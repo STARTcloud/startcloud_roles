@@ -24,7 +24,6 @@
         - "{{ python_simple_web_server_path }}/.cache"
         - "{{ python_simple_web_server_path }}/.cache/pip"
         - "{{ python_simple_web_server_path }}/.local"
-        - "{{ python_simple_web_server_path }}/icons"
 
     -
       name: "Installing uploadserver for Python Web Server" # Installs the uploadserver package for the Python web server.
@@ -136,20 +135,6 @@
         - { src: 'environment.j2', dest: '/etc/pythonserv', owner: '{{ service_user }}' }
         - { src: 'styles.css', dest: '{{ python_simple_web_server_path }}/styles.css', owner: '{{ service_user }}' }
         - { src: 'cockpit.conf.j2', dest: '/etc/cockpit/cockpit.conf', owner: '{{ service_user }}' }
-
-    -
-      name: "Adding Icons Python Simple HTTP Server Service file" # Copies service configuration files to their respective locations.
-      become: true # Executes the task with elevated privileges.
-      ansible.builtin.copy:
-        owner: "{{ item.owner }}" # Sets the owner of the file.
-        src: "{{ item.src }}" # Specifies the source file.
-        dest: "{{ item.dest }}" # Specifies the destination file.
-        mode: '0644' # Sets the file permissions.
-      loop:
-        - { src: 'api.ico', dest: '{{ python_simple_web_server_path }}/icons/api.ico', owner: '{{ service_user }}' }
-        - { src: 'home.ico', dest: '{{ python_simple_web_server_path }}/icons/home.ico', owner: '{{ service_user }}' }
-        - { src: 'guac.ico', dest: '{{ python_simple_web_server_path }}/icons/guac.ico', owner: '{{ service_user }}' }
-        - { src: 'cockpit.ico', dest: '{{ python_simple_web_server_path }}/icons/cockpit.ico', owner: '{{ service_user }}' }
 
     -
       name: "Placing Python Simple HTTP Server Service file" # Copies service configuration files to their respective locations.
