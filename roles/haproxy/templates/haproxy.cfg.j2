@@ -221,7 +221,7 @@ frontend  HTTPS-IN
 {% endif %}
 {% endif %}
 {% if domino_oidc_provider_enabled %}
-        use_backend                   domino_oidc               if host_domino_oidc
+        use_backend                   domino_oidc          if host_domino_oidc
 {% endif %}
 {% if domino_leap_proxy_url is defined %}
         use_backend                   leap                 if host_leap
@@ -277,6 +277,9 @@ backend console
 {% if domino_vagrant_rest_api_port_forwards[0].guest is defined %}
 # Rest API
 backend restapi
+	balance roundrobin
+	cookie backend insert httponly secure
+	#option httpchk HEAD /names.nsf?login HTTP/1.0
         http-response set-header Access-Control-Allow-Origin "*"
         http-response set-header Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization"
         http-response set-header Access-Control-Allow-Credentials "true"
@@ -291,6 +294,9 @@ backend downloads
 {% if domino_install_port_forwards[0].guest is defined %}
 # Domino
 backend domino
+	balance roundrobin
+	cookie backend insert httponly secure
+	option httpchk HEAD /names.nsf?login HTTP/1.0
         server  domino-https          127.0.0.1:{{ domino_install_port_forwards[0].guest }}    ssl verify none sni ssl_fc_sni check cookie {{ settings.hostname }} init-addr last,libc,none
 {% if domino_install_port_forwards[1].guest is defined %}
         server  domino-http           127.0.0.1:{{ domino_install_port_forwards[1].guest }}    backup check cookie {{ settings.hostname }} init-addr last,libc,none
@@ -300,6 +306,9 @@ backend domino
 {% if domino_install_port_forwards[0].guest is defined %}
 # Domino
 backend domino_oidc
+	balance roundrobin
+	cookie backend insert httponly secure
+	option httpchk HEAD /names.nsf?login HTTP/1.0
         server  domino-oidc-https          {{ domino_oidc_install_proxy_url }}:{{ domino_install_port_forwards[0].guest }}    ssl verify none sni ssl_fc_sni check cookie {{ settings.hostname }} init-addr last,libc,none
 {% if domino_install_port_forwards[1].guest is defined %}
         server  domino-oidc-http           {{ domino_oidc_install_proxy_url }}:{{ domino_install_port_forwards[1].guest }}    backup check cookie {{ settings.hostname }} init-addr last,libc,none
@@ -309,22 +318,28 @@ backend domino_oidc
 {% if domino_nomadweb_port_forwards[0].guest is defined %}
 # Nomad Web
 backend nomadweb
-        server  nomadweb              127.0.0.1:{{ domino_nomadweb_port_forwards[0].guest }}    ssl verify none sni ssl_fc_sni check cookie {{ settings.hostname }} init-addr last,libc,none
+        server  nomadweb              {{ domino_nomadweb_proxy_url }}:{{ domino_nomadweb_port_forwards[0].guest }}    ssl verify none sni ssl_fc_sni check cookie {{ settings.hostname }} init-addr last,libc,none
 {% endif %}
 {% if domino_traveler_port_forwards[0].guest is defined %}
 # Traveler
 backend traveler
-        server  domino-https          127.0.0.1:{{ domino_traveler_port_forwards[0].guest }}    ssl verify none sni ssl_fc_sni check cookie {{ settings.hostname }} init-addr last,libc,none
+	balance roundrobin
+	cookie backend insert httponly secure
+	option httpchk HEAD /names.nsf?login HTTP/1.0
+        server  domino-https          {{ domino_traveler_proxy_url }}:{{ domino_traveler_port_forwards[0].guest }}    ssl verify none sni ssl_fc_sni check cookie {{ settings.hostname }} init-addr last,libc,none
 {% if domino_traveler_port_forwards[1].guest is defined %}
-        server  domino-http           127.0.0.1:{{ domino_traveler_port_forwards[1].guest }}    backup check cookie {{ settings.hostname }} init-addr last,libc,none
+        server  domino-http           {{ domino_traveler_proxy_url }}:{{ domino_traveler_port_forwards[1].guest }}    backup check cookie {{ settings.hostname }} init-addr last,libc,none
 {% endif %}
 {% endif %}
 {% if domino_leap_port_forwards[0].guest is defined %}
 # Leap
 backend leap
-        server  domino-https          127.0.0.1:{{ domino_leap_port_forwards[0].guest }}    ssl verify none sni ssl_fc_sni check cookie {{ settings.hostname }} init-addr last,libc,none
+	balance roundrobin
+	cookie backend insert httponly secure
+	option httpchk HEAD /names.nsf?login HTTP/1.0
+        server  domino-https          {{ domino_leap_proxy_url }}:{{ domino_leap_port_forwards[0].guest }}    ssl verify none sni ssl_fc_sni check cookie {{ settings.hostname }} init-addr last,libc,none
 {% if domino_leap_port_forwards[1].guest is defined %}
-        server  domino-http           127.0.0.1:{{ domino_leap_port_forwards[1].guest }}    backup check cookie {{ settings.hostname }} init-addr last,libc,none
+        server  domino-http           {{ domino_leap_proxy_url }}:{{ domino_leap_port_forwards[1].guest }}    backup check cookie {{ settings.hostname }} init-addr last,libc,none
 {% endif %}
 {% endif %}
 {% if startcloud_guacamole_port_forwards[0].guest is defined %}
@@ -335,6 +350,9 @@ backend guacamole
 {% if domino_verse_port_forwards[0].guest is defined %}
 # Verse
 backend verse
+	balance roundrobin
+	cookie backend insert httponly secure
+	option httpchk HEAD /names.nsf?login HTTP/1.0
         server  domino-https          {{ domino_verse_proxy_url }}:{{ domino_verse_port_forwards[0].guest }}    ssl verify none sni ssl_fc_sni check cookie {{ settings.hostname }} init-addr last,libc,none
 {% if domino_verse_port_forwards[1].guest is defined %}
         server  domino-http           {{ domino_verse_proxy_url }}:{{ domino_verse_port_forwards[1].guest }}    backup check cookie {{ settings.hostname }} init-addr last,libc,none
