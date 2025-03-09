@@ -432,7 +432,7 @@
             path: "/etc/letsencrypt/live/{{ settings.hostname | lower }}.{{ settings.domain | lower }}/fullchain.pem"
 
         -
-          name: "Copying cert.pem from Let'sEncrypt "
+          name: "Copying cert.pem from letsencrypt"
           when: letsencrypt_cert_generated_check.stat.exists | bool
           ansible.builtin.copy:
             src: "/etc/letsencrypt/live/{{ settings.hostname | lower }}.{{ settings.domain | lower }}/fullchain.pem"
@@ -443,7 +443,7 @@
             remote_src: true
 
         -
-          name: "Copying CRT"
+          name: "Replacing presigned ssl with letsencrypt cert"
           when: letsencrypt_cert_generated_check.stat.exists | bool
           ansible.builtin.copy:
             src: "{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.crt"
@@ -454,7 +454,7 @@
             remote_src: true
 
         -
-          name: "Copying privkey.pem from Let'sEncrypt"
+          name: "Copying privkey.pem from letsencrypt"
           when: letsencrypt_cert_generated_check.stat.exists | bool
           ansible.builtin.copy:
             src: "/etc/letsencrypt/live/{{ settings.hostname | lower }}.{{ settings.domain | lower }}/privkey.pem"
@@ -465,7 +465,7 @@
             remote_src: true
 
         -
-          name: "Copying privkey.pem"
+          name: "Replacing presigned ssl with letsencrypt key"
           when: letsencrypt_cert_generated_check.stat.exists | bool
           become: true
           ansible.builtin.copy:
