@@ -321,6 +321,16 @@
             remote_src: true
 
         -
+          name: "Append CA certificate to combined certificate"
+          ansible.builtin.blockinfile:
+            path: "{{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}.pem"
+            block: "{{ lookup('file', cert_dir + '/ca/ca-certificate.crt') }}"
+            marker: "# {mark} ANSIBLE MANAGED BLOCK - CA CERTIFICATE"
+            owner: "{{ domino_user }}"
+            group: "{{ domino_group }}"
+            mode: '0644'
+
+        -
           name: "Creating a keystore for the self-signed certificate/private key pair"
           community.general.java_keystore:
             name: "{{ settings.hostname }}.{{ settings.domain }}"
