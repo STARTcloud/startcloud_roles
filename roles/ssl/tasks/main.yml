@@ -326,8 +326,8 @@
             path: "{{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}.pem"
             block: "{{ lookup('file', cert_dir + '/ca/ca-certificate.crt') }}"
             marker: "# {mark} ANSIBLE MANAGED BLOCK - CA CERTIFICATE"
-            owner: "{{ domino_user }}"
-            group: "{{ domino_group }}"
+            owner: "{{ service_user }}"
+            group: "{{ service_group }}"
             mode: '0644'
 
         -
