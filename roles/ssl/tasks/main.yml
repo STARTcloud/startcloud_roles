@@ -401,7 +401,7 @@
           when: haproxy_status.rc != 0 and not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled
 
         -
-          name: "Generating new staging  request via HAProxy"
+          name: "Generating new staging request via HAProxy"
           ansible.builtin.shell: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --staging --email {{ settings.email }} {{ le_entries | join(' ') }} --http-01-port=8181
           when: haproxy_status.rc == 0 and not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled
 
@@ -429,13 +429,13 @@
           register: letsencrypt_cert_generated_check
           become: true
           ansible.builtin.stat:
-            path: "/etc/letsencrypt/live/{{ settings.hostname | lower }}.{{ settings.domain | lower }}/cert.pem"
+            path: "/etc/letsencrypt/live/{{ settings.hostname | lower }}.{{ settings.domain | lower }}/fullchain.pem"
 
         -
           name: "Copying cert.pem from Let'sEncrypt "
           when: letsencrypt_cert_generated_check.stat.exists | bool
           ansible.builtin.copy:
-            src: "/etc/letsencrypt/live/{{ settings.hostname | lower }}.{{ settings.domain | lower }}/cert.pem"
+            src: "/etc/letsencrypt/live/{{ settings.hostname | lower }}.{{ settings.domain | lower }}/fullchain.pem"
             dest: "{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.crt"
             owner: "{{ service_user }}"
             group: "{{ service_group }}"
