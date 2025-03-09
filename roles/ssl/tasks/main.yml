@@ -21,6 +21,7 @@
         - "{{ cert_dir }}/jks"
         - "{{ cert_dir }}/combined"
         - "{{ cert_dir }}/ca"
+        - "/usr/local/share/ca-certificates/self-signed"
 
     -
       name: "Using existing Certificate"
@@ -204,7 +205,7 @@
           name: "Copying root CA certificate to trusted certificates directory"
           ansible.builtin.copy:
             src: "{{ cert_dir }}/ca/ca-certificate.crt"
-            dest: "/usr/local/share/ca-certificates/ca-certificate.pem"
+            dest: "/usr/local/share/ca-certificates/self-signed/ca-certificate.pem"
             owner: root
             group: root
             mode: '0644'
