@@ -1,3 +1,0 @@
-[submodule "roles/web-terminal/files/web-terminal"]
-	path = roles/web-terminal/files/web-terminal
-	url = https://github.com/STARTcloud/web-terminal
