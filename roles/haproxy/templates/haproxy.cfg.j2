@@ -174,7 +174,7 @@ frontend  HTTPS-IN
 {% if domino_install_proxy_url is defined %}
         acl host_domino               hdr(host)            -i {{ domino_install_proxy_url }}
 {% endif %}
-{% if domino_oidc_provider_enabled %}
+{% if domino_oidc_provider_enabled is defined and domino_oidc_provider_enabled %}
         acl host_domino_oidc          hdr(host)            -i {{ domino_oidc_install_proxy_url }}
 {% endif %}
 {% if startcloud_quick_start_proxy_url is defined %}
@@ -220,8 +220,8 @@ frontend  HTTPS-IN
 {% endif %}
 {% endif %}
 {% endif %}
-{% if domino_oidc_provider_enabled %}
-        use_backend                   domino_oidc          if host_domino_oidc
+{% if domino_oidc_provider_enabled is defined and domino_oidc_provider_enabled and domino_oidc_install_proxy_url is defined %}
+        acl host_domino_oidc          hdr(host)            -i {{ domino_oidc_install_proxy_url }}
 {% endif %}
 {% if domino_leap_proxy_url is defined %}
         use_backend                   leap                 if host_leap
@@ -297,8 +297,8 @@ backend domino
 {% endif %}
 {% endif %}
 
-{% if domino_install_port_forwards[0].guest is defined %}
-# Domino
+{% if domino_install_port_forwards[0].guest is defined and domino_oidc_install_proxy_url is defined and domino_oidc_provider_enabled %}
+# Domino OIDC
 backend domino_oidc
         server  domino-oidc-https          {{ domino_oidc_install_proxy_url }}:{{ domino_install_port_forwards[0].guest }}    ssl verify none sni ssl_fc_sni check cookie {{ settings.hostname }} init-addr last,libc,none
 {% if domino_install_port_forwards[1].guest is defined %}
