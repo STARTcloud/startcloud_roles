@@ -283,7 +283,7 @@ backend console
 
 {% if startcloud_web_terminal_port_forwards[0].guest is defined %}
 backend web_terminal
-        server  web_terminal               127.0.0.1:{{ startcloud_web_terminal_port_forwards[0].guest }}    ssl verify none sni ssl_fc_sni check cookie {{ settings.hostname }} init-addr last,libc,none
+        server  web_terminal          127.0.0.1:{{ startcloud_web_terminal_port_forwards[0].guest }}    ssl verify none sni ssl_fc_sni check cookie {{ settings.hostname }} init-addr last,libc,none
 {% endif %}
 
 {% if domino_vagrant_rest_api_port_forwards[0].guest is defined %}

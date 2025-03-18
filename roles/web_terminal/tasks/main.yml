@@ -41,7 +41,6 @@
       loop:
         - { src: 'web-terminal.service.j2', dest: '/etc/systemd/system/web-terminal.service', owner: '{{ service_user }}' }
 
-
     -
       name: "Placing Configuration file"
       become: true
