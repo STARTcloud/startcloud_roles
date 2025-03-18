@@ -160,6 +160,10 @@ frontend  HTTPS-IN
         acl host_console              hdr(host)            -i console.{{ settings.hostname }}.{{ settings.domain }}
         acl is_options                method               OPTIONS
 
+{% if startcloud_web_terminal_proxy_url is defined %}
+        acl host_web_terminal         hdr(host)            -i {{ startcloud_web_terminal_proxy_url }}
+{% endif %}
+
 {% if domino_vagrant_rest_api_proxy_url is defined %}
         acl host_restapi              hdr(host)            -i {{ domino_vagrant_rest_api_proxy_url }}
 {% endif %}
@@ -241,13 +245,15 @@ frontend  HTTPS-IN
 {% if voltmx_port_forwards[0].url is defined %}
         use_backend                   voltmx               if host_voltmx
 {% endif %}
+{% if startcloud_web_terminal_proxy_url is defined %}
+        use_backend                   web_terminal            if host_web_terminal
+{% endif %}
 {% if startcloud_quick_start_proxy_url is defined %}
         use_backend                   downloads            if host_downloads || host_direct_ip
 {% endif %}
 {% if haproxy_default_backend is defined and haproxy_default_backend | length > 0 %}
         default_backend               {{ haproxy_default_backend }}
 {% endif %}
-
 
 #---------------------------------------------------------------------
 ##### BACKENDS ####
@@ -274,6 +280,12 @@ backend cors_backend
 # Console
 backend console
         server  cockpit               127.0.0.1:9090    ssl verify none sni ssl_fc_sni check cookie {{ settings.hostname }} init-addr last,libc,none
+
+{% if startcloud_web_terminal_port_forwards[0].guest is defined %}
+backend web_terminal
+        server  web_terminal               127.0.0.1:{{ startcloud_web_terminal_port_forwards[0].guest }}    ssl verify none sni ssl_fc_sni check cookie {{ settings.hostname }} init-addr last,libc,none
+{% endif %}
+
 {% if domino_vagrant_rest_api_port_forwards[0].guest is defined %}
 # Rest API
 backend restapi
