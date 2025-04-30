@@ -382,6 +382,11 @@
             state: started
           check_mode: yes
           register: haproxy_status
+          
+        -
+          name: "Check if HAProxy is in enabled_roles"
+          ansible.builtin.set_fact:
+            haproxy_in_enabled_roles: "{{ 'startcloud.startcloud_roles.haproxy' in (enabled_roles | default([])) }}"
 
         -
           name: "Setting LE entries as a fact to consume"
@@ -410,22 +415,22 @@
             --staging
             --email {{ settings.email }}
             {{ le_entries | join(' ') }}
-          when: haproxy_status.changed and not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled
+          when: (haproxy_status.changed and not haproxy_in_enabled_roles) and not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled
 
         -
           name: "Generating new staging request via HAProxy"
           ansible.builtin.shell: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --staging --email {{ settings.email }} {{ le_entries | join(' ') }} --http-01-port=8181
-          when: not haproxy_status.changed and not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled
+          when: (not haproxy_status.changed or (haproxy_status.changed and haproxy_in_enabled_roles)) and not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled
 
         -
           name: "Generating new certificate request"
           ansible.builtin.shell: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --email {{ settings.email }} {{ le_entries | join(' ') }}
-          when: haproxy_status.changed and not letsencrypt_cert.stat.exists and not letsencrypt_staging_enabled
+          when: (haproxy_status.changed and not haproxy_in_enabled_roles) and not letsencrypt_cert.stat.exists and not letsencrypt_staging_enabled
 
         -
           name: "Generating new certificate request via HAProxy"
           ansible.builtin.shell: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --email {{ settings.email }} {{ le_entries | join(' ') }} --http-01-port=8181
-          when: not haproxy_status.changed and not letsencrypt_cert.stat.exists and not letsencrypt_staging_enabled
+          when: (not haproxy_status.changed or (haproxy_status.changed and haproxy_in_enabled_roles)) and not letsencrypt_cert.stat.exists and not letsencrypt_staging_enabled
 
         -
           name: "Remove old certs Directories for SSLs"
