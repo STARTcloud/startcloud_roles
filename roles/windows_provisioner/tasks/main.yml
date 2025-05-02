@@ -327,12 +327,11 @@
             name: "{{ item }}"
             state: present
           loop:
-            - firefox
+            - librewolf
             - telegraf
             - git
             - bginfo
             - cyg-get
-            - clamwin
 
         - name: "Upgrading all Chocolatey packages"
           chocolatey.chocolatey.win_chocolatey:
@@ -790,7 +789,7 @@
 
         - name: "Preparing SSH Directory and Keys"
           ansible.windows.win_copy:
-            src: ../../../../../../ssh_keys/id_rsa.pub
+            src: ../../../../../../ansible/ssh_keys/id_rsa.pub
             dest: C:\Users\Administrator\.ssh\authorized_keys
 
         - name: "Creating SSH directory for STARTcloud"
@@ -800,7 +799,7 @@
 
         - name: "Preparing SSH Directory and Keys"
           ansible.windows.win_copy:
-            src: ../../../../../../ssh_keys/id_rsa.pub
+            src: ../../../../../../ansible/ssh_keys/id_rsa.pub
             dest: C:\Users\STARTcloud\.ssh\authorized_keys
 
         - name: "Configuring SSH Service"
