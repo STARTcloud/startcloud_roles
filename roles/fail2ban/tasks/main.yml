@@ -1,0 +1,45 @@
+---
+- name: "Log playbook progress"
+  ansible.builtin.debug:
+    msg:
+      - "Installing fail2ban"
+      - "72"
+
+## Asterisk specifc tasks should go in the asterisk role, this role should be a dependency role for asterisk
+- name: Check if Asterisk is installed
+  ansible.builtin.stat:
+    path: "{{ CONFIG_DIR }}"
+  register: asterisk_bin_path
+
+- name: Load Asterisk Security module
+  ansible.builtin.lineinfile:
+    path: "{{ CONFIG_DIR }}/modules.conf"
+    search_string: 'load => res_security_log.so'
+    line: load => res_security_log.so
+
+- name: Enable Asterisk Security logs
+  ansible.builtin.lineinfile:
+    path: "{{ CONFIG_DIR }}/logger.conf"
+    search_string: 'security = security'
+    line: security = security
+
+- name: "Install fail2ban"
+  ansible.builtin.apt:
+    name: fail2ban
+    state: present
+    update_cache: no
+  register: result
+  retries: 10
+  delay: 5
+  until: result is success or ('Unable to acquire the dpkg frontend lock' not in result.msg and '/var/lib/dpkg/lock-frontend' not in result.msg)
+
+- name: Copy jail.local template
+  ansible.builtin.template:
+    src: jail.local.j2
+    dest: /etc/fail2ban/jail.local
+
+- name: Start and Enable fail2ban
+  ansible.builtin.systemd:
+    name: fail2ban
+    state: restarted
+    enabled: true
