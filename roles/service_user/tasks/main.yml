@@ -14,9 +14,14 @@
       ansible.builtin.user:
         name: "{{ service_user }}"
         shell: /bin/bash
-        groups: "{{ service_group }},sudo"
         home: "{{ service_home_dir }}"
-    
+        groups:
+          - "{{ service_group }}"
+          - cert
+          - sudo
+        append: yes
+        createhome: no
+        system: yes
     -
       name: "Adding startcloud to groups: {{ service_group }}"
       ansible.builtin.user:
