@@ -17,7 +17,6 @@
         home: "{{ service_home_dir }}"
         groups:
           - "{{ service_group }}"
-          - cert
           - sudo
         append: yes
         createhome: no
