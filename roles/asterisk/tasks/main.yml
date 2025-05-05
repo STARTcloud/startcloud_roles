@@ -189,7 +189,7 @@
           name: "Copying Config files to Asterisk Box"
           ansible.builtin.template:
             src: 'sysconfig.sh.j2'
-            dest: '/etc/default/asterisk/sysconfig.sh'
+            dest: '/etc/default/asterisk'
             mode: "+x"
             owner: "{{ ASTERISK_USER }}"
             group: "{{ ASTERISK_GROUP }}"
