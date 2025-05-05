@@ -5,10 +5,12 @@ CUSTOM_SOUNDS_PATH: /var/lib/asterisk/sounds/en/custom
 ASTERISK_LOG: /var/log/asterisk
 ASTERISK_VERSION: asterisk-20.11.1.tar.gz
 ASTERISK_PACKAGE: "https://downloads.asterisk.org/pub/telephony/asterisk/old-releases/{{ ASTERISK_VERSION}}"
+# This should be overrideen by the Hosts.yml
 SQL_USER: asteriskdb
 SQL_PASSWORD: 4P3wafe#CK27
 SQL_DATABASE: asteriskdb
 SQL_TABLE: cdr
+## End Override
 ASTERISK_GROUP: asterisk
 ASTERISK_USER: asterisk
 ASTERISK_USER_PASS: asterisk
