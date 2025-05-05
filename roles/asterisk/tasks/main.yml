@@ -4,9 +4,20 @@
   when: run_tasks
   block:
     -
+      name: "Logging playbook progress"
+      ansible.builtin.debug:
+        msg:
+          - "Installing Asterisk packages"
+          - "22"
+
+    -
       name: "Setting up Debian Installations"
       when: "ansible_os_family == 'Debian'"
       block:
+        -
+          name: "Including additional vars"
+          ansible.builtin.include_vars: vars/debian12.yml
+
         -
           name: "Gathering DEB architecture"
           ansible.builtin.command: dpkg --print-architecture
@@ -31,116 +42,170 @@
             update_cache: true
     
         -
-          name: "Adding Additional Dependencies {{ packages }}"
+          name: "Adding Additional Dependencies"
           ansible.builtin.apt:
             name: "{{ packages }}"
             state: present
-    
-        - 
-          debug: 
-            msg: "The hostname is {{ ansible_hostname }} and the OS is {{ ansible_version }}"
-          name: "Displaying System Information"
-        - 
-          name: "Installing Tools and Packages"
-          yum: 
-            name: 
-              - gcc
-              - net-tools
-              - vim
-              - bash-completion
-              - tmux
-              - tree
-              - htop
-              - wget
-              - unzip
-              - curl
-              - git
-        - 
-          name: "Setting timezone to {{ timezone }}"
-          timezone: 
-            name: "{{ timezone }}"
-    
-        - 
-          command: "yum clean all"
-          name: "Cleaning Yum Cache"
-        - name: Adding EPEL repository
-          yum:
-            name: epel-release
-            state: present
+
+        -
+          name: "Checking if Asterisk is installed"
+          ansible.builtin.stat:
+            path: "{{ CONFIG_DIR }}"
+          register: asterisk_bin_path
+
+        -
+          name: "Logging playbook progress"
+          ansible.builtin.debug:
+            msg:
+              - "Setup Asterisk"
+              - "30"
+
         - 
           ignore_errors: true
           name: "Adding the user asterisk"
           user: 
             comment: Asterisk SIP User
             shell: /bin/bash
-            name: asterisk
+            name: "{{ ASTERISK_USER }}"
             password: "{{ userpass | password_hash('sha512') }}"
-        - name: Creating Export Directoring
+            groups:
+              - "{{ ASTERISK_GROUP }}"
+              - audio
+              - dialout
+              - "{{ service_group }}"
+
+        -
+          name: "Creating Export Directoring"
           file:
             path: /data
             state: directory
             mode: '0755'
-            owner: asterisk
-            group: asterisk
+            owner: "{{ ASTERISK_USER }}"
+            group: "{{ ASTERISK_GROUP }}"
     
-        - 
-          become: true
-          name: Creating Asterisk Base Directory
-          file:
-            path:  /usr/src/asterisk
-            owner: asterisk
-            group: asterisk
+        -
+          name: "Creating asterisk directories if they do not exist"
+          ansible.builtin.file:
+            path: "{{ item }}"
             state: directory
-            mode: '0755'
-        - 
-          name: "Downloading Asterisk"
-          get_url: 
-            url: https://downloads.asterisk.org/pub/telephony/asterisk/asterisk-17-current.tar.gz
-            dest: /usr/src/asterisk/asterisk-17-current.tar.gz
-            timeout: 300
-        - 
-          name: "Unpacking Asterisk"
-          unarchive: 
-            copy: false
-            dest: /usr/src/
-            src: /usr/src/asterisk/asterisk-17-current.tar.gz
-        - 
-          args: 
-            chdir: /usr/src/asterisk-17.8.0/contrib/scripts/
-          name: "Preparing Asterisk Source for Compilation"
-          become: true
-          shell: "sudo sh install_prereq install"
+            owner: "{{ ASTERISK_USER }}"
+          with_items:
+            - "{{ SOURCE_DIR }}"
+            - "{{ CONFIG_DIR }}"
+
         -
-          args:
-            chdir: /usr/src/asterisk-17.8.0/
-          name: "Configuring Asterisk Source for Compilation"
-          become: true
-          shell: "sudo ./configure  --with-jansson-bundled"
-        - 
-          args: 
-            chdir: /usr/src/asterisk-17.8.0
-          name: "Compiling Asterisk Server from Source"
-          shell: "make && make install && make config && make install-logrotate"
-    
-        -
-          name: "Unpacking Asterisk"
+          name: "Downloading and Extract Asterisk"
           unarchive:
-            copy: false
-            dest: /etc/asterisk
-            src: /etc/asterisk/conf.zip
+            src: "{{ ASTERISK_PACKAGE }}"
+            dest: "{{ SOURCE_DIR }}"
+            remote_src: yes
+            list_files: yes
+          register: asterisk_archive_contents
+
+        -
+          name: "Check if Asterisk is installed"
+          debug:
+            msg: "Asterisk directory path is {{ SOURCE_DIR }}/{{ asterisk_archive_contents.files[0] }}, installed: {{asterisk_bin_path.stat.exists}}"
+
+        -
+          name: "Logging playbook progress"
+          ansible.builtin.debug:
+            msg:
+              - "Installing Asterisk"
+              - "40"
+
+        -
+          name: Install Asterisk Packages
+          command: "{{ item }}"
+          with_items:
+            - ./configure --with-jansson-bundled
+            - make
+            - make install
+            - make config
+            - make install-logrotate
+            - ldconfig
+          args:
+            chdir: "{{ SOURCE_DIR }}/{{ asterisk_archive_contents.files[0] }}"
+          async: 3600
+          poll: 15
+          when: asterisk_bin_path.stat.exists == False
     
-        - name: Setting Asterisk ACLs
-          file:
-            path: /var/lib/asterisk
-            state: directory
+        -
+          name: "Changing file ownership, group and permissions"
+          ansible.builtin.file:
+            path: "{{ item }}"
+            owner: "{{ ASTERISK_USER }}"
+            group: "{{ ASTERISK_GROUP }}"
             mode: '0755'
-            owner: asterisk
-            group: asterisk
+            state: directory
+            recurse: true
+          loop:
+            - /var/lib/asterisk
+            - "{{ ASTERISK_LOG }}"
+            - /var/run/asterisk
+            - /var/spool/asterisk
+            - /usr/lib64/asterisk
+            - /usr/lib/asterisk
+            - "{{ CONFIG_DIR }}"
       
-        - name: Setting Asterisk ACLs
+        -
+          name: "Setting Asterisk ACLs"
           file:
-            path: /var/log/asterisk
+            path: "{{ ASTERISK_LOG }}"
             state: directory
             mode: '0755'
-            owner: asterisk
-            group: asterisk
+            owner: "{{ ASTERISK_USER }}"
+            group: "{{ ASTERISK_GROUP }}"
+
+        -
+          name: "Remove Asterisk init.d script"
+          ansible.builtin.file:
+            path: /etc/init.d/asterisk
+            state: absent
+
+        -
+          name: "Copying Asterisk Templates"
+          ansible.builtin.template:
+            src: asterisk.service.j2
+            dest: /etc/systemd/system/asterisk.service
+
+        -
+          name: "Restarting Asterisk server"
+          ansible.builtin.systemd_service:
+            name: asterisk.service
+            state: restarted
+            enabled: true
+            daemon_reload: true
+
+        -
+          name: "Checking if Asterisk is installed"
+          ansible.builtin.stat:
+            path: "{{ ASTERISK_CONFIG_DIR }}"
+          register: asterisk_bin_path
+
+        -
+          name: "Loading Asterisk Security module"
+          ansible.builtin.lineinfile:
+            path: "{{ ASTERISK_CONFIG_DIR }}/modules.conf"
+            search_string: 'load => res_security_log.so'
+            line: load => res_security_log.so
+
+        -
+          name: "Enabling Asterisk Security logs"
+          ansible.builtin.lineinfile:
+            path: "{{ ASTERISK_CONFIG_DIR }}/logger.conf"
+            search_string: 'security = security'
+            line: security = security
+
+        -
+          name: "Copying jail.local template"
+          ansible.builtin.template:
+            src: asterisk.jail.local.j2
+            dest: /etc/fail2ban/jail.d/asterisk.conf
+
+        -
+          name: "Starting and Enabling fail2ban"
+          ansible.builtin.systemd:
+            name: fail2ban
+            state: restarted
+            enabled: true
