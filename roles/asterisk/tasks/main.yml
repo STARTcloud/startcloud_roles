@@ -178,10 +178,21 @@
             daemon_reload: true
 
         -
-          name: "Checking if Asterisk is installed"
-          ansible.builtin.stat:
-            path: "{{ CONFIG_DIR }}"
-          register: asterisk_bin_path
+          name: "Copying Asterisk configuration to remote"
+          ansible.builtin.copy:
+            src: './files/conf/'
+            dest: "{{ CONFIG_DIR }}"
+            owner: "{{ ASTERISK_USER }}"
+            group: "{{ ASTERISK_GROUP }}"
+
+        -
+          name: "Copying Config files to Asterisk Box"
+          copy:
+            src: 'sysconfig.sh.j2'
+            dest: '/etc/default/asterisk/sysconfig.sh'
+            mode: "+x"
+            owner: "{{ ASTERISK_USER }}"
+            group: "{{ ASTERISK_GROUP }}"
 
         -
           name: "Loading Asterisk Security module"
