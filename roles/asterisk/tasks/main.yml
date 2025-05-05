@@ -67,7 +67,7 @@
             comment: Asterisk SIP User
             shell: /bin/bash
             name: "{{ ASTERISK_USER }}"
-            password: "{{ userpass | password_hash('sha512') }}"
+            password: "{{ ASTERISK_USER_PASS | password_hash('sha512') }}"
             groups:
               - "{{ ASTERISK_GROUP }}"
               - audio
