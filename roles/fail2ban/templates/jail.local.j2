@@ -3,10 +3,3 @@
 [sshd]
 backend = systemd
 enabled = false
-
-[asterisk]
-enabled = true
-ports = {{ FAIL2BAN_PORTS }}
-logpath = {{ FAIL2BAN_LOG }}
-maxretry = {{ FAIL2BAN_MAX_RETRIES }}
-bantime = {{ FAIL2BAN_BAN_TIME }}
