@@ -180,20 +180,20 @@
         -
           name: "Checking if Asterisk is installed"
           ansible.builtin.stat:
-            path: "{{ ASTERISK_CONFIG_DIR }}"
+            path: "{{ CONFIG_DIR }}"
           register: asterisk_bin_path
 
         -
           name: "Loading Asterisk Security module"
           ansible.builtin.lineinfile:
-            path: "{{ ASTERISK_CONFIG_DIR }}/modules.conf"
+            path: "{{ CONFIG_DIR }}/modules.conf"
             search_string: 'load => res_security_log.so'
             line: load => res_security_log.so
 
         -
           name: "Enabling Asterisk Security logs"
           ansible.builtin.lineinfile:
-            path: "{{ ASTERISK_CONFIG_DIR }}/logger.conf"
+            path: "{{ CONFIG_DIR }}/logger.conf"
             search_string: 'security = security'
             line: security = security
 
