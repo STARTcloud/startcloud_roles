@@ -60,10 +60,15 @@
               - "Setup Asterisk"
               - "30"
 
+        -
+          name: Ensure group "asterisk" exists
+          ansible.builtin.group:
+            name: "{{ ASTERISK_GROUP }}"
+            state: present
+
         - 
-          ignore_errors: true
           name: "Adding the user asterisk"
-          user: 
+          ansible.builtin.user: 
             comment: Asterisk SIP User
             shell: /bin/bash
             name: "{{ ASTERISK_USER }}"
