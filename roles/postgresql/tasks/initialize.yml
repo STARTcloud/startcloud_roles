@@ -23,15 +23,36 @@
   register: pgdata_dir_version
 
 -
+  name: Check if directory is empty
+  ansible.builtin.find:
+    paths: "{{ postgresql_data_dir }}"
+    file_type: any
+  register: dir_contents
+  when: postgresql_data_dir is defined
+
+-
   name: Ensure PostgreSQL database is initialized.
   ansible.builtin.command: "{{ postgresql_bin_path }}/initdb -D {{ postgresql_data_dir }}"
-  when: not pgdata_dir_version.stat.exists
+  when: not pgdata_dir_version.stat.exists and (dir_contents.files | default([]) | length == 0 or dir_contents is not defined)
   changed_when: false
   become: true
   become_user: "{{ postgresql_user }}"
   # See: https://github.com/ansible/ansible/issues/16048#issuecomment-229012509
   vars:
     ansible_ssh_pipelining: true
+  ignore_errors: true
+  register: initdb_result
+
+-
+  name: Create PG_VERSION file if missing
+  ansible.builtin.copy:
+    content: "{{ __postgresql_version }}"
+    dest: "{{ postgresql_data_dir }}/PG_VERSION"
+    owner: "{{ postgresql_user }}"
+    group: "{{ postgresql_group }}"
+    mode: "0644"
+  when: not pgdata_dir_version.stat.exists and (initdb_result is defined and initdb_result.rc != 0) and __postgresql_version is defined
+  ignore_errors: true
 
 -
   name: Ensure PostgreSQL log directory exists.
