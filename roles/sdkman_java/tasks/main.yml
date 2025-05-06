@@ -41,9 +41,14 @@
       when: "java_version != 'LATEST'"
     
     -
+      name: "Setting unified Java version variable"
+      ansible.builtin.set_fact:
+        java_version_to_install: "{{ computed_java_version.stdout if (java_version == 'LATEST') else selected_java_version.stdout }}"
+    
+    -
       name: "Installing Java via SDKMAN: {{ java_version }}"
       become_user: "{{ sdk_service_user }}"
-      ansible.builtin.shell: . {{ sdkman_dir }}/bin/sdkman-init.sh && sdk install java {{ computed_java_version.stdout }} {{ item.localpath | default('') }}
+      ansible.builtin.shell: . {{ sdkman_dir }}/bin/sdkman-init.sh && sdk install java {{ java_version_to_install }} {{ item.localpath | default('') }}
       args:
         executable: /bin/bash
       register: sdk_install
