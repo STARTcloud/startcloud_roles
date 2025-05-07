@@ -120,6 +120,12 @@
             script: iex "C:\temp\ConfigureRemotingForAnsible.ps1"
           register: winrm_execution
 
+        -
+          name: "Ensuring WinRM starts when the system has settled and is ready to work reliably"
+          ansible.windows.win_service:
+            name: WinRM
+            start_mode: delayed
+
     - name: "Installing Chocolatey"
       block:
         - name: "Downloading Chocolatey Installation Script"
@@ -892,7 +898,8 @@
 
         - name: "Rebooting to Apply Windows Updates"
           ansible.windows.win_reboot:
-            reboot_timeout: 7200
+            reboot_timeout: 15200
+            post_reboot_delay: 300
 
     - name: "Installing Windows Updates"
       block:
@@ -924,7 +931,8 @@
 
         - name: "Rebooting to Apply Windows Updates"
           ansible.windows.win_reboot:
-            reboot_timeout: 7200
+            reboot_timeout: 15200
+            post_reboot_delay: 300
 
     - name: "Installing Windows Updates"
       block:
@@ -956,7 +964,8 @@
 
         - name: "Rebooting to Apply Windows Updates"
           ansible.windows.win_reboot:
-            reboot_timeout: 7200
+            reboot_timeout: 15200
+            post_reboot_delay: 300
 
 
     - name: "Installing Windows Updates"
@@ -994,7 +1003,8 @@
 
         - name: "Rebooting to Apply Windows Updates"
           ansible.windows.win_reboot:
-            reboot_timeout: 7200
+            reboot_timeout: 15200
+            post_reboot_delay: 300
 
     - name: "Disabling System Wide Proxy"
       when: use_proxy
