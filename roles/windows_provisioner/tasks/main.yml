@@ -97,6 +97,11 @@
             src: provision-Autounattend.ps1.j2
             dest: C:\Windows\Temp\packer\Autounattend.ps1
 
+        - name: "Copying get_adapter_names.sh to Windows Directory"
+          ansible.windows.win_template:
+            src: get_adapter_names.sh.j2
+            dest: C:\Windows\System32\get_adapter_names.sh
+
         - name: "Copying provision-Autounattend.xml to packer directory"
           ansible.windows.win_template:
             src: provision-Autounattend.xml.j2
