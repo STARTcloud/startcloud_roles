@@ -24,6 +24,7 @@
         - "{{ python_simple_web_server_path }}/.cache"
         - "{{ python_simple_web_server_path }}/.cache/pip"
         - "{{ python_simple_web_server_path }}/.local"
+        - "/vagrant/installers"
 
     -
       name: "Installing uploadserver for Python Web Server" # Installs the uploadserver package for the Python web server.
