@@ -165,6 +165,23 @@
           async: 3600
           poll: 15
           when: asterisk_bin_path.stat.exists == False
+
+        -
+          name: "Managing progress for {{ ansible_role_name }} - Installation Complete"
+          when: count_progress | default(false)
+          block:
+            - 
+              name: "Incrementing global progress step counter"
+              ansible.builtin.set_fact:
+                global_current_progress_step: "{{ global_current_progress_step | default(0) | int + 1 }}"
+            -
+              name: "Including progress reporting task"
+              ansible.builtin.include_role:
+                name: startcloud.startcloud_roles.progress
+              vars:
+                current_progress_step: "{{ global_current_progress_step | default(0) | int }}"
+                total_progress_steps: "{{ total_progress_steps_count | default(1) | int }}"
+                progress_description: "{{ progress_description_step4 | default(ansible_role_name + ' - Installation Complete') }}"
     
         -
           name: "Changing file ownership, group and permissions"

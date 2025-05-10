@@ -1,26 +1,50 @@
 ---
 # tasks file for startcloud.startcloud_roles.progress
--
-  name: "Validating progress task inputs"
-  ansible.builtin.assert:
-    that:
-      - current_progress_step is defined
-      - total_progress_steps is defined
-      - progress_description is defined
-      - current_progress_step is number
-      - total_progress_steps is number
-      - total_progress_steps | int > 0
-    fail_msg: "Progress task called with invalid parameters. CPS_defined: {{ current_progress_step is defined }}, CPS_is_number: {{ current_progress_step is number }}, CPS_value: '{{ current_progress_step }}', TPS_defined: {{ total_progress_steps is defined }}, TPS_is_number: {{ total_progress_steps is number }}, TPS_value: '{{ total_progress_steps }}', DESC_defined: {{ progress_description is defined }}. Required: current_progress_step (number), total_progress_steps (number > 0), progress_description (string)."
-    quiet: true
 
--
-  name: "Calculating progress percentage"
-  ansible.builtin.set_fact:
-    _progress_percentage: "{{ ((current_progress_step | float / total_progress_steps | float) * 100) | round(0, 'floor') | int }}"
+- name: "Progress Role - Setup or Reporting"
+  block:
+    - name: "Setup Mode: Calculate total progress steps"
+      when: _progress_role_is_setup_run | default(false)
+      block:
+        - name: "Initialize calculated total steps"
+          ansible.builtin.set_fact:
+            _calculated_total_steps: 0
 
--
-  name: "Displaying playbook progress: {{ progress_description }}"
-  ansible.builtin.debug:
-    msg:
-      - "{{ progress_description }}"
-      - "{{ _progress_percentage }}%"
+        - name: "Sum progress_units from definitions"
+          ansible.builtin.set_fact:
+            _calculated_total_steps: "{{ _calculated_total_steps | int + item.progress_units | int }}"
+          loop: "{{ _progress_role_definitions_to_calculate }}"
+          when: _progress_role_definitions_to_calculate is defined and (_progress_role_definitions_to_calculate | length > 0)
+
+        - name: "Set total_progress_steps_count fact"
+          ansible.builtin.set_fact:
+            total_progress_steps_count: "{{ _calculated_total_steps }}"
+
+        - name: "Debug: Progress role setup complete"
+          ansible.builtin.debug:
+            msg: "Progress role setup: total_progress_steps_count set to {{ total_progress_steps_count }}. global_current_progress_step is {{ global_current_progress_step | default('not set yet by playbook vars, but should be 0') }}."
+
+    - name: "Reporting Mode: Display progress"
+      when: not (_progress_role_is_setup_run | default(false))
+      block:
+        - name: "Validate progress task inputs for reporting"
+          ansible.builtin.assert:
+            that:
+              - current_progress_step is defined
+              - total_progress_steps_count is defined # Relies on this being set by the setup run
+              - progress_description is defined
+              - current_progress_step is number
+              - total_progress_steps_count is number
+              - total_progress_steps_count | int > 0
+            fail_msg: "Progress reporting task called with invalid parameters. CPS_defined: {{current_progress_step is defined}}, CPS_is_number: {{current_progress_step is number}}, CPS_value: '{{current_progress_step}}', TPS_defined: {{total_progress_steps_count is defined}}, TPS_is_number: {{total_progress_steps_count is number}}, TPS_value: '{{total_progress_steps_count}}', DESC_defined: {{progress_description is defined}}. Required: current_progress_step (number), total_progress_steps_count (number > 0 from setup), progress_description (string)."
+            quiet: true
+
+        - name: "Calculate progress percentage"
+          ansible.builtin.set_fact:
+            _progress_percentage: "{{ ((current_progress_step | float / total_progress_steps_count | float) * 100) | round(0, 'floor') | int }}"
+
+        - name: "Displaying playbook progress: {{ progress_description }}"
+          ansible.builtin.debug:
+            msg:
+              - "{{ progress_description }}"
+              - "{{ _progress_percentage }}%"
