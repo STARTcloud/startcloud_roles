@@ -71,7 +71,7 @@
           ansible.builtin.user: 
             comment: Asterisk SIP User
             shell: /bin/bash
-            name: "{{ asterisk_user}}"
+            name: "{{ asterisk_user }}"
             password: "{{ asterisk_user_pass | password_hash('sha512') }}"
             groups:
               - "{{ asterisk_group }}"
@@ -85,7 +85,7 @@
             path: /data
             state: directory
             mode: '0755'
-            owner: "{{ asterisk_user}}"
+            owner: "{{ asterisk_user }}"
             group: "{{ asterisk_group }}"
     
         -
@@ -93,7 +93,7 @@
           ansible.builtin.file:
             path: "{{ item }}"
             state: directory
-            owner: "{{ asterisk_user}}"
+            owner: "{{ asterisk_user }}"
           with_items:
             - "{{ asterisk_source_dir }}"
             - "{{ asterisk_config_dir }}"
@@ -139,7 +139,7 @@
           name: "Changing file ownership, group and permissions"
           ansible.builtin.file:
             path: "{{ item }}"
-            owner: "{{ asterisk_user}}"
+            owner: "{{ asterisk_user }}"
             group: "{{ asterisk_group }}"
             mode: '0755'
             state: directory
@@ -159,7 +159,7 @@
             path: "{{ ASTERISK_LOG }}"
             state: directory
             mode: '0755'
-            owner: "{{ asterisk_user}}"
+            owner: "{{ asterisk_user }}"
             group: "{{ asterisk_group }}"
 
         -
@@ -187,7 +187,7 @@
           ansible.builtin.copy:
             src: './files/conf/'
             dest: "{{ asterisk_config_dir }}"
-            owner: "{{ asterisk_user}}"
+            owner: "{{ asterisk_user }}"
             group: "{{ asterisk_group }}"
 
         -
@@ -196,7 +196,7 @@
             src: 'sysconfig.sh.j2'
             dest: '/etc/default/asterisk'
             mode: "+x"
-            owner: "{{ asterisk_user}}"
+            owner: "{{ asterisk_user }}"
             group: "{{ asterisk_group }}"
 
         -
