@@ -146,7 +146,7 @@
             recurse: true
           loop:
             - "{{ asterisk_lib_dir }}"
-            - "{{ ASTERISK_LOG }}"
+            - "{{ asterisk_log_dir }}"
             - "{{ asterisk_run_dir }}"
             - "{{ asterisk_spool_dir }}"
             - "{{ asterisk_lib64_dir }}"
@@ -156,7 +156,7 @@
         -
           name: "Setting Asterisk ACLs"
           file:
-            path: "{{ ASTERISK_LOG }}"
+            path: "{{ asterisk_log_dir }}"
             state: directory
             mode: '0755'
             owner: "{{ asterisk_user }}"
