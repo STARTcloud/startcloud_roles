@@ -10,7 +10,7 @@
       - current_progress_step is number
       - total_progress_steps is number
       - total_progress_steps | int > 0
-    fail_msg: "Progress task called with invalid parameters. Required: current_progress_step (number), total_progress_steps (number > 0), progress_description (string)."
+    fail_msg: "Progress task called with invalid parameters. CPS_defined: {{ current_progress_step is defined }}, CPS_is_number: {{ current_progress_step is number }}, CPS_value: '{{ current_progress_step }}', TPS_defined: {{ total_progress_steps is defined }}, TPS_is_number: {{ total_progress_steps is number }}, TPS_value: '{{ total_progress_steps }}', DESC_defined: {{ progress_description is defined }}. Required: current_progress_step (number), total_progress_steps (number > 0), progress_description (string)."
     quiet: true
 
 -
