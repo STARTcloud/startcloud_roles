@@ -13,9 +13,10 @@
       ansible.builtin.include_role:
         name: startcloud.startcloud_roles.progress
       vars:
-        current_progress_step: "{{ global_current_progress_step | default(0) | int }}"
-        total_progress_steps: "{{ total_progress_steps_count | default(1) | int }}"
+        _progress_role_is_setup_run: false
+        current_progress_step: "{{ global_current_progress_step | default(0) }}"
         progress_description: "{{ progress_role_description | default('Processing ' + ansible_role_name) }}"
+
 -
   name: "Block to Allow Loading of Variables without running task"
   when: run_tasks

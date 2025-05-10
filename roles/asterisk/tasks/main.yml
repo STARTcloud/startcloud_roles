@@ -1,21 +1,21 @@
 ---
 -
-  name: "Managing progress for {{ ansible_role_name }}"
+  name: "Managing progress for {{ ansible_role_name }} (Step 1 of 4)"
   when: count_progress | default(false)
   block:
     -
-      name: "Incrementing global progress step counter for {{ ansible_role_name }}"
+      name: "Incrementing global progress step counter for {{ ansible_role_name }} (Step 1)"
       ansible.builtin.set_fact:
         global_current_progress_step: "{{ global_current_progress_step | default(0) | int + 1 }}"
 
     -
-      name: "Including progress reporting task for {{ ansible_role_name }}"
+      name: "Including progress reporting task for {{ ansible_role_name }} (Step 1)"
       ansible.builtin.include_role:
         name: startcloud.startcloud_roles.progress
       vars:
-        current_progress_step: "{{ global_current_progress_step | default(0) | int }}"
-        total_progress_steps: "{{ total_progress_steps_count | default(1) | int }}"
-        progress_description: "{{ progress_role_description | default('Processing ' + ansible_role_name) }}"
+        _progress_role_is_setup_run: false
+        current_progress_step: "{{ global_current_progress_step | default(0) }}"
+        progress_description: "{{ progress_role_description | default('Processing ' + ansible_role_name + ' - Step 1') }}"
 
 -
   name: "Block to Allow Loading of Variables without running task"
@@ -34,242 +34,247 @@
           ansible.builtin.command: dpkg --print-architecture
           register: deb_architecture
           changed_when: false
-    
+
         -
           name: "Printing DEB architecture"
           ansible.builtin.debug:
             msg: "deb_architecture.stdout: {{ deb_architecture.stdout }}"
-    
+
         -
           name: "Ensuring apt cache is updated"
           ansible.builtin.apt:
             cache_valid_time: 3600
             update_cache: true
-    
+
         -
           name: "Upgrading all apt packages"
           ansible.builtin.apt:
             upgrade: dist
             update_cache: true
-    
+
         -
           name: "Adding Additional Dependencies"
           ansible.builtin.apt:
             name: "{{ packages }}"
             state: present
 
-        -
-          name: "Checking if Asterisk is installed"
-          ansible.builtin.stat:
-            path: "{{ asterisk_config_dir }}"
-          register: asterisk_bin_path
+-
+  name: "Managing progress for {{ ansible_role_name }} (Step 2 of 4)"
+  when: count_progress | default(false) and run_tasks and (ansible_os_family == 'Debian')
+  block:
+    -
+      name: "Incrementing global progress step counter for {{ ansible_role_name }} (Step 2)"
+      ansible.builtin.set_fact:
+        global_current_progress_step: "{{ global_current_progress_step | default(0) | int + 1 }}"
 
-        -
-          name: "Managing progress for {{ ansible_role_name }} - Initial Setup"
-          when: count_progress | default(false)
-          block:
-            - 
-              name: "Incrementing global progress step counter"
-              ansible.builtin.set_fact:
-                global_current_progress_step: "{{ global_current_progress_step | default(0) | int + 1 }}"
-            -
-              name: "Including progress reporting task"
-              ansible.builtin.include_role:
-                name: startcloud.startcloud_roles.progress
-              vars:
-                current_progress_step: "{{ global_current_progress_step | default(0) | int }}"
-                total_progress_steps: "{{ total_progress_steps_count | default(1) | int }}"
-                progress_description: "{{ progress_description_step2 | default(ansible_role_name + ' - Initial Setup') }}"
+    -
+      name: "Including progress reporting task for {{ ansible_role_name }} (Step 2)"
+      ansible.builtin.include_role:
+        name: startcloud.startcloud_roles.progress
+      vars:
+        _progress_role_is_setup_run: false
+        current_progress_step: "{{ global_current_progress_step | default(0) }}"
+        progress_description: "{{ progress_description_step2 | default('Processing ' + ansible_role_name + ' - Step 2') }}"
 
-        -
-          name: Ensure group "asterisk" exists
-          ansible.builtin.group:
-            name: "{{ asterisk_group }}"
-            state: present
+-
+  name: "Asterisk User and Directory Setup"
+  when: run_tasks and (ansible_os_family == 'Debian')
+  block:
+    -
+      name: "Checking if Asterisk is installed (Pre-Setup)"
+      ansible.builtin.stat:
+        path: "{{ asterisk_config_dir }}"
+      register: asterisk_bin_path
 
-        - 
-          name: "Adding the user asterisk"
-          ansible.builtin.user: 
-            comment: Asterisk SIP User
-            shell: /bin/bash
-            name: "{{ asterisk_user }}"
-            password: "{{ asterisk_user_pass | password_hash('sha512') }}"
-            groups:
-              - "{{ asterisk_group }}"
-              - audio
-              - dialout
-              - "{{ service_group }}"
+    -
+      name: Ensure group "asterisk" exists
+      ansible.builtin.group:
+        name: "{{ asterisk_group }}"
+        state: present
 
-        -
-          name: "Creating Export Directoring"
-          file:
-            path: /data
-            state: directory
-            mode: '0755'
-            owner: "{{ asterisk_user }}"
-            group: "{{ asterisk_group }}"
-    
-        -
-          name: "Creating asterisk directories if they do not exist"
-          ansible.builtin.file:
-            path: "{{ item }}"
-            state: directory
-            owner: "{{ asterisk_user }}"
-          with_items:
-            - "{{ asterisk_source_dir }}"
-            - "{{ asterisk_config_dir }}"
+    - 
+      name: "Adding the user asterisk"
+      ansible.builtin.user: 
+        comment: Asterisk SIP User
+        shell: /bin/bash
+        name: "{{ asterisk_user }}"
+        password: "{{ asterisk_user_pass | password_hash('sha512') }}"
+        groups:
+          - "{{ asterisk_group }}"
+          - audio
+          - dialout
+          - "{{ service_group }}"
 
-        -
-          name: "Downloading and Extract Asterisk"
-          unarchive:
-            src: "{{ asterisk_package }}"
-            dest: "{{ asterisk_source_dir }}"
-            remote_src: yes
-            list_files: yes
-          register: asterisk_archive_contents
+    -
+      name: "Creating Export Directoring"
+      ansible.builtin.file:
+        path: /data
+        state: directory
+        mode: '0755'
+        owner: "{{ asterisk_user }}"
+        group: "{{ asterisk_group }}"
 
-        -
-          name: "Checking if Asterisk is installed"
-          debug:
-            msg: "Asterisk directory path is {{ asterisk_source_dir }}/{{ asterisk_archive_contents.files[0] }}, installed: {{ asterisk_bin_path.stat.exists }}"
+    -
+      name: "Creating asterisk directories if they do not exist"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ asterisk_user }}"
+      with_items:
+        - "{{ asterisk_source_dir }}"
+        - "{{ asterisk_config_dir }}"
 
-        -
-          name: "Managing progress for {{ ansible_role_name }} - Compiling & Installing"
-          when: count_progress | default(false)
-          block:
-            -
-              name: "Incrementing global progress step counter"
-              ansible.builtin.set_fact:
-                global_current_progress_step: "{{ global_current_progress_step | default(0) | int + 1 }}"
-            -
-              name: "Including progress reporting task"
-              ansible.builtin.include_role:
-                name: startcloud.startcloud_roles.progress
-              vars:
-                current_progress_step: "{{ global_current_progress_step | default(0) | int }}"
-                total_progress_steps: "{{ total_progress_steps_count | default(1) | int }}"
-                progress_description: "{{ progress_description_step3 | default(ansible_role_name + ' - Compiling & Installing') }}"
+    -
+      name: "Downloading and Extract Asterisk"
+      ansible.builtin.unarchive:
+        src: "{{ asterisk_package }}"
+        dest: "{{ asterisk_source_dir }}"
+        remote_src: yes
+        list_files: yes
+      register: asterisk_archive_contents
 
-        -
-          name: "Installing Asterisk Packages"
-          command: "{{ item }}"
-          with_items:
-            - ./configure --with-jansson-bundled
-            - make
-            - make install
-            - make config
-            - make install-logrotate
-            - ldconfig
-          args:
-            chdir: "{{ asterisk_source_dir }}/{{ asterisk_archive_contents.files[0] }}"
-          async: 3600
-          poll: 15
-          when: asterisk_bin_path.stat.exists == False
+    -
+      name: "Checking if Asterisk is installed (Post-Download)"
+      ansible.builtin.debug:
+        msg: "Asterisk directory path is {{ asterisk_source_dir }}/{{ asterisk_archive_contents.files[0] }}, installed: {{ asterisk_bin_path.stat.exists }}"
 
-        -
-          name: "Managing progress for {{ ansible_role_name }} - Installation Complete"
-          when: count_progress | default(false)
-          block:
-            - 
-              name: "Incrementing global progress step counter"
-              ansible.builtin.set_fact:
-                global_current_progress_step: "{{ global_current_progress_step | default(0) | int + 1 }}"
-            -
-              name: "Including progress reporting task"
-              ansible.builtin.include_role:
-                name: startcloud.startcloud_roles.progress
-              vars:
-                current_progress_step: "{{ global_current_progress_step | default(0) | int }}"
-                total_progress_steps: "{{ total_progress_steps_count | default(1) | int }}"
-                progress_description: "{{ progress_description_step4 | default(ansible_role_name + ' - Installation Complete') }}"
-    
-        -
-          name: "Changing file ownership, group and permissions"
-          ansible.builtin.file:
-            path: "{{ item }}"
-            owner: "{{ asterisk_user }}"
-            group: "{{ asterisk_group }}"
-            mode: '0755'
-            state: directory
-            recurse: true
-          loop:
-            - "{{ asterisk_lib_dir }}"
-            - "{{ asterisk_log_dir }}"
-            - "{{ asterisk_run_dir }}"
-            - "{{ asterisk_spool_dir }}"
-            - "{{ asterisk_lib64_dir }}"
-            - "{{ asterisk_user_lib_dir }}"
-            - "{{ asterisk_config_dir }}"
-      
-        -
-          name: "Setting Asterisk ACLs"
-          file:
-            path: "{{ asterisk_log_dir }}"
-            state: directory
-            mode: '0755'
-            owner: "{{ asterisk_user }}"
-            group: "{{ asterisk_group }}"
+-
+  name: "Managing progress for {{ ansible_role_name }} (Step 3 of 4)"
+  when: count_progress | default(false) and run_tasks and (ansible_os_family == 'Debian')
+  block:
+    -
+      name: "Incrementing global progress step counter for {{ ansible_role_name }} (Step 3)"
+      ansible.builtin.set_fact:
+        global_current_progress_step: "{{ global_current_progress_step | default(0) | int + 1 }}"
 
-        -
-          name: "Removing Asterisk init.d script"
-          ansible.builtin.file:
-            path: /etc/init.d/asterisk
-            state: absent
+    -
+      name: "Including progress reporting task for {{ ansible_role_name }} (Step 3)"
+      ansible.builtin.include_role:
+        name: startcloud.startcloud_roles.progress
+      vars:
+        _progress_role_is_setup_run: false
+        current_progress_step: "{{ global_current_progress_step | default(0) }}"
+        progress_description: "{{ progress_description_step3 | default('Processing ' + ansible_role_name + ' - Step 3') }}"
 
-        -
-          name: "Copying Asterisk Templates"
-          ansible.builtin.template:
-            src: asterisk.service.j2
-            dest: /etc/systemd/system/asterisk.service
+-
+  name: "Asterisk Compilation and Installation"
+  when: run_tasks and (ansible_os_family == 'Debian') and asterisk_bin_path.stat.exists == False # Original when for install
+  block:
+      -
+        name: "Installing Asterisk Packages"
+        ansible.builtin.command: "{{ item }}"
+        with_items:
+          - ./configure --with-jansson-bundled
+          - make
+          - make install
+          - make config
+          - make install-logrotate
+          - ldconfig
+        args:
+          chdir: "{{ asterisk_source_dir }}/{{ asterisk_archive_contents.files[0] }}"
+        async: 3600 # Consider if async is still needed if this is a distinct progress step
+        poll: 15
+-
+  name: "Managing progress for {{ ansible_role_name }} (Step 4 of 4)"
+  when: count_progress | default(false) and run_tasks and (ansible_os_family == 'Debian')
+  block:
+    -
+      name: "Incrementing global progress step counter for {{ ansible_role_name }} (Step 4)"
+      ansible.builtin.set_fact:
+        global_current_progress_step: "{{ global_current_progress_step | default(0) | int + 1 }}"
 
-        -
-          name: "Restarting Asterisk server"
-          ansible.builtin.systemd_service:
-            name: asterisk.service
-            state: restarted
-            enabled: true
-            daemon_reload: true
+    -
+      name: "Including progress reporting task for {{ ansible_role_name }} (Step 4)"
 
-        -
-          name: "Copying Asterisk configuration to remote"
-          ansible.builtin.copy:
-            src: './files/conf/'
-            dest: "{{ asterisk_config_dir }}"
-            owner: "{{ asterisk_user }}"
-            group: "{{ asterisk_group }}"
+      ansible.builtin.include_role:
+        name: startcloud.startcloud_roles.progress
+      vars:
+        _progress_role_is_setup_run: false
+        current_progress_step: "{{ global_current_progress_step | default(0) }}"
+        progress_description: "{{ progress_description_step4 | default('Processing ' + ansible_role_name + ' - Step 4') }}"
 
-        -
-          name: "Copying Config files to Asterisk Box"
-          ansible.builtin.template:
-            src: 'sysconfig.sh.j2'
-            dest: '/etc/default/asterisk'
-            mode: "+x"
-            owner: "{{ asterisk_user }}"
-            group: "{{ asterisk_group }}"
-
-        -
-          name: "Loading Asterisk Security module"
-          ansible.builtin.lineinfile:
-            path: "{{ asterisk_config_dir }}/modules.conf"
-            search_string: 'load => res_security_log.so'
-            line: load => res_security_log.so
-
-        -
-          name: "Enabling Asterisk Security logs"
-          ansible.builtin.lineinfile:
-            path: "{{ asterisk_config_dir }}/logger.conf"
-            search_string: 'security = security'
-            line: security = security
-
-        -
-          name: "Copying jail.local template"
-          ansible.builtin.template:
-            src: asterisk.jail.local.j2
-            dest: /etc/fail2ban/jail.d/asterisk.conf
-
-        -
-          name: "Starting and Enabling fail2ban"
-          ansible.builtin.systemd:
-            name: fail2ban
-            state: restarted
-            enabled: true
+-
+  name: "Asterisk Final Configuration" # New block for remaining tasks
+  when: run_tasks and (ansible_os_family == 'Debian')
+  block:
+    -
+      name: "Changing file ownership, group and permissions"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        owner: "{{ asterisk_user }}"
+        group: "{{ asterisk_group }}"
+        mode: '0755'
+        state: directory
+        recurse: true
+      loop:
+        - "{{ asterisk_lib_dir }}"
+        - "{{ asterisk_log_dir }}"
+        - "{{ asterisk_run_dir }}"
+        - "{{ asterisk_spool_dir }}"
+        - "{{ asterisk_lib64_dir }}"
+        - "{{ asterisk_user_lib_dir }}"
+        - "{{ asterisk_config_dir }}"
+  
+    -
+      name: "Setting Asterisk ACLs"
+      file:
+        path: "{{ asterisk_log_dir }}"
+        state: directory
+        mode: '0755'
+        owner: "{{ asterisk_user }}"
+        group: "{{ asterisk_group }}
+    -
+      name: "Removing Asterisk init.d script"
+      ansible.builtin.file:
+        path: /etc/init.d/asterisk
+        state: absen
+    -
+      name: "Copying Asterisk Templates"
+      ansible.builtin.template:
+        src: asterisk.service.j2
+        dest: /etc/systemd/system/asterisk.servic
+    -
+      name: "Restarting Asterisk server"
+      ansible.builtin.systemd_service:
+        name: asterisk.service
+        state: restarted
+        enabled: true
+        daemon_reload: tru
+    -
+      name: "Copying Asterisk configuration to remote"
+      ansible.builtin.copy:
+        src: './files/conf/'
+        dest: "{{ asterisk_config_dir }}"
+        owner: "{{ asterisk_user }}"
+        group: "{{ asterisk_group }}
+    -
+      name: "Copying Config files to Asterisk Box"
+      ansible.builtin.template:
+        src: 'sysconfig.sh.j2'
+        dest: '/etc/default/asterisk'
+        mode: "+x"
+        owner: "{{ asterisk_user }}"
+        group: "{{ asterisk_group }}
+    -
+      name: "Loading Asterisk Security module"
+      ansible.builtin.lineinfile:
+        path: "{{ asterisk_config_dir }}/modules.conf"
+        search_string: 'load => res_security_log.so'
+        line: load => res_security_log.s
+    -
+      name: "Enabling Asterisk Security logs"
+      ansible.builtin.lineinfile:
+        path: "{{ asterisk_config_dir }}/logger.conf"
+        search_string: 'security = security'
+        line: security = securit
+    -
+      name: "Copying jail.local template"
+      ansible.builtin.template:
+        src: asterisk.jail.local.j2
+        dest: /etc/fail2ban/jail.d/asterisk.con
+    -
+      name: "Starting and Enabling fail2ban"
+      ansible.builtin.systemd:
+        name: fail2ban
+        state: restarted
+        enabled: true

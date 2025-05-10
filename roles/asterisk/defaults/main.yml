@@ -1,7 +1,8 @@
 ---
 run_tasks: true
 count_progress: true
-progress_role_description: "Configuring Asterisk Core (Step 1 of 4)"
+progress_units: 4 # Explicitly define based on descriptions
+progress_role_description: "Configuring Asterisk Core (Step 1 of 4)" # This will be used for step 1
 progress_description_step2: "Asterisk Core: Installing Build Dependencies"
 progress_description_step3: "Asterisk Core: Pre-build Setup & Configuration"
 progress_description_step4: "Asterisk Core: Compiling & Installing Asterisk"

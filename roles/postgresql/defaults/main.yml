@@ -1,6 +1,7 @@
 ---
 run_tasks: true
 count_progress: true
+progress_units: 1
 progress_role_description: "Configuring PostgreSQL (startcloud_roles)"
 
 # RHEL/CentOS only. Set a repository to use for PostgreSQL installation.
