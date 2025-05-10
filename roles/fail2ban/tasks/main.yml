@@ -1,36 +1,52 @@
 ---
 -
-  name: "Logging playbook progress"
-  ansible.builtin.debug:
-    msg:
-      - "Installing fail2ban"
-      - "72"
+  name: "Managing progress for {{ ansible_role_name }}"
+  when: count_progress | default(false)
+  block:
+    -
+      name: "Incrementing global progress step counter for {{ ansible_role_name }}"
+      ansible.builtin.set_fact:
+        global_current_progress_step: "{{ hostvars['localhost'].global_current_progress_step | default(0) | int + 1 }}"
+      delegate_to: localhost
+      run_once: true
 
+    -
+      name: "Including progress reporting task for {{ ansible_role_name }}"
+      ansible.builtin.include_role:
+        name: startcloud.startcloud_roles.progress
+      vars:
+        current_progress_step: "{{ hostvars['localhost'].global_current_progress_step }}"
+        total_progress_steps: "{{ total_progress_steps_count }}"
+        progress_description: "{{ progress_role_description | default('Processing ' + ansible_role_name) }}"
 -
-  name: "Installing fail2ban"
-  ansible.builtin.apt:
-    name: fail2ban
-    state: present
-    update_cache: no
-  register: result
-  retries: 10
-  delay: 5
-  until: result is success or ('Unable to acquire the dpkg frontend lock' not in result.msg and '/var/lib/dpkg/lock-frontend' not in result.msg)
-
--
-  name: "Creating fail2ban directories if they do not exist"
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: directory
-    owner: root
-    group: root
-  with_items:
-    - "/etc/fail2ban"
-    - "/etc/fail2ban/jail.d"
-
--
-  name: "Starting and Enabling fail2ban"
-  ansible.builtin.systemd:
-    name: fail2ban
-    state: restarted
-    enabled: true
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    -
+      name: "Installing fail2ban"
+      ansible.builtin.apt:
+        name: fail2ban
+        state: present
+        update_cache: no
+      register: result
+      retries: 10
+      delay: 5
+      until: result is success or ('Unable to acquire the dpkg frontend lock' not in result.msg and '/var/lib/dpkg/lock-frontend' not in result.msg)
+    
+    -
+      name: "Creating fail2ban directories if they do not exist"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+      with_items:
+        - "/etc/fail2ban"
+        - "/etc/fail2ban/jail.d"
+    
+    -
+      name: "Starting and Enabling fail2ban"
+      ansible.builtin.systemd:
+        name: fail2ban
+        state: restarted
+        enabled: true

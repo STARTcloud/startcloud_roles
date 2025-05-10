@@ -1,3 +1,23 @@
+---
+-
+  name: "Managing progress for {{ ansible_role_name }}"
+  when: count_progress | default(false)
+  block:
+    -
+      name: "Incrementing global progress step counter for {{ ansible_role_name }}"
+      ansible.builtin.set_fact:
+        global_current_progress_step: "{{ hostvars['localhost'].global_current_progress_step | default(0) | int + 1 }}"
+      delegate_to: localhost
+      run_once: true
+
+    -
+      name: "Including progress reporting task for {{ ansible_role_name }}"
+      ansible.builtin.include_role:
+        name: startcloud.startcloud_roles.progress
+      vars:
+        current_progress_step: "{{ hostvars['localhost'].global_current_progress_step }}"
+        total_progress_steps: "{{ total_progress_steps_count }}"
+        progress_description: "{{ progress_role_description | default('Processing ' + ansible_role_name) }}"
 -
   name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
@@ -47,4 +67,3 @@
     -
       name: "Configuring Postgres User properties"
       ansible.builtin.import_tasks: users_props.yml
-    

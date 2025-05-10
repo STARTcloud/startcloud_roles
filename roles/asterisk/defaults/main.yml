@@ -1,5 +1,9 @@
 ---
 run_tasks: true
+count_progress: true
+progress_role_description: "Configuring Asterisk (startcloud_roles) (Step 1 of 3)"
+progress_description_step2: "Asterisk Core: Initial Setup"
+progress_description_step3: "Asterisk Core: Compiling & Installing"
 
 # Ports for Asterisk's built-in HTTP/HTTPS server
 # These are often used for serving static content, ARI (Asterisk REST Interface), etc.

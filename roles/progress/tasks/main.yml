@@ -1,0 +1,26 @@
+---
+# tasks file for startcloud.startcloud_roles.progress
+-
+  name: "Validating progress task inputs"
+  ansible.builtin.assert:
+    that:
+      - current_progress_step is defined
+      - total_progress_steps is defined
+      - progress_description is defined
+      - current_progress_step is number
+      - total_progress_steps is number
+      - total_progress_steps | int > 0
+    fail_msg: "Progress task called with invalid parameters. Required: current_progress_step (number), total_progress_steps (number > 0), progress_description (string)."
+    quiet: true
+
+-
+  name: "Calculating progress percentage"
+  ansible.builtin.set_fact:
+    _progress_percentage: "{{ ((current_progress_step | float / total_progress_steps | float) * 100) | round(0, 'floor') | int }}"
+
+-
+  name: "Displaying playbook progress: {{ progress_description }}"
+  ansible.builtin.debug:
+    msg:
+      - "{{ progress_description }}"
+      - "{{ _progress_percentage }}%"
