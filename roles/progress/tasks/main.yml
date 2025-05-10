@@ -20,13 +20,9 @@
 
         - name: "Sum progress_units from definitions"
           ansible.builtin.set_fact:
-            _calculated_total_steps: "{{ _calculated_total_steps | int + (item.vars.progress_units | default(0) | int) }}"
+            _calculated_total_steps: "{{ _calculated_total_steps | int + item.progress_units | int }}"
           loop: "{{ _progress_role_definitions_to_calculate }}"
-          when:
-            - _progress_role_definitions_to_calculate is defined
-            - (_progress_role_definitions_to_calculate | length > 0)
-            - item.vars.count_progress | default(false) # Only sum for roles that count progress
-            - item.vars.run_tasks | default(true)      # Only sum for roles that are set to run
+          when: _progress_role_definitions_to_calculate is defined and (_progress_role_definitions_to_calculate | length > 0)
 
         - name: "Set total_progress_steps_count fact"
           ansible.builtin.set_fact:
@@ -40,28 +36,31 @@
       when: not (_progress_role_is_setup_run is defined and _progress_role_is_setup_run)
       block:
         # Ensure types are correct upon entry to this block for reporting
+        - name: "Ensure progress variables are integers for reporting"
+          ansible.builtin.set_fact:
+            current_progress_step_int: "{{ current_progress_step | int }}"
+            total_progress_steps_count_int: "{{ total_progress_steps_count | int }}"
+          when: current_progress_step is defined and total_progress_steps_count is defined
+
         - name: "Validate progress task inputs for reporting"
           ansible.builtin.assert:
             that:
-              - current_progress_step is defined
-              - total_progress_steps_count is defined
+              - current_progress_step_int is defined
+              - total_progress_steps_count_int is defined
               - progress_description is defined
-              - (current_progress_step | string).isdigit() # Check if it's a string of digits
-              - (total_progress_steps_count | string).isdigit() # Check if it's a string of digits
-              - (total_progress_steps_count | int) > 0 # Perform int conversion directly in the check
-            fail_msg: "Progress reporting task called with invalid parameters. current_progress_step: '{{current_progress_step}}', total_progress_steps_count: '{{total_progress_steps_count}}', progress_description: '{{progress_description}}'. Required: current_progress_step (numeric), total_progress_steps_count (numeric > 0), progress_description."
+              # - current_progress_step_int is number # Relaxing this, relying on |int filter
+              # - total_progress_steps_count_int is number # Relaxing this, relying on |int filter
+              - total_progress_steps_count_int > 0 # This is the most critical numeric check
+            fail_msg: "Progress reporting task called with invalid parameters. current_progress_step_int: '{{current_progress_step_int}}', total_progress_steps_count_int: '{{total_progress_steps_count_int}}', progress_description: '{{progress_description}}'. Required: current_progress_step, total_progress_steps_count > 0, progress_description."
             quiet: true
-          when: current_progress_step is defined and total_progress_steps_count is defined # Basic check before complex assertions
+          when: current_progress_step_int is defined and total_progress_steps_count_int is defined # Only assert if vars for assertion are set
 
         - name: "Calculate progress percentage"
           ansible.builtin.set_fact:
-            _progress_percentage: "{{ (( (current_progress_step | int) | float / (total_progress_steps_count | int) | float) * 100) | round(0, 'floor') | int }}"
-          when:
-            - current_progress_step is defined
-            - total_progress_steps_count is defined
-            - (total_progress_steps_count | int) > 0
-            - (current_progress_step | string).isdigit()
-            - (total_progress_steps_count | string).isdigit()
+            _progress_percentage: "{{ ((current_progress_step_int | float / total_progress_steps_count_int | float) * 100) | round(0, 'floor') | int }}"
+          when: current_progress_step_int is defined and total_progress_steps_count_int is defined and total_progress_steps_count_int > 0 and (current_progress_step_int | string is SANE_STRING_REGEX) and (total_progress_steps_count_int | string is SANE_STRING_REGEX)
+          vars:
+            SANE_STRING_REGEX: '^[0-9]+$' # Ensure they look like numbers before float conversion
 
 
         - name: "PROGRESS ({{ _progress_percentage | default('N/A') }}%) --- {{ progress_description | default('Waiting for details...') }}"
