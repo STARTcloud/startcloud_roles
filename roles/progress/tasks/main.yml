@@ -4,7 +4,7 @@
 - name: "Progress Role - Setup or Reporting"
   block:
     - name: "Setup Mode: Calculate total progress steps"
-      when: _progress_role_is_setup_run | default(false)
+      when: _progress_role_is_setup_run is defined and _progress_role_is_setup_run
       block:
         - name: "Initialize calculated total steps"
           ansible.builtin.set_fact:
@@ -25,7 +25,7 @@
             msg: "Progress role setup: total_progress_steps_count set to {{ total_progress_steps_count }}. global_current_progress_step is {{ global_current_progress_step | default('not set yet by playbook vars, but should be 0') }}."
 
     - name: "Reporting Mode: Display progress"
-      when: not (_progress_role_is_setup_run | default(false))
+      when: not (_progress_role_is_setup_run is defined and _progress_role_is_setup_run)
       block:
         - name: "Validate progress task inputs for reporting"
           ansible.builtin.assert:
