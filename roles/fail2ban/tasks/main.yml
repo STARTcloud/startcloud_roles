@@ -1,6 +1,6 @@
 ---
 -
-  name: "Loggin playbook progress"
+  name: "Logging playbook progress"
   ansible.builtin.debug:
     msg:
       - "Installing fail2ban"
