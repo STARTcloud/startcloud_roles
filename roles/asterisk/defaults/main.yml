@@ -11,10 +11,13 @@ asterisk_config_dir: /etc/asterisk
 asterisk_lib_dir: /var/lib/asterisk
 asterisk_run_dir: /var/run/asterisk
 asterisk_spool_dir: /var/spool/asterisk
+asterisk_monitor_dir: "{{ asterisk_spool_dir }}/monitor"
+asterisk_voicemail_dir: "{{ asterisk_spool_dir }}/voicemail"
 asterisk_lib64_dir: /usr/lib64/asterisk
 asterisk_user_lib_dir: /usr/lib/asterisk
 asterisk_custom_sounds_path: "{{ asterisk_lib_dir }}/sounds/en/custom"
 asterisk_log_dir: /var/log/asterisk
+asterisk_bin_dir: "/usr/sbin"
 
 # Asterisk Build
 asterisk_source_dir: /usr/src/asterisk
