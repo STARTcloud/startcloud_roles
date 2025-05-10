@@ -6,16 +6,14 @@
     -
       name: "Incrementing global progress step counter for {{ ansible_role_name }}"
       ansible.builtin.set_fact:
-        global_current_progress_step: "{{ hostvars['localhost'].global_current_progress_step | default(0) | int + 1 }}"
-      delegate_to: localhost
-      run_once: true
+        global_current_progress_step: "{{ global_current_progress_step | default(0) | int + 1 }}"
 
     -
       name: "Including progress reporting task for {{ ansible_role_name }}"
       ansible.builtin.include_role:
         name: startcloud.startcloud_roles.progress
       vars:
-        current_progress_step: "{{ hostvars['localhost'].global_current_progress_step }}"
+        current_progress_step: "{{ global_current_progress_step | default(0) }}"
         total_progress_steps: "{{ total_progress_steps_count }}"
         progress_description: "{{ progress_role_description | default('Processing ' + ansible_role_name) }}"
 
@@ -66,19 +64,20 @@
             path: "{{ asterisk_config_dir }}"
           register: asterisk_bin_path
 
-        - name: "Managing progress for {{ ansible_role_name }} - Initial Setup"
+        -
+          name: "Managing progress for {{ ansible_role_name }} - Initial Setup"
           when: count_progress | default(false)
           block:
-            - name: "Incrementing global progress step counter"
+            - 
+              name: "Incrementing global progress step counter"
               ansible.builtin.set_fact:
-                global_current_progress_step: "{{ hostvars['localhost'].global_current_progress_step | default(0) | int + 1 }}"
-              delegate_to: localhost
-              run_once: true
-            - name: "Including progress reporting task"
+                global_current_progress_step: "{{ global_current_progress_step | default(0) | int + 1 }}"
+            -
+              name: "Including progress reporting task"
               ansible.builtin.include_role:
                 name: startcloud.startcloud_roles.progress
               vars:
-                current_progress_step: "{{ hostvars['localhost'].global_current_progress_step }}"
+                current_progress_step: "{{ global_current_progress_step | default(0) }}"
                 total_progress_steps: "{{ total_progress_steps_count }}"
                 progress_description: "{{ progress_description_step2 | default(ansible_role_name + ' - Initial Setup') }}"
 
@@ -134,19 +133,20 @@
           debug:
             msg: "Asterisk directory path is {{ asterisk_source_dir }}/{{ asterisk_archive_contents.files[0] }}, installed: {{ asterisk_bin_path.stat.exists }}"
 
-        - name: "Managing progress for {{ ansible_role_name }} - Compiling & Installing"
+        -
+          name: "Managing progress for {{ ansible_role_name }} - Compiling & Installing"
           when: count_progress | default(false)
           block:
-            - name: "Incrementing global progress step counter"
+            -
+              name: "Incrementing global progress step counter"
               ansible.builtin.set_fact:
-                global_current_progress_step: "{{ hostvars['localhost'].global_current_progress_step | default(0) | int + 1 }}"
-              delegate_to: localhost
-              run_once: true
-            - name: "Including progress reporting task"
+                global_current_progress_step: "{{ global_current_progress_step | default(0) | int + 1 }}"
+            -
+              name: "Including progress reporting task"
               ansible.builtin.include_role:
                 name: startcloud.startcloud_roles.progress
               vars:
-                current_progress_step: "{{ hostvars['localhost'].global_current_progress_step }}"
+                current_progress_step: "{{ global_current_progress_step | default(0) }}"
                 total_progress_steps: "{{ total_progress_steps_count }}"
                 progress_description: "{{ progress_description_step3 | default(ansible_role_name + ' - Compiling & Installing') }}"
 
