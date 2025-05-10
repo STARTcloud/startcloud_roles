@@ -6,3 +6,8 @@ extra_packages:
 packages:
 
 use_proxy: false
+
+# Progress reporting
+count_progress: true
+progress_units: 1
+progress_role_description: "Installing system dependencies"

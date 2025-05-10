@@ -3,6 +3,20 @@
   name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
+    - name: "Incrementing global progress step counter for {{ ansible_role_name }}"
+      ansible.builtin.set_fact:
+        global_current_progress_step: "{{ global_current_progress_step | int + 1 }}"
+      when: count_progress | default(false)
+
+    - name: "Including progress reporting task for {{ ansible_role_name }}"
+      ansible.builtin.include_role:
+        name: startcloud.startcloud_roles.progress
+      vars:
+        _progress_role_is_setup_run: false
+        current_progress_step: "{{ global_current_progress_step }}"
+        progress_description: "{{ progress_role_description | default('Running ' + ansible_role_name) }}"
+      when: count_progress | default(false)
+
     -
       name: "Setting timezone to {{ timezone }}"
       community.general.timezone:

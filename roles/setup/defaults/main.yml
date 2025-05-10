@@ -8,3 +8,8 @@ debug_all: false
 provisioner_name: Ad-Hoc Playbook
 provisioner_version: v0.0.0
 core_provisioner_version: v0.0.0
+
+# Progress reporting
+count_progress: true
+progress_units: 1
+progress_role_description: "Performing initial system setup"
