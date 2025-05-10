@@ -44,10 +44,12 @@
             _progress_percentage: "{{ ((current_progress_step | float / total_progress_steps_count | float) * 100) | round(0, 'floor') | int }}"
 
         - name: "PROGRESS ({{ _progress_percentage }}%) --- {{ progress_description }}"
-          ansible.builtin.meta: noop
+          ansible.builtin.meta: noop # This task itself doesn't output, but its name will be yellow
           changed_when: true # Always report as changed to get yellow output (if theme supports)
 
         - name: "Show progress message"
           ansible.builtin.debug:
             msg: "Progress: {{ _progress_percentage }}% --- {{ progress_description }}"
-          when: ansible_verbosity >= 0 # Always show this, or adjust verbosity as needed (e.g., ansible_verbosity > 0 for -v)
+          # The when condition applies to this debug task, not the meta: noop above.
+          # ansible_verbosity >= 0 means it will always show unless verbosity is explicitly negative (which is not typical).
+          when: ansible_verbosity >= 0
