@@ -158,7 +158,7 @@
 
 -
   name: "Asterisk Compilation and Installation"
-  when: run_tasks and (ansible_os_family == 'Debian') and asterisk_bin_path.stat.exists == False # Original when for install
+  when: run_tasks and (ansible_os_family == 'Debian') and asterisk_bin_path.stat.exists == False
   block:
       -
         name: "Installing Asterisk Packages"
@@ -172,8 +172,9 @@
           - ldconfig
         args:
           chdir: "{{ asterisk_source_dir }}/{{ asterisk_archive_contents.files[0] }}"
-        async: 3600 # Consider if async is still needed if this is a distinct progress step
+        async: 3600
         poll: 15
+
 -
   name: "Managing progress for {{ ansible_role_name }} (Step 4 of 4)"
   when: count_progress | default(false) and run_tasks and (ansible_os_family == 'Debian')
@@ -194,7 +195,7 @@
         progress_description: "{{ progress_description_step4 | default('Processing ' + ansible_role_name + ' - Step 4') }}"
 
 -
-  name: "Asterisk Final Configuration" # New block for remaining tasks
+  name: "Asterisk Final Configuration"
   when: run_tasks and (ansible_os_family == 'Debian')
   block:
     -
@@ -214,7 +215,7 @@
         - "{{ asterisk_lib64_dir }}"
         - "{{ asterisk_user_lib_dir }}"
         - "{{ asterisk_config_dir }}"
-  
+
     -
       name: "Setting Asterisk ACLs"
       file:
@@ -222,31 +223,36 @@
         state: directory
         mode: '0755'
         owner: "{{ asterisk_user }}"
-        group: "{{ asterisk_group }}
+        group: "{{ asterisk_group }}"
+
     -
       name: "Removing Asterisk init.d script"
       ansible.builtin.file:
         path: /etc/init.d/asterisk
-        state: absen
+        state: absent
+
     -
       name: "Copying Asterisk Templates"
       ansible.builtin.template:
         src: asterisk.service.j2
-        dest: /etc/systemd/system/asterisk.servic
+        dest: /etc/systemd/system/asterisk.service
+
     -
       name: "Restarting Asterisk server"
       ansible.builtin.systemd_service:
         name: asterisk.service
         state: restarted
         enabled: true
-        daemon_reload: tru
+        daemon_reload: true
+
     -
       name: "Copying Asterisk configuration to remote"
       ansible.builtin.copy:
         src: './files/conf/'
         dest: "{{ asterisk_config_dir }}"
         owner: "{{ asterisk_user }}"
-        group: "{{ asterisk_group }}
+        group: "{{ asterisk_group }}"
+
     -
       name: "Copying Config files to Asterisk Box"
       ansible.builtin.template:
@@ -254,24 +260,28 @@
         dest: '/etc/default/asterisk'
         mode: "+x"
         owner: "{{ asterisk_user }}"
-        group: "{{ asterisk_group }}
+        group: "{{ asterisk_group }}"
+
     -
       name: "Loading Asterisk Security module"
       ansible.builtin.lineinfile:
         path: "{{ asterisk_config_dir }}/modules.conf"
         search_string: 'load => res_security_log.so'
-        line: load => res_security_log.s
+        line: load => res_security_log.so
+
     -
       name: "Enabling Asterisk Security logs"
       ansible.builtin.lineinfile:
         path: "{{ asterisk_config_dir }}/logger.conf"
         search_string: 'security = security'
-        line: security = securit
+        line: security = security
+
     -
       name: "Copying jail.local template"
       ansible.builtin.template:
         src: asterisk.jail.local.j2
-        dest: /etc/fail2ban/jail.d/asterisk.con
+        dest: /etc/fail2ban/jail.d/asterisk.conf
+
     -
       name: "Starting and Enabling fail2ban"
       ansible.builtin.systemd:
