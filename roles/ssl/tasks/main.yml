@@ -153,6 +153,30 @@
             mode: '0644'
             remote_src: true
 
+-
+  name: "Managing progress for {{ ansible_role_name }} (Step 2 of 2)"
+  when:
+    - count_progress | default(false)
+    - not selfsigned_enabled and not letsencrypt_enabled
+  block:
+    -
+      name: "Incrementing global progress step counter for {{ ansible_role_name }} (Step 2)"
+      ansible.builtin.set_fact:
+        global_current_progress_step: "{{ global_current_progress_step | default(0) | int + 1 }}"
+
+    -
+      name: "Including progress reporting task for {{ ansible_role_name }} (Step 2)"
+      ansible.builtin.include_role:
+        name: startcloud.startcloud_roles.progress
+      vars:
+        _progress_role_is_setup_run: false
+        current_progress_step: "{{ global_current_progress_step | default(0) }}"
+        progress_description: "{{ progress_role_description_step2 | default('Processing ' + ansible_role_name + ' - Step 2') }}"
+
+-
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
     -
       name: "Generating Self Signed Certificate"
       when: selfsigned_enabled and not letsencrypt_enabled
@@ -371,13 +395,11 @@
             mode: '0644'
             remote_src: true
 
-# Progress Step 2 for SSL Role (Let's Encrypt part)
 -
   name: "Managing progress for {{ ansible_role_name }} (Step 2 of 2)"
   when:
     - count_progress | default(false)
-    - run_tasks # Only if the main block is running
-    - letsencrypt_enabled # This progress step only runs if letsencrypt is enabled
+    - selfsigned_enabled and letsencrypt_enabled
   block:
     -
       name: "Incrementing global progress step counter for {{ ansible_role_name }} (Step 2)"
@@ -394,215 +416,219 @@
         progress_description: "{{ progress_role_description_step2 | default('Processing ' + ansible_role_name + ' - Step 2') }}"
 
 -
-  name: "Beginning Let's Encrypt Provisioning"
-  when: run_tasks and letsencrypt_enabled
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
   block:
     -
-      name: "Ensuring apt cache is updated"
-      ansible.builtin.apt:
-        cache_valid_time: 3600
-        update_cache: true
+      name: "Beginning Let's Encrypt Provisioning"
+      when: selfsigned_enabled and letsencrypt_enabled
+      block:
+        -
+          name: "Ensuring apt cache is updated"
+          ansible.builtin.apt:
+            cache_valid_time: 3600
+            update_cache: true
 
-    -
-      name: "Upgrading all apt packages"
-      ansible.builtin.apt:
-        upgrade: dist
-        update_cache: true
+        -
+          name: "Upgrading all apt packages"
+          ansible.builtin.apt:
+            upgrade: dist
+            update_cache: true
 
-    -
-      name: "Adding certbot via apt repo"
-      ansible.builtin.apt:
-        name: certbot
-        state: present
+        -
+          name: "Adding certbot via apt repo"
+          ansible.builtin.apt:
+            name: certbot
+            state: present
 
-    -
-      name: "Checking if HAProxy is running"
-      ansible.builtin.service:
-        name: haproxy
-        state: started
-      check_mode: yes
-      register: haproxy_status
+        -
+          name: "Checking if HAProxy is running"
+          ansible.builtin.service:
+            name: haproxy
+            state: started
+          check_mode: yes
+          register: haproxy_status
 
-    -
-      name: "Check if HAProxy is in enabled_roles"
-      ansible.builtin.set_fact:
-        haproxy_in_enabled_roles: "{{ 'startcloud.startcloud_roles.haproxy' in (enabled_roles | default([])) }}"
+        -
+          name: "Check if HAProxy is in enabled_roles"
+          ansible.builtin.set_fact:
+            haproxy_in_enabled_roles: "{{ 'startcloud.startcloud_roles.haproxy' in (enabled_roles | default([])) }}"
 
-    -
-      name: "Setting LE entries as a fact to consume"
-      ansible.builtin.set_fact:
-        le_entries: "{{ ['-d ' + settings.hostname + '.' + settings.domain] }}"
+        -
+          name: "Setting LE entries as a fact to consume"
+          ansible.builtin.set_fact:
+            le_entries: "{{ ['-d ' + settings.hostname + '.' + settings.domain] }}"
 
-    -
-      name: "Add subdomain entries to LE entries"
-      ansible.builtin.set_fact:
-        le_entries: "{{ le_entries + ['-d ' + item + '.' + settings.hostname + '.' + settings.domain] }}"
-      loop: "{{ dns_entries_list }}"
+        -
+          name: "Add subdomain entries to LE entries"
+          ansible.builtin.set_fact:
+            le_entries: "{{ le_entries + ['-d ' + item + '.' + settings.hostname + '.' + settings.domain] }}"
+          loop: "{{ dns_entries_list }}"
 
-    -
-      name: "Checking if certificate exists"
-      register: letsencrypt_cert
-      ansible.builtin.stat:
-        path: "/etc/letsencrypt/live/{{ settings.hostname | lower }}.{{ settings.domain | lower }}/cert.pem"
+        -
+          name: "Checking if certificate exists"
+          register: letsencrypt_cert
+          ansible.builtin.stat:
+            path: "/etc/letsencrypt/live/{{ settings.hostname | lower }}.{{ settings.domain | lower }}/cert.pem"
 
-    -
-      name: "Generating new staging certificate request"
-      ansible.builtin.shell: >-
-        certbot certonly --standalone
-        --noninteractive
-        --agree-tos
-        --key-type rsa
-        --staging
-        --email {{ settings.email }}
-        {{ le_entries | join(' ') }}
-      when: (haproxy_status.changed and not haproxy_in_enabled_roles) and not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled
+        -
+          name: "Generating new staging certificate request"
+          ansible.builtin.shell: >-
+            certbot certonly --standalone
+            --noninteractive
+            --agree-tos
+            --key-type rsa
+            --staging
+            --email {{ settings.email }}
+            {{ le_entries | join(' ') }}
+          when: (haproxy_status.changed and not haproxy_in_enabled_roles) and not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled
 
-    -
-      name: "Generating new staging request via HAProxy"
-      ansible.builtin.shell: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --staging --email {{ settings.email }} {{ le_entries | join(' ') }} --http-01-port=8181
-      when: (not haproxy_status.changed or (haproxy_status.changed and haproxy_in_enabled_roles)) and not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled
+        -
+          name: "Generating new staging request via HAProxy"
+          ansible.builtin.shell: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --staging --email {{ settings.email }} {{ le_entries | join(' ') }} --http-01-port=8181
+          when: (not haproxy_status.changed or (haproxy_status.changed and haproxy_in_enabled_roles)) and not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled
 
-    -
-      name: "Generating new certificate request"
-      ansible.builtin.shell: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --email {{ settings.email }} {{ le_entries | join(' ') }}
-      when: (haproxy_status.changed and not haproxy_in_enabled_roles) and not letsencrypt_cert.stat.exists and not letsencrypt_staging_enabled
+        -
+          name: "Generating new certificate request"
+          ansible.builtin.shell: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --email {{ settings.email }} {{ le_entries | join(' ') }}
+          when: (haproxy_status.changed and not haproxy_in_enabled_roles) and not letsencrypt_cert.stat.exists and not letsencrypt_staging_enabled
 
-    -
-      name: "Generating new certificate request via HAProxy"
-      ansible.builtin.shell: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --email {{ settings.email }} {{ le_entries | join(' ') }} --http-01-port=8181
-      when: (not haproxy_status.changed or (haproxy_status.changed and haproxy_in_enabled_roles)) and not letsencrypt_cert.stat.exists and not letsencrypt_staging_enabled
+        -
+          name: "Generating new certificate request via HAProxy"
+          ansible.builtin.shell: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --email {{ settings.email }} {{ le_entries | join(' ') }} --http-01-port=8181
+          when: (not haproxy_status.changed or (haproxy_status.changed and haproxy_in_enabled_roles)) and not letsencrypt_cert.stat.exists and not letsencrypt_staging_enabled
 
-    -
-      name: "Remove old certs Directories for SSLs"
-      ansible.builtin.file:
-        path: "{{ item }}"
-        state: absent
-      with_items:
-        - "{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}.key"
-        - "{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}.crt"
+        -
+          name: "Remove old certs Directories for SSLs"
+          ansible.builtin.file:
+            path: "{{ item }}"
+            state: absent
+          with_items:
+            - "{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}.key"
+            - "{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}.crt"
 
-    -
-      name: "Checking if letsencrypt certificate exists"
-      register: letsencrypt_cert_generated_check
-      become: true
-      ansible.builtin.stat:
-        path: "/etc/letsencrypt/live/{{ settings.hostname | lower }}.{{ settings.domain | lower }}/fullchain.pem"
+        -
+          name: "Checking if letsencrypt certificate exists"
+          register: letsencrypt_cert_generated_check
+          become: true
+          ansible.builtin.stat:
+            path: "/etc/letsencrypt/live/{{ settings.hostname | lower }}.{{ settings.domain | lower }}/fullchain.pem"
 
-    -
-      name: "Copying cert.pem from letsencrypt"
-      when: letsencrypt_cert_generated_check.stat.exists | bool
-      ansible.builtin.copy:
-        src: "/etc/letsencrypt/live/{{ settings.hostname | lower }}.{{ settings.domain | lower }}/fullchain.pem"
-        dest: "{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.crt"
-        owner: "{{ service_user }}"
-        group: "{{ service_group }}"
-        mode: '0644'
-        remote_src: true
+        -
+          name: "Copying cert.pem from letsencrypt"
+          when: letsencrypt_cert_generated_check.stat.exists | bool
+          ansible.builtin.copy:
+            src: "/etc/letsencrypt/live/{{ settings.hostname | lower }}.{{ settings.domain | lower }}/fullchain.pem"
+            dest: "{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.crt"
+            owner: "{{ service_user }}"
+            group: "{{ service_group }}"
+            mode: '0644'
+            remote_src: true
 
-    -
-      name: "Replacing presigned ssl with letsencrypt cert"
-      when: letsencrypt_cert_generated_check.stat.exists | bool
-      ansible.builtin.copy:
-        src: "{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.crt"
-        dest: "{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}.crt"
-        owner: "{{ service_user }}"
-        group: "{{ service_group }}"
-        mode: '0644'
-        remote_src: true
+        -
+          name: "Replacing presigned ssl with letsencrypt cert"
+          when: letsencrypt_cert_generated_check.stat.exists | bool
+          ansible.builtin.copy:
+            src: "{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.crt"
+            dest: "{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}.crt"
+            owner: "{{ service_user }}"
+            group: "{{ service_group }}"
+            mode: '0644'
+            remote_src: true
 
-    -
-      name: "Copying privkey.pem from letsencrypt"
-      when: letsencrypt_cert_generated_check.stat.exists | bool
-      ansible.builtin.copy:
-        src: "/etc/letsencrypt/live/{{ settings.hostname | lower }}.{{ settings.domain | lower }}/privkey.pem"
-        dest: "{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.key"
-        owner: "{{ service_user }}"
-        group: "{{ service_group }}"
-        mode: '0777'
-        remote_src: true
+        -
+          name: "Copying privkey.pem from letsencrypt"
+          when: letsencrypt_cert_generated_check.stat.exists | bool
+          ansible.builtin.copy:
+            src: "/etc/letsencrypt/live/{{ settings.hostname | lower }}.{{ settings.domain | lower }}/privkey.pem"
+            dest: "{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.key"
+            owner: "{{ service_user }}"
+            group: "{{ service_group }}"
+            mode: '0777'
+            remote_src: true
 
-    -
-      name: "Replacing presigned ssl with letsencrypt key"
-      when: letsencrypt_cert_generated_check.stat.exists | bool
-      become: true
-      ansible.builtin.copy:
-        src: "{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.key"
-        dest: "{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}.key"
-        owner: "{{ service_user }}"
-        group: "{{ service_group }}"
-        mode: '0777'
-        remote_src: true
+        -
+          name: "Replacing presigned ssl with letsencrypt key"
+          when: letsencrypt_cert_generated_check.stat.exists | bool
+          become: true
+          ansible.builtin.copy:
+            src: "{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.key"
+            dest: "{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}.key"
+            owner: "{{ service_user }}"
+            group: "{{ service_group }}"
+            mode: '0777'
+            remote_src: true
 
-    -
-      name: "Generating self signed PKCS12 file"
-      become: true
-      community.crypto.openssl_pkcs12:
-        action: export
-        path: "{{ cert_dir }}/pfx/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.pfk"
-        certificate_path: "{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.crt"
-        privatekey_path: "{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.key"
-        state: present
-        friendly_name: 'pkcs12_file'
-        owner: "{{ service_user }}"
-        group: "{{ service_group }}"
-        mode: '0644'
+        -
+          name: "Generating self signed PKCS12 file"
+          become: true
+          community.crypto.openssl_pkcs12:
+            action: export
+            path: "{{ cert_dir }}/pfx/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.pfk"
+            certificate_path: "{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.crt"
+            privatekey_path: "{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.key"
+            state: present
+            friendly_name: 'pkcs12_file'
+            owner: "{{ service_user }}"
+            group: "{{ service_group }}"
+            mode: '0644'
 
-    -
-      name: "Copying PFX"
-      become: true
-      ansible.builtin.copy:
-        src: "{{ cert_dir }}/pfx/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.pfk"
-        dest: "{{ cert_dir }}/pfx/{{ settings.hostname }}.{{ settings.domain }}.pfk"
-        owner: "{{ service_user }}"
-        group: "{{ service_group }}"
-        mode: '0777'
-        remote_src: true
+        -
+          name: "Copying PFX"
+          become: true
+          ansible.builtin.copy:
+            src: "{{ cert_dir }}/pfx/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.pfk"
+            dest: "{{ cert_dir }}/pfx/{{ settings.hostname }}.{{ settings.domain }}.pfk"
+            owner: "{{ service_user }}"
+            group: "{{ service_group }}"
+            mode: '0777'
+            remote_src: true
 
-    -
-      name: "Parsing letsencrypt PKCS12 file to concatenated PEM"
-      become: true
-      community.crypto.openssl_pkcs12:
-        action: parse
-        src: "{{ cert_dir }}/pfx/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.pfk"
-        path: "{{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.pem"
-        state: present
-        owner: "{{ service_user }}"
-        group: "{{ service_group }}"
-        mode: '0644'
+        -
+          name: "Parsing letsencrypt PKCS12 file to concatenated PEM"
+          become: true
+          community.crypto.openssl_pkcs12:
+            action: parse
+            src: "{{ cert_dir }}/pfx/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.pfk"
+            path: "{{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.pem"
+            state: present
+            owner: "{{ service_user }}"
+            group: "{{ service_group }}"
+            mode: '0644'
 
-    -
-      name: "Copying Combined Cert"
-      become: true
-      ansible.builtin.copy:
-        src: "{{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.pem"
-        dest: "{{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}.pem"
-        owner: "{{ service_user }}"
-        group: "{{ service_group }}"
-        mode: '0777'
-        remote_src: true
+        -
+          name: "Copying Combined Cert"
+          become: true
+          ansible.builtin.copy:
+            src: "{{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.pem"
+            dest: "{{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}.pem"
+            owner: "{{ service_user }}"
+            group: "{{ service_group }}"
+            mode: '0777'
+            remote_src: true
 
-    -
-      name: "Creating a keystore for the letsencrypt certificate/private key pair"
-      become: true
-      community.general.java_keystore:
-        name: "{{ settings.hostname }}.{{ settings.domain }}"
-        certificate: "{{ lookup('file', '{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.crt') }}"
-        private_key: "{{ lookup('file', '{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.key') }}"
-        password: "{{ cert_pass }}"
-        owner: "{{ service_user }}"
-        group: "{{ service_group }}"
-        mode: '0644'
-        dest: "{{ cert_dir }}/jks/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.jks"
-      environment:
-        PATH: "{{ ansible_env.PATH }}:{{ service_home_dir }}/.sdkman/candidates/java/current/bin"
+        -
+          name: "Creating a keystore for the letsencrypt certificate/private key pair"
+          become: true
+          community.general.java_keystore:
+            name: "{{ settings.hostname }}.{{ settings.domain }}"
+            certificate: "{{ lookup('file', '{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.crt') }}"
+            private_key: "{{ lookup('file', '{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.key') }}"
+            password: "{{ cert_pass }}"
+            owner: "{{ service_user }}"
+            group: "{{ service_group }}"
+            mode: '0644'
+            dest: "{{ cert_dir }}/jks/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.jks"
+          environment:
+            PATH: "{{ ansible_env.PATH }}:{{ service_home_dir }}/.sdkman/candidates/java/current/bin"
 
-    -
-      name: "Copying JKS"
-      become: true
-      ansible.builtin.copy:
-        src: "{{ cert_dir }}/jks/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.jks"
-        dest: "{{ cert_dir }}/jks/{{ settings.hostname }}.{{ settings.domain }}.jks"
-        owner: "{{ service_user }}"
-        group: "{{ service_group }}"
-        mode: '0777'
-        remote_src: true
+        -
+          name: "Copying JKS"
+          become: true
+          ansible.builtin.copy:
+            src: "{{ cert_dir }}/jks/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.jks"
+            dest: "{{ cert_dir }}/jks/{{ settings.hostname }}.{{ settings.domain }}.jks"
+            owner: "{{ service_user }}"
+            group: "{{ service_group }}"
+            mode: '0777'
+            remote_src: true
