@@ -2,6 +2,7 @@
 -
   name: "Managing progress for {{ ansible_role_name }} (Step 1 of 2)"
   when: count_progress | default(false)
+  run_once: true
   block:
     -
       name: "Incrementing global progress step counter for {{ ansible_role_name }} (Step 1)"
@@ -591,7 +592,8 @@
 
 -
   name: "Managing progress for {{ ansible_role_name }} (Step 2 of 2) - Final"
-  when: count_progress | default(false) and run_tasks # run_tasks ensures this only runs if the role did work
+  when: count_progress | default(false) and run_tasks
+  run_once: true
   block:
     -
       name: "Incrementing global progress step counter for {{ ansible_role_name }} (Step 2 - Final)"

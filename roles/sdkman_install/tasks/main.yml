@@ -2,6 +2,7 @@
 -
   name: "Managing progress for {{ ansible_role_name }}"
   when: count_progress | default(false)
+  run_once: true
   block:
     -
       name: "Incrementing global progress step counter for {{ ansible_role_name }}"
@@ -16,6 +17,7 @@
         _progress_role_is_setup_run: false
         current_progress_step: "{{ global_current_progress_step | default(0) }}"
         progress_description: "{{ progress_role_description | default('Processing ' + ansible_role_name) }}"
+
 -
   name: "Block to Allow Loading of Variables without running task"
   when: run_tasks

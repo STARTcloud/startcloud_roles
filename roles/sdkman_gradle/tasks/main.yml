@@ -2,6 +2,7 @@
 -
   name: "Managing progress for {{ ansible_role_name }}"
   when: count_progress | default(false)
+  run_once: true
   block:
     -
       name: "Incrementing global progress step counter for {{ ansible_role_name }}"

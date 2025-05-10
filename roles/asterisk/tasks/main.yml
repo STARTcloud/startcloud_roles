@@ -2,6 +2,7 @@
 -
   name: "Managing progress for {{ ansible_role_name }} (Step 1 of 4)"
   when: count_progress | default(false)
+  run_once: true
   block:
     -
       name: "Incrementing global progress step counter for {{ ansible_role_name }} (Step 1)"
@@ -59,8 +60,9 @@
             state: present
 
 -
-  name: "Managing progress for {{ ansible_role_name }} (Step 2 of 4)"
-  when: count_progress | default(false) and run_tasks and (ansible_os_family == 'Debian')
+  name: "Managing progress for {{ ansible_role_name }} (Step 4 of 4)"
+  when: count_progress | default(false) and run_tasks
+  run_once: true
   block:
     -
       name: "Incrementing global progress step counter for {{ ansible_role_name }} (Step 2)"
@@ -141,6 +143,7 @@
 -
   name: "Managing progress for {{ ansible_role_name }} (Step 3 of 4)"
   when: count_progress | default(false) and run_tasks and (ansible_os_family == 'Debian')
+  run_once: true
   block:
     -
       name: "Incrementing global progress step counter for {{ ansible_role_name }} (Step 3)"
@@ -178,6 +181,7 @@
 -
   name: "Managing progress for {{ ansible_role_name }} (Step 4 of 4)"
   when: count_progress | default(false) and run_tasks and (ansible_os_family == 'Debian')
+  run_once: true
   block:
     -
       name: "Incrementing global progress step counter for {{ ansible_role_name }} (Step 4)"
