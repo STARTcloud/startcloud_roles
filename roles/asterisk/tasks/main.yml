@@ -108,9 +108,9 @@
           register: asterisk_archive_contents
 
         -
-          name: "Check if Asterisk is installed"
+          name: "Checking if Asterisk is installed"
           debug:
-            msg: "Asterisk directory path is {{ asterisk_source_dir }}/{{ asterisk_archive_contents.files[0] }}, installed: {{asterisk_bin_path.stat.exists}}"
+            msg: "Asterisk directory path is {{ asterisk_source_dir }}/{{ asterisk_archive_contents.files[0] }}, installed: {{ asterisk_bin_path.stat.exists }}"
 
         -
           name: "Logging playbook progress"
@@ -120,7 +120,7 @@
               - "40"
 
         -
-          name: Install Asterisk Packages
+          name: "Installing Asterisk Packages"
           command: "{{ item }}"
           with_items:
             - ./configure --with-jansson-bundled
@@ -163,7 +163,7 @@
             group: "{{ asterisk_group }}"
 
         -
-          name: "Remove Asterisk init.d script"
+          name: "Removing Asterisk init.d script"
           ansible.builtin.file:
             path: /etc/init.d/asterisk
             state: absent

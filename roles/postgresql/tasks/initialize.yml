@@ -1,6 +1,6 @@
 ---
 -
-  name: Set PostgreSQL environment variables.
+  name: "Setting PostgreSQL environment variables"
   ansible.builtin.template:
     src: postgres.sh.j2
     dest: /etc/profile.d/postgres.sh
@@ -8,7 +8,7 @@
   notify: Restart postgresql
 
 -
-  name: Ensure PostgreSQL data directory exists.
+  name: "Ensuring PostgreSQL data directory exists"
   ansible.builtin.file:
     path: "{{ postgresql_data_dir }}"
     owner: "{{ postgresql_user }}"
@@ -17,13 +17,13 @@
     mode: "0700"
 
 -
-  name: Check if PostgreSQL database is initialized.
+  name: "Checking if PostgreSQL database is initialized"
   ansible.builtin.stat:
     path: "{{ postgresql_data_dir }}/PG_VERSION"
   register: pgdata_dir_version
 
 -
-  name: Check if directory is empty
+  name: "Checking if directory is empty"
   ansible.builtin.find:
     paths: "{{ postgresql_data_dir }}"
     file_type: any
@@ -31,7 +31,7 @@
   when: postgresql_data_dir is defined
 
 -
-  name: Ensure PostgreSQL database is initialized.
+  name: "Ensuring PostgreSQL database is initialized"
   ansible.builtin.command: "{{ postgresql_bin_path }}/initdb -D {{ postgresql_data_dir }}"
   when: not pgdata_dir_version.stat.exists and (dir_contents.files | default([]) | length == 0 or dir_contents is not defined)
   changed_when: false
@@ -44,7 +44,7 @@
   register: initdb_result
 
 -
-  name: Create PG_VERSION file if missing
+  name: "Creating PG_VERSION file if missing"
   ansible.builtin.copy:
     content: "{{ __postgresql_version }}"
     dest: "{{ postgresql_data_dir }}/PG_VERSION"
@@ -55,7 +55,7 @@
   ignore_errors: true
 
 -
-  name: Ensure PostgreSQL log directory exists.
+  name: "Ensuring PostgreSQL log directory exists"
   ansible.builtin.file:
     path: "{{ postgresql_effective_log_dir }}"
     owner: "{{ postgresql_user }}"
