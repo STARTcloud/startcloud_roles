@@ -3,10 +3,11 @@
 
 - name: "Debug: Entering progress role"
   ansible.builtin.debug:
-    msg: "Entering progress role. _progress_role_is_setup_run is {{ _progress_role_is_setup_run | default('NOT DEFINED') }}. current_progress_step is {{ current_progress_step | default('NOT DEFINED') }}. progress_description is {{ progress_description | default('NOT DEFINED') }}."
-  vars:
-    # Ensure these don't fail the debug task if not defined at this point
-    _progress_role_is_setup_run_check: "{{ _progress_role_is_setup_run | default(false) }}" # just for safety in debug
+    msg: >-
+      Entering progress role.
+      _progress_role_is_setup_run is {{ _progress_role_is_setup_run | default('NOT DEFINED') }}.
+      current_progress_step is {{ current_progress_step if not (_progress_role_is_setup_run | default(false)) else '0 (Setup Phase)' }}.
+      progress_description is {{ progress_description if not (_progress_role_is_setup_run | default(false)) else 'Initial Setup Call' }}.
 
 - name: "Progress Role - Setup or Reporting"
   block:
