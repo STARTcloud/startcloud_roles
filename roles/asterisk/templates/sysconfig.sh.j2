@@ -5,8 +5,8 @@
 # be sure that Asterisk's environment has permission to write the
 # files required  for  its  operation, including logs, its comm
 # socket, the asterisk database, etc.
-AST_USER="{{ ASTERISK_USER }}"
-AST_GROUP="{{ ASTERISK_GROUP }}"
+AST_USER="{{ asterisk_user}}"
+AST_GROUP="{{ asterisk_group }}"
 
 # If you DON'T want Asterisk to start up with terminal colors, comment
 # this out.
@@ -14,7 +14,7 @@ COLOR=yes
 
 # If you want Asterisk to run with a non-default configuration file,
 # uncomment the following option, and set the value appropriately.
-#ALTCONF={{ CONFIG_DIR }}/asterisk.conf
+#ALTCONF={{ asterisk_config_dir }}/asterisk.conf
 
 # In the case of a crash, Asterisk may create a core file.  Uncomment
 # if you want this behavior.

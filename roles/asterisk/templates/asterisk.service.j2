@@ -4,16 +4,16 @@ After=network.target
 
 [Service]
 Type=simple
-Environment=HOME=/var/lib/asterisk
+Environment=HOME={{ asterisk_lib_dir }}
 #if systemd do not provide hostname and you need to use ${ENV(HOSTNAME)}
 #Environment=HOSTNAME=%H
-WorkingDirectory=/var/lib/asterisk
+WorkingDirectory={{ asterisk_lib_dir }}
 User=asterisk
 Group=asterisk
-ExecStart=/usr/sbin/asterisk -mqf -C /etc/asterisk/asterisk.conf
+ExecStart=/usr/sbin/asterisk -mqf -C {{ asterisk_config_dir }}/asterisk.conf
 ExecReload=/usr/sbin/asterisk -rx 'core reload'
 
-#if /var/run is a tmpfs, this will create /var/run/asterisk on start
+#if /var/run is a tmpfs, this will create {{ asterisk_run_dir }} on start
 #RuntimeDirectory=asterisk
 
 #Nice=0

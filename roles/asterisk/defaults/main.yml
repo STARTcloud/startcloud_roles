@@ -5,18 +5,26 @@ run_tasks: true
 # These are often used for serving static content, ARI (Asterisk REST Interface), etc.
 asterisk_static_http_port: 8088
 asterisk_static_https_port: 8089
-CONFIG_DIR: /etc/asterisk
-SOURCE_DIR: /usr/src/asterisk
-CUSTOM_SOUNDS_PATH: /var/lib/asterisk/sounds/en/custom
-ASTERISK_LOG: /var/log/asterisk
-ASTERISK_VERSION: asterisk-20.11.1.tar.gz
-ASTERISK_PACKAGE: "https://downloads.asterisk.org/pub/telephony/asterisk/old-releases/{{ ASTERISK_VERSION}}"
 
-## End Override
-ASTERISK_GROUP: asterisk
-ASTERISK_USER: asterisk
-ASTERISK_ASSETS_USER: asterisk_assets
-ASTERISK_USER_PASS: asterisk
+## Configuration Directories
+asterisk_config_dir: /etc/asterisk
+asterisk_lib_dir: /var/lib/asterisk
+asterisk_run_dir: /var/run/asterisk
+asterisk_spool_dir: /var/spool/asterisk
+asterisk_lib64_dir: /usr/lib64/asterisk
+asterisk_user_lib_dir: /usr/lib/asterisk
+asterisk_custom_sounds_path: "{{ asterisk_lib_dir }}/sounds/en/custom"
+asterisk_log: /var/log/asterisk
+
+# Asterisk Build
+asterisk_source_dir: /usr/src/asterisk
+asterisk_version: asterisk-20.11.1.tar.gz
+asterisk_package: "https://downloads.asterisk.org/pub/telephony/asterisk/old-releases/{{ asterisk_version }}"
+
+asterisk_group: asterisk
+asterisk_user: asterisk
+asterisk_assets_user: asterisk_assets
+asterisk_user_pass: asterisk
 
 # Default PJSIP and Manager ports
 startcloud_asterisk_pjsip_udp_port: 5060
@@ -28,7 +36,7 @@ startcloud_asterisk_manager_port: 5038
 startcloud_asterisk_rtp_start: 10000
 startcloud_asterisk_rtp_end: 20000
 
-FAIL2BAN_ASTERISK_PORTS: "{{ startcloud_asterisk_pjsip_udp_port }},{{ startcloud_asterisk_pjsip_tcp_port }},{{ startcloud_asterisk_pjsip_tls_port }},{{ startcloud_asterisk_manager_port }},{{ asterisk_static_http_port }},{{ asterisk_static_https_port }},5080"
-FAIL2BAN_ASTERISK_LOG: /var/log/asterisk/security
-FAIL2BAN_ASTERISK_MAX_RETRIES: 10
-FAIL2BAN_ASTERISK_BAN_TIME: 8h
+fail2ban_asterisk_ports: "{{ startcloud_asterisk_pjsip_udp_port }},{{ startcloud_asterisk_pjsip_tcp_port }},{{ startcloud_asterisk_pjsip_tls_port }},{{ startcloud_asterisk_manager_port }},{{ asterisk_static_http_port }},{{ asterisk_static_https_port }},5080"
+fail2ban_asterisk_log: "{{ asterisk_log }}/security"
+fail2ban_asterisk_max_retries: 10
+fail2ban_asterisk_BAN_TIME: 8h

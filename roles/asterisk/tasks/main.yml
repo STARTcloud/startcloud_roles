@@ -50,7 +50,7 @@
         -
           name: "Checking if Asterisk is installed"
           ansible.builtin.stat:
-            path: "{{ CONFIG_DIR }}"
+            path: "{{ asterisk_config_dir }}"
           register: asterisk_bin_path
 
         -
@@ -63,7 +63,7 @@
         -
           name: Ensure group "asterisk" exists
           ansible.builtin.group:
-            name: "{{ ASTERISK_GROUP }}"
+            name: "{{ asterisk_group }}"
             state: present
 
         - 
@@ -71,10 +71,10 @@
           ansible.builtin.user: 
             comment: Asterisk SIP User
             shell: /bin/bash
-            name: "{{ ASTERISK_USER }}"
-            password: "{{ ASTERISK_USER_PASS | password_hash('sha512') }}"
+            name: "{{ asterisk_user}}"
+            password: "{{ asterisk_user_pass | password_hash('sha512') }}"
             groups:
-              - "{{ ASTERISK_GROUP }}"
+              - "{{ asterisk_group }}"
               - audio
               - dialout
               - "{{ service_group }}"
@@ -85,24 +85,24 @@
             path: /data
             state: directory
             mode: '0755'
-            owner: "{{ ASTERISK_USER }}"
-            group: "{{ ASTERISK_GROUP }}"
+            owner: "{{ asterisk_user}}"
+            group: "{{ asterisk_group }}"
     
         -
           name: "Creating asterisk directories if they do not exist"
           ansible.builtin.file:
             path: "{{ item }}"
             state: directory
-            owner: "{{ ASTERISK_USER }}"
+            owner: "{{ asterisk_user}}"
           with_items:
-            - "{{ SOURCE_DIR }}"
-            - "{{ CONFIG_DIR }}"
+            - "{{ asterisk_source_dir }}"
+            - "{{ asterisk_config_dir }}"
 
         -
           name: "Downloading and Extract Asterisk"
           unarchive:
-            src: "{{ ASTERISK_PACKAGE }}"
-            dest: "{{ SOURCE_DIR }}"
+            src: "{{ asterisk_package }}"
+            dest: "{{ asterisk_source_dir }}"
             remote_src: yes
             list_files: yes
           register: asterisk_archive_contents
@@ -110,7 +110,7 @@
         -
           name: "Check if Asterisk is installed"
           debug:
-            msg: "Asterisk directory path is {{ SOURCE_DIR }}/{{ asterisk_archive_contents.files[0] }}, installed: {{asterisk_bin_path.stat.exists}}"
+            msg: "Asterisk directory path is {{ asterisk_source_dir }}/{{ asterisk_archive_contents.files[0] }}, installed: {{asterisk_bin_path.stat.exists}}"
 
         -
           name: "Logging playbook progress"
@@ -130,7 +130,7 @@
             - make install-logrotate
             - ldconfig
           args:
-            chdir: "{{ SOURCE_DIR }}/{{ asterisk_archive_contents.files[0] }}"
+            chdir: "{{ asterisk_source_dir }}/{{ asterisk_archive_contents.files[0] }}"
           async: 3600
           poll: 15
           when: asterisk_bin_path.stat.exists == False
@@ -139,19 +139,19 @@
           name: "Changing file ownership, group and permissions"
           ansible.builtin.file:
             path: "{{ item }}"
-            owner: "{{ ASTERISK_USER }}"
-            group: "{{ ASTERISK_GROUP }}"
+            owner: "{{ asterisk_user}}"
+            group: "{{ asterisk_group }}"
             mode: '0755'
             state: directory
             recurse: true
           loop:
-            - /var/lib/asterisk
+            - "{{ asterisk_lib_dir }}"
             - "{{ ASTERISK_LOG }}"
-            - /var/run/asterisk
-            - /var/spool/asterisk
-            - /usr/lib64/asterisk
-            - /usr/lib/asterisk
-            - "{{ CONFIG_DIR }}"
+            - "{{ asterisk_run_dir }}"
+            - "{{ asterisk_spool_dir }}"
+            - "{{ asterisk_lib64_dir }}"
+            - "{{ asterisk_user_lib_dir }}"
+            - "{{ asterisk_config_dir }}"
       
         -
           name: "Setting Asterisk ACLs"
@@ -159,8 +159,8 @@
             path: "{{ ASTERISK_LOG }}"
             state: directory
             mode: '0755'
-            owner: "{{ ASTERISK_USER }}"
-            group: "{{ ASTERISK_GROUP }}"
+            owner: "{{ asterisk_user}}"
+            group: "{{ asterisk_group }}"
 
         -
           name: "Remove Asterisk init.d script"
@@ -186,9 +186,9 @@
           name: "Copying Asterisk configuration to remote"
           ansible.builtin.copy:
             src: './files/conf/'
-            dest: "{{ CONFIG_DIR }}"
-            owner: "{{ ASTERISK_USER }}"
-            group: "{{ ASTERISK_GROUP }}"
+            dest: "{{ asterisk_config_dir }}"
+            owner: "{{ asterisk_user}}"
+            group: "{{ asterisk_group }}"
 
         -
           name: "Copying Config files to Asterisk Box"
@@ -196,20 +196,20 @@
             src: 'sysconfig.sh.j2'
             dest: '/etc/default/asterisk'
             mode: "+x"
-            owner: "{{ ASTERISK_USER }}"
-            group: "{{ ASTERISK_GROUP }}"
+            owner: "{{ asterisk_user}}"
+            group: "{{ asterisk_group }}"
 
         -
           name: "Loading Asterisk Security module"
           ansible.builtin.lineinfile:
-            path: "{{ CONFIG_DIR }}/modules.conf"
+            path: "{{ asterisk_config_dir }}/modules.conf"
             search_string: 'load => res_security_log.so'
             line: load => res_security_log.so
 
         -
           name: "Enabling Asterisk Security logs"
           ansible.builtin.lineinfile:
-            path: "{{ CONFIG_DIR }}/logger.conf"
+            path: "{{ asterisk_config_dir }}/logger.conf"
             search_string: 'security = security'
             line: security = security
 
