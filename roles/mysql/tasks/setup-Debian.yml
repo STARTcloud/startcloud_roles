@@ -1,26 +1,29 @@
 ---
 -
-  name: Check if MySQL is already installed.
+  name: "Checking if MySQL is already installed"
   ansible.builtin.stat:
     path: "{{ mysql_config_file }}"
   register: mysql_installed
 
--
-  name: "Adding MySQL APT repository key"
-  ansible.builtin.apt_key:
-    url: https://repo.mysql.com/RPM-GPG-KEY-mysql-2022
-    state: present
+# For Debian 12 we need to use the official MySQL repository
+- 
+  name: "Downloading MySQL APT configuration package"
+  ansible.builtin.get_url:
+    url: https://dev.mysql.com/get/mysql-apt-config_0.8.30-1_all.deb
+    dest: /tmp/mysql-apt-config.deb
   when: 
     - not mysql_installed.stat.exists
     - ansible_distribution == 'Debian'
     - ansible_distribution_major_version | int >= 12
 
 -
-  name: "Adding MySQL APT Repository"
-  ansible.builtin.apt_repository:
-    repo: deb http://repo.mysql.com/apt/debian/ bookworm mysql-8.0
-    state: present
-    filename: mysql
+  name: "Installing MySQL APT configuration"
+  ansible.builtin.shell: |
+    echo "mysql-apt-config mysql-apt-config/select-server select mysql-8.0" | sudo debconf-set-selections
+    echo "mysql-apt-config mysql-apt-config/select-product select Ok" | sudo debconf-set-selections
+    sudo DEBIAN_FRONTEND=noninteractive dpkg -i /tmp/mysql-apt-config.deb
+  args:
+    creates: /etc/apt/sources.list.d/mysql.list
   when: 
     - not mysql_installed.stat.exists
     - ansible_distribution == 'Debian'
@@ -40,14 +43,25 @@
     state: present
 
 -
+  name: "Setting MySQL root password before installation"
+  ansible.builtin.shell: |
+    echo "mysql-server mysql-server/root_password password {{ mysql_root_password }}" | sudo debconf-set-selections
+    echo "mysql-server mysql-server/root_password_again password {{ mysql_root_password }}" | sudo debconf-set-selections
+  args:
+    creates: "{{ mysql_config_file }}"
+  when: 
+    - not mysql_installed.stat.exists
+    - mysql_root_password is defined and mysql_root_password != ""
+
+-
   name: "Ensuring MySQL packages are installed"
   ansible.builtin.apt:
-    name: "{{ mysql_packages }}"
+    name: "{{ __mysql_packages }}"
     state: present
     policy_rc_d: 101
   register: deb_mysql_install_packages
 
-# Because Ubuntu starts MySQL as part of the install process, we need to stop
+# Because MySQL starts as part of the install process, we need to stop
 # mysql and remove the logfiles in case the user set a custom log file size.
 -
   name: "Ensuring MySQL is stopped after initial install"
@@ -67,3 +81,16 @@
   when: >
     not mysql_installed.stat.exists
     and ansible_distribution_major_version | int < 12
+
+-
+  name: "Configuring MySQL to allow remote connections"
+  ansible.builtin.lineinfile:
+    path: /etc/mysql/mysql.conf.d/mysqld.cnf
+    regexp: '^bind-address\s+'
+    line: 'bind-address = 0.0.0.0'
+    state: present
+  when:
+    - not mysql_installed.stat.exists
+    - ansible_distribution == 'Debian'
+    - ansible_distribution_major_version | int >= 12
+  notify: Restart mysql
