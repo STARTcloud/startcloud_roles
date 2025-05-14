@@ -2,8 +2,9 @@
 - 
   name: "Downloading MySQL APT configuration package"
   ansible.builtin.get_url:
-    url: https://dev.mysql.com/get/mysql-apt-config_0.8.30-1_all.deb
+    url: https://repo.mysql.com/mysql-apt-config_0.8.30-1_all.deb
     dest: /tmp/mysql-apt-config.deb
+    timeout: 60
 
 -
   name: "Installing MySQL APT configuration"
