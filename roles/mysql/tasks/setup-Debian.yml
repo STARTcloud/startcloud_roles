@@ -15,9 +15,11 @@
 
 -
   name: "Installing MySQL APT configuration"
-  ansible.builtin.command: DEBIAN_FRONTEND=noninteractive dpkg -i /tmp/mysql-apt-config.deb
+  ansible.builtin.command: dpkg -i /tmp/mysql-apt-config.deb
   args:
     creates: /etc/apt/sources.list.d/mysql.list
+  environment:
+    DEBIAN_FRONTEND: noninteractive
 
 -
   name: "Updating apt cache"
