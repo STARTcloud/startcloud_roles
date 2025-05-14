@@ -7,8 +7,15 @@
     timeout: 60
 
 -
+  name: "Pre-configuring MySQL APT configuration options"
+  ansible.builtin.shell: |
+    echo "mysql-apt-config mysql-apt-config/select-server select mysql-8.0" | sudo debconf-set-selections
+    echo "mysql-apt-config mysql-apt-config/select-product select Ok" | sudo debconf-set-selections
+  changed_when: false
+
+-
   name: "Installing MySQL APT configuration"
-  ansible.builtin.command: dpkg -i /tmp/mysql-apt-config.deb
+  ansible.builtin.command: DEBIAN_FRONTEND=noninteractive dpkg -i /tmp/mysql-apt-config.deb
   args:
     creates: /etc/apt/sources.list.d/mysql.list
 
@@ -39,6 +46,11 @@
     name: "{{ __mysql_packages }}"
     state: present
     policy_rc_d: 101
+    update_cache: true
+    force_apt_get: true
+    dpkg_options: 'force-confdef,force-confold'
+  environment:
+    DEBIAN_FRONTEND: noninteractive
   register: deb_mysql_install_packages
 
 # Because MySQL starts as part of the install process, we need to stop
