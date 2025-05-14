@@ -18,10 +18,7 @@
 
 -
   name: "Installing MySQL APT configuration"
-  ansible.builtin.shell: |
-    echo "mysql-apt-config mysql-apt-config/select-server select mysql-8.0" | sudo debconf-set-selections
-    echo "mysql-apt-config mysql-apt-config/select-product select Ok" | sudo debconf-set-selections
-    sudo DEBIAN_FRONTEND=noninteractive dpkg -i /tmp/mysql-apt-config.deb
+  ansible.builtin.command: dpkg -i /tmp/mysql-apt-config.deb
   args:
     creates: /etc/apt/sources.list.d/mysql.list
   when: 
