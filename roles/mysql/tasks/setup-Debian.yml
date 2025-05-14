@@ -1,37 +1,20 @@
 ---
--
-  name: "Checking if MySQL is already installed"
-  ansible.builtin.stat:
-    path: "{{ mysql_config_file }}"
-  register: mysql_installed
-
-# For Debian 12 we need to use the official MySQL repository
 - 
   name: "Downloading MySQL APT configuration package"
   ansible.builtin.get_url:
     url: https://dev.mysql.com/get/mysql-apt-config_0.8.30-1_all.deb
     dest: /tmp/mysql-apt-config.deb
-  when: 
-    - not mysql_installed.stat.exists
-    - ansible_distribution == 'Debian'
-    - ansible_distribution_major_version | int >= 12
 
 -
   name: "Installing MySQL APT configuration"
   ansible.builtin.command: dpkg -i /tmp/mysql-apt-config.deb
   args:
     creates: /etc/apt/sources.list.d/mysql.list
-  when: 
-    - not mysql_installed.stat.exists
-    - ansible_distribution == 'Debian'
-    - ansible_distribution_major_version | int >= 12
 
 -
   name: "Updating apt cache"
   ansible.builtin.apt:
     update_cache: true
-  changed_when: false
-  when: not mysql_installed.stat.exists
 
 -
   name: "Ensuring MySQL Python libraries are installed"
@@ -47,7 +30,6 @@
   args:
     creates: "{{ mysql_config_file }}"
   when: 
-    - not mysql_installed.stat.exists
     - mysql_root_password is defined and mysql_root_password != ""
 
 -
@@ -65,7 +47,6 @@
   ansible.builtin.service:
     name: "{{ mysql_daemon }}"
     state: stopped
-  when: not mysql_installed.stat.exists
 
 -
   name: "Deleting innodb log files created by apt package after initial install"
@@ -75,9 +56,6 @@
   with_items:
     - ib_logfile0
     - ib_logfile1
-  when: >
-    not mysql_installed.stat.exists
-    and ansible_distribution_major_version | int < 12
 
 -
   name: "Configuring MySQL to allow remote connections"
@@ -86,8 +64,4 @@
     regexp: '^bind-address\s+'
     line: 'bind-address = 0.0.0.0'
     state: present
-  when:
-    - not mysql_installed.stat.exists
-    - ansible_distribution == 'Debian'
-    - ansible_distribution_major_version | int >= 12
   notify: Restart mysql
