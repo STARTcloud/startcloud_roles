@@ -1,55 +1,62 @@
 ---
-# tasks file for startcloud.startcloud_roles.progress
+#-
+#  name: "Debug: Entering progress role"
+#  ansible.builtin.debug:
+#    msg: >-
+#      Entering progress role.
+#      _progress_role_is_setup_run is {{ _progress_role_is_setup_run | default('NOT DEFINED') }}.
+#      current_progress_step is {{ current_progress_step if not (_progress_role_is_setup_run | default(false)) else '0 (Setup Phase)' }}.
+#      progress_description is {{ progress_description if not (_progress_role_is_setup_run | default(false)) else 'Initial Setup Call' }}.
 
-- name: "Debug: Entering progress role"
-  ansible.builtin.debug:
-    msg: >-
-      Entering progress role.
-      _progress_role_is_setup_run is {{ _progress_role_is_setup_run | default('NOT DEFINED') }}.
-      current_progress_step is {{ current_progress_step if not (_progress_role_is_setup_run | default(false)) else '0 (Setup Phase)' }}.
-      progress_description is {{ progress_description if not (_progress_role_is_setup_run | default(false)) else 'Initial Setup Call' }}.
-
-- name: "Progress Role - Setup or Reporting"
+-
+  name: "Progress Role - Setup or Reporting"
   block:
-    - name: "Setup Mode: Calculate total progress steps"
+    -
+      name: "Setup Mode: Calculate total progress steps"
       when: _progress_role_is_setup_run is defined and _progress_role_is_setup_run
       block:
-        - name: "Initialize calculated total steps"
+        -
+          name: "Initializing calculated total steps"
           ansible.builtin.set_fact:
             _calculated_total_steps: 0
 
-        - name: "Sum progress_units from definitions"
+        -
+          name: "Summing progress_units from definitions"
           ansible.builtin.set_fact:
             _calculated_total_steps: "{{ _calculated_total_steps | int + item.progress_units | int }}"
           loop: "{{ _progress_role_definitions_to_calculate }}"
           when: _progress_role_definitions_to_calculate is defined and (_progress_role_definitions_to_calculate | length > 0)
 
-        - name: "Set total_progress_steps_count fact"
+        -
+          name: "Setting total_progress_steps_count fact"
           ansible.builtin.set_fact:
             total_progress_steps_count: "{{ _calculated_total_steps }}"
 
-        - name: "Debug: Progress role setup complete"
+        -
+          name: "Debugging: Progress role setup complete"
           ansible.builtin.debug:
             msg: "Progress role setup: total_progress_steps_count set to {{ total_progress_steps_count }}. global_current_progress_step is {{ global_current_progress_step | default('not set yet by playbook vars, but should be 0') }}."
 
-    - name: "Reporting Mode: Display progress"
+    -
+      name: "Reporting Mode: Display progress"
       when: not (_progress_role_is_setup_run is defined and _progress_role_is_setup_run)
       block:
-        # Ensure types are correct upon entry to this block for reporting
-        - name: "Validate progress task inputs for reporting"
+        -
+          name: "Validating progress task inputs for reporting"
           ansible.builtin.assert:
             that:
               - current_progress_step is defined
               - total_progress_steps_count is defined
               - progress_description is defined
-              - (current_progress_step | string).isdigit() # Check if it's a string of digits
-              - (total_progress_steps_count | string).isdigit() # Check if it's a string of digits
-              - (total_progress_steps_count | int) > 0 # Perform int conversion directly in the check
+              - (current_progress_step | string).isdigit()
+              - (total_progress_steps_count | string).isdigit()
+              - (total_progress_steps_count | int) > 0
             fail_msg: "Progress reporting task called with invalid parameters. current_progress_step: '{{current_progress_step}}', total_progress_steps_count: '{{total_progress_steps_count}}', progress_description: '{{progress_description}}'. Required: current_progress_step (numeric), total_progress_steps_count (numeric > 0), progress_description."
             quiet: true
-          when: current_progress_step is defined and total_progress_steps_count is defined # Basic check before complex assertions
+          when: current_progress_step is defined and total_progress_steps_count is defined
 
-        - name: "Calculate progress percentage"
+        -
+          name: "Calculating progress percentage"
           ansible.builtin.set_fact:
             _progress_percentage: "{{ (( (current_progress_step | int) | float / (total_progress_steps_count | int) | float) * 100) | round(0, 'floor') | int }}"
           when:
@@ -59,14 +66,8 @@
             - (current_progress_step | string).isdigit()
             - (total_progress_steps_count | string).isdigit()
 
-
-        - name: "PROGRESS ({{ _progress_percentage | default('N/A') }}%) --- {{ progress_description | default('Waiting for details...') }}"
+        -
+          name: "PROGRESS ({{ _progress_percentage | default('N/A') }}%) --- {{ progress_description | default('Waiting for details...') }}"
           ansible.builtin.debug:
             msg: "Progress: {{ _progress_percentage }}% --- {{ progress_description }}"
-          changed_when: true # Always report as changed to get yellow output
-          # The when condition for the entire "Reporting Mode" block still applies.
-          # This debug task itself doesn't need an additional 'when: ansible_verbosity'
-          # if the goal is for it to always show when in reporting mode.
-          # If it should only show with verbosity, the block's 'when' would need adjustment,
-          # or this task's 'when' would be:
-          # when: ansible_verbosity >= 0 (or > 0 for -v and higher)
+          changed_when: true

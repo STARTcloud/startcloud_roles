@@ -1,5 +1,9 @@
 ---
 run_tasks: true
+count_progress: true
+progress_units: 1
+progress_role_description: "Installing Nginx"
+
 # Used only for Debian/Ubuntu installation, as the -t option for apt.
 nginx_default_release: ""
 
