@@ -16,3 +16,7 @@ lockdown:
   - rpcbind.service
   - rpcbind.socket
   - nfs-kernel-server
+
+# List of files/paths to be cleaned up by the lockdown role.
+# Other roles can append to this list.
+lockdown_file_cleanups_list: []
