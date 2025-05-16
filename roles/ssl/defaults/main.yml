@@ -12,7 +12,7 @@ domino_organization: DEMO
 # Variables for Role Certbot certs.
 certbot_create_if_missing: false
 certbot_create_method: standalone
-certbot_admin_email: "{{ mailer_user }}"
+certbot_admin_email: "{{ email }} | default('support@startcloud.com')"
 certbot_create_standalone_stop_services:
   - nginx
 

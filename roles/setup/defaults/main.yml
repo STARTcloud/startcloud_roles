@@ -9,6 +9,8 @@ provisioner_name: Ad-Hoc Playbook
 provisioner_version: v0.0.0
 core_provisioner_version: v0.0.0
 
+email: support@startcloud.com
+
 # Progress reporting
 count_progress: true
 progress_units: 1
