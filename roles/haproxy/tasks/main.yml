@@ -36,7 +36,6 @@
         state: directory
       with_items:
         - "/etc/haproxy/errors/tpl"
-        - "/etc/haproxy/errors/html"
     
     -
       name: "Configuring haproxy"
@@ -57,14 +56,6 @@
         - { src: 'tpl/502.http.j2', dest: '/etc/haproxy/errors/tpl/502.http', owner: 'haproxy' }
         - { src: 'tpl/503.http.j2', dest: '/etc/haproxy/errors/tpl/503.http', owner: 'haproxy' }
         - { src: 'tpl/504.http.j2', dest: '/etc/haproxy/errors/tpl/504.http', owner: 'haproxy' }
-        - { src: 'html/400.html.j2', dest: '/etc/haproxy/errors/html/400.html', owner: 'haproxy' }
-        - { src: 'html/403.html.j2', dest: '/etc/haproxy/errors/html/403.html', owner: 'haproxy' }
-        - { src: 'html/404.html.j2', dest: '/etc/haproxy/errors/html/404.html', owner: 'haproxy' }
-        - { src: 'html/408.html.j2', dest: '/etc/haproxy/errors/html/408.html', owner: 'haproxy' }
-        - { src: 'html/500.html.j2', dest: '/etc/haproxy/errors/html/500.html', owner: 'haproxy' }
-        - { src: 'html/502.html.j2', dest: '/etc/haproxy/errors/html/502.html', owner: 'haproxy' }
-        - { src: 'html/503.html.j2', dest: '/etc/haproxy/errors/html/503.html', owner: 'haproxy' }
-        - { src: 'html/504.html.j2', dest: '/etc/haproxy/errors/html/504.html', owner: 'haproxy' }
     
     
     -
