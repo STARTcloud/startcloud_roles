@@ -79,6 +79,18 @@
           ansible.builtin.include_tasks: "virtualbox/{{ ansible_os_family | lower }}.yml"
 
     -
+      name: "Loading UTM/KVM Tasks"
+      when: 
+        - ansible_virtualization_type == "kvm"
+        - not ansible_module_running_in_container
+      become: true
+      tags: once
+      block:
+        -
+          name: "Including OS-specific tasks"
+          ansible.builtin.include_tasks: "utm/{{ ansible_os_family | lower }}.yml"
+
+    -
       name: "Setting Host Records"
       become: true
       when: not ansible_module_running_in_container
