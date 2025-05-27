@@ -1,38 +1,20 @@
 -
-  name: "Setting up UTM Shared Network (First Adapter)"
+  name: "Setting up UTM NAT Network (First Adapter)"
   when: not convert_nat_dhcp_to_static
   block:
     -
-      name: "Placing Netplan into Working directory for UTM Shared Adapter"
+      name: "Placing Netplan into Working directory for UTM NAT Adapter"
       ansible.builtin.template:
         src: nat_interface.yaml.j2
-        dest: /etc/netplan/shared_adapter.yaml
+        dest: /etc/netplan/nat_adapter.yaml
         mode: '0600'
       vars:
         macaddress: "{{ first_adapter_details.mac }}"
-        network_name: "shared_adapter"
-      register: shared_adapter_config
-
-    -
-      name: "Waiting for 5 seconds for IP to set for UTM Shared Adapter"
-      when: "shared_adapter_config.changed"
-      ansible.builtin.pause:
-        seconds: 5
-
-    -
-      name: "Setting Networking for UTM Shared Adapter"
-      when: "shared_adapter_config.changed"
-      changed_when: false
-      ansible.builtin.command: netplan apply
-
-    -
-      name: "Waiting for 5 seconds for IP to set for UTM Shared Adapter"
-      when: "shared_adapter_config.changed"
-      ansible.builtin.pause:
-        seconds: 5
+        network_name: "nat_adapter"
+      register: nat_adapter_config
 
 -
-  name: "Converting DHCP to Static IP for Shared Adapter"
+  name: "Converting DHCP to Static IP for NAT Adapter"
   when: convert_nat_dhcp_to_static
   block:
     -
@@ -47,61 +29,30 @@
       name: "Placing Netplan into Working directory"
       ansible.builtin.template:
         src: nat_interface.yaml.j2
-        dest: /etc/netplan/shared_adapter.yaml
+        dest: /etc/netplan/nat_adapter.yaml
         mode: '0600'
-      register: static_shared_adapter_config
+      register: static_nat_adapter_config
       vars:
         prefix: "{{ hostvars[inventory_hostname]['ansible_' + first_adapter]['ipv4']['prefix'] }}"
         macaddress: "{{ first_adapter_details.mac }}"
-        network_name: "shared_adapter"
+        network_name: "nat_adapter"
         address: "{{ first_adapter_details.ip }}"
         gateway: "{{ first_adapter_gateway.stdout }}"
-
-    -
-      name: "Setting Networking"
-      when: static_shared_adapter_config.changed
-      changed_when: false
-      ansible.builtin.command: "{{ item }}"
-      with_items:
-        - "netplan apply"
-
-    -
-      name: "Waiting for 2 seconds for IP to set"
-      when: static_shared_adapter_config.changed
-      ansible.builtin.pause:
-        seconds: 2
 
 -
   name: "Setting up UTM Emulated VLAN (Second Adapter) for Vagrant SSH"
   block:
     -
-      name: "Placing Netplan into Working directory for UTM VLAN Adapter"
+      name: "Placing Netplan into Working directory for UTM Vagrant Adapter"
       ansible.builtin.template:
         src: nat_interface.yaml.j2
-        dest: /etc/netplan/vlan_adapter.yaml
+        dest: /etc/netplan/vagrant_adapter.yaml
         mode: '0600'
       vars:
         macaddress: "{{ second_adapter_details.mac }}"
-        network_name: "vlan_adapter"
-      register: vlan_adapter_config
-
-    -
-      name: "Waiting for 5 seconds for IP to set for UTM VLAN Adapter"
-      when: "vlan_adapter_config.changed"
-      ansible.builtin.pause:
-        seconds: 5
-
-    -
-      name: "Setting Networking for UTM VLAN Adapter"
-      when: "vlan_adapter_config.changed"
-      changed_when: false
-      ansible.builtin.command: netplan apply
-
-    -
-      name: "Waiting for 5 seconds for IP to set for UTM VLAN Adapter"
-      when: "vlan_adapter_config.changed"
-      ansible.builtin.pause:
-        seconds: 5
+        network_name: "vagrant_adapter"
+        convert_nat_dhcp_to_static: false  # Always use DHCP for Vagrant adapter
+      register: vagrant_adapter_config
 
 -
   name: "Gathering Networking Configurations"
@@ -113,17 +64,17 @@
       ansible.builtin.include_tasks: "gather.yml"
 
 -
-  name: "Setting up External Network (Third+ Adapters)"
+  name: "Setting up Public Bridged Network (Third+ Adapters)"
   when: networks[0] is defined and networks[0].type == "external"
   block:
     -
-      name: "Ensuring there are at least three interfaces for external network"
+      name: "Ensuring there are at least three interfaces for public network"
       ansible.builtin.fail:
-        msg: "External network configured but no third interface available."
+        msg: "Public network configured but no third interface available."
       when: sorted_interfaces | length < 3
 
     -
-      name: "Setting third adapter details for external network"
+      name: "Setting third adapter details for public network"
       ansible.builtin.set_fact:
         third_adapter: "{{ sorted_interfaces[2] }}"
         third_adapter_details:
@@ -137,27 +88,15 @@
         net_mask: "{{ networks[0].address }}/{{ networks[0].netmask }}"
 
     -
-      name: "Placing Netplan into Working directory for External Adapter"
+      name: "Placing Netplan into Working directory for Public Adapter"
       ansible.builtin.template:
         src: interface.yaml.j2
-        dest: /etc/netplan/external_adapter.yaml
+        dest: /etc/netplan/public_adapter.yaml
         mode: '0600'
-      register: external_adapter_config
+      register: public_adapter_config
       vars:
         macaddress: "{{ third_adapter_details.mac }}"
-        network_name: "external_adapter"
-
-    -
-      name: "Setting Networking"
-      changed_when: false
-      ansible.builtin.command: "{{ item }}"
-      with_items:
-        - "netplan apply"
-
-    -
-      name: "Waiting for 2 seconds for IP to set"
-      ansible.builtin.pause:
-        seconds: 2
+        network_name: "public_adapter"
 
 -
   name: "When No External Adapter included, Setting configurations to use VLAN adapter IP"
@@ -192,3 +131,24 @@
     -
       name: "Gather Networking Details"
       ansible.builtin.include_tasks: "gather.yml"
+
+-
+  name: "Apply All Netplan Configurations"
+  become: true
+  block:
+    -
+      name: "Register if any network configs changed"
+      ansible.builtin.set_fact:
+        network_configs_changed: "{{ nat_adapter_config.changed | default(false) or static_nat_adapter_config.changed | default(false) or vagrant_adapter_config.changed | default(false) or public_adapter_config.changed | default(false) }}"
+
+    -
+      name: "Apply netplan configurations"
+      when: network_configs_changed
+      changed_when: false
+      ansible.builtin.command: netplan apply
+
+    -
+      name: "Waiting for 10 seconds for all network adapters to initialize"
+      when: network_configs_changed
+      ansible.builtin.pause:
+        seconds: 10
