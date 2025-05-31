@@ -1,6 +1,26 @@
 # Set the default behavior, in case people don't have core.autocrlf set.
 * text eol=lf
 
+ # Treat binary files correctly
+*.png binary 
+*.jpg binary 
+*.jpeg binary 
+*.gif binary 
+*.ico binary 
+*.webp binary 
+*.svg binary 
+*.ttf binary 
+*.eot binary 
+*.woff binary 
+*.woff2binary 
+*.pdf binary 
+*.zip binary 
+*.gz binary 
+*.tgz binary 
+*.mp3 binary 
+*.mp4 binary 
+*.mov binary 
+
 # Enforce to use Linux-style newlines
 *.hx text eol=lf
 *.yml text eol=lf
