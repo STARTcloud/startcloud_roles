@@ -1,0 +1,197 @@
+---
+-
+  name: "Running Server Only Configurations"
+  when: "vm_type == 'desktop'"
+  block:
+    -
+      name: Setting User Dconf
+      ansible.builtin.copy:
+        content: |
+          user-db:user
+          system-db:gdm
+          file-db:/usr/share/gdm/greeter-dconf-defaults
+        dest: /etc/dconf/profile/gdm
+        mode: "0774"
+
+    -
+      name: "Setting Login Screen Appearance"
+      ansible.builtin.template:
+        src: 00-login-screen.j2
+        dest: /etc/dconf/db/gdm.d/00-login-screen
+        mode: "0774"
+
+    -
+      name: "Setting Screensaver Setings"
+      ansible.builtin.template:
+        src: 00-session.j2
+        dest: /etc/dconf/db/local.d/00-session
+        mode: "0774"
+
+    -
+      name: "Setting Screensaver Setings"
+      ansible.builtin.template:
+        src: 00-power.j2
+        dest: /etc/dconf/db/local.d/00-power
+        mode: "0774"
+
+    -
+      name: "Downloading ubuntu-gdm-set-background"
+      ansible.builtin.get_url:
+        mode: '+x'
+        url: "https://raw.githubusercontent.com/PRATAP-KUMAR/ubuntu-gdm-set-background/main/ubuntu-gdm-set-background"
+        dest: "/usr/local/bin/ubuntu-gdm-set-background"
+
+-
+  name: "Running General Configurations"
+  when: "vm_type == 'server' or vm_type == 'desktop'"
+  block:
+    -
+      name: "Adding Additional packages"
+      ansible.builtin.apt:
+        name: "{{ theme_packages }}"
+        state: present
+
+    -
+      name: "Creating STARTcloud Theme Folder"
+      ansible.builtin.file:
+        mode: '0755'
+        path: "{{ item }}"
+        state: directory
+      with_items:
+        - "/usr/share/plymouth/themes/startcloud"
+
+    -
+      name: "Registering STARTcloud Theme Files"
+      ansible.builtin.find:
+        paths: "{{ role_path }}/files/"
+        file_type: any
+      register: files
+
+    -
+      name: "Copying Theme files"
+      ansible.builtin.copy:
+        mode: '0644'
+        src: "{{ item.path }}"
+        dest: /usr/share/plymouth/themes/startcloud/
+      loop: "{{ files.files }}"
+
+    -
+      name: "Copying Plymouth daemon configuration"
+      ansible.builtin.copy:
+        mode: '0644'
+        src: "plymouthd.conf"
+        dest: /etc/plymouth/plymouthd.conf
+
+    -
+      name: "Copying Grub Background Image files"
+      ansible.builtin.copy:
+        mode: '0644'
+        src: "startcloud-desktop.png"
+        dest: /boot/grub/
+      loop: "{{ files.files }}"
+
+    -
+      name: "Setting GRUB command line variable"
+      ansible.builtin.set_fact:
+        grub_cmdline: >
+          console=ttyS0,115200n8 console=tty1 loglevel=3
+          rd.systemd.show_status=false rd.udev.log_level=3
+          plymouth.ignore-serial-consoles quiet splash
+
+    -
+      name: "Configuring Grub for Plymouth and Serial Console"
+      ansible.builtin.lineinfile:
+        line: "{{ item.line }}"
+        path: /etc/default/grub
+        regexp: "{{ item.regexp }}"
+      with_items:
+        - line: 'GRUB_CMDLINE_LINUX_DEFAULT="{{ grub_cmdline }}"'
+          regexp: ^GRUB_CMDLINE_LINUX_DEFAULT=
+        - line: 'GRUB_CMDLINE_LINUX=""'
+          regexp: ^GRUB_CMDLINE_LINUX=
+        - line: 'GRUB_BACKGROUND="/boot/grub/startcloud-desktop.png"'
+          regexp: ^GRUB_BACKGROUND=
+        - line: 'GRUB_TIMEOUT=5'
+          regexp: ^GRUB_TIMEOUT=
+        - line: 'GRUB_TIMEOUT_STYLE=menu'
+          regexp: ^GRUB_TIMEOUT_STYLE=
+        - line: 'GRUB_TERMINAL_INPUT="console serial"'
+          regexp: ^#?GRUB_TERMINAL_INPUT=
+        - line: 'GRUB_TERMINAL_OUTPUT="gfxterm serial"'
+          regexp: ^#?GRUB_TERMINAL_OUTPUT=
+        - line: 'GRUB_SERIAL_COMMAND="serial --speed=115200 --unit=0 --word=8 --parity=no --stop=1"'
+          regexp: ^#?GRUB_SERIAL_COMMAND=
+        - line: 'GRUB_GFXMODE="1024x768x32,auto"'
+          regexp: ^#?GRUB_GFXMODE=
+        - line: 'GRUB_GFXPAYLOAD_LINUX="keep"'
+          regexp: ^#?GRUB_GFXPAYLOAD_LINUX=
+        - line: 'GRUB_HIDDEN_TIMEOUT_QUIET=false'
+          regexp: ^#?GRUB_HIDDEN_TIMEOUT_QUIET=
+
+    -
+      name: "Setting quiet boot in GRUB Linux script"
+      ansible.builtin.replace:
+        path: /etc/grub.d/10_linux
+        regexp: '^quiet_boot="0"'
+        replace: 'quiet_boot="1"'
+
+    -
+      name: "Setting STARTcloud Theme as default"
+      community.general.alternatives:
+        name: default.plymouth
+        path: /usr/share/plymouth/themes/startcloud/startcloud.plymouth
+        link: /usr/share/plymouth/themes/default.plymouth
+        priority: 100
+
+    -
+      name: "Setting Plymouth default theme"
+      ansible.builtin.command: plymouth-set-default-theme startcloud
+      register: plymouth_theme
+      changed_when: plymouth_theme.rc == 0
+
+    -
+      name: "Updating initramfs"
+      ansible.builtin.command: update-initramfs -u
+      register: update_initramfs
+      changed_when: update_initramfs.rc == 0
+
+    -
+      name: "Updating GRUB"
+      ansible.builtin.command: update-grub
+      register: update_grub
+      changed_when: update_grub.rc == 0
+
+    -
+      name: "Enabling serial getty service"
+      ansible.builtin.systemd:
+        name: serial-getty@ttyS0.service
+        enabled: true
+        state: started
+        daemon_reload: true
+
+    -
+      name: "Creating serial getty override directory"
+      ansible.builtin.file:
+        path: /etc/systemd/system/serial-getty@ttyS0.service.d
+        state: directory
+        mode: '0755'
+
+    -
+      name: "Configuring serial getty override"
+      ansible.builtin.copy:
+        content: |
+          [Service]
+          # Clear the default ExecStart to avoid conflicts
+          ExecStart=
+          # Set up serial console with proper parameters
+          ExecStart=-/sbin/agetty -o '-p -- \\\\u' --keep-baud 115200,38400,9600 %I $TERM
+          Type=idle
+        dest: /etc/systemd/system/serial-getty@ttyS0.service.d/override.conf
+        mode: '0644'
+
+    -
+      name: "Ensuring getty on tty0 is enabled"
+      ansible.builtin.systemd:
+        name: getty@tty0.service
+        enabled: true
+        state: started

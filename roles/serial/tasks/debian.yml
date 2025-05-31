@@ -7,7 +7,7 @@
     mode: "0755"
 
 -
-  name: "Enable Auto Login configuration"
+  name: "Enabling Auto Login configuration"
   when: enable_auto_login
   ansible.builtin.lineinfile:
     create: true
@@ -26,9 +26,9 @@
     path: /etc/default/grub
     regexp: "{{ item.regexp }}"
   with_items:
-    - line: 'GRUB_CMDLINE_LINUX_DEFAULT="quiet"'
+    - line: 'GRUB_CMDLINE_LINUX_DEFAULT="{{ grub_cmdline_linux_default }}"'
       regexp: ^GRUB_CMDLINE_LINUX_DEFAULT=
-    - line: 'GRUB_CMDLINE_LINUX="console=tty0 console=ttyS0,115200n8"'
+    - line: 'GRUB_CMDLINE_LINUX="{{ grub_cmdline_linux }}"'
       regexp: ^GRUB_CMDLINE_LINUX=
 
 -
@@ -43,6 +43,8 @@
 -
   name: "Installing Grub for BIOS systems"
   ansible.builtin.command: grub-install --target=i386-pc /dev/sda
+  register: grub_intall
+  changed_when: grub_intall.rc != 0
 
 -
   name: "Generating Grub configuration"

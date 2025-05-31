@@ -1,58 +1,76 @@
+---
+-
+  name: "Managing progress for {{ ansible_role_name }}"
+  when: count_progress | default(false)
+  run_once: true
+  block:
+    - name: "Incrementing global progress step counter for {{ ansible_role_name }}"
+      ansible.builtin.set_fact:
+        global_current_progress_step: "{{ global_current_progress_step | default(0) | int + 1 }}"
+
+    - name: "Including progress reporting task for {{ ansible_role_name }}"
+      ansible.builtin.include_role:
+        name: startcloud.startcloud_roles.progress
+      vars:
+        _progress_role_is_setup_run: false
+        current_progress_step: "{{ global_current_progress_step | default(0) }}"
+        progress_description: "{{ progress_role_description | default('Processing ' + ansible_role_name) }}"
+
 -
   name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
     -
-      name: "Including OS-specific variables."
-      ansible.builtin.include_vars: "{{ ansible_os_family }}.yml"
-    
+      name: "Including OS-specific tasks"
+      ansible.builtin.include_vars: "{{ ansible_os_family | lower }}.yml"
+
     -
       name: "Setting the ntp_driftfile variable."
       ansible.builtin.set_fact:
         ntp_driftfile: "{{ __ntp_driftfile }}"
       when: ntp_driftfile is not defined
-    
+
     -
       name: "Setting the ntp_package variable."
       ansible.builtin.set_fact:
         ntp_package: "{{ __ntp_package }}"
       when: ntp_package is not defined
-    
+
     -
       name: "Setting the ntp_config_file variable."
       ansible.builtin.set_fact:
         ntp_config_file: "{{ __ntp_config_file }}"
       when: ntp_config_file is not defined
-    
+
     -
       name: "Setting the ntp_daemon variable."
       ansible.builtin.set_fact:
         ntp_daemon: "{{ __ntp_daemon }}"
       when: ntp_daemon is not defined
-    
+
     -
       name: "Ensuring NTP package is installed."
       ansible.builtin.package:
         name: "{{ ntp_package }}"
         state: present
-    
+
     -
       name: "Ensuring tzdata package is installed (Linux)."
       ansible.builtin.package:
         name: "{{ ntp_tzdata_package }}"
         state: present
       when: ansible_system == "Linux"
-    
+
     -
       name: "Setting timezone."
       community.general.timezone:
         name: "{{ ntp_timezone }}"
       notify: restart cron
-    
+
     -
       name: "Populating service facts."
       ansible.builtin.service_facts:
-    
+
     -
       name: "Disabling systemd-timesyncd if it's running but ntp is enabled."
       ansible.builtin.service:
@@ -62,7 +80,7 @@
       when:
         - ntp_enabled | bool
         - ansible_facts.services["systemd-timesyncd"] is defined
-    
+
     -
       name: "Ensuring NTP is running and enabled as configured."
       ansible.builtin.service:
@@ -70,7 +88,7 @@
         state: started
         enabled: true
       when: ntp_enabled | bool
-    
+
     -
       name: "Ensuring NTP is stopped and disabled as configured."
       ansible.builtin.service:
@@ -78,7 +96,7 @@
         state: stopped
         enabled: false
       when: not (ntp_enabled | bool)
-    
+
     -
       name: "Generating ntp configuration file."
       ansible.builtin.template:

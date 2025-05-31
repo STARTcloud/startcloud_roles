@@ -1,5 +1,9 @@
 ---
 run_tasks: true
+count_progress: true
+progress_units: 1
+progress_role_description: "Configuring NTP"
+
 ntp_enabled: true
 ntp_timezone: America/Chicago
 # ntp_daemon: [various]

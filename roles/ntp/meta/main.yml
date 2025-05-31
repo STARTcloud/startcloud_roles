@@ -1,13 +1,12 @@
 ---
-dependencies: []
-
 galaxy_info:
   role_name: ntp
   author: MarkProminic
-  description: NTP installation and configuration for Linux.
-  company: "Prominic.NET"
-  license: "license (BSD, MIT)"
-  min_ansible_version: 2.10
+  description: NTP installation and configuration
+  company: STARTCloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: license (Apache)
+  min_ansible_version: '2.9'
   platforms:
     - name: Fedora
       versions:
@@ -27,6 +26,7 @@ galaxy_info:
     - name: Archlinux
       versions:
         - all
+
   galaxy_tags:
     - system
     - ntp
@@ -36,3 +36,10 @@ galaxy_info:
     - chrony
     - chronyd
     - synchronization
+
+dependencies: []
+
+collections:
+  - startcloud.startcloud_roles
+
+allow_duplicates: false

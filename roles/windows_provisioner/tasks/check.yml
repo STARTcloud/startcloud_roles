@@ -1,8 +1,9 @@
 ---
-- hosts: all
-  tasks:
-   - name: Get disk facts
-     win_command: wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
-     register: usage
+- name: Get disk facts
+  ansible.windows.win_command: wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+  register: usage
 
-   - debug: msg="{{ usage.stdout }}"
+-
+  name: Debug
+  ansible.builtin.debug:
+    msg: "{{ usage.stdout }}"

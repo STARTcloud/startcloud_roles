@@ -108,13 +108,32 @@
     - /var/log/wtmp
     - /var/log/btmp
 
--
-  name: "Unsetting the History File"
-  ansible.builtin.shell: "unset HISTFILE"
 
 -
-  name: "Clearing out all logs in subfolder of Log Dir"
-  ansible.builtin.shell: 'find /var/log -type f | while read f; do echo -ne "" > "${f}"; done;'
+  name: "Clearing the History File"
+  ansible.builtin.command: "unset HISTFILE"
+  changed_when: false
+  failed_when: false
+
+
+-
+  name: "Finding all log files to truncate"
+  ansible.builtin.find:
+    paths: /var/log
+    file_type: file
+    recurse: true
+  register: all_log_files
+
+-
+  name: "Truncating all log files"
+  ansible.builtin.copy:
+    content: ""
+    dest: "{{ item.path }}"
+    backup: false
+    force: true
+    mode: preserve
+  loop: "{{ all_log_files.files }}"
+  failed_when: false
 
 -
   name: "Removing caches, logs, docs, man pages, and history"
@@ -184,12 +203,13 @@
     enabled: false
 
 -
-  name: "Removing Final Caches and Logs"
-  ansible.builtin.shell: "{{ item }}"
-  with_items:
-    - "sudo dnf clean all"
-    - "sudo rm -rf /var/cache/*"
-    - "sudo rm -rf /var/tmp/*"
-    - "sudo rm -rf /tmp/*"
-    - "sudo rm -rf /etc/ssh/ssh_host_*"
-    - "sudo rm -rf /etc/udev/rules.d/70-persistent-net.rules"
+  name: "Removing old directories and files"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/var/cache/"
+    - "/var/tmp"
+    - "/etc/udev/rules.d/70-persistent-net.rules"
+    - "/tmp"
+    - "/etc/ssh/ssh_host_*"
