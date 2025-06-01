@@ -91,15 +91,17 @@
       loop: "{{ files.files }}"
 
     -
-      name: "Setting GRUB command line variable"
+      name: "Setting theme-specific GRUB parameters"
       ansible.builtin.set_fact:
-        grub_cmdline: >
-          console=ttyS0,115200n8 console=tty1 loglevel=3
-          rd.systemd.show_status=false rd.udev.log_level=3
-          plymouth.ignore-serial-consoles quiet splash
+        theme_grub_params: "loglevel=3 rd.systemd.show_status=false rd.udev.log_level=3 vt.global_cursor_default=0 plymouth.ignore-serial-consoles splash"
 
     -
-      name: "Configuring Grub for Plymouth and Serial Console"
+      name: "Build final GRUB command line using serial role variables"
+      ansible.builtin.set_fact:
+        grub_cmdline: "{{ serial_grub_cmdline }} {{ theme_grub_params }}"
+
+    -
+      name: "Configuring Grub for Plymouth and Theme"
       ansible.builtin.lineinfile:
         line: "{{ item.line }}"
         path: /etc/default/grub
@@ -113,20 +115,26 @@
           regexp: ^GRUB_BACKGROUND=
         - line: 'GRUB_TIMEOUT=5'
           regexp: ^GRUB_TIMEOUT=
+          when: serial_console_configured is not defined
         - line: 'GRUB_TIMEOUT_STYLE=menu'
           regexp: ^GRUB_TIMEOUT_STYLE=
+          when: serial_console_configured is not defined
         - line: 'GRUB_TERMINAL_INPUT="console serial"'
           regexp: ^#?GRUB_TERMINAL_INPUT=
+          when: serial_console_configured is not defined
         - line: 'GRUB_TERMINAL_OUTPUT="gfxterm serial"'
           regexp: ^#?GRUB_TERMINAL_OUTPUT=
+          when: serial_console_configured is not defined
         - line: 'GRUB_SERIAL_COMMAND="serial --speed=115200 --unit=0 --word=8 --parity=no --stop=1"'
           regexp: ^#?GRUB_SERIAL_COMMAND=
+          when: serial_console_configured is not defined
         - line: 'GRUB_GFXMODE="1024x768x32,auto"'
           regexp: ^#?GRUB_GFXMODE=
         - line: 'GRUB_GFXPAYLOAD_LINUX="keep"'
           regexp: ^#?GRUB_GFXPAYLOAD_LINUX=
         - line: 'GRUB_HIDDEN_TIMEOUT_QUIET=false'
           regexp: ^#?GRUB_HIDDEN_TIMEOUT_QUIET=
+          when: serial_console_configured is not defined
 
     -
       name: "Setting quiet boot in GRUB Linux script"
@@ -160,38 +168,3 @@
       ansible.builtin.command: update-grub
       register: update_grub
       changed_when: update_grub.rc == 0
-
-    -
-      name: "Enabling serial getty service"
-      ansible.builtin.systemd:
-        name: serial-getty@ttyS0.service
-        enabled: true
-        state: started
-        daemon_reload: true
-
-    -
-      name: "Creating serial getty override directory"
-      ansible.builtin.file:
-        path: /etc/systemd/system/serial-getty@ttyS0.service.d
-        state: directory
-        mode: '0755'
-
-    -
-      name: "Configuring serial getty override"
-      ansible.builtin.copy:
-        content: |
-          [Service]
-          # Clear the default ExecStart to avoid conflicts
-          ExecStart=
-          # Set up serial console with proper parameters
-          ExecStart=-/sbin/agetty -o '-p -- \\\\u' --keep-baud 115200,38400,9600 %I $TERM
-          Type=idle
-        dest: /etc/systemd/system/serial-getty@ttyS0.service.d/override.conf
-        mode: '0644'
-
-    -
-      name: "Ensuring getty on tty0 is enabled"
-      ansible.builtin.systemd:
-        name: getty@tty0.service
-        enabled: true
-        state: started

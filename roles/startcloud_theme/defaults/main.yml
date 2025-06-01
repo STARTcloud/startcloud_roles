@@ -5,10 +5,7 @@ count_progress: true
 progress_units: 1
 progress_role_description: "Installing system dependencies"
 
-server_type: server
+vm_type: server
 theme_packages:
   - plymouth
   - plymouth-themes
-
-
-grub_cmdline_linux_default: "quiet splash"

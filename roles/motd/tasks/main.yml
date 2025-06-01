@@ -137,3 +137,27 @@
         - motd
         - common
       when: "not tail_supported.stat.exists | bool"
+
+    -
+      name: "Prepending string to first line in /etc/issue"
+      ansible.builtin.lineinfile:
+        path: /etc/issue
+        regexp: '^(.*)'
+        line: 'Booted - STARTcloud - \1'
+        backrefs: true
+        firstmatch: true
+      tags:
+        - motd
+        - common
+
+    -
+      name: "Prepending string to first line in /etc/issue.net"
+      ansible.builtin.lineinfile:
+        path: /etc/issue.net
+        regexp: '^(.*)'
+        line: 'Booted - STARTcloud - \1'
+        backrefs: true
+        firstmatch: true
+      tags:
+        - motd
+        - common

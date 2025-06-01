@@ -6,5 +6,5 @@ progress_role_description: "Configuring Serial"
 
 enable_auto_login: false
 
-grub_cmdline_linux: "console=tty0 console=ttyS0,115200n8"
-grub_cmdline_linux_default: "quiet"
+grub_cmdline_linux: ""
+grub_cmdline_linux_default: "console=ttyS0,115200n8 console=tty1 quiet"

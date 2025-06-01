@@ -20,7 +20,8 @@ galaxy_info:
 
   galaxy_tags: []
 
-dependencies: []
+dependencies:
+  - role: startcloud.startcloud_roles.serial
 
 collections:
   - startcloud.startcloud_roles

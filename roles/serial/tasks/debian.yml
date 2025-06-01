@@ -20,6 +20,29 @@
     - "ExecStart=/sbin/agetty --autologin root -8 --keep-baud 115200,38400,9600 ttyS0 $TERM"
 
 -
+  name: "Enabling serial getty service"
+  when: enable_auto_login
+  ansible.builtin.systemd:
+    name: serial-getty@ttyS0.service
+    enabled: true
+    state: started
+    daemon_reload: true
+
+-
+  name: "Ensuring getty on tty0 is enabled"
+  when: enable_auto_login
+  ansible.builtin.systemd:
+    name: getty@tty0.service
+    enabled: true
+    state: started
+
+-
+  name: "Setting fact for serial console configuration"
+  ansible.builtin.set_fact:
+    serial_console_configured: true
+    serial_grub_cmdline: "{{ grub_cmdline_linux_default }}"
+
+-
   name: "Ensuring that a Serial Terminal is enabled in Grub"
   ansible.builtin.lineinfile:
     line: "{{ item.line }}"
@@ -30,6 +53,18 @@
       regexp: ^GRUB_CMDLINE_LINUX_DEFAULT=
     - line: 'GRUB_CMDLINE_LINUX="{{ grub_cmdline_linux }}"'
       regexp: ^GRUB_CMDLINE_LINUX=
+    - line: 'GRUB_TERMINAL_INPUT="console serial"'
+      regexp: ^#?GRUB_TERMINAL_INPUT=
+    - line: 'GRUB_TERMINAL_OUTPUT="gfxterm serial"'
+      regexp: ^#?GRUB_TERMINAL_OUTPUT=
+    - line: 'GRUB_SERIAL_COMMAND="serial --speed=115200 --unit=0 --word=8 --parity=no --stop=1"'
+      regexp: ^#?GRUB_SERIAL_COMMAND=
+    - line: 'GRUB_TIMEOUT=5'
+      regexp: ^GRUB_TIMEOUT=
+    - line: 'GRUB_TIMEOUT_STYLE=menu'
+      regexp: ^GRUB_TIMEOUT_STYLE=
+    - line: 'GRUB_HIDDEN_TIMEOUT_QUIET=false'
+      regexp: ^#?GRUB_HIDDEN_TIMEOUT_QUIET=
 
 -
   name: "Updating Grub"
