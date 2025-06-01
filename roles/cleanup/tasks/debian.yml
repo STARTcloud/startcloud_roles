@@ -227,7 +227,7 @@
     - /tmp/*
 
 -
-  name: "Recreating TMP, Doc and Man directories"
+  name: "Recreating Doc and Man directories"
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
@@ -235,6 +235,14 @@
   loop:
     - /usr/share/doc/
     - /usr/share/man/
+
+-
+  name: "Recreating TMP"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0777"
+  loop:
     - /tmp/
 
 -
