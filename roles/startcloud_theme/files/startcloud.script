@@ -12,7 +12,7 @@ screen_y = Window.GetY();
  * and load images accordingly
  */
 
-background_image = Image("startcloud.png");
+background_image = Image("startcloud-desktop.png");
 passw_dialog_input_image = Image("entry.png");
 lock_image = Image("lock.png");
 capslock_image = Image("capslock.png");
