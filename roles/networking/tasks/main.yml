@@ -28,7 +28,7 @@
 
     -
       name: "Network Cleanup"
-      when: 
+      when:
         - not ansible_module_running_in_container
       become: true
       tags: once
@@ -57,7 +57,7 @@
 
     -
       name: "Gathering Networking Configurations"
-      when: 
+      when:
         - not ansible_module_running_in_container
       become: true
       tags: once
@@ -68,7 +68,7 @@
 
     -
       name: "Loading Virtualbox Tasks"
-      when: 
+      when:
         - ansible_virtualization_type == "virtualbox"
         - not ansible_module_running_in_container
       become: true
@@ -80,8 +80,9 @@
 
     -
       name: "Loading UTM/KVM Tasks"
-      when: 
+      when:
         - ansible_virtualization_type == "kvm"
+        - ansible_bios_vendor != "BHYVE"
         - not ansible_module_running_in_container
       become: true
       tags: once
@@ -89,6 +90,18 @@
         -
           name: "Including OS-specific tasks"
           ansible.builtin.include_tasks: "utm/{{ ansible_os_family | lower }}.yml"
+
+    -
+      name: "Loading Bhyve Tasks"
+      when:
+        - ansible_bios_vendor == "BHYVE"
+        - not ansible_module_running_in_container
+      become: true
+      tags: once
+      block:
+        -
+          name: "Including OS-specific tasks"
+          ansible.builtin.include_tasks: "bhyve/{{ ansible_os_family | lower }}.yml"
 
     -
       name: "Setting Host Records"
