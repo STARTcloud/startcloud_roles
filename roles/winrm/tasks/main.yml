@@ -1,0 +1,48 @@
+---
+-
+  name: "Managing progress for {{ ansible_role_name }}"
+  when: count_progress | default(false)
+  run_once: true
+  block:
+    -
+      name: "Incrementing global progress step counter for {{ ansible_role_name }}"
+      ansible.builtin.set_fact:
+        global_current_progress_step: "{{ global_current_progress_step | default(0) | int + 1 }}"
+
+    -
+      name: "Including progress reporting task for {{ ansible_role_name }}"
+      ansible.builtin.include_role:
+        name: startcloud.startcloud_roles.progress
+      vars:
+        _progress_role_is_setup_run: false
+        current_progress_step: "{{ global_current_progress_step | default(0) }}"
+        progress_description: "{{ progress_role_description | default('Processing ' + ansible_role_name) }}"
+
+-
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    - name: "Setting up WinRM"
+      block:
+        - name: "Downloading WinRM Configuration Script"
+          ansible.windows.win_get_url:
+            url: "{{ winrm_config_script_url }}"
+            dest: "{{ winrm_temp_dir }}\\ConfigureRemotingForAnsible.ps1"
+          register: winrm_setup
+
+        - name: "Executing WinRM Configuration Script"
+          ansible.windows.win_powershell:
+            script: iex "{{ winrm_temp_dir }}\\ConfigureRemotingForAnsible.ps1"
+          register: winrm_execution
+
+        - name: "Allowing Basic WinRM Authentication"
+          ansible.windows.win_powershell:
+            script: Set-Item -Path WSMan:\localhost\Service\Auth\Basic -Value $true
+          register: winrm_allow_basic_auth_result
+          when: winrm_allow_basic_auth
+
+        - name: "Allowing Unencrypted Connections"
+          ansible.windows.win_powershell:
+            script: winrm set winrm/config/service '@{AllowUnencrypted="true"}'
+          register: winrm_allow_unencrypted_result
+          when: winrm_allow_unencrypted

@@ -1,0 +1,21 @@
+---
+# defaults file for windows_privacy
+
+# Windows Security settings
+disable_security_notifications: true
+
+# Telemetry and data collection
+disable_telemetry: true
+disable_feedback: true
+disable_location_tracking: true
+
+# Cortana and search
+disable_cortana: true
+disable_bing_search: true
+
+# Bloatware prevention
+disable_consumer_features: true
+disable_content_delivery: true
+
+# Services
+disable_diagnostics_tracking: true

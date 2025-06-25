@@ -1,0 +1,115 @@
+---
+-
+  name: "Configuring Powershell"
+  block:
+    - name: "Setting Execution Policy to Unrestricted"
+      ansible.windows.win_shell: Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Force
+      register: execution_policy_unrestricted
+
+    - name: "Setting Execution Policy to Bypass for Process Scope and Enable TLS 1.2"
+      ansible.windows.win_shell: '[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072'
+      register: execution_policy_bypass
+
+-
+  name: "Installing Powershell 7"
+  block:
+    - name: Check if PowerShell 7 is already installed
+      ansible.windows.win_shell: |
+        $psVersion = (Get-Command pwsh -ErrorAction SilentlyContinue).Version.Major
+        if ($psVersion -eq 7) {
+          $psVersion
+        }
+      register: ps7_check
+      changed_when: false
+
+    - name: "Debugging PS7 Check Result"
+      ansible.builtin.debug:
+        var: ps7_check
+
+    - name: "Downloading Powershell 7 Installation Script"
+      ansible.windows.win_get_url:
+        url: "https://aka.ms/install-powershell.ps1"
+        dest: C:\temp\install-powershell.ps1
+      when: ps7_check != "7"
+
+    - name: "Executing Powershell 7 Installation Script"
+      ansible.windows.win_powershell:
+        script: iex "C:\temp\install-powershell.ps1"
+      when: ps7_check != "7"
+
+-
+  name: "Configuring AutoUnattend.xml and Post Provisioning Setup scripts"
+  block:
+    - name: "Creating Post-Provisioning Directory"
+      ansible.windows.win_file:
+        path: C:\temp
+        state: directory
+
+    - name: "Creating Post-Provisioning Directory"
+      ansible.windows.win_file:
+        path: C:\Windows\Temp\packer
+        state: directory
+
+    - name: "Creating STARTcloud Directory"
+      ansible.windows.win_file:
+        path: C:\opt\STARTcloud
+        state: directory
+
+    - name: "Copying provision-Autounattend.ps1 to packer directory"
+      ansible.windows.win_template:
+        src: provision-Autounattend.ps1.j2
+        dest: C:\Windows\Temp\packer\Autounattend.ps1
+
+    - name: "Copying provision-Autounattend.xml to packer directory"
+      ansible.windows.win_template:
+        src: provision-Autounattend.xml.j2
+        dest: C:\Windows\Temp\packer\Autounattend.xml
+
+    - name: "Creating Setup Scripts Directory"
+      ansible.windows.win_file:
+        path: C:\Windows\Setup\Scripts
+        state: directory
+
+    - name: "Copying SetupComplete.cmd to C:\\Windows\\Setup\\Scripts"
+      ansible.windows.win_template:
+        src: SetupComplete.cmd.j2
+        dest: C:\Windows\Setup\Scripts\SetupComplete.cmd
+
+    - name: "Copying setup-ssh.ps1 to C:\\Windows\\Setup\\Scripts"
+      ansible.windows.win_template:
+        src: setup-ssh.ps1.j2
+        dest: C:\Windows\Setup\Scripts\setup-ssh.ps1
+
+    - name: "Creating Vagrant Directory"
+      ansible.windows.win_file:
+        path: C:\vagrant
+        state: directory
+
+-
+  name: "Setting Timezone"
+  ansible.windows.win_shell: |
+    Write-Output "Setting Timezone"
+    Set-TimeZone -Name "{{ timezone | default('UTC') }}" -PassThru
+
+-
+  name: "Writing current variables to support bundle"
+  block:
+    - name: "Creating support bundle directory"
+      ansible.windows.win_file:
+        path: C:\vagrant\support-bundle
+        state: directory
+
+    - name: "Writing current variables to C:\\vagrant\\support-bundle\\ansible-system-variables.json"
+      ansible.windows.win_copy:
+        content: "{{ vars | to_nice_json }}"
+        dest: "C:\\vagrant\\support-bundle\\ansible-system-variables.json"
+
+    - name: "Writing provisioner version to json"
+      ansible.windows.win_copy:
+        content: "{{ provisioner_version | default('unknown') }}"
+        dest: "C:\\vagrant\\support-bundle\\{{ provisioner_name | default('provisioner') }}-version.json"
+
+    - name: "Writing core_provisioner version"
+      ansible.windows.win_copy:
+        content: "{{ core_provisioner_version | default('unknown') }}"
+        dest: "C:\\vagrant\\support-bundle\\core_provisioner-version.json"

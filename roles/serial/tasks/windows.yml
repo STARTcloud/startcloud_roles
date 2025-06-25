@@ -1,0 +1,7 @@
+---
+-
+  name: "Enabling Serial Emergency Management Console"
+  ansible.windows.win_shell: |
+    bcdedit /ems ON
+    bcdedit /bootems ON
+    bcdedit /emssettings EMSPORT:1 EMSBAUDRATE:115200
