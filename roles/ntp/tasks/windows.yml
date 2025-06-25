@@ -4,7 +4,7 @@
   ansible.windows.win_shell: |
     Write-Output "Setting NTP"
     net start w32time
-    w32tm /config /manualpeerlist:"{{ ntp1server | default('ntp1.prominic.net,0x8') }} {{ ntp2server | default('ntp2.prominic.net,0x8') }}" /syncfromflags:manual /update
+    w32tm /config /manualpeerlist:"{{ [ntp1server, ntp2server] | select | join(' ') }}" /syncfromflags:manual /update
     w32tm /resync /force
 
 -
