@@ -1,5 +1,35 @@
 ---
 -
+  name: "Loading vendor-specific variables"
+  ansible.builtin.include_vars: "{{ vendor }}.yml"
+  when: vendor is defined
+  ignore_errors: true
+
+-
+  name: "Windows Activation"
+  when: activate_os | default(false) | bool and windows_license_key is defined and windows_license_key != ""
+  block:
+    - name: "Activating Windows with license key"
+      ansible.windows.win_powershell:
+        script: |
+          try {
+            $result = slmgr.vbs /ipk "{{ windows_license_key }}"
+            Start-Sleep -Seconds 5
+            $activation = slmgr.vbs /ato
+            Write-Output "License installed and activation attempted"
+            Write-Output $result
+            Write-Output $activation
+          } catch {
+            Write-Error "Failed to activate Windows: $_"
+            throw $_
+          }
+      register: activation_result
+
+    - name: "Displaying activation result"
+      ansible.builtin.debug:
+        var: activation_result
+
+-
   name: "Configuring Powershell"
   block:
     - name: "Setting Execution Policy to Unrestricted"

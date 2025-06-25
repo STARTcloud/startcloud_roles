@@ -2,10 +2,10 @@
 dependencies: []
 
 galaxy_info:
-  role_name: clamav
-  author: geerlingguy
-  description: ClamAV installation and configuration.
-  company: "Midwestern Mac, LLC"
+  role_name: antivirus
+  author: STARTcloud
+  description: Antivirus installation and configuration supporting ClamAV and Sophos.
+  company: "STARTcloud"
   license: "license (BSD, MIT)"
   min_ansible_version: "2.10"
   platforms:
@@ -14,10 +14,20 @@ galaxy_info:
         - trusty
         - xenial
         - bionic
+        - focal
+        - jammy
     - name: Debian
       versions:
         - jessie
         - stretch
+        - buster
+        - bullseye
+    - name: Windows
+      versions:
+        - "10"
+        - "11"
+        - "2019"
+        - "2022"
   galaxy_tags:
     - networking
     - cloud
@@ -25,6 +35,10 @@ galaxy_info:
     - antivirus
     - antimalware
     - scan
+    - sophos
+    - clamav
+    - windows
+    - linux
 
 collections:
   - startcloud.startcloud_roles
