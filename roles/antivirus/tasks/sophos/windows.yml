@@ -3,12 +3,14 @@
   name: "Installing Sophos Antivirus on Windows"
   when: install_sophos | default(false) | bool
   block:
-    - name: "Setting TLS 1.2 for PowerShell downloads"
+    -
+      name: "Setting TLS 1.2 for PowerShell downloads"
       ansible.windows.win_powershell:
         script: |
           [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-    - name: "Downloading Sophos Setup from primary URL"
+    -
+      name: "Downloading Sophos Setup from primary URL"
       ansible.windows.win_powershell:
         script: |
           try {
@@ -22,7 +24,8 @@
           }
       register: sophos_download_result
 
-    - name: "Installing Sophos Antivirus"
+    -
+      name: "Installing Sophos Antivirus"
       ansible.windows.win_powershell:
         script: |
           try {
@@ -40,12 +43,14 @@
           }
       register: sophos_install_result
 
-    - name: "Cleaning up Sophos installer"
+    -
+      name: "Cleaning up Sophos installer"
       ansible.windows.win_file:
         path: "{{ ansible_env.TEMP }}\\SophosSetup.exe"
         state: absent
       ignore_errors: true
 
-    - name: "Displaying Sophos installation result"
+    -
+      name: "Displaying Sophos installation result"
       ansible.builtin.debug:
         var: sophos_install_result

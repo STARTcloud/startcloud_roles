@@ -22,34 +22,41 @@
   name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    - name: "Setting up BGInfo"
+    -
+      name: "Setting up BGInfo"
       block:
-        - name: "Creating BGInfo directory"
+        -
+          name: "Creating BGInfo directory"
           ansible.windows.win_file:
             path: "{{ bginfo_directory }}"
             state: directory
 
-        - name: "Downloading Prominic.bgi"
+        -
+          name: "Downloading Prominic.bgi"
           ansible.windows.win_get_url:
             url: "{{ bginfo_config_url }}"
             dest: "{{ bginfo_directory }}\\Prominic.bgi"
 
-        - name: "Creating Startup Directory"
+        -
+          name: "Creating Startup Directory"
           ansible.windows.win_file:
             path: "{{ startup_directory }}"
             state: directory
 
-        - name: "Downloading Bginfo64.lnk"
+        -
+          name: "Downloading Bginfo64.lnk"
           ansible.windows.win_get_url:
             url: "{{ bginfo_shortcut_url }}"
             dest: "{{ startup_directory }}\\Bginfo64.lnk"
 
-        - name: "Downloading ProminicBackgroundv2.bmp"
+        -
+          name: "Downloading ProminicBackgroundv2.bmp"
           ansible.windows.win_get_url:
             url: "{{ bginfo_background_v2_url }}"
             dest: "{{ bginfo_directory }}\\ProminicBackgroundv2.bmp"
 
-        - name: "Downloading ProminicBackground.jpg"
+        -
+          name: "Downloading ProminicBackground.jpg"
           ansible.windows.win_get_url:
             url: "{{ bginfo_background_jpg_url }}"
             dest: "{{ bginfo_directory }}\\ProminicBackground.jpg"

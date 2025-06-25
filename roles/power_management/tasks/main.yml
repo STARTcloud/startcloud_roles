@@ -22,26 +22,31 @@
   name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    - name: "Disabling Hibernate"
+    -
+      name: "Disabling Hibernate"
       when: disable_hibernate
       block:
-        - name: "Setting Hibernate file size"
+        -
+          name: "Setting Hibernate file size"
           ansible.windows.win_regedit:
             path: HKLM:\SYSTEM\CurrentControlSet\Control\Power\
             name: HiberFileSizePercent
             data: "{{ hibernate_file_size_percent }}"
             type: dword
 
-        - name: "Disabling Hibernate"
+        -
+          name: "Disabling Hibernate"
           ansible.windows.win_regedit:
             path: HKLM:\SYSTEM\CurrentControlSet\Control\Power\
             name: HibernateEnabled
             data: 0
             type: dword
 
-    - name: "Adjusting Power Settings"
+    -
+      name: "Adjusting Power Settings"
       block:
-        - name: "Disabling Screen Saver"
+        -
+          name: "Disabling Screen Saver"
           when: disable_screensaver
           ansible.windows.win_regedit:
             path: HKCU:\Control Panel\Desktop
@@ -49,15 +54,18 @@
             data: 0
             type: dword
 
-        - name: "Disabling Monitor Timeout on AC"
+        -
+          name: "Disabling Monitor Timeout on AC"
           ansible.windows.win_shell: |
             powercfg -x -monitor-timeout-ac {{ monitor_timeout_ac }}
 
-        - name: "Disabling Monitor Timeout on DC"
+        -
+          name: "Disabling Monitor Timeout on DC"
           ansible.windows.win_shell: |
             powercfg -x -monitor-timeout-dc {{ monitor_timeout_dc }}
 
-        - name: "Setting Power Plan to High Performance"
+        -
+          name: "Setting Power Plan to High Performance"
           when: set_high_performance
           ansible.windows.win_shell: |
             $HighPerf = powercfg -l | ForEach-Object { if ($_.contains("High performance")) { $_.split()[3] } }

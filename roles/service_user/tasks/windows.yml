@@ -2,13 +2,15 @@
 -
   name: "Creating STARTcloud Administrator User"
   block:
-    - name: "Lowering password complexity requirements"
+    -
+      name: "Lowering password complexity requirements"
       community.windows.win_security_policy:
         section: System Access
         key: PasswordComplexity
         value: 0
 
-    - name: "Adding Startcloud as admin user"
+    -
+      name: "Adding Startcloud as admin user"
       ansible.windows.win_user:
         name: "{{ service_user | default('STARTcloud') }}"
         password: "{{ service_user_password | default('STARTcloud24@!') }}"
@@ -17,7 +19,8 @@
         groups:
           - Administrators
 
-    - name: "Restoring original password complexity requirements"
+    -
+      name: "Restoring original password complexity requirements"
       community.windows.win_security_policy:
         section: System Access
         key: PasswordComplexity
@@ -26,12 +29,14 @@
 -
   name: "Setting User Configurations"
   block:
-    - name: "Setting administrator password never expires"
+    -
+      name: "Setting administrator password never expires"
       ansible.windows.win_user:
         name: administrator
         password_never_expires: true
 
-    - name: "Setting service user password never expires"
+    -
+      name: "Setting service user password never expires"
       ansible.windows.win_user:
         name: "{{ service_user | default('STARTcloud') }}"
         password_never_expires: true

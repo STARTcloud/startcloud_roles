@@ -1,6 +1,4 @@
 ---
-# tasks file for sbaerlocher.snmp
-
 -
   name: 'linux : install snmp'
   become: true
