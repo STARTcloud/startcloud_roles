@@ -88,6 +88,47 @@
         script: cyg-get cygrunsrv nano diffutils lynx make openssh perl psmisc rsync vim wget curl
 
 -
+  name: "Configuring Vendor-Specific WSUS Server"
+  when: wsus_server is defined and vendor is defined and not (use_microsoft_update | default(false))
+  block:
+    - name: "Configuring WSUS server for {{ vendor }}"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate
+        name: WUServer
+        data: "{{ wsus_server }}"
+        type: string
+
+    - name: "Configuring WSUS status server for {{ vendor }}"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate
+        name: WUStatusServer
+        data: "{{ wsus_server }}"
+        type: string
+
+    - name: "Enabling use of WSUS server"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU
+        name: UseWUServer
+        data: 1
+        type: dword
+
+    - name: "Configuring WSUS target group"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate
+        name: TargetGroup
+        data: "{{ wsus_target_group | default('Default') }}"
+        type: string
+      when: wsus_target_group is defined
+
+    - name: "Enabling WSUS target group assignment"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate
+        name: TargetGroupEnabled
+        data: 1
+        type: dword
+      when: wsus_target_group is defined
+
+-
   name: "Windows Updates"
   when: install_windows_updates | default(true)
   block:
