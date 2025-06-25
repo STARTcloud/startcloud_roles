@@ -24,4 +24,4 @@
   block:
     -
       name: "Including OS-specific tasks"
-      ansible.builtin.include_vars: "{{ ansible_os_family | lower }}.yml"
+      ansible.builtin.include_tasks: "{{ ansible_os_family | lower }}.yml"
