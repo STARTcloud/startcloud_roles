@@ -32,8 +32,8 @@
       name: "Setting hostname"
       when: ansible_os_family == 'Windows'
       ansible.builtin.win_hostname:
-        name: "{{ settings.hostname }}.{{ settings.domain }}"
-    
+        name: "{{ distro }}-{{ distro_version }}"
+
     -
       name: "Gathering facts on current container"
       community.docker.current_container_facts:
