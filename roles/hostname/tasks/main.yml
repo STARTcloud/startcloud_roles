@@ -36,13 +36,14 @@
 
     -
       name: "Gathering facts on current container"
+      when: not ansible_os_family == 'Windows'
       community.docker.current_container_facts:
     
     -
       name: "Printing information on current container when running in a container"
       ansible.builtin.debug:
         msg: "Container ID is {{ ansible_module_container_id }}"
-      when: ansible_module_running_in_container
+      when: ansible_module_running_in_container and not ansible_os_family == 'Windows'
     
     -
       name: "Setting /etc/hosts"
