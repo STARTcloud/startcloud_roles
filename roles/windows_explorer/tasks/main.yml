@@ -22,16 +22,19 @@
   name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    - name: "Setting Registry to show Hidden files"
+    -
+      name: "Setting Registry to show Hidden files"
       block:
-        - name: "Setting Hidden to 1 to show hidden files"
+        -
+          name: "Setting Hidden to 1 to show hidden files"
           ansible.windows.win_regedit:
             path: HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
             name: Hidden
             data: "{{ 1 if show_hidden_files else 2 }}"
             type: dword
 
-        - name: "Setting ShowSuperHidden to show system/super-hidden items"
+        -
+          name: "Setting ShowSuperHidden to show system/super-hidden items"
           ansible.windows.win_regedit:
             path: HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
             name: ShowSuperHidden

@@ -3,7 +3,8 @@
   name: "Configuring System Proxy"
   when: use_proxy | default(false)
   block:
-    - name: "Setting HTTP and HTTPS Proxy Environment Variables"
+    -
+      name: "Setting HTTP and HTTPS Proxy Environment Variables"
       ansible.windows.win_environment:
         name: "{{ item.name }}"
         value: "{{ item.value }}"
@@ -13,7 +14,8 @@
         - { name: "HTTP_PROXY", value: "http://{{ proxy_host }}:{{ proxy_port }}" }
         - { name: "HTTPS_PROXY", value: "http://{{ proxy_host }}:{{ proxy_port }}" }
 
-    - name: "Configuring WinHTTP Proxy Settings"
+    -
+      name: "Configuring WinHTTP Proxy Settings"
       ansible.windows.win_shell: |
         netsh winhttp set proxy proxy-server="http={{ proxy_host }}:{{ proxy_port }};https={{ proxy_host }}:{{ proxy_port }}" bypass-list="*.local"
 
@@ -21,18 +23,21 @@
   name: "Disabling System Wide Proxy"
   when: not (use_proxy | default(false))
   block:
-    - name: "Removing System Wide HTTP Proxy"
+    -
+      name: "Removing System Wide HTTP Proxy"
       ansible.windows.win_environment:
         name: HTTP_PROXY
         state: absent
         level: machine
 
-    - name: "Removing System Wide HTTPS Proxy"
+    -
+      name: "Removing System Wide HTTPS Proxy"
       ansible.windows.win_environment:
         name: HTTPS_PROXY
         state: absent
         level: machine
 
-    - name: "Resetting WinHTTP Proxy Settings"
+    -
+      name: "Resetting WinHTTP Proxy Settings"
       ansible.windows.win_shell: |
         netsh winhttp reset proxy

@@ -1,7 +1,8 @@
 ---
 # tasks file for sbaerlocher.snmp
 
-- name: 'linux : install snmp'
+-
+  name: 'linux : install snmp'
   become: true
   package:
     name: '{{ item }}'
@@ -11,7 +12,8 @@
   tags:
     - packages
 
-- name: 'linux : create snmp extension directory'
+-
+  name: 'linux : create snmp extension directory'
   become: true
   ansible.builtin.file:
     path: '{{ snmp_extension_scripts }}'
@@ -26,7 +28,8 @@
   tags:
     - configuration
 
-- name: 'linux : install snmp extension'
+-
+  name: 'linux : install snmp extension'
   become: true
   get_url:
     url: '{{ item.url }}'
@@ -43,7 +46,8 @@
   tags:
     - configuration
 
-- name: 'linux : install snmp extension proxmox'
+-
+  name: 'linux : install snmp extension proxmox'
   become: true
   get_url:
     url: 'https://raw.githubusercontent.com/librenms/librenms-agent/master/agent-local/proxmox'
@@ -59,7 +63,8 @@
   tags:
     - configuration
 
-- name: 'linux : configure snmpd daemon'
+-
+  name: 'linux : configure snmpd daemon'
   become: true
   ansible.builtin.template:
     src: 'default/snmpd.{{ ansible_os_family }}.j2'
@@ -74,7 +79,8 @@
   notify:
     - restart snmp
 
-- name: 'linux : check create snmp config'
+-
+  name: 'linux : check create snmp config'
   become: true
   ansible.builtin.template:
     src: 'snmp/snmpd.conf.j2'
@@ -91,7 +97,9 @@
   tags:
     - configuration
 
-- block:
+-
+ name: "Configuring SNMP"
+ block:
 
     - name: 'linux : stopped snmp'
       become: true

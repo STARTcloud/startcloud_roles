@@ -2,49 +2,56 @@
 -
   name: "Adjusting Theme Settings"
   block:
-    - name: "Adjusting Theme Settings AppsUseLightTheme"
+    -
+      name: "Adjusting Theme Settings AppsUseLightTheme"
       ansible.windows.win_regedit:
         path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize
         name: AppsUseLightTheme
         data: 0
         type: dword
 
-    - name: "Adjust Theme Settings SystemUsesLightTheme"
+    -
+      name: "Adjust Theme Settings SystemUsesLightTheme"
       ansible.windows.win_regedit:
         path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize
         name: SystemUsesLightTheme
         data: 0
         type: dword
 
-    - name: "Adjusting Theme Settings TaskbarMn"
+    -
+      name: "Adjusting Theme Settings TaskbarMn"
       ansible.windows.win_regedit:
         path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced
         name: TaskbarMn
         data: 0
         type: dword
 
-    - name: "Adjusting Theme Settings ShowTaskViewButton"
+    -
+      name: "Adjusting Theme Settings ShowTaskViewButton"
       ansible.windows.win_regedit:
         path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced
         name: ShowTaskViewButton
         data: 0
         type: dword
 
-    - name: "Adjusting Theme Settings TaskbarDa"
+    -
+      name: "Adjusting Theme Settings TaskbarDa"
       ansible.windows.win_regedit:
         path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced
         name: TaskbarDa
         data: 0
         type: dword
 
-    - name: "Adjusting Theme Settings TaskbarAl"
+    -
+      name: "Adjusting Theme Settings TaskbarAl"
       ansible.windows.win_regedit:
         path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced
         name: TaskbarAl
         data: 0
         type: dword
 
-    - name: "Adjusting Theme Settings SearchboxTaskbarMode"
+    -
+      name: "Adjusting Theme Settings SearchboxTaskbarMode"
       ansible.windows.win_regedit:
         path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Search
         name: SearchboxTaskbarMode
