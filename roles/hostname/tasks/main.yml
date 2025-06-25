@@ -35,23 +35,26 @@
         name: "{{ distro }}-{{ distro_version }}"
 
     -
-      name: "Gathering facts on current container"
+      name: "Block to Allow Loading of Variables without running task"
       when: not ansible_os_family == 'Windows'
-      community.docker.current_container_facts:
+      block:
+        -
+          name: "Gathering facts on current container"
+          community.docker.current_container_facts:
     
-    -
-      name: "Printing information on current container when running in a container"
-      ansible.builtin.debug:
-        msg: "Container ID is {{ ansible_module_container_id }}"
-      when: ansible_module_running_in_container and not ansible_os_family == 'Windows'
-    
-    -
-      name: "Setting /etc/hosts"
-      when: not ansible_module_running_in_container or not ansible_os_family == 'Windows'
-      ansible.builtin.replace:
-        path: "/etc/hosts"
-        regexp: "{{ item.regex }}"
-        replace: "{{ item.replace }}"
-      with_items:
-        - { regex: "(^127.0.0.1)(.*)$", replace: '127.0.0.1   localhost {{ settings.hostname }}.{{ settings.domain }} {{ settings.hostname }}'}
-        - { regex: "(^127.0.1.1)(.*)$", replace: '127.0.1.1   localhost {{ settings.hostname }}.{{ settings.domain }} {{ settings.hostname }}'}
+        -
+          name: "Printing information on current container when running in a container"
+          ansible.builtin.debug:
+            msg: "Container ID is {{ ansible_module_container_id }}"
+          when: ansible_module_running_in_container
+        
+        -
+          name: "Setting /etc/hosts"
+          when: not ansible_module_running_in_container
+          ansible.builtin.replace:
+            path: "/etc/hosts"
+            regexp: "{{ item.regex }}"
+            replace: "{{ item.replace }}"
+          with_items:
+            - { regex: "(^127.0.0.1)(.*)$", replace: '127.0.0.1   localhost {{ settings.hostname }}.{{ settings.domain }} {{ settings.hostname }}'}
+            - { regex: "(^127.0.1.1)(.*)$", replace: '127.0.1.1   localhost {{ settings.hostname }}.{{ settings.domain }} {{ settings.hostname }}'}
