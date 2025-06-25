@@ -18,6 +18,22 @@
         script: iex "C:\temp\choco_install.ps1"
 
 -
+  name: "Configuring Vendor-Specific Chocolatey Repositories"
+  when: chocolatey_repos is defined and vendor is defined
+  block:
+    - name: "Removing default chocolatey source to reconfigure with priority"
+      ansible.windows.win_powershell:
+        script: choco source remove -n="chocolatey"
+      ignore_errors: true
+
+    - name: "Adding vendor-specific Chocolatey repositories with priority"
+      ansible.windows.win_powershell:
+        script: choco source add -n="{{ item.name }}" -s="{{ item.url }}" --priority="{{ item.priority }}"
+      loop: "{{ chocolatey_repos }}"
+      loop_control:
+        label: "{{ item.name }} (Priority: {{ item.priority }})"
+
+-
   name: "Installing Base Chocolatey Packages"
   when: chocolatey_base_packages is defined
   block:

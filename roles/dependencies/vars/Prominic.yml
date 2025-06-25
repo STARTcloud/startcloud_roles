@@ -2,6 +2,15 @@
 # Prominic-specific dependencies and packages
 # This file contains vendor-specific Chocolatey packages for Prominic internal templates
 
+# Chocolatey repository configuration
+chocolatey_repos:
+  - name: "prominic"
+    url: "https://choco.prominic.net/phpnuget/api/v2/"
+    priority: 0
+  - name: "chocolatey"
+    url: "https://community.chocolatey.org/api/v2/"
+    priority: 1
+
 chocolatey_packages:
   - putty.install
   - 7zip
