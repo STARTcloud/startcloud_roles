@@ -5,6 +5,7 @@
     DISM /Online /Add-Capability /CapabilityName:Windows.Desktop.EMS-SAC.Tools~~~~0.0.1.0
   register: ems_sac_result
   ignore_errors: true
+  when: ansible_distribution == "Microsoft Windows 10 Enterprise" or ansible_distribution == "Microsoft Windows 10 Pro"
 
 -
   name: "Enabling Serial Emergency Management Console"
@@ -12,4 +13,3 @@
     bcdedit /ems ON
     bcdedit /bootems ON
     bcdedit /emssettings EMSPORT:1 EMSBAUDRATE:115200
-  when: ems_sac_result is succeeded or ems_sac_result is failed
