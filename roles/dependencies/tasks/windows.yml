@@ -1,5 +1,11 @@
 ---
 -
+  name: "Loading vendor-specific variables"
+  ansible.builtin.include_vars: "{{ vendor }}.yml"
+  when: vendor is defined
+  ignore_errors: true
+
+-
   name: "Installing Chocolatey"
   block:
     - name: "Downloading Chocolatey Installation Script"
@@ -40,6 +46,16 @@
         name: "{{ item }}"
         state: present
       loop: "{{ chocolatey_customer_packages | default([]) }}"
+
+-
+  name: "Installing Vendor-Specific Chocolatey Packages"
+  when: chocolatey_packages is defined and vendor is defined
+  block:
+    - name: "Installing vendor-specific Chocolatey packages for {{ vendor }}"
+      chocolatey.chocolatey.win_chocolatey:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ chocolatey_packages | default([]) }}"
 
 -
   name: "Installing Cygwin with cyg-get"

@@ -1,0 +1,52 @@
+---
+# Prominic-specific dependencies and packages
+# This file contains vendor-specific Chocolatey packages for Prominic internal templates
+
+chocolatey_packages:
+  - putty.install
+  - 7zip
+  - bluej
+  - tightvnc
+  - sophia
+  - winscp
+  - kubernetes-cli
+  - 7zip.install
+  - winscp.install
+  - notepadplusplus.install
+  - inkscape
+  - git
+  - chocolatey-core.extension
+  - autohotkey.install
+  - vmrc
+  - vcredist2010
+  - vscode.install
+  - cmder
+  - vscode
+  - superputty
+  - superputty.install
+  - hg
+  - filezilla
+  - drawio
+  - curl
+  - chocolatey
+  - chromium
+  - sysinternals
+  - vmware-tools
+  - notepadplusplus
+  - firefox
+  - git.install
+  - vcredist140
+  - vim
+  - crystaldiskmark
+  - vagrant
+  - windirstat
+  - putty
+  - intellijidea-community
+  - chocolatey-windowsupdate.extension
+  - nmap
+
+# Additional Prominic-specific configuration
+vendor_specific_config:
+  enable_developer_tools: true
+  install_vmware_tools: true
+  configure_development_environment: true
