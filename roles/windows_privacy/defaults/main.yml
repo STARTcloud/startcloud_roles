@@ -1,4 +1,9 @@
 ---
+run_tasks: true
+count_progress: true
+progress_units: 1
+progress_role_description: "Configuring Windows Privacy and Telemetry Settings"
+
 # defaults file for windows_privacy
 
 # Windows Security settings

@@ -1,4 +1,9 @@
 ---
+run_tasks: true
+count_progress: true
+progress_units: 1
+progress_role_description: "Installing and Configuring SSH for Windows"
+
 # defaults file for windows_ssh
 
 # SSH key source path (relative to ansible directory)

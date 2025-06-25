@@ -1,4 +1,9 @@
 ---
+run_tasks: true
+count_progress: true
+progress_units: 1
+progress_role_description: "Configuring WinRM for Windows"
+
 # defaults file for winrm
 
 # WinRM configuration script URL

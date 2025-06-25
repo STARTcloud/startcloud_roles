@@ -3,7 +3,7 @@ run_tasks: true
 
 count_progress: true
 progress_units: 1
-progress_role_description: "Installing system dependencies"
+progress_role_description: "Installing STARTcloud Theme"
 
 vm_type: server
 theme_packages:

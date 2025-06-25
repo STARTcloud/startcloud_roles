@@ -1,4 +1,9 @@
 ---
+run_tasks: true
+count_progress: true
+progress_units: 1
+progress_role_description: "Configuring Power Management"
+
 # defaults file for power_management
 
 # Hibernate settings
@@ -14,3 +19,4 @@ monitor_timeout_dc: 0
 
 # Power plan setting
 set_high_performance: true
+

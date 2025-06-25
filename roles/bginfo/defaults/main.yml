@@ -1,5 +1,8 @@
 ---
-# defaults file for bginfo
+run_tasks: true
+count_progress: true
+progress_units: 1
+progress_role_description: "Configuring BGinfo"
 
 # BGInfo URLs
 bginfo_config_url: "https://www.m4kr.net/downloads/Prominic.bgi"
