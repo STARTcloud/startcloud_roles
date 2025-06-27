@@ -1012,7 +1012,6 @@
           ansible.windows.win_reboot:
             reboot_timeout: 7200
 
-
     - name: "Installing Windows Updates"
       block:
         - name: "Executing the scheduled task"

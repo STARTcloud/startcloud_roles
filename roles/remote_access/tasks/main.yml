@@ -139,11 +139,11 @@
             name: "Telnet-Client"
             state: present
 
-    -
-      name: "Desktop-specific configurations"
-      when: ansible_os_family == "Windows" and "server" not in ansible_distribution.lower()
-      block:
-        -
-          name: "Enabling Telnet Client"
-          ansible.windows.win_shell: |
-            dism /online /Enable-Feature /FeatureName:TelnetClient
+#    -
+#      name: "Desktop-specific configurations"
+#      when: ansible_os_family == "Windows" and "server" not in ansible_distribution.lower()
+#      block:
+#        -
+#          name: "Enabling Telnet Client"
+#          ansible.windows.win_shell: |
+#            dism /online /Enable-Feature /FeatureName:TelnetClient
