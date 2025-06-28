@@ -1,5 +1,10 @@
 ---
 -
+  name: "Removing Appx packages (and their hindering file associations)"
+  ansible.windows.win_shell: |
+    Get-AppxPackage -name "*OneDriveSync*" | Remove-AppxPackage
+
+-
   name: "Reducing Template and Cleaning up System"
   block:
     -
@@ -33,8 +38,18 @@
       ansible.windows.win_shell: 'DISM /Online /Cleanup-Image /ScanHealth'
 
     -
+      name: "Rebooting to Apply Windows Updates"
+      ansible.windows.win_reboot:
+        reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
+
+    -
       name: "Starting component cleanup"
       ansible.windows.win_shell: 'DISM /Online /Cleanup-Image /StartComponentCleanup /ResetBase'
+
+    -
+      name: "Rebooting to Apply Windows Updates"
+      ansible.windows.win_reboot:
+        reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
 
     -
       name: "Removing superseded components"
@@ -73,13 +88,3 @@
       name: "Resetting WinHTTP Proxy Settings"
       ansible.windows.win_shell: |
         netsh winhttp reset proxy
-
--
-  name: "Removing Appx packages (and their hindering file associations)"
-  ansible.windows.win_shell: |
-    Get-AppxPackage -name "*OneDriveSync*" | Remove-AppxPackage
-
--
-  name: "Disabling Firewall Profiles"
-  ansible.windows.win_shell: |
-    Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False
