@@ -15,7 +15,6 @@ galaxy_info:
 
 dependencies:
   - role: startcloud.startcloud_roles.serial
-  - role: startcloud.startcloud_roles.motd
 
 collections:
   - startcloud.startcloud_roles
