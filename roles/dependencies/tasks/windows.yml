@@ -85,12 +85,6 @@
   name: "Installing Cygwin with cyg-get"
   block:
     -
-      name: "Creating C:\\tools\\cygwin\\bin"
-      ansible.windows.win_file:
-        path: C:\tools\cygwin\bin
-        state: touch
-
-    -
       name: "Adding Cygwin to System PATH"
       ansible.windows.win_path:
         elements:
