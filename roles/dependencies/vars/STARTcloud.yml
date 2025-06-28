@@ -14,12 +14,15 @@ chocolatey_repos:
 chocolatey_packages:
   - 7zip
   - notepadplusplus
-  - git
-  - chocolatey-core.extension
-  - vscode
-  - firefox
   - vcredist140
-  - chocolatey
+  - librewolf
+  - telegraf
+  - git
+  - bginfo
+  - cyg-get
+  - clamwin
+  - virtio-drivers
+  - winfsp
 
 # Additional STARTcloud-specific configuration
 vendor_specific_config:
