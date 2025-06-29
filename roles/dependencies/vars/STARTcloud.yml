@@ -16,7 +16,6 @@ chocolatey_packages:
   - notepadplusplus
   - vcredist140
   - librewolf
-  - telegraf
   - git
   - bginfo
   - cyg-get
