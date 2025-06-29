@@ -4,6 +4,7 @@ show_help: true
 installer_dir: /vagrant/installers
 completed_dir: /vagrant/completed
 timezone: 'America/Chicago'
+win_timezone: 'Central Standard Time'
 debug_all: false
 provisioner_name: Ad-Hoc Playbook
 provisioner_version: v0.0.0
