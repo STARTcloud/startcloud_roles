@@ -4,12 +4,12 @@
 
 # Chocolatey repository configuration
 chocolatey_repos:
-  - name: "startcloud"
-    url: "https://choco.startcloud.com/phpnuget/api/v2/"
-    priority: 0
+#  - name: "startcloud"
+#    url: "https://choco.startcloud.com/phpnuget/api/v2/"
+#    priority: 0
   - name: "chocolatey"
     url: "https://community.chocolatey.org/api/v2/"
-    priority: 1
+    priority: 0
 
 chocolatey_packages:
   - 7zip
