@@ -177,6 +177,12 @@
             reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
 
     -
+      name: "Ensuring Packer Installations Directory exists"
+      ansible.windows.win_file:
+        path: C:\Windows\Temp\packer
+        state: directory
+
+    -
       name: "Creating Windows Update Installation Script"
       ansible.windows.win_copy:
         dest: C:\Windows\Temp\packer\InstallUpdates.ps1
