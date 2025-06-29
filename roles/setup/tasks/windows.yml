@@ -116,6 +116,24 @@
         state: directory
 
     -
+      name: "Creating Vagrant Directory"
+      ansible.windows.win_file:
+        path: C:\vagrant
+        state: directory
+
+    -
+      name: "Creating Ansible Directory"
+      ansible.windows.win_file:
+        path: C:\vagrant\ansible
+        state: directory
+
+    -
+      name: "Creating Ansible Collections Directory"
+      ansible.windows.win_file:
+        path: C:\vagrant\ansible_collections
+        state: directory
+
+    -
       name: "Copying SetupComplete.cmd to C:\\Windows\\Setup\\Scripts"
       ansible.windows.win_template:
         src: SetupComplete.cmd.j2
