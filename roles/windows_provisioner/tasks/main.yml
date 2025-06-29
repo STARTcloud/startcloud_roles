@@ -367,7 +367,6 @@
             - bginfo
             - cyg-get
             - clamwin
-            - virtio-drivers
             - winfsp
 
         - name: "Upgrading all Chocolatey packages"

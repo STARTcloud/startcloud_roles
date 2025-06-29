@@ -21,7 +21,6 @@ chocolatey_packages:
   - bginfo
   - cyg-get
   - clamwin
-  - virtio-drivers
   - winfsp
 
 # Additional STARTcloud-specific configuration
