@@ -225,13 +225,6 @@
             data: 0
             type: dword
 
-        - name: "Adjusting Theme Settings TaskbarDa"
-          ansible.windows.win_regedit:
-            path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced
-            name: TaskbarDa
-            data: 0
-            type: dword
-
         - name: "Adjusting Theme Settings TaskbarAl"
           ansible.windows.win_regedit:
             path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced
