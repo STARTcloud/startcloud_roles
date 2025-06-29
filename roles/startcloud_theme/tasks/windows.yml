@@ -25,6 +25,8 @@
         name: TaskbarMn
         data: 0
         type: dword
+      state: present
+      ignore_errors: yes
 
     -
       name: "Adjusting Theme Settings ShowTaskViewButton"
@@ -33,6 +35,8 @@
         name: ShowTaskViewButton
         data: 0
         type: dword
+      state: present
+      ignore_errors: yes
 
     -
       name: "Adjusting Theme Settings TaskbarDa"
@@ -41,6 +45,8 @@
         name: TaskbarDa
         data: 0
         type: dword
+      state: present
+      ignore_errors: yes
 
     -
       name: "Adjusting Theme Settings TaskbarAl"
@@ -49,6 +55,8 @@
         name: TaskbarAl
         data: 0
         type: dword
+      state: present
+      ignore_errors: yes
 
     -
       name: "Adjusting Theme Settings SearchboxTaskbarMode"
@@ -57,6 +65,8 @@
         name: SearchboxTaskbarMode
         data: 0
         type: dword
+      state: present
+      ignore_errors: yes
 
 -
   name: "Adjusting Default User Settings"

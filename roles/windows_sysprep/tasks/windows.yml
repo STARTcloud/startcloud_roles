@@ -1,0 +1,76 @@
+
+-
+  name: "Configuring AutoUnattend.xml and Post Provisioning Setup scripts"
+  when: prepare_template
+  block:
+    -
+      name: "Creating Post-Provisioning Directory"
+      ansible.windows.win_file:
+        path: C:\temp
+        state: directory
+
+    -
+      name: "Creating Post-Provisioning Directory"
+      ansible.windows.win_file:
+        path: C:\Windows\Temp\packer
+        state: directory
+
+    -
+      name: "Creating STARTcloud Directory"
+      ansible.windows.win_file:
+        path: C:\opt\STARTcloud
+        state: directory
+
+    -
+      name: "Copying provision-Autounattend.ps1 to packer directory"
+      ansible.windows.win_template:
+        src: provision-Autounattend.ps1.j2
+        dest: C:\Windows\Temp\packer\Autounattend.ps1
+
+    -
+      name: "Copying provision-Autounattend.xml to packer directory"
+      ansible.windows.win_template:
+        src: provision-Autounattend.xml.j2
+        dest: C:\Windows\Temp\packer\Autounattend.xml
+
+    -
+      name: "Creating Setup Scripts Directory"
+      ansible.windows.win_file:
+        path: C:\Windows\Setup\Scripts
+        state: directory
+
+    -
+      name: "Creating Vagrant Directory"
+      ansible.windows.win_file:
+        path: C:\vagrant
+        state: directory
+
+    -
+      name: "Creating Ansible Directory"
+      ansible.windows.win_file:
+        path: C:\vagrant\ansible
+        state: directory
+
+    -
+      name: "Creating Ansible Collections Directory"
+      ansible.windows.win_file:
+        path: C:\vagrant\ansible_collections
+        state: directory
+
+    -
+      name: "Copying SetupComplete.cmd to C:\\Windows\\Setup\\Scripts"
+      ansible.windows.win_template:
+        src: SetupComplete.cmd.j2
+        dest: C:\Windows\Setup\Scripts\SetupComplete.cmd
+
+    -
+      name: "Copying setup-ssh.ps1 to C:\\Windows\\Setup\\Scripts"
+      ansible.windows.win_template:
+        src: setup-ssh.ps1.j2
+        dest: C:\Windows\Setup\Scripts\setup-ssh.ps1
+
+    -
+      name: "Creating Vagrant Directory"
+      ansible.windows.win_file:
+        path: C:\vagrant
+        state: directory
