@@ -25,7 +25,7 @@
         name: TaskbarMn
         data: 0
         type: dword
-      state: present
+        state: present
       ignore_errors: yes
 
     -
@@ -35,7 +35,7 @@
         name: ShowTaskViewButton
         data: 0
         type: dword
-      state: present
+        state: present
       ignore_errors: yes
 
     -
@@ -45,7 +45,7 @@
         name: TaskbarDa
         data: 0
         type: dword
-      state: present
+        state: present
       ignore_errors: yes
 
     -
@@ -55,7 +55,7 @@
         name: TaskbarAl
         data: 0
         type: dword
-      state: present
+        state: present
       ignore_errors: yes
 
     -
@@ -65,7 +65,7 @@
         name: SearchboxTaskbarMode
         data: 0
         type: dword
-      state: present
+        state: present
       ignore_errors: yes
 
 -
