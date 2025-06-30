@@ -8,11 +8,6 @@
   name: "Reducing Template and Cleaning up System"
   block:
     -
-      name: "Clearing last used files and folders"
-      ansible.windows.win_shell: |
-        Remove-Item "$env:APPDATA\Microsoft\Windows\Recent\AutomaticDestinations\*.automaticDestinations-ms" -FORCE -ErrorAction SilentlyContinue
-
-    -
       name: "Cleaning Temp Files"
       ansible.windows.win_shell: |
         Takeown /d Y /R /f "C:\Windows\Temp\*"
