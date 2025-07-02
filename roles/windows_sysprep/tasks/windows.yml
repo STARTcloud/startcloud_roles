@@ -74,3 +74,20 @@
       ansible.windows.win_file:
         path: C:\vagrant
         state: directory
+
+    -
+      name: "Preparing for Sysprep"
+      when: prepare_sysprep
+      block:
+        -
+          name: "Sysprepping Machine"
+          when: ansible_virtualization_type != "virtualbox"
+          ansible.windows.win_shell: 'C:\Windows\System32\Sysprep\sysprep.exe /generalize /oobe /quiet /quit /unattend:C:\Windows\Temp\packer\Autounattend.xml'
+
+        -
+          name: "Create sysprep.bat"
+          when: ansible_virtualization_type == "virtualbox"
+          ansible.windows.win_copy:
+            dest: C:\Windows\Temp\packer\sysprep.bat
+            content: |
+              C:\Windows\System32\Sysprep\sysprep.exe /generalize /oobe /quiet /shutdown /unattend:C:\Windows\Temp\packer\Autounattend.xml

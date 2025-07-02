@@ -5,3 +5,4 @@ progress_units: 1
 progress_role_description: "Preparing windows for sysprep"
 
 prepare_template: false
+prepare_sysprep: false

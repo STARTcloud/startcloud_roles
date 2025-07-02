@@ -20,13 +20,36 @@
         $System.AutomaticManagedPagefile = $False
         $System.Put()
         $CurrentPageFile = gwmi -query "select * from Win32_PageFileSetting where name='c:\\pagefile.sys'"
-        $CurrentPageFile.InitialSize = 512
-        $CurrentPageFile.MaximumSize = 512
+        $CurrentPageFile.InitialSize = {{ windows_page_file_size_initial }}
+        $CurrentPageFile.MaximumSize = {{ windows_page_file_size_max }}
         $CurrentPageFile.Put()
 
 -
+  name: "Cleanup System Wide Proxy (End of Provisioning)"
+  when: cleanup_proxy
+  block:
+    -
+      name: "Removing System Wide HTTP Proxy"
+      ansible.windows.win_environment:
+        name: HTTP_PROXY
+        state: absent
+        level: machine
+
+    -
+      name: "Removing System Wide HTTPS Proxy"
+      ansible.windows.win_environment:
+        name: HTTPS_PROXY
+        state: absent
+        level: machine
+
+    -
+      name: "Resetting WinHTTP Proxy Settings"
+      ansible.windows.win_shell: |
+        netsh winhttp reset proxy
+
+-
   name: "Verifying Health of Windows Installation"
-  when: verify | default(true)
+  when: verify
   block:
     -
       name: "Scanning health of the image"
@@ -50,36 +73,8 @@
       name: "Removing superseded components"
       ansible.windows.win_shell: 'DISM /Online /Cleanup-Image /SPSuperseded'
 
--
-  name: "Preparing for Sysprep"
-  when: prepare_sysprep | default(true)
-  block:
     -
-      name: "Create sysprep.bat"
-      ansible.windows.win_copy:
-        dest: C:\Windows\Temp\packer\sysprep.bat
-        content: |
-          C:\Windows\System32\Sysprep\sysprep.exe /generalize /oobe /quiet /shutdown /unattend:C:\Windows\Temp\packer\Autounattend.xml
+      name: "Rebooting to Apply Windows Updates"
+      ansible.windows.win_reboot:
+        reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
 
--
-  name: "Cleanup System Wide Proxy (End of Provisioning)"
-  when: cleanup_proxy | default(false)
-  block:
-    -
-      name: "Removing System Wide HTTP Proxy"
-      ansible.windows.win_environment:
-        name: HTTP_PROXY
-        state: absent
-        level: machine
-
-    -
-      name: "Removing System Wide HTTPS Proxy"
-      ansible.windows.win_environment:
-        name: HTTPS_PROXY
-        state: absent
-        level: machine
-
-    -
-      name: "Resetting WinHTTP Proxy Settings"
-      ansible.windows.win_shell: |
-        netsh winhttp reset proxy
