@@ -25,29 +25,6 @@
         $CurrentPageFile.Put()
 
 -
-  name: "Cleanup System Wide Proxy (End of Provisioning)"
-  when: cleanup_proxy
-  block:
-    -
-      name: "Removing System Wide HTTP Proxy"
-      ansible.windows.win_environment:
-        name: HTTP_PROXY
-        state: absent
-        level: machine
-
-    -
-      name: "Removing System Wide HTTPS Proxy"
-      ansible.windows.win_environment:
-        name: HTTPS_PROXY
-        state: absent
-        level: machine
-
-    -
-      name: "Resetting WinHTTP Proxy Settings"
-      ansible.windows.win_shell: |
-        netsh winhttp reset proxy
-
--
   name: "Verifying Health of Windows Installation"
   when: verify
   block:
@@ -78,3 +55,25 @@
       ansible.windows.win_reboot:
         reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
 
+-
+  name: "Cleanup System Wide Proxy (End of Provisioning)"
+  when: cleanup_proxy
+  block:
+    -
+      name: "Removing System Wide HTTP Proxy"
+      ansible.windows.win_environment:
+        name: HTTP_PROXY
+        state: absent
+        level: machine
+
+    -
+      name: "Removing System Wide HTTPS Proxy"
+      ansible.windows.win_environment:
+        name: HTTPS_PROXY
+        state: absent
+        level: machine
+
+    -
+      name: "Resetting WinHTTP Proxy Settings"
+      ansible.windows.win_shell: |
+        netsh winhttp reset proxy
