@@ -4,22 +4,15 @@
   when: prepare_template
   block:
     -
-      name: "Creating Post-Provisioning Directory"
-      ansible.windows.win_file:
-        path: C:\temp
+      name: "Creating STARTcloud Directories"
+      ansible.builtin.file:
+        mode: '0644'
+        path: "{{ item }}"
         state: directory
-
-    -
-      name: "Creating Post-Provisioning Directory"
-      ansible.windows.win_file:
-        path: C:\Windows\Temp\packer
-        state: directory
-
-    -
-      name: "Creating STARTcloud Directory"
-      ansible.windows.win_file:
-        path: C:\opt\STARTcloud
-        state: directory
+      with_items:
+        - C:\temp
+        - C:\Windows\Temp\packer
+        - C:\vagrant
 
     -
       name: "Copying provision-Autounattend.ps1 to packer directory"
@@ -29,33 +22,17 @@
 
     -
       name: "Copying provision-Autounattend.xml to packer directory"
+      when: distro_version == "10"
       ansible.windows.win_template:
-        src: provision-Autounattend.xml.j2
+        src: win10-provision-Autounattend.xml.j2
         dest: C:\Windows\Temp\packer\Autounattend.xml
 
     -
-      name: "Creating Setup Scripts Directory"
-      ansible.windows.win_file:
-        path: C:\Windows\Setup\Scripts
-        state: directory
-
-    -
-      name: "Copying SetupComplete.cmd to C:\\Windows\\Setup\\Scripts"
+      name: "Copying provision-Autounattend.xml to packer directory"
+      when: distro_version == "2022"
       ansible.windows.win_template:
-        src: SetupComplete.cmd.j2
-        dest: C:\Windows\Setup\Scripts\SetupComplete.cmd
-
-    -
-      name: "Copying setup-ssh.ps1 to C:\\Windows\\Setup\\Scripts"
-      ansible.windows.win_template:
-        src: setup-ssh.ps1.j2
-        dest: C:\Windows\Setup\Scripts\setup-ssh.ps1
-
-    -
-      name: "Creating Vagrant Directory"
-      ansible.windows.win_file:
-        path: C:\vagrant
-        state: directory
+        src: server2022-provision-Autounattend.xml.j2
+        dest: C:\Windows\Temp\packer\Autounattend.xml
 
     -
       name: "Preparing for Sysprep"
