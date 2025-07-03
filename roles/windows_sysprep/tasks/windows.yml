@@ -5,8 +5,7 @@
   block:
     -
       name: "Creating STARTcloud Directories"
-      ansible.builtin.file:
-        mode: '0644'
+      ansible.builtin.win_file:
         path: "{{ item }}"
         state: directory
       with_items:
