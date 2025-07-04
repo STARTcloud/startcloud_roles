@@ -12,6 +12,13 @@
         - C:\temp
         - C:\Windows\Temp\packer
         - C:\vagrant
+        - C:\Windows\Setup\Scripts
+
+    #-
+    #  name: "Copying SetupComplete.cmd"
+    #  ansible.windows.win_template:
+    #    src: SetupComplete.cmd.j2
+    #    dest: C:\Windows\Setup\Scripts\SetupComplete.cmd
 
     -
       name: "Copying provision-Autounattend.ps1 to packer directory"
