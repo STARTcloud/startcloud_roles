@@ -53,6 +53,7 @@ chocolatey_packages:
   - intellijidea-community
   - chocolatey-windowsupdate.extension
   - nmap
+  - softperfect-ramdisk
 
 # Additional Prominic-specific configuration
 vendor_specific_config:
