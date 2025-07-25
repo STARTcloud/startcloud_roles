@@ -16,24 +16,45 @@ chocolatey_packages:
   - 7zip
   - bluej
   - tightvnc
-  - sophia
   - winscp
+  - bginfo
+  - winfsp
+  - ca-cert
+  - libreoffice
+  - librewolf
+  - kyrtest
+  - bluej
+  - kubernetes-cli
   - kubernetes-cli
   - 7zip.install
+  - microsoft-ui-xaml-2-7
+  - nmap
   - winscp.install
   - notepadplusplus.install
   - inkscape
+  - clamwin
   - git
   - chocolatey-core.extension
   - autohotkey.install
   - vmrc
   - vcredist2010
+  - NugetPackageExplorer
+  - cyg-get
+  - hostsfileupdate
   - vscode.install
   - cmder
+  - prominicnative
+  - docker
+  - docker-cli
+  - docker-compose
   - vscode
+  - putty
   - superputty
   - superputty.install
+  - raritan
+  - royalts
   - hg
+  - jre7
   - filezilla
   - drawio
   - curl
@@ -46,10 +67,14 @@ chocolatey_packages:
   - git.install
   - vcredist140
   - vim
+  - vmrc
+  - vmware-converter
+  - superhumaninstaller
   - crystaldiskmark
   - vagrant
   - windirstat
-  - putty
+  - winget
+  - winget-cli
   - intellijidea-community
   - chocolatey-windowsupdate.extension
   - nmap
