@@ -59,7 +59,6 @@ chocolatey_packages:
   - nmap
   - raritan
   - softperfect-ramdisk
-  - autohotkey
 #  - kyrtest -- Installs Notes11
 #  - prominicnative -- tries to install vmrc 
 #  - vmrc -- Fails due to VMWare/Broadcom monopoly
