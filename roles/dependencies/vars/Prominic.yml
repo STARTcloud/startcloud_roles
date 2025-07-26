@@ -13,7 +13,6 @@ chocolatey_repos:
 
 chocolatey_packages:
   - 7zip
-  - autohotkey
   - bginfo
   - chromium
   - firefox
@@ -31,39 +30,41 @@ chocolatey_packages:
   - winget-cli
   - notepadplusplus
   - NugetPackageExplorer
-  - prominicnative
   - putty
   - superputty
-  - raritan
   - royalts
   - tightvnc
-  - softperfect-ramdisk
   - cmder
   - crystaldiskmark
   - curl
   - cyg-get
   - inkscape
-  - jre7
-  - kubernetes-cli
   - microsoft-ui-xaml-2-7
-  - nmap
-  - sysinternals
   - vcredist140
   - vcredist2010
   - vim
-  - vmrc
   - vmware-converter
-  - vmware-tools
   - vscode
   - bluej
 #  - intellijidea-community
 #  - superhumaninstaller
 #  - vagrant
 #  - hostsfileupdate
+#  - kubernetes-cli
 #  - docker
 #  - docker-cli
 #  - docker-compose
 #  - kyrtest
+#  - ca-cert
+#  - vmrc
+#  - vmware-tools
+#  - jre7
+#  - nmap
+#  - raritan
+#  - sysinternals
+#  - softperfect-ramdisk
+#  - prominicnative
+#  - autohotkey
 
 
 # Additional Prominic-specific configuration
