@@ -19,10 +19,10 @@ chocolatey_packages:
   - winscp
   - bginfo
   - winfsp
-  - ca-cert
+#  - ca-cert
   - libreoffice
   - librewolf
-  - kyrtest
+# - kyrtest
   - bluej
   - kubernetes-cli
   - kubernetes-cli
