@@ -15,47 +15,39 @@ chocolatey_packages:
   - 7zip
   - autohotkey
   - bginfo
-  - bluej
-  - bluej
-  - chocolatey
-  - chocolatey-core.extension
-  - chocolatey-windowsupdate.extension
   - chromium
+  - firefox
+  - librewolf
+  - libreoffice
   - clamwin
-  - cmder
-  - crystaldiskmark
-  - curl
-  - cyg-get
-  - docker
-  - docker-cli
-  - docker-compose
   - drawio
   - filezilla
-  - firefox
+  - winscp
   - git
   - hg
-  - hostsfileupdate
-  - inkscape
-  - intellijidea-community
-  - jre7
-  - kubernetes-cli
-#  - kyrtest
-  - libreoffice
-  - librewolf
-  - microsoft-ui-xaml-2-7
-  - nmap
+  - windirstat
+  - winfsp
+  - winget
+  - winget-cli
   - notepadplusplus
   - NugetPackageExplorer
   - prominicnative
   - putty
+  - superputty
   - raritan
   - royalts
-  - softperfect-ramdisk
-  - superhumaninstaller
-  - superputty
-  - sysinternals
   - tightvnc
-  - vagrant
+  - softperfect-ramdisk
+  - cmder
+  - crystaldiskmark
+  - curl
+  - cyg-get
+  - inkscape
+  - jre7
+  - kubernetes-cli
+  - microsoft-ui-xaml-2-7
+  - nmap
+  - sysinternals
   - vcredist140
   - vcredist2010
   - vim
@@ -63,11 +55,16 @@ chocolatey_packages:
   - vmware-converter
   - vmware-tools
   - vscode
-  - windirstat
-  - winfsp
-  - winget
-  - winget-cli
-  - winscp
+  - bluej
+#  - intellijidea-community
+#  - superhumaninstaller
+#  - vagrant
+#  - hostsfileupdate
+#  - docker
+#  - docker-cli
+#  - docker-compose
+#  - kyrtest
+
 
 # Additional Prominic-specific configuration
 vendor_specific_config:
