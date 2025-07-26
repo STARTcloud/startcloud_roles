@@ -60,10 +60,11 @@ chocolatey_packages:
   - raritan
   - softperfect-ramdisk
   - autohotkey
-#  - prominicnative
-#  - vmrc
-#  - sysinternals
-#  - vmware-tools
+#  - kyrtest -- Installs Notes11
+#  - prominicnative -- tries to install vmrc 
+#  - vmrc -- Fails due to VMWare/Broadcom monopoly
+#  - sysinternals -- Failes due to invalid hashes
+#  - vmware-tools -- Fails due to VMWare/Broadcom monopoly
 
 
 # Additional Prominic-specific configuration
