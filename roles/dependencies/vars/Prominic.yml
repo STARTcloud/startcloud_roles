@@ -60,8 +60,8 @@ chocolatey_packages:
   - nmap
   - raritan
   - softperfect-ramdisk
+  - autohotkey
 #  - prominicnative
-#  - autohotkey
 #  - vmrc
 #  - sysinternals
 #  - vmware-tools
