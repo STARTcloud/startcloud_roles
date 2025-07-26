@@ -49,6 +49,7 @@
     -
       name: "Removing superseded components"
       ansible.windows.win_shell: 'DISM /Online /Cleanup-Image /SPSuperseded'
+      ignore_errors: true
 
     -
       name: "Rebooting to Apply Windows Updates"
