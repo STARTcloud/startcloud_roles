@@ -12,73 +12,62 @@ chocolatey_repos:
     priority: 1
 
 chocolatey_packages:
-  - putty.install
   - 7zip
-  - bluej
-  - tightvnc
-  - winscp
+  - autohotkey
   - bginfo
-  - winfsp
-#  - ca-cert
-  - libreoffice
-  - librewolf
-# - kyrtest
   - bluej
-  - kubernetes-cli
-  - kubernetes-cli
-  - 7zip.install
-  - microsoft-ui-xaml-2-7
-  - nmap
-  - winscp.install
-  - notepadplusplus.install
-  - inkscape
-  - clamwin
-  - git
+  - bluej
+  - chocolatey
   - chocolatey-core.extension
-  - autohotkey.install
-  - vmrc
-  - vcredist2010
-  - NugetPackageExplorer
-  - cyg-get
-  - hostsfileupdate
-  - vscode.install
+  - chocolatey-windowsupdate.extension
+  - chromium
+  - clamwin
   - cmder
-  - prominicnative
+  - crystaldiskmark
+  - curl
+  - cyg-get
   - docker
   - docker-cli
   - docker-compose
-  - vscode
+  - drawio
+  - filezilla
+  - firefox
+  - git
+  - hg
+  - hostsfileupdate
+  - inkscape
+  - intellijidea-community
+  - jre7
+  - kubernetes-cli
+#  - kyrtest
+  - libreoffice
+  - librewolf
+  - microsoft-ui-xaml-2-7
+  - nmap
+  - notepadplusplus
+  - NugetPackageExplorer
+  - prominicnative
   - putty
-  - superputty
-  - superputty.install
   - raritan
   - royalts
-  - hg
-  - jre7
-  - filezilla
-  - drawio
-  - curl
-  - chocolatey
-  - chromium
+  - softperfect-ramdisk
+  - superhumaninstaller
+  - superputty
   - sysinternals
-  - vmware-tools
-  - notepadplusplus
-  - firefox
-  - git.install
+  - tightvnc
+  - vagrant
   - vcredist140
+  - vcredist2010
   - vim
   - vmrc
   - vmware-converter
-  - superhumaninstaller
-  - crystaldiskmark
-  - vagrant
+  - vmware-tools
+  - vscode
   - windirstat
+  - winfsp
   - winget
   - winget-cli
-  - intellijidea-community
-  - chocolatey-windowsupdate.extension
-  - nmap
-  - softperfect-ramdisk
+  - winscp
 
 # Additional Prominic-specific configuration
 vendor_specific_config:
