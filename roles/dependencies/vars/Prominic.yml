@@ -46,25 +46,25 @@ chocolatey_packages:
   - vmware-converter
   - vscode
   - bluej
-#  - intellijidea-community
-#  - superhumaninstaller
-#  - vagrant
-#  - hostsfileupdate
-#  - kubernetes-cli
-#  - docker
-#  - docker-cli
-#  - docker-compose
-#  - kyrtest
-#  - ca-cert
-#  - vmrc
-#  - vmware-tools
-#  - jre7
-#  - nmap
-#  - raritan
-#  - sysinternals
-#  - softperfect-ramdisk
-#  - prominicnative
+  - intellijidea-community
+  - vagrant
+  - superhumaninstaller
+  - hostsfileupdate
+  - kubernetes-cli
+  - docker
+  - docker-cli
+  - docker-compose
+  - kyrtest
+  - ca-cert
+  - jre7
+  - nmap
+  - raritan
+  - softperfect-ramdisk
+  - prominicnative
 #  - autohotkey
+#  - vmrc
+#  - sysinternals
+#  - vmware-tools
 
 
 # Additional Prominic-specific configuration
