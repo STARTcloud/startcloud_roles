@@ -56,9 +56,9 @@ chocolatey_packages:
   - docker-compose
   - ca-cert
   - jre7
-  - nmap
   - raritan
   - softperfect-ramdisk
+#  - nmap
 #  - kyrtest -- Installs Notes11
 #  - prominicnative -- tries to install vmrc 
 #  - vmrc -- Fails due to VMWare/Broadcom monopoly
