@@ -54,7 +54,6 @@ chocolatey_packages:
   - docker
   - docker-cli
   - docker-compose
-  - kyrtest
   - ca-cert
   - jre7
   - nmap
