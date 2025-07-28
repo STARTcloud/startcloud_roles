@@ -14,7 +14,7 @@
 
     -
       name: "Creating Chromium Intial Preferences"
-      when: chromium in chocolatey_packages
+      when: "'chromium' in chocolatey_packages"
       ansible.builtin.win_template:
         src: initial_preferences.json.j2
         dest: C:\Program Files\Google\Chromium\Application\initial_preferences.json
