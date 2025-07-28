@@ -13,11 +13,28 @@
         - C:\opt\STARTcloud\backgrounds
 
     -
+      name: "Finding Public Desktop Shortcuts"
+      ansible.builtin.win_find:
+        paths: "C:\\Users\\Public\\Desktop"
+        patterns: "*.lnk"
+      register: desktop_shortcuts
+      ignore_errors: yes
+
+    -
+      name: "Removing Public Desktop Shortcuts"
+      ansible.builtin.win_file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ desktop_shortcuts.files }}"
+      when: desktop_shortcuts.files is defined
+      ignore_errors: yes
+
+    -
       name: "Creating Chromium Intial Preferences"
       when: "'chromium' in chocolatey_packages"
       ansible.builtin.win_template:
         src: initial_preferences.json.j2
-        dest: C:\Program Files\Google\Chromium\Application\initial_preferences.json
+        dest: C:\Program Files\Chromium\Application\initial_preferences.json
         newline_sequence: '\n'
         backup: true
 
