@@ -13,6 +13,15 @@
         - C:\opt\STARTcloud\backgrounds
 
     -
+      name: "Creating Chromium Intial Preferences"
+      when: chromium in chocolatey_packages
+      ansible.builtin.win_template:
+        src: initial_preferences.json.j2
+        dest: C:\Program Files\Google\Chromium\Application\initial_preferences.json
+        newline_sequence: '\n'
+        backup: true
+
+    -
       name: "Adding Background Image"
       ansible.windows.win_copy:
         src: startcloud-desktop.jpg
@@ -103,4 +112,5 @@
     New-itemproperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name ShowTaskViewButton -Value 0 -PropertyType Dword
     New-itemproperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name TaskbarDa -Value 0 -PropertyType Dword
     New-itemproperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name TaskbarAl -Value 0 -PropertyType Dword
+    reg delete HKU\default\software\Microsoft\Windows\CurrentVersion\Run /v OneDriveSetup /f 
     REG UNLOAD HKLM\Default

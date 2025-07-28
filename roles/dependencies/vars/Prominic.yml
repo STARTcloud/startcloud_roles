@@ -23,7 +23,6 @@ chocolatey_packages:
   - filezilla
   - winscp
   - git
-  - hg
   - windirstat
   - winfsp
   - winget
