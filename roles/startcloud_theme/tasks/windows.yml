@@ -156,13 +156,13 @@
   ansible.windows.win_copy:
     src: "4k/{{ item }}"
     dest: "C:\\Windows\\Web\\4K\\Wallpaper\\Windows\\{{ item }}"
-    with_items:
-      - img0_1024x768.jpg
-      - img0_1366x768.jpg
-      - img0_2160x3840.jpg
-      - img0_3840x2160.jpg
-      - img0_768x1366.jpg
-      - img0_1200x1920.jpg
-      - img0_1600x2560.jpg 
-      - img0_2560x1600.jpg
-      - img0_768x1024.jpg
+  with_items:
+    - img0_1024x768.jpg
+    - img0_1366x768.jpg
+    - img0_2160x3840.jpg
+    - img0_3840x2160.jpg
+    - img0_768x1366.jpg
+    - img0_1200x1920.jpg
+    - img0_1600x2560.jpg 
+    - img0_2560x1600.jpg
+    - img0_768x1024.jpg
