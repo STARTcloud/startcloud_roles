@@ -28,14 +28,17 @@
     path: C:\temp\updates installed
 
 -
+  name: "Rebooting to Apply Windows Updates (Pass {{ pass_number }})"
+  ansible.windows.win_reboot:
+    reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
+
+-
   name: "Installing all updates and rebooting as many times as needed"
   ansible.windows.win_updates:
     category_names: '*'
     reboot: true
     skip_optional: false
     reboot_timeout: 3600
-
-
 
 -
   name: "Installing Chocolatey"
@@ -137,12 +140,6 @@
     reboot: true
     skip_optional: false
     reboot_timeout: 3600
-
--
-  name: "Rebooting to Apply Windows Updates (Pass {{ pass_number }})"
-  ansible.windows.win_reboot:
-    reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
-
 
 -
   name: "Installing Cygwin with cyg-get"
