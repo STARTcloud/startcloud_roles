@@ -227,6 +227,13 @@
         skip_optional: false
         reboot_timeout: 3600
 
+    -
+      name: "Installing all updates and rebooting as many times as needed"
+      ansible.windows.win_updates:
+        category_names: '*'
+        reboot: true
+        skip_optional: false
+        reboot_timeout: 3600
 
 -
   name: "Package Maintenance"
