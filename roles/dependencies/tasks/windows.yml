@@ -15,6 +15,24 @@
     reboot_timeout: 3600
 
 -
+  name: "Installing all updates and rebooting as many times as needed"
+  ansible.windows.win_updates:
+    category_names: '*'
+    reboot: true
+    skip_optional: false
+    reboot_timeout: 3600
+
+
+-
+  name: "Installing all updates and rebooting as many times as needed"
+  ansible.windows.win_updates:
+    category_names: '*'
+    reboot: true
+    skip_optional: false
+    reboot_timeout: 3600
+
+
+-
   name: "Installing Chocolatey"
   block:
     -
@@ -69,6 +87,14 @@
       loop: "{{ chocolatey_internal_packages | default([]) }}"
 
 -
+  name: "Installing all updates and rebooting as many times as needed"
+  ansible.windows.win_updates:
+    category_names: '*'
+    reboot: true
+    skip_optional: false
+    reboot_timeout: 3600
+
+-
   name: "Installing Customer Chocolatey Packages"
   when: template_type | default('customer') == 'customer'
   block:
@@ -80,6 +106,15 @@
       loop: "{{ chocolatey_customer_packages | default([]) }}"
 
 -
+  name: "Installing all updates and rebooting as many times as needed"
+  ansible.windows.win_updates:
+    category_names: '*'
+    reboot: true
+    skip_optional: false
+    reboot_timeout: 3600
+
+
+-
   name: "Installing Vendor-Specific Chocolatey Packages"
   when: chocolatey_packages is defined and vendor is defined
   block:
@@ -89,6 +124,15 @@
         name: "{{ item }}"
         state: present
       loop: "{{ chocolatey_packages | default([]) }}"
+
+-
+  name: "Installing all updates and rebooting as many times as needed"
+  ansible.windows.win_updates:
+    category_names: '*'
+    reboot: true
+    skip_optional: false
+    reboot_timeout: 3600
+
 
 -
   name: "Installing Cygwin with cyg-get"
