@@ -222,10 +222,8 @@
           name: "Installing PSWindowsUpdate Module"
           ansible.windows.win_shell: Install-Module -Name PSWindowsUpdate -Force
 
-        -
-          name: "Adding WUServiceManager"
-          ansible.windows.win_shell: 
-          
+        - name: "Adding WUServiceManager"
+          ansible.windows.win_shell: Add-WUServiceManager -ServiceID "7971f918-a847-4430-9279-4a52d1efe18d"  -AddServiceFlag 7 -Confirm:$false
 
         -
           name: "Running Updates"
