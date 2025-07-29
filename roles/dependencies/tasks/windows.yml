@@ -22,6 +22,10 @@
     skip_optional: false
     reboot_timeout: 3600
 
+-
+  name: "Waiting for All Updates to be completed"
+  ansible.windows.win_wait_for:
+    path: C:\temp\updates installed
 
 -
   name: "Installing all updates and rebooting as many times as needed"
@@ -30,6 +34,7 @@
     reboot: true
     skip_optional: false
     reboot_timeout: 3600
+
 
 
 -
@@ -132,6 +137,11 @@
     reboot: true
     skip_optional: false
     reboot_timeout: 3600
+
+-
+  name: "Rebooting to Apply Windows Updates (Pass {{ pass_number }})"
+  ansible.windows.win_reboot:
+    reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
 
 
 -
