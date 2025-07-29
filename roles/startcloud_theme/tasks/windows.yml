@@ -129,5 +129,40 @@
     New-itemproperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name ShowTaskViewButton -Value 0 -PropertyType Dword
     New-itemproperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name TaskbarDa -Value 0 -PropertyType Dword
     New-itemproperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name TaskbarAl -Value 0 -PropertyType Dword
-    reg delete HKU\default\software\Microsoft\Windows\CurrentVersion\Run /v OneDriveSetup /f 
+    reg delete HKU\default\software\Microsoft\Windows\CurrentVersion\Run /v OneDriveSetup /f
+    reg Add "HKU\TEMP\Software\Microsoft\Windows\CurrentVersion\DesktopSpotlight\Settings" /f
+    reg Add "HKU\TEMP\Software\Microsoft\Windows\CurrentVersion\DesktopSpotlight\Settings" /f /v "OneTimeUpgrade" /t Reg_DWORD /d 1
+    reg Add "HKU\TEMP\Software\Microsoft\Windows\CurrentVersion\DesktopSpotlight\Settings" /f /v "EnabledState" /t Reg_DWORD /d 0
     REG UNLOAD HKLM\Default
+
+-
+  name: "Adjusting Default User Settings"
+  ansible.windows.win_shell: |
+    takeown /f C:\Windows\Web\Screen\img100.jpg
+    takeown /f C:\Windows\Web\4K\Wallpaper\Windows\*.*
+    icacls C:\Windows\Web\Screen\img100.jpg /Grant 'Administrators:(F)'
+    icacls C:\Windows\Web\4K\Wallpaper\Windows\*.* /Grant 'Administrators:(F)'
+    Remove-Item C:\Windows\Web\Screen\img100.jpg
+    Remove-Item C:\Windows\Web\4K\Wallpaper\Windows\*.*
+
+-
+  name: "Adding Background Image"
+  ansible.windows.win_copy:
+    src: startcloud-desktop.jpg
+    dest: C:\Windows\Web\Screen\img100.jpg
+
+-
+  name: "Adding Background Image"
+  ansible.windows.win_copy:
+    src: "4k/{{ item }}"
+    dest: "C:\\Windows\\Web\\4K\\Wallpaper\\Windows\\{{ item }}"
+    with_items:
+      - img0_1024x768.jpg
+      - img0_1366x768.jpg
+      - img0_2160x3840.jpg
+      - img0_3840x2160.jpg
+      - img0_768x1366.jpg
+      - img0_1200x1920.jpg
+      - img0_1600x2560.jpg 
+      - img0_2560x1600.jpg
+      - img0_768x1024.jpg
