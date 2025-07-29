@@ -5,6 +5,13 @@
   when: vendor is defined
   ignore_errors: true
 
+-
+  name: "Installing all updates and rebooting as many times as needed"
+  ansible.windows.win_updates:
+    category_names: '*'
+    reboot: true
+    skip_optional: false
+    reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
 
 -
   name: "Installing all updates and rebooting as many times as needed"
@@ -12,24 +19,16 @@
     category_names: '*'
     reboot: true
     skip_optional: false
-    reboot_timeout: 3600
-
--
-  name: "Installing all updates and rebooting as many times as needed"
-  ansible.windows.win_updates:
-    category_names: '*'
-    reboot: true
-    skip_optional: false
-    reboot_timeout: 3600
+    reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
 
 -
   name: "Waiting for All Updates to be completed"
   ansible.windows.win_wait_for:
     path: C:\temp\updates_installed
-    timeout: 1800
+    timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
 
 -
-  name: "Rebooting to Apply Windows Updates (Pass {{ pass_number }})"
+  name: "Rebooting to Apply Windows Updates"
   ansible.windows.win_reboot:
     reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
 
@@ -39,7 +38,7 @@
     category_names: '*'
     reboot: true
     skip_optional: false
-    reboot_timeout: 3600
+    reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
 
 -
   name: "Installing Chocolatey"
