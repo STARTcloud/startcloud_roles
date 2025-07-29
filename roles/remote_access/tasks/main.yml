@@ -108,6 +108,7 @@
           name: "Waiting for file C:\\ProgramData\\ssh\\sshd_config to exist before continuing"
           ansible.windows.win_wait_for:
             path: C:\ProgramData\ssh\sshd_config
+            timeout: 1800
 
     -
       name: "Server-specific configurations"

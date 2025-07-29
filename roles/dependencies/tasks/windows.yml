@@ -25,7 +25,8 @@
 -
   name: "Waiting for All Updates to be completed"
   ansible.windows.win_wait_for:
-    path: C:\temp\updates installed
+    path: C:\temp\updates_installed
+    timeout: 1800
 
 -
   name: "Rebooting to Apply Windows Updates (Pass {{ pass_number }})"
