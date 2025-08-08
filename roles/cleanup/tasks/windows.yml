@@ -33,7 +33,7 @@
       ansible.windows.win_shell: 'DISM /Online /Cleanup-Image /ScanHealth'
 
     -
-      name: "Rebooting to Apply Windows Updates"
+      name: "Rebooting to ensure all dism commands complete"
       ansible.windows.win_reboot:
         reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
 
@@ -42,7 +42,7 @@
       ansible.windows.win_shell: 'DISM /Online /Cleanup-Image /StartComponentCleanup /ResetBase'
 
     -
-      name: "Rebooting to Apply Windows Updates"
+      name: "Rebooting to ensure all dism commands complete"
       ansible.windows.win_reboot:
         reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
 
@@ -52,7 +52,7 @@
       ignore_errors: true
 
     -
-      name: "Rebooting to Apply Windows Updates"
+      name: "Rebooting to ensure all dism commands complete"
       ansible.windows.win_reboot:
         reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
 

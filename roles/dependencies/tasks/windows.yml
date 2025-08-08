@@ -22,10 +22,14 @@
     reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
 
 -
-  name: "Waiting for All Updates to be completed"
-  ansible.windows.win_wait_for:
-    path: C:\temp\updates_installed
-    timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
+  name: "Manually Installing Updates"
+  when: manually_intall_updates
+  block:
+    -
+      name: "Waiting for All Updates to be completed"
+      ansible.windows.win_wait_for:
+        path: C:\temp\updates_installed
+        timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
 
 -
   name: "Rebooting to Apply Windows Updates"
