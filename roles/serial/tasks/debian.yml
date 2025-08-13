@@ -77,7 +77,7 @@
 
 -
   name: "Installing Grub for BIOS systems"
-  ansible.builtin.command: grub-install --target=i386-pc /dev/sda
+  ansible.builtin.command: grub-install --target=i386-pc /dev/vda
   register: grub_intall
   changed_when: grub_intall.rc != 0
 
