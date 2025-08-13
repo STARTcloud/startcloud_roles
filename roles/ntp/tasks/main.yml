@@ -23,5 +23,9 @@
   when: run_tasks
   block:
     -
+      name: "Including OS-specific vars"
+      ansible.builtin.include_vars: "{{ ansible_os_family | lower }}.yml"
+
+    -
       name: "Including OS-specific tasks"
       ansible.builtin.include_tasks: "{{ ansible_os_family | lower }}.yml"
