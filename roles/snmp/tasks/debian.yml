@@ -96,8 +96,8 @@
     - configuration
 
 -
- name: "Configuring SNMP"
- block:
+  name: "Configuring SNMP"
+  block:
 
     - name: 'linux : stopped snmp'
       become: true
