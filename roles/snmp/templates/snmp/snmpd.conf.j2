@@ -14,8 +14,8 @@ agentAddress {{ snmp_agentadress_protocol.ipv6 }}:{{ snmp_agentadress_adress.ipv
 sysLocation {{ snmp_location }}
 {% endif %}
 sysName {{ ansible_fqdn }}
-{% if snmp_contact is defined %}
-sysContact {{ snmp_contact }}
+{% if email is defined %}
+sysContact {{ email }}
 {% endif %}
 
 {% for item in snmp_extension_list %}

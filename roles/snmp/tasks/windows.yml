@@ -16,7 +16,7 @@
           ansible.windows.win_regedit:
             path: HKLM:\SYSTEM\CurrentControlSet\services\SNMP\Parameters\RFC1156Agent
             name: sysContact
-            data: "{{ syscontact | default('admin@example.com') }}"
+            data: "{{ email | default('admin@example.com') }}"
             type: string
 
         -
