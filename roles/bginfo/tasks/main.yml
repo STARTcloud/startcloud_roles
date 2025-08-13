@@ -32,10 +32,16 @@
             state: directory
 
         -
+          name: "Creating Default Users Startup directory"
+          ansible.windows.win_file:
+            path: "{{ startup_directory }}"
+            state: directory
+
+        -
           name: "Downloading Prominic.bgi"
           ansible.windows.win_get_url:
             url: "{{ bginfo_config_url }}"
-            dest: "{{ bginfo_directory }}\\Prominic.bgi"
+            dest: "{{ bginfo_directory }}\\STARTcloud.bgi"
 
         -
           name: "Creating Startup Directory"
@@ -44,19 +50,9 @@
             state: directory
 
         -
-          name: "Downloading Bginfo64.lnk"
-          ansible.windows.win_get_url:
-            url: "{{ bginfo_shortcut_url }}"
+          name: "Creating BGInfo shortcut in startup folder"
+          community.windows.win_shortcut:
+            src: "C:\\ProgramData\\chocolatey\\lib\\bginfo\\Tools\\Bginfo64.exe"
             dest: "{{ startup_directory }}\\Bginfo64.lnk"
-
-        -
-          name: "Downloading ProminicBackgroundv2.bmp"
-          ansible.windows.win_get_url:
-            url: "{{ bginfo_background_v2_url }}"
-            dest: "{{ bginfo_directory }}\\ProminicBackgroundv2.bmp"
-
-        -
-          name: "Downloading ProminicBackground.jpg"
-          ansible.windows.win_get_url:
-            url: "{{ bginfo_background_jpg_url }}"
-            dest: "{{ bginfo_directory }}\\ProminicBackground.jpg"
+            arguments: "C:\\opt\\STARTcloud /timer:0 /nolicprompt /silent"
+            description: "BGInfo System Information Display"
