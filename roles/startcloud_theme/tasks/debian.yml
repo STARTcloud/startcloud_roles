@@ -52,6 +52,12 @@
         update_cache: true
 
     -
+      name: "Upgrading all apt packages"
+      ansible.builtin.apt:
+        upgrade: dist
+        update_cache: true
+
+    -
       name: "Adding Additional packages"
       ansible.builtin.apt:
         name: "{{ theme_packages }}"
