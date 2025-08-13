@@ -46,6 +46,12 @@
   when: "vm_type == 'server' or vm_type == 'desktop'"
   block:
     -
+      name: "Ensuring apt cache is updated"
+      ansible.builtin.apt:
+        cache_valid_time: 3600
+        update_cache: true
+
+    -
       name: "Adding Additional packages"
       ansible.builtin.apt:
         name: "{{ theme_packages }}"
