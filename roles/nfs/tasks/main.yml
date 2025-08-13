@@ -58,4 +58,4 @@
         name: "{{ nfs_server_daemon }}"
         state: "started"
         enabled: "yes"
-      when: nfs_exports | length
+      when: nfs_exports | length | bool
