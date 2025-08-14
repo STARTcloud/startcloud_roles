@@ -122,41 +122,45 @@
 -
   name: "Adjusting Default User Settings"
   ansible.windows.win_shell: |
-    REG LOAD HKLM\Default C:\Users\Default\NTUSER.DAT
-    if (Test-Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize") {
-        Set-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name AppsUseLightTheme -Value 0 -Type Dword -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name SystemUsesLightTheme -Value 0 -Type Dword -ErrorAction SilentlyContinue
-    }
-    if (Test-Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced") {
-        Set-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name TaskbarMn -Value 0 -Type Dword -ErrorAction SilentlyContinue
-    }
-    if (Test-Path "HKLM:\Default\Control Panel\Desktop") {
-        Set-ItemProperty -Path "HKLM:\Default\Control Panel\Desktop" -Name Wallpaper -Value "C:\opt\STARTcloud\backgrounds\startcloud-desktop.jpg" -Type String -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path "HKLM:\Default\Control Panel\Desktop" -Name WallpaperStyle -Value "6" -Type String -ErrorAction SilentlyContinue
-        Set-ItemProperty -Path "HKLM:\Default\Control Panel\Desktop" -Name TileWallpaper -Value "0" -Type String -ErrorAction SilentlyContinue
-    }
-    if (Test-Path "HKLM:\Default\SOFTWARE\Microsoft\Internet Explorer\Toolbar") {
-        Set-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Internet Explorer\Toolbar" -Name Locked -Value 1 -Type Dword -ErrorAction SilentlyContinue
-    }
-    if (Test-Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced") {
-        if (-not (Get-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name ShowTaskViewButton -ErrorAction SilentlyContinue)) {
-            New-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name ShowTaskViewButton -Value 0 -PropertyType Dword -Force -ErrorAction SilentlyContinue
+    try {
+        REG LOAD HKLM\Default C:\Users\Default\NTUSER.DAT
+        if (Test-Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize") {
+            Set-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name AppsUseLightTheme -Value 0 -Type Dword -ErrorAction SilentlyContinue
+            Set-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name SystemUsesLightTheme -Value 0 -Type Dword -ErrorAction SilentlyContinue
         }
-        if (-not (Get-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name TaskbarDa -ErrorAction SilentlyContinue)) {
-            New-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name TaskbarDa -Value 0 -PropertyType Dword -Force -ErrorAction SilentlyContinue
+        if (Test-Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced") {
+            Set-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name TaskbarMn -Value 0 -Type Dword -ErrorAction SilentlyContinue
         }
-        if (-not (Get-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name TaskbarAl -ErrorAction SilentlyContinue)) {
-            New-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name TaskbarAl -Value 0 -PropertyType Dword -Force -ErrorAction SilentlyContinue
+        if (Test-Path "HKLM:\Default\Control Panel\Desktop") {
+            Set-ItemProperty -Path "HKLM:\Default\Control Panel\Desktop" -Name Wallpaper -Value "C:\opt\STARTcloud\backgrounds\startcloud-desktop.jpg" -Type String -ErrorAction SilentlyContinue
+            Set-ItemProperty -Path "HKLM:\Default\Control Panel\Desktop" -Name WallpaperStyle -Value "6" -Type String -ErrorAction SilentlyContinue
+            Set-ItemProperty -Path "HKLM:\Default\Control Panel\Desktop" -Name TileWallpaper -Value "0" -Type String -ErrorAction SilentlyContinue
         }
+        if (Test-Path "HKLM:\Default\SOFTWARE\Microsoft\Internet Explorer\Toolbar") {
+            Set-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Internet Explorer\Toolbar" -Name Locked -Value 1 -Type Dword -ErrorAction SilentlyContinue
+        }
+        if (Test-Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced") {
+            if (-not (Get-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name ShowTaskViewButton -ErrorAction SilentlyContinue)) {
+                New-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name ShowTaskViewButton -Value 0 -PropertyType Dword -Force -ErrorAction SilentlyContinue
+            }
+            if (-not (Get-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name TaskbarDa -ErrorAction SilentlyContinue)) {
+                New-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name TaskbarDa -Value 0 -PropertyType Dword -Force -ErrorAction SilentlyContinue
+            }
+            if (-not (Get-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name TaskbarAl -ErrorAction SilentlyContinue)) {
+                New-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name TaskbarAl -Value 0 -PropertyType Dword -Force -ErrorAction SilentlyContinue
+            }
+        }
+        if (Test-Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes") {
+            New-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes" -Name CurrentTheme -Value "C:\Users\Default\AppData\Local\Microsoft\Windows\Themes\STARTcloud.theme" -PropertyType String -Force -ErrorAction SilentlyContinue
+        }
+        try { reg delete "HKLM\Default\software\Microsoft\Windows\CurrentVersion\Run" /v OneDriveSetup /f 2>$null } catch {}
+        try { reg Add "HKLM\Default\Software\Microsoft\Windows\CurrentVersion\DesktopSpotlight\Settings" /f 2>$null } catch {}
+        try { reg Add "HKLM\Default\Software\Microsoft\Windows\CurrentVersion\DesktopSpotlight\Settings" /f /v "OneTimeUpgrade" /t Reg_DWORD /d 1 2>$null } catch {}
+        try { reg Add "HKLM\Default\Software\Microsoft\Windows\CurrentVersion\DesktopSpotlight\Settings" /f /v "EnabledState" /t Reg_DWORD /d 0 2>$null } catch {}
+    } finally {
+        try { REG UNLOAD HKLM\Default 2>$null } catch {}
     }
-    if (Test-Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes") {
-        New-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes" -Name CurrentTheme -Value "C:\Users\Default\AppData\Local\Microsoft\Windows\Themes\STARTcloud.theme" -PropertyType String -Force -ErrorAction SilentlyContinue
-    }
-    reg delete "HKLM\Default\software\Microsoft\Windows\CurrentVersion\Run" /v OneDriveSetup /f 2>$null
-    reg Add "HKLM\Default\Software\Microsoft\Windows\CurrentVersion\DesktopSpotlight\Settings" /f 2>$null
-    reg Add "HKLM\Default\Software\Microsoft\Windows\CurrentVersion\DesktopSpotlight\Settings" /f /v "OneTimeUpgrade" /t Reg_DWORD /d 1 2>$null
-    reg Add "HKLM\Default\Software\Microsoft\Windows\CurrentVersion\DesktopSpotlight\Settings" /f /v "EnabledState" /t Reg_DWORD /d 0 2>$null
-    REG UNLOAD HKLM\Default
+    exit 0
 
 -
   name: "Adjusting Default User Settings"
