@@ -45,3 +45,30 @@
   ansible.builtin.apt:
     name: "{{ extra_packages }}"
     state: present
+
+-
+  name: "Loading Xen PV drivers in kernel"
+  community.general.modprobe:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - xen-blkfront
+    - xen-netfront
+  ignore_errors: true
+
+-
+  name: "Adding Xen drivers to initramfs modules"
+  ansible.builtin.lineinfile:
+    path: /etc/initramfs-tools/modules
+    line: "{{ item }}"
+    create: true
+    mode: '0644'
+  loop:
+    - xen-blkfront
+    - xen-netfront
+
+-
+  name: "Updating initramfs with Xen drivers"
+  ansible.builtin.command: update-initramfs -u
+  changed_when: true
+  when: ansible_os_family == "Debian"
