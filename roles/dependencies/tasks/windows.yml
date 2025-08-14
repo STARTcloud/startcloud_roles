@@ -23,7 +23,7 @@
 
 -
   name: "Manually Installing Updates"
-  when: manually_intall_updates
+  when: false
   block:
     -
       name: "Waiting for All Updates to be completed"
