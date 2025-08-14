@@ -126,9 +126,14 @@
     Set-ItemProperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize -Name AppsUseLightTheme -Value 0 -Type Dword
     Set-ItemProperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize -Name SystemUsesLightTheme -Value 0 -Type Dword
     Set-itemproperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name TaskbarMn -Value 0 -Type Dword
+    Set-ItemProperty -Path HKLM:\Default\Control Panel\Desktop -Name Wallpaper -Value "C:\opt\STARTcloud\backgrounds\startcloud-desktop.jpg" -Type String
+    Set-ItemProperty -Path HKLM:\Default\Control Panel\Desktop -Name WallpaperStyle -Value "6" -Type String
+    Set-ItemProperty -Path HKLM:\Default\Control Panel\Desktop -Name TileWallpaper -Value "0" -Type String
+    Set-ItemProperty -Path HKLM:\Default\SOFTWARE\Microsoft\Internet Explorer\Toolbar -Name Locked -Value 1 -Type Dword
     New-itemproperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name ShowTaskViewButton -Value 0 -PropertyType Dword
     New-itemproperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name TaskbarDa -Value 0 -PropertyType Dword
     New-itemproperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name TaskbarAl -Value 0 -PropertyType Dword
+    New-ItemProperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes -Name CurrentTheme -Value "C:\Users\Default\AppData\Local\Microsoft\Windows\Themes\STARTcloud.theme" -PropertyType String -Force
     reg delete HKU\default\software\Microsoft\Windows\CurrentVersion\Run /v OneDriveSetup /f
     reg Add "HKU\TEMP\Software\Microsoft\Windows\CurrentVersion\DesktopSpotlight\Settings" /f
     reg Add "HKU\TEMP\Software\Microsoft\Windows\CurrentVersion\DesktopSpotlight\Settings" /f /v "OneTimeUpgrade" /t Reg_DWORD /d 1
