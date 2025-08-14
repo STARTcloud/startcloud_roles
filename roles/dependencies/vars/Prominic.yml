@@ -17,9 +17,9 @@ chocolatey_packages:
   - chromium
   - firefox
   - librewolf
-  - libreoffice
+#  - libreoffice
   - clamwin
-  - drawio
+#  - drawio
   - filezilla
   - winscp
   - git
@@ -31,28 +31,28 @@ chocolatey_packages:
   - NugetPackageExplorer
   - putty
   - superputty
-  - royalts
-  - tightvnc
+#  - royalts
+#  - tightvnc
   - cmder
-  - crystaldiskmark
+#  - crystaldiskmark
   - curl
   - cyg-get
-  - inkscape
+#  - inkscape
   - microsoft-ui-xaml-2-7
   - vcredist140
   - vcredist2010
   - vim
-  - vmware-converter
+#  - vmware-converter
   - vscode
-  - bluej
-  - intellijidea-community
-  - vagrant
-  - superhumaninstaller
-  - hostsfileupdate
-  - kubernetes-cli
-  - docker
-  - docker-cli
-  - docker-compose
+#  - bluej
+#  - intellijidea-community
+#  - vagrant
+#  - superhumaninstaller
+#  - hostsfileupdate
+#  - kubernetes-cli
+#  - docker
+#  - docker-cli
+#  - docker-compose
   - ca-cert
   - jre7
   - raritan
