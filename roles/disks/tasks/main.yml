@@ -87,13 +87,13 @@
       become_user: root
       when:
         - disks.additional_disks is defined
-        - disks.additional_disks
+        - disks.additional_disks | length > 0
         - not disks.additional_disks is none
       block:
         -
           name: "Gathering disk information"
           when:
-            - disks.additional_disks
+            - disks.additional_disks | length > 0
             - not disks.additional_disks is none
           block:
             -
