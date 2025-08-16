@@ -37,7 +37,7 @@
           ansible.builtin.set_fact:
             root_disk: "{{ root_partition | regex_replace('[0-9]+$', '') }}"
             root_partition_number: "{{ root_partition | regex_search('[0-9]+$') }}"
-    
+
         -
           name: "Extending the unecrypted Root Partition"
           ansible.builtin.shell: "{{ item }}"
