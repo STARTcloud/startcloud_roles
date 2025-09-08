@@ -16,24 +16,24 @@ chocolatey_packages:
   - bginfo
   - chromium
   - firefox
-  - librewolf
+#  - librewolf #Works
 #  - libreoffice
   - clamwin
 #  - drawio
-  - filezilla
-  - winscp
-  - git
-  - windirstat
-  - winfsp
+#  - filezilla #Works
+#  - winscp #Works
+#  - git  #Works
+#  - windirstat  #Works
+#  - winfsp  #Works
   - winget
   - winget-cli
   - notepadplusplus
   - NugetPackageExplorer
-  - putty
-  - superputty
+#  - putty #Works
+#  - superputty #Works
 #  - royalts
 #  - tightvnc
-  - cmder
+#  - cmder #Works
 #  - crystaldiskmark
   - curl
   - cyg-get
@@ -41,9 +41,9 @@ chocolatey_packages:
   - microsoft-ui-xaml-2-7
   - vcredist140
   - vcredist2010
-  - vim
+#  - vim #Works
 #  - vmware-converter
-  - vscode
+#  - vscode #Works
 #  - bluej
 #  - intellijidea-community
 #  - vagrant
@@ -53,9 +53,9 @@ chocolatey_packages:
 #  - docker
 #  - docker-cli
 #  - docker-compose
-  - ca-cert
-  - jre7
-  - raritan
+#  - ca-cert #Works
+#  - jre7 #Works
+#  - raritan #Works
   - softperfect-ramdisk
 #  - nmap
 #  - kyrtest -- Installs Notes11
@@ -63,7 +63,6 @@ chocolatey_packages:
 #  - vmrc -- Fails due to VMWare/Broadcom monopoly
 #  - sysinternals -- Failes due to invalid hashes
 #  - vmware-tools -- Fails due to VMWare/Broadcom monopoly
-
 
 # Additional Prominic-specific configuration
 vendor_specific_config:
