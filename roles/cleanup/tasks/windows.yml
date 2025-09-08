@@ -1,8 +1,6 @@
 ---
--
-  name: "Removing Appx packages (and their hindering file associations)"
-  ansible.windows.win_shell: |
-    Get-AppxPackage -name "*OneDriveSync*" | Remove-AppxPackage
+# Note: AppX package removal is now handled by the windows_privacy role
+# for comprehensive debloating with proper sysprep-safe methods
 
 -
   name: "Reducing Template and Cleaning up System"
