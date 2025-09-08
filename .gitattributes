@@ -20,6 +20,7 @@
 *.mp3 binary 
 *.mp4 binary 
 *.mov binary 
+*.dll  binary
 
 # Enforce to use Linux-style newlines
 *.hx text eol=lf
