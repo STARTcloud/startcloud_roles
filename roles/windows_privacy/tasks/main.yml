@@ -356,7 +356,7 @@
     -
       name: "Disabling Telemetry Scheduled Tasks"
       when: disable_telemetry_tasks
-      ansible.windows.win_scheduled_task:
+      community.windows.win_scheduled_task:
         name: "{{ item }}"
         state: absent
       loop: "{{ telemetry_tasks_to_disable }}"
