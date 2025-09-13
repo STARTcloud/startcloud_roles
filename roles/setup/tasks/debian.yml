@@ -19,7 +19,7 @@
 -
   name: "Writing current variables to /vagrant/support-bundle/ansible-system-variables.json"
   ansible.builtin.copy:
-    content: "{{ vars | dict2items | selectattr('value', 'defined') | list | items2dict | to_nice_json }}"
+    content: "{{ vars | dict2items | selectattr('value', 'defined') | rejectattr('key', 'equalto', 'play_hosts') | list | items2dict | to_nice_json }}"
     dest: "/vagrant/support-bundle/ansible-system-variables.json"
     force: false
     mode: 'a+x'

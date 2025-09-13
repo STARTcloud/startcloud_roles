@@ -135,8 +135,8 @@
           become: true
           community.general.java_keystore:
             name: "{{ settings.hostname }}.{{ settings.domain }}"
-            certificate: "{{ lookup('file', '{{ cert_dir }}/crt/default-signed.crt') }}"
-            private_key: "{{ lookup('file', '{{ cert_dir }}/key/default-signed.key') }}"
+            certificate: "{{ lookup('file', cert_dir + '/crt/default-signed.crt') }}"
+            private_key: "{{ lookup('file', cert_dir + '/key/default-signed.key') }}"
             password: "{{ cert_pass }}"
             owner: "{{ service_user }}"
             mode: '0777'
@@ -357,8 +357,8 @@
           name: "Creating a keystore for the self-signed certificate/private key pair"
           community.general.java_keystore:
             name: "{{ settings.hostname }}.{{ settings.domain }}"
-            certificate: "{{ lookup('file', '{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt') }}"
-            private_key: "{{ lookup('file', '{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}-self-signed.key') }}"
+            certificate: "{{ lookup('file', cert_dir + '/crt/' + settings.hostname + '.' + settings.domain + '-self-signed.crt') }}"
+            private_key: "{{ lookup('file', cert_dir + '/key/' + settings.hostname + '.' + settings.domain + '-self-signed.key') }}"
             password: "{{ cert_pass }}"
             owner: "{{ service_user }}"
             mode: '0777'
@@ -569,8 +569,8 @@
           become: true
           community.general.java_keystore:
             name: "{{ settings.hostname }}.{{ settings.domain }}"
-            certificate: "{{ lookup('file', '{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.crt') }}"
-            private_key: "{{ lookup('file', '{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.key') }}"
+            certificate: "{{ lookup('file', cert_dir + '/crt/' + settings.hostname + '.' + settings.domain + '-letsencrypt.crt') }}"
+            private_key: "{{ lookup('file', cert_dir + '/key/' + settings.hostname + '.' + settings.domain + '-letsencrypt.key') }}"
             password: "{{ cert_pass }}"
             owner: "{{ service_user }}"
             group: "{{ service_group }}"
