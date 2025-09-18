@@ -1,6 +1,5 @@
 ---
 run_tasks: true
-# Progress reporting
 count_progress: true
 progress_units: 1
 progress_role_description: "Securing Server"
