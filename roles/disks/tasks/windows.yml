@@ -16,21 +16,30 @@
             if ($size.SizeMax -gt (Get-Partition -DriveLetter $systemDrive).Size) {
               # Extend the partition to maximum supported size
               Resize-Partition -DriveLetter $systemDrive -Size $size.SizeMax
-              Write-Output "System drive $systemDrive extended successfully"
               $changed = $true
+              $message = "System drive $systemDrive extended successfully"
             } else {
-              Write-Output "System drive $systemDrive already at maximum size"
               $changed = $false
+              $message = "System drive $systemDrive already at maximum size"
             }
+            $errorMsg = $null
           } catch {
-            Write-Output "Unable to extend system drive: $($_.Exception.Message)"
             $changed = $false
+            $message = "Unable to extend system drive"
+            $errorMsg = $_.Exception.Message
           }
           
-          return @{ changed = $changed }
+          # Return structured output
+          $result = @{ 
+            changed = $changed
+            message = $message
+            error = $errorMsg
+          }
+          
+          return $result
       register: extend_system_drive
-      changed_when: extend_system_drive.output | selectattr('changed', 'equalto', true) | list | length > 0
-      failed_when: false
+      changed_when: extend_system_drive.result.changed | default(false)
+      failed_when: extend_system_drive.result.error is defined and extend_system_drive.result.error != null
 -
   name: "Configuring Additional Disks"
   when:

@@ -45,37 +45,6 @@
       register: execution_policy_bypass
 
 -
-  name: "Installing Powershell 7"
-  block:
-    -
-      name: Check if PowerShell 7 is already installed
-      ansible.windows.win_shell: |
-        $psVersion = (Get-Command pwsh -ErrorAction SilentlyContinue).Version.Major
-        if ($psVersion -eq 7) {
-          $psVersion
-        }
-      register: ps7_check
-      changed_when: false
-
-    -
-      name: "Debugging PS7 Check Result"
-      ansible.builtin.debug:
-        var: ps7_check
-
-    -
-      name: "Downloading Powershell 7 Installation Script"
-      ansible.windows.win_get_url:
-        url: "https://aka.ms/install-powershell.ps1"
-        dest: C:\temp\install-powershell.ps1
-      when: ps7_check != "7"
-
-    -
-      name: "Executing Powershell 7 Installation Script"
-      ansible.windows.win_powershell:
-        script: iex "C:\temp\install-powershell.ps1"
-      when: ps7_check != "7"
-
--
   name: "Setting timezone to {{ win_timezone }}"
   when: ansible_os_family == 'Windows'
   community.windows.win_timezone:
