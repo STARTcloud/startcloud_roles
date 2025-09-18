@@ -53,11 +53,16 @@
       register: windows_disk_facts
 
     -
+      name: "Debugging: Windows disk facts structure"
+      ansible.builtin.debug:
+        var: windows_disk_facts
+
+    -
       name: "Identifying available uninitialized disks"
       ansible.builtin.set_fact:
         available_uninitialized_disks: >-
           {{
-            windows_disk_facts.ansible_facts.disks |
+            windows_disk_facts.ansible_facts.ansible_disks |
             selectattr('system_disk', 'equalto', false) |
             selectattr('partition_style', 'equalto', 'RAW') |
             map(attribute='number') |
