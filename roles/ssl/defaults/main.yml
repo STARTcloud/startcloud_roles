@@ -43,9 +43,6 @@ cert_key_exportable: true
 # DNS entries
 dns_entries_list: []
 
-# Service user password
-service_user_password: "Service123!@#"
-
 # Variables for Role Certbot certs.
 certbot_create_if_missing: false
 certbot_create_method: standalone
