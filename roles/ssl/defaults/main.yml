@@ -26,7 +26,7 @@ countrycode: US
 organization: "{{ domino_organization | default('DEMO') }}"
 
 # Java and keystore settings (Windows)
-java_version: "22"
+java_version: "latest"
 java_home: "C:\\Program Files\\OpenJDK\\jdk-22.0.2"
 java_keytool: "C:\\Program Files\\OpenJDK\\jdk-22.0.2\\bin\\keytool.exe"
 
