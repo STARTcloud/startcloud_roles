@@ -13,18 +13,14 @@
       name: "Activating Windows with license key"
       ansible.windows.win_powershell:
         script: |
-          try {
-            $result = slmgr.vbs /ipk "{{ windows_license_key }}"
-            Start-Sleep -Seconds 5
-            $activation = slmgr.vbs /ato
-            Write-Output "License installed and activation attempted"
-            Write-Output $result
-            Write-Output $activation
-          } catch {
-            Write-Error "Failed to activate Windows: $_"
-            throw $_
-          }
+          slmgr.vbs /ipk "{{ windows_license_key }}"
       register: activation_result
+
+    -
+      name: "Activating Windows with license key"
+      ansible.windows.win_powershell:
+        script: |
+          slmgr.vbs /ato
 
     -
       name: "Displaying activation result"
