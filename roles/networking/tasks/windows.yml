@@ -114,7 +114,7 @@
 
     -
       name: "Creating Windows hosts entries"
-      ansible.windows.win_hosts:
+      community.windows.win_hosts:
         state: present
         canonical_name: "{{ settings.hostname }}.{{ settings.domain }}"
         ip_address: "{{ second_adapter_details.ip }}"
