@@ -136,10 +136,13 @@
             name: {{ second_adapter_details.name | default('') }}
 
     -
-      name: "Creating support bundle directory"
+      name: "Creating required directories"
       ansible.windows.win_file:
-        path: "C:\\vagrant\\support-bundle"
+        path: "{{ item }}"
         state: directory
+      loop:
+        - "C:\\vagrant\\support-bundle"
+        - "C:\\vagrant\\completed"
 
     -
       name: "Writing adapter details to files"
@@ -147,7 +150,7 @@
         content: "{{ item.content }}"
         dest: "{{ item.dest }}"
       loop:
-        - dest: "{{ completed_dir }}\\ipaddress.yml"
+        - dest: "C:\\vagrant\\completed\\ipaddress.yml"
           content: "{{ second_adapter_details.ip | default('') }}"
         - dest: "C:\\vagrant\\support-bundle\\adapters.json"
           content: "{{ adapter_details | from_yaml | to_nice_json }}"
