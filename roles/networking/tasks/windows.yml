@@ -159,7 +159,7 @@
 
 -
   name: "Loading Bhyve networking tasks"
-  when: ansible_bios_vendor == "BHYVE"
+  when: ansible_product_name == "OmniOS HVM"
   block:
     -
       name: "Including Bhyve-specific tasks"
