@@ -15,6 +15,9 @@
         name: "{{ service_user }}"
         password: "{{ service_user_password }}"
         state: present
+        password_never_expires: true
+        user_cannot_change_password: false
+        account_disabled: false
 
     -
       name: "Creating service user home directory"
