@@ -1,0 +1,386 @@
+---
+-
+  name: "Installing Java for keystore operations"
+  chocolatey.chocolatey.win_chocolatey:
+    name: openjdk
+    version: "{{ java_version }}"
+    state: present
+
+-
+  name: "Detecting Java installation path"
+  ansible.windows.win_powershell:
+    script: |
+      $javaPath = Get-ChildItem "C:\Program Files\OpenJDK" | Where-Object { $_.Name -like "jdk-{{ java_version }}*" } | Select-Object -First 1 -ExpandProperty FullName
+      if ($javaPath) {
+        Write-Output $javaPath
+      } else {
+        # Fallback path based on major version only
+        Write-Output "C:\Program Files\OpenJDK\jdk-{{ java_version }}"
+      }
+  register: detected_java_path
+  changed_when: false
+
+-
+  name: "Setting JAVA_HOME environment variable"
+  ansible.windows.win_environment:
+    name: JAVA_HOME
+    value: "{{ detected_java_path.output[0] }}"
+    level: machine
+
+-
+  name: "Adding Java to system PATH"
+  ansible.windows.win_path:
+    elements:
+      - "{{ detected_java_path.output[0] }}\\bin"
+    scope: machine
+    state: present
+
+-
+  name: "Creating directories for SSL certificates"
+  ansible.windows.win_file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+    - "{{ cert_dir }}"
+    - "{{ cert_dir }}\\key"
+    - "{{ cert_dir }}\\crt"
+    - "{{ cert_dir }}\\csr"
+    - "{{ cert_dir }}\\pfx"
+    - "{{ cert_dir }}\\kyr"
+    - "{{ cert_dir }}\\jks"
+    - "{{ cert_dir }}\\combined"
+    - "{{ cert_dir }}\\ca"
+
+-
+  name: "Setting permissions on SSL certificate directories"
+  ansible.windows.win_acl:
+    path: "{{ cert_dir }}"
+    user: "{{ service_user }}"
+    rights: FullControl
+    type: allow
+    state: present
+    inherit: ContainerInherit,ObjectInherit
+    propagation: InheritOnly
+
+-
+  name: "Using existing Certificate"
+  when: not selfsigned_enabled and not letsencrypt_enabled
+  block:
+    -
+      name: "Checking if SSL default certificates exist"
+      ansible.windows.win_stat:
+        path: "{{ item }}"
+      register: cert_check
+      failed_when: not cert_check.stat.exists
+      loop:
+        - "{{ cert_dir }}\\key\\default-signed.key"
+        - "{{ cert_dir }}\\crt\\default-signed.crt"
+        - "{{ cert_dir }}\\ca\\default-signed.ca"
+
+    -
+      name: "Copying signed SSL key"
+      ansible.windows.win_copy:
+        src: "{{ cert_dir }}\\key\\default-signed.key"
+        dest: "{{ cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}.key"
+        remote_src: true
+
+    -
+      name: "Copying signed SSL certificate"
+      ansible.windows.win_copy:
+        src: "{{ cert_dir }}\\crt\\default-signed.crt"
+        dest: "{{ cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}.crt"
+        remote_src: true
+
+    -
+      name: "Copying signed SSL CA"
+      ansible.windows.win_copy:
+        src: "{{ cert_dir }}\\ca\\default-signed.ca"
+        dest: "{{ cert_dir }}\\ca\\{{ settings.hostname }}.{{ settings.domain }}.crt"
+        remote_src: true
+
+    -
+      name: "Generating signed PKCS12 file"
+      community.crypto.openssl_pkcs12:
+        action: export
+        path: "{{ cert_dir }}\\pfx\\default-signed.pfx"
+        certificate_path: "{{ cert_dir }}\\crt\\default-signed.crt"
+        privatekey_path: "{{ cert_dir }}\\key\\default-signed.key"
+        other_certificates_parse_all: true
+        other_certificates:
+          - "{{ cert_dir }}\\ca\\default-signed.ca"
+        state: present
+        friendly_name: "pkcs12_file"
+
+    -
+      name: "Copying signed SSL PFX"
+      ansible.windows.win_copy:
+        src: "{{ cert_dir }}\\pfx\\default-signed.pfx"
+        dest: "{{ cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}.pfx"
+        remote_src: true
+
+    -
+      name: "Creating keystore for signed certificate"
+      community.general.java_keystore:
+        name: "{{ settings.hostname }}.{{ settings.domain }}"
+        certificate: "{{ lookup('file', cert_dir + '\\crt\\default-signed.crt') }}"
+        private_key: "{{ lookup('file', cert_dir + '\\key\\default-signed.key') }}"
+        password: "{{ cert_pass }}"
+        dest: "{{ cert_dir }}\\jks\\default-signed.jks"
+
+    -
+      name: "Copying JKS keystore"
+      ansible.windows.win_copy:
+        src: "{{ cert_dir }}\\jks\\default-signed.jks"
+        dest: "{{ cert_dir }}\\jks\\{{ settings.hostname }}.{{ settings.domain }}.jks"
+        remote_src: true
+
+    -
+      name: "Installing certificate in Windows Certificate Store"
+      ansible.windows.win_certificate_store:
+        path: "{{ cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}.pfx"
+        password: "{{ cert_pass }}"
+        store_location: "{{ cert_store_location }}"
+        store_name: "{{ cert_store_name }}"
+        key_storage: "{{ cert_key_storage }}"
+        key_exportable: "{{ cert_key_exportable }}"
+        state: present
+
+-
+  name: "Generating Self Signed Certificate"
+  when: selfsigned_enabled and not letsencrypt_enabled
+  block:
+    -
+      name: "Copying root CA private key"
+      ansible.windows.win_copy:
+        src: "ssls\\ca\\ca-certificate.key"
+        dest: "{{ cert_dir }}\\ca\\ca-certificate.key"
+
+    -
+      name: "Copying root CA certificate"
+      ansible.windows.win_copy:
+        src: "ssls\\ca\\ca-certificate.crt"
+        dest: "{{ cert_dir }}\\ca\\ca-certificate.crt"
+
+    -
+      name: "Generating server private key"
+      community.crypto.openssl_privatekey:
+        path: "{{ cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key"
+        type: "{{ private_key_type }}"
+        size: "{{ private_key_size }}"
+
+    -
+      name: "Copying signed SSL key"
+      ansible.windows.win_copy:
+        src: "{{ cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key"
+        dest: "{{ cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}.key"
+        remote_src: true
+
+    -
+      name: "Setting DNS entries as fact"
+      ansible.builtin.set_fact:
+        dns_entries: "{{ ['DNS:' + settings.hostname + '.' + settings.domain] }}"
+
+    -
+      name: "Setting DNS subdomain entries as fact"
+      ansible.builtin.set_fact:
+        dns_entries: "{{ dns_entries | default([]) + ['DNS:' + item + '.' + settings.hostname + '.' + settings.domain] }}"
+      loop: "{{ dns_entries_list }}"
+
+    -
+      name: "Generating OpenSSL CSR with subjectAltName extension"
+      community.crypto.openssl_csr:
+        path: "{{ cert_dir }}\\csr\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.csr"
+        privatekey_path: "{{ cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key"
+        subject_alt_name: "{{ dns_entries | list }}"
+        country_name: "{{ countrycode }}"
+        organization_name: "{{ organization }}"
+        common_name: "{{ settings.hostname }}.{{ settings.domain }}"
+
+    -
+      name: "Generating self signed certificate"
+      community.crypto.x509_certificate:
+        path: "{{ cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt"
+        privatekey_path: "{{ cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key"
+        csr_path: "{{ cert_dir }}\\csr\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.csr"
+        provider: ownca
+        ownca_path: "{{ cert_dir }}\\ca\\ca-certificate.crt"
+        ownca_privatekey_path: "{{ cert_dir }}\\ca\\ca-certificate.key"
+        ownca_privatekey_passphrase: "{{ ca_cert_pass }}"
+
+    -
+      name: "Copying certificate"
+      ansible.windows.win_copy:
+        src: "{{ cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt"
+        dest: "{{ cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}.crt"
+        remote_src: true
+
+    -
+      name: "Generating self signed PKCS12 file"
+      community.crypto.openssl_pkcs12:
+        action: export
+        path: "{{ cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.pfx"
+        certificate_path: "{{ cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt"
+        privatekey_path: "{{ cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key"
+        state: present
+        friendly_name: "pkcs12_file"
+
+    -
+      name: "Copying PKCS12 file"
+      ansible.windows.win_copy:
+        src: "{{ cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.pfx"
+        dest: "{{ cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}.pfx"
+        remote_src: true
+
+    -
+      name: "Creating keystore for self-signed certificate"
+      community.general.java_keystore:
+        name: "{{ settings.hostname }}.{{ settings.domain }}"
+        certificate: "{{ lookup('file', cert_dir + '\\crt\\' + settings.hostname + '.' + settings.domain + '-self-signed.crt') }}"
+        private_key: "{{ lookup('file', cert_dir + '\\key\\' + settings.hostname + '.' + settings.domain + '-self-signed.key') }}"
+        password: "{{ cert_pass }}"
+        dest: "{{ cert_dir }}\\jks\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.jks"
+
+    -
+      name: "Copying JKS keystore"
+      ansible.windows.win_copy:
+        src: "{{ cert_dir }}\\jks\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.jks"
+        dest: "{{ cert_dir }}\\jks\\{{ settings.hostname }}.{{ settings.domain }}.jks"
+        remote_src: true
+
+    -
+      name: "Installing self-signed certificate in Windows Certificate Store"
+      ansible.windows.win_certificate_store:
+        path: "{{ cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}.pfx"
+        password: "{{ cert_pass }}"
+        store_location: "{{ cert_store_location }}"
+        store_name: "{{ cert_store_name }}"
+        key_storage: "{{ cert_key_storage }}"
+        key_exportable: "{{ cert_key_exportable }}"
+        state: present
+
+-
+  name: "Beginning Let's Encrypt Provisioning"
+  when: selfsigned_enabled and letsencrypt_enabled
+  block:
+    -
+      name: "Setting LE entries as fact"
+      ansible.builtin.set_fact:
+        le_entries: "{{ [settings.hostname + '.' + settings.domain] }}"
+
+    -
+      name: "Adding subdomain entries to LE entries"
+      ansible.builtin.set_fact:
+        le_entries: "{{ le_entries + [item + '.' + settings.hostname + '.' + settings.domain] }}"
+      loop: "{{ dns_entries_list }}"
+
+    -
+      name: "Checking if certificate exists"
+      ansible.windows.win_stat:
+        path: "{{ cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.crt"
+      register: letsencrypt_cert
+
+    -
+      name: "Creating private key for Let's Encrypt"
+      community.crypto.openssl_privatekey:
+        path: "{{ cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.key"
+        type: "{{ private_key_type }}"
+        size: "{{ private_key_size }}"
+
+    -
+      name: "Creating CSR for Let's Encrypt"
+      community.crypto.openssl_csr_pipe:
+        privatekey_path: "{{ cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.key"
+        subject_alt_name: "{{ dns_entries | list }}"
+        country_name: "{{ countrycode }}"
+        organization_name: "{{ organization }}"
+        common_name: "{{ settings.hostname }}.{{ settings.domain }}"
+      register: letsencrypt_csr
+
+    -
+      name: "Creating Let's Encrypt certificate with HTTP-01 challenge"
+      community.crypto.acme_certificate:
+        account_key_src: "{{ cert_dir }}\\key\\account.key"
+        account_email: "{{ settings.email }}"
+        csr_content: "{{ letsencrypt_csr.csr }}"
+        dest: "{{ cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.crt"
+        fullchain_dest: "{{ cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt-fullchain.crt"
+        challenge: http-01
+        acme_directory: "{{ 'https://acme-staging-v02.api.letsencrypt.org/directory' if letsencrypt_staging_enabled else 'https://acme-v02.api.letsencrypt.org/directory' }}"
+        remaining_days: 60
+        terms_agreed: true
+        modify_account: false
+      register: acme_challenge
+      when: not letsencrypt_cert.stat.exists
+
+    -
+      name: "Completing Let's Encrypt certificate validation"
+      community.crypto.acme_certificate:
+        account_key_src: "{{ cert_dir }}\\key\\account.key"
+        account_email: "{{ settings.email }}"
+        csr_content: "{{ letsencrypt_csr.csr }}"
+        dest: "{{ cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.crt"
+        fullchain_dest: "{{ cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt-fullchain.crt"
+        challenge: http-01
+        acme_directory: "{{ 'https://acme-staging-v02.api.letsencrypt.org/directory' if letsencrypt_staging_enabled else 'https://acme-v02.api.letsencrypt.org/directory' }}"
+        remaining_days: 60
+        data: "{{ acme_challenge }}"
+        modify_account: false
+      when: acme_challenge is changed
+
+    -
+      name: "Copying Let's Encrypt certificate"
+      ansible.windows.win_copy:
+        src: "{{ cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.crt"
+        dest: "{{ cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}.crt"
+        remote_src: true
+
+    -
+      name: "Copying Let's Encrypt private key"
+      ansible.windows.win_copy:
+        src: "{{ cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.key"
+        dest: "{{ cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}.key"
+        remote_src: true
+
+    -
+      name: "Generating Let's Encrypt PKCS12 file"
+      community.crypto.openssl_pkcs12:
+        action: export
+        path: "{{ cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.pfx"
+        certificate_path: "{{ cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.crt"
+        privatekey_path: "{{ cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.key"
+        state: present
+        friendly_name: "pkcs12_file"
+
+    -
+      name: "Copying Let's Encrypt PFX"
+      ansible.windows.win_copy:
+        src: "{{ cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.pfx"
+        dest: "{{ cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}.pfx"
+        remote_src: true
+
+    -
+      name: "Creating keystore for Let's Encrypt certificate"
+      community.general.java_keystore:
+        name: "{{ settings.hostname }}.{{ settings.domain }}"
+        certificate: "{{ lookup('file', cert_dir + '\\crt\\' + settings.hostname + '.' + settings.domain + '-letsencrypt.crt') }}"
+        private_key: "{{ lookup('file', cert_dir + '\\key\\' + settings.hostname + '.' + settings.domain + '-letsencrypt.key') }}"
+        password: "{{ cert_pass }}"
+        dest: "{{ cert_dir }}\\jks\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.jks"
+
+    -
+      name: "Copying Let's Encrypt JKS"
+      ansible.windows.win_copy:
+        src: "{{ cert_dir }}\\jks\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.jks"
+        dest: "{{ cert_dir }}\\jks\\{{ settings.hostname }}.{{ settings.domain }}.jks"
+        remote_src: true
+
+    -
+      name: "Installing Let's Encrypt certificate in Windows Certificate Store"
+      ansible.windows.win_certificate_store:
+        path: "{{ cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}.pfx"
+        password: "{{ cert_pass }}"
+        store_location: "{{ cert_store_location }}"
+        store_name: "{{ cert_store_name }}"
+        key_storage: "{{ cert_key_storage }}"
+        key_exportable: "{{ cert_key_exportable }}"
+        state: present
