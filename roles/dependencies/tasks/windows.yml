@@ -6,6 +6,12 @@
   ignore_errors: true
 
 -
+  name: "Rebooting to Apply Windows Updates"
+  ansible.windows.win_reboot:
+    reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
+  ignore_errors: true
+
+-
   name: "Installing Powershell 7"
   block:
     -
@@ -25,16 +31,17 @@
 
     -
       name: "Downloading Powershell 7 Installation Script"
+      when: ps7_check != "7"
       ansible.windows.win_get_url:
         url: "https://aka.ms/install-powershell.ps1"
         dest: C:\temp\install-powershell.ps1
-      when: ps7_check != "7"
-
+      
     -
       name: "Executing Powershell 7 Installation Script"
+      when: ps7_check != "7"
       ansible.windows.win_powershell:
         script: iex "C:\temp\install-powershell.ps1"
-      when: ps7_check != "7"
+      ignore_errors: true
 
 -
   name: "Installing all updates and rebooting as many times as needed"
@@ -43,6 +50,7 @@
     reboot: true
     skip_optional: false
     reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
+  ignore_errors: true
 
 -
   name: "Installing all updates and rebooting as many times as needed"
@@ -51,6 +59,7 @@
     reboot: true
     skip_optional: false
     reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
+  ignore_errors: true
 
 -
   name: "Manually Installing Updates"
@@ -61,11 +70,13 @@
       ansible.windows.win_wait_for:
         path: C:\temp\updates_installed
         timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
+      ignore_errors: true
 
 -
   name: "Rebooting to Apply Windows Updates"
   ansible.windows.win_reboot:
     reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
+  ignore_errors: true
 
 -
   name: "Installing all updates and rebooting as many times as needed"
@@ -74,6 +85,7 @@
     reboot: true
     skip_optional: false
     reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
+  ignore_errors: true
 
 -
   name: "Installing Chocolatey"
