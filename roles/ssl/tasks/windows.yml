@@ -3,7 +3,6 @@
   name: "Installing Java for keystore operations"
   chocolatey.chocolatey.win_chocolatey:
     name: openjdk
-    version: "{{ java_version }}"
     state: present
 
 -
