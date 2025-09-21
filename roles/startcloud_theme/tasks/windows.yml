@@ -278,16 +278,6 @@
       ignore_errors: yes
 
     -
-      name: "Taskbar - Do not allow pinning store app to taskbar"
-      ansible.windows.win_regedit:
-        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer
-        name: NoPinningToTaskbar
-        data: 1
-        type: dword
-        state: present
-      ignore_errors: yes
-
-    -
       name: "Taskbar - Remove Meet Now icon"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer
