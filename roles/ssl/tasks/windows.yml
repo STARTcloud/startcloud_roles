@@ -51,17 +51,6 @@
     - "{{ cert_dir }}\\ca"
 
 -
-  name: "Setting permissions on SSL certificate directories"
-  ansible.windows.win_acl:
-    path: "{{ cert_dir }}"
-    user: "{{ service_user }}"
-    rights: FullControl
-    type: allow
-    state: present
-    inherit: ContainerInherit,ObjectInherit
-    propagation: InheritOnly
-
--
   name: "Using existing Certificate"
   when: not selfsigned_enabled and not letsencrypt_enabled
   block:

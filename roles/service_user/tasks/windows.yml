@@ -3,13 +3,6 @@
   name: "Creating Windows service user and group"
   block:
     -
-      name: "Creating local service group"
-      ansible.windows.win_group:
-        name: "{{ service_group }}"
-        description: "Service group for {{ service_user }}"
-        state: present
-
-    -
       name: "Creating service user account"
       ansible.windows.win_user:
         name: "{{ service_user }}"
@@ -18,40 +11,6 @@
         password_never_expires: true
         user_cannot_change_password: false
         account_disabled: false
-
-    -
-      name: "Creating service user home directory"
-      ansible.windows.win_file:
-        path: "{{ service_home_dir }}"
-        state: directory
-
-    -
-      name: "Setting permissions on service user home directory"
-      ansible.windows.win_acl:
-        path: "{{ service_home_dir }}"
-        user: "{{ service_user }}"
-        rights: FullControl
-        type: allow
-        state: present
-        inherit: ContainerInherit,ObjectInherit
-        propagation: None
-
-    -
-      name: "Creating Ansible temp directory"
-      ansible.windows.win_file:
-        path: "{{ service_home_dir }}\\.ansible\\tmp"
-        state: directory
-
-    -
-      name: "Setting permissions on Ansible temp directory"
-      ansible.windows.win_acl:
-        path: "{{ service_home_dir }}\\.ansible\\tmp"
-        user: "{{ service_user }}"
-        rights: FullControl
-        type: allow
-        state: present
-        inherit: ContainerInherit,ObjectInherit
-        propagation: None
 
 -
   name: "Configuring user password policies"
