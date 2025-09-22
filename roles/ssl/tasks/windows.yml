@@ -55,36 +55,26 @@
   when: not selfsigned_enabled and not letsencrypt_enabled
   block:
     -
-      name: "Checking if SSL default certificates exist"
-      ansible.windows.win_stat:
-        path: "{{ item }}"
-      register: cert_check
-      failed_when: not cert_check.stat.exists
-      loop:
-        - "{{ cert_dir }}\\key\\default-signed.key"
-        - "{{ cert_dir }}\\crt\\default-signed.crt"
-        - "{{ cert_dir }}\\ca\\default-signed.ca"
-
-    -
       name: "Copying signed SSL key"
       ansible.windows.win_copy:
-        src: "{{ cert_dir }}\\key\\default-signed.key"
+        src: "ssls/key/default-signed.key"
         dest: "{{ cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}.key"
         remote_src: true
 
     -
       name: "Copying signed SSL certificate"
       ansible.windows.win_copy:
-        src: "{{ cert_dir }}\\crt\\default-signed.crt"
+        src: "ssls/key/default-signed.crt"
         dest: "{{ cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}.crt"
         remote_src: true
 
     -
       name: "Copying signed SSL CA"
       ansible.windows.win_copy:
-        src: "{{ cert_dir }}\\ca\\default-signed.ca"
+        src: "ssls/key/default-signed.ca"
         dest: "{{ cert_dir }}\\ca\\{{ settings.hostname }}.{{ settings.domain }}.crt"
         remote_src: true
+      ignore_errors: true
 
     -
       name: "Generating signed PKCS12 file"
@@ -140,13 +130,13 @@
     -
       name: "Copying root CA private key"
       ansible.windows.win_copy:
-        src: "ssls\\ca\\ca-certificate.key"
+        src: "ssls/ca/ca-certificate.key"
         dest: "{{ cert_dir }}\\ca\\ca-certificate.key"
 
     -
       name: "Copying root CA certificate"
       ansible.windows.win_copy:
-        src: "ssls\\ca\\ca-certificate.crt"
+        src: "ssls/ca/ca-certificate.crt"
         dest: "{{ cert_dir }}\\ca\\ca-certificate.crt"
 
     -
