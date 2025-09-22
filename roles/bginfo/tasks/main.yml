@@ -54,5 +54,5 @@
           community.windows.win_shortcut:
             src: "C:\\ProgramData\\chocolatey\\lib\\bginfo\\Tools\\Bginfo64.exe"
             dest: "{{ startup_directory }}\\Bginfo64.lnk"
-            arguments: "C:\\opt\\STARTcloud /timer:0 /nolicprompt /silent"
+            arguments: "{{ bginfo_directory }}\\STARTcloud.bgi /timer:0 /nolicprompt /silent"
             description: "BGInfo System Information Display"
