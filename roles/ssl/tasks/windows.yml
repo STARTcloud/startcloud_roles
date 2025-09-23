@@ -141,10 +141,18 @@
 
     -
       name: "Generating server private key"
-      community.crypto.openssl_privatekey:
-        path: "{{ cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key"
+      community.crypto.openssl_privatekey_pipe:
         type: "{{ private_key_type }}"
         size: "{{ private_key_size }}"
+      register: self_signed_private_key
+      no_log: true
+
+    -
+      name: "Writing server private key to file"
+      ansible.windows.win_copy:
+        content: "{{ self_signed_private_key.privatekey }}"
+        dest: "{{ cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key"
+      no_log: true
 
     -
       name: "Copying signed SSL key"
@@ -166,24 +174,38 @@
 
     -
       name: "Generating OpenSSL CSR with subjectAltName extension"
-      community.crypto.openssl_csr:
-        path: "{{ cert_dir }}\\csr\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.csr"
-        privatekey_path: "{{ cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key"
+      community.crypto.openssl_csr_pipe:
+        privatekey_content: "{{ self_signed_private_key.privatekey }}"
         subject_alt_name: "{{ dns_entries | list }}"
         country_name: "{{ countrycode }}"
         organization_name: "{{ organization }}"
         common_name: "{{ settings.hostname }}.{{ settings.domain }}"
+      register: self_signed_csr
+      no_log: true
+
+    -
+      name: "Writing CSR to file"
+      ansible.windows.win_copy:
+        content: "{{ self_signed_csr.csr }}"
+        dest: "{{ cert_dir }}\\csr\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.csr"
 
     -
       name: "Generating self signed certificate"
-      community.crypto.x509_certificate:
-        path: "{{ cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt"
-        privatekey_path: "{{ cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key"
-        csr_path: "{{ cert_dir }}\\csr\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.csr"
+      community.crypto.x509_certificate_pipe:
+        privatekey_content: "{{ self_signed_private_key.privatekey }}"
+        csr_content: "{{ self_signed_csr.csr }}"
         provider: ownca
-        ownca_path: "{{ cert_dir }}\\ca\\ca-certificate.crt"
-        ownca_privatekey_path: "{{ cert_dir }}\\ca\\ca-certificate.key"
+        ownca_content: "{{ lookup('file', 'ssls/ca/ca-certificate.crt') }}"
+        ownca_privatekey_content: "{{ lookup('file', 'ssls/ca/ca-certificate.key') }}"
         ownca_privatekey_passphrase: "{{ ca_cert_pass }}"
+      register: self_signed_cert
+      no_log: true
+
+    -
+      name: "Writing self signed certificate to file"
+      ansible.windows.win_copy:
+        content: "{{ self_signed_cert.certificate }}"
+        dest: "{{ cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt"
 
     -
       name: "Copying certificate"
@@ -259,20 +281,29 @@
 
     -
       name: "Creating private key for Let's Encrypt"
-      community.crypto.openssl_privatekey:
-        path: "{{ cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.key"
+      community.crypto.openssl_privatekey_pipe:
         type: "{{ private_key_type }}"
         size: "{{ private_key_size }}"
+      register: letsencrypt_private_key
+      no_log: true
+
+    -
+      name: "Writing Let's Encrypt private key to file"
+      ansible.windows.win_copy:
+        content: "{{ letsencrypt_private_key.privatekey }}"
+        dest: "{{ cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.key"
+      no_log: true
 
     -
       name: "Creating CSR for Let's Encrypt"
       community.crypto.openssl_csr_pipe:
-        privatekey_path: "{{ cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.key"
+        privatekey_content: "{{ letsencrypt_private_key.privatekey }}"
         subject_alt_name: "{{ dns_entries | list }}"
         country_name: "{{ countrycode }}"
         organization_name: "{{ organization }}"
         common_name: "{{ settings.hostname }}.{{ settings.domain }}"
       register: letsencrypt_csr
+      no_log: true
 
     -
       name: "Creating Let's Encrypt certificate with HTTP-01 challenge"
