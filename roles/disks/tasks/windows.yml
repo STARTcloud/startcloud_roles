@@ -110,9 +110,9 @@
         - created_partitions.results[index] is defined
         - created_partitions.results[index].changed
       community.windows.win_format:
-        drive_letter: "{{ created_partitions.results[index].drive_letter | default(item.drive_letter) }}"
-        file_system: "{{ item.filesystem | upper | default('NTFS') }}"
-        new_label: "{{ item.label | default('Data' + (index + 1) | string) }}"
+        drive_letter: "{{ created_partitions.results[index].drive_letter | default(item.drive_letter | default('auto')) }}"
+        file_system: "{{ (item.filesystem | default('NTFS')).replace('ext4', 'NTFS') | upper }}"
+        new_label: "{{ item.label | default(item.volume_name | default('Data' + (index + 1) | string)) }}"
         full: false
       loop: "{{ disks.additional_disks | default([], true) }}"
       loop_control:
