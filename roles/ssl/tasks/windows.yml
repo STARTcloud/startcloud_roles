@@ -101,13 +101,19 @@
         remote_src: true
 
     -
-      name: "Creating keystore for signed certificate"
-      community.general.java_keystore:
-        name: "{{ settings.hostname }}.{{ settings.domain }}"
-        certificate_path: "{{ win_cert_dir }}\\crt\\default-signed.crt"
-        private_key_path: "{{ win_cert_dir }}\\key\\default-signed.key"
-        password: "{{ cert_pass }}"
-        dest: "{{ win_cert_dir }}\\jks\\default-signed.jks"
+      name: "Creating keystore for signed certificate with PowerShell"
+      ansible.windows.win_powershell:
+        script: |
+          $certPem = Get-Content "{{ win_cert_dir }}\\crt\\default-signed.crt" -Raw
+          $privateKeyPem = Get-Content "{{ win_cert_dir }}\\key\\default-signed.key" -Raw
+          $certWithKey = [System.Security.Cryptography.X509Certificates.X509Certificate2]::CreateFromPem($certPem, $privateKeyPem)
+          $pfxBytes = $certWithKey.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pkcs12, "{{ cert_pass }}")
+          $tempPfx = [System.IO.Path]::GetTempFileName() + ".pfx"
+          [System.IO.File]::WriteAllBytes($tempPfx, $pfxBytes)
+          $keytoolPath = "{{ detected_java_path.output[0] }}\\bin\\keytool.exe"
+          & $keytoolPath -importkeystore -srckeystore $tempPfx -srcstoretype PKCS12 -srcstorepass "{{ cert_pass }}" -destkeystore "{{ win_cert_dir }}\\jks\\default-signed.jks" -deststoretype JKS -deststorepass "{{ cert_pass }}" -alias 1 -destalias "{{ settings.hostname }}.{{ settings.domain }}"
+          Remove-Item $tempPfx
+          return "Signed JKS keystore created successfully"
 
     -
       name: "Copying JKS keystore"
@@ -323,13 +329,19 @@
         remote_src: true
 
     -
-      name: "Creating keystore for self-signed certificate"
-      community.general.java_keystore:
-        name: "{{ settings.hostname }}.{{ settings.domain }}"
-        certificate_path: "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt"
-        private_key_path: "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key"
-        password: "{{ cert_pass }}"
-        dest: "{{ win_cert_dir }}\\jks\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.jks"
+      name: "Creating keystore for self-signed certificate with PowerShell"
+      ansible.windows.win_powershell:
+        script: |
+          $certPem = Get-Content "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt" -Raw
+          $privateKeyPem = Get-Content "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key" -Raw
+          $certWithKey = [System.Security.Cryptography.X509Certificates.X509Certificate2]::CreateFromPem($certPem, $privateKeyPem)
+          $pfxBytes = $certWithKey.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pkcs12, "{{ cert_pass }}")
+          $tempPfx = [System.IO.Path]::GetTempFileName() + ".pfx"
+          [System.IO.File]::WriteAllBytes($tempPfx, $pfxBytes)
+          $keytoolPath = "{{ detected_java_path.output[0] }}\\bin\\keytool.exe"
+          & $keytoolPath -importkeystore -srckeystore $tempPfx -srcstoretype PKCS12 -srcstorepass "{{ cert_pass }}" -destkeystore "{{ win_cert_dir }}\\jks\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.jks" -deststoretype JKS -deststorepass "{{ cert_pass }}" -alias 1 -destalias "{{ settings.hostname }}.{{ settings.domain }}"
+          Remove-Item $tempPfx
+          return "JKS keystore created successfully"
 
     -
       name: "Copying JKS keystore"
@@ -489,13 +501,19 @@
         remote_src: true
 
     -
-      name: "Creating keystore for Let's Encrypt certificate"
-      community.general.java_keystore:
-        name: "{{ settings.hostname }}.{{ settings.domain }}"
-        certificate_path: "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.crt"
-        private_key_path: "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.key"
-        password: "{{ cert_pass }}"
-        dest: "{{ win_cert_dir }}\\jks\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.jks"
+      name: "Creating keystore for Let's Encrypt certificate with PowerShell"
+      ansible.windows.win_powershell:
+        script: |
+          $certPem = Get-Content "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.crt" -Raw
+          $privateKeyPem = Get-Content "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.key" -Raw
+          $certWithKey = [System.Security.Cryptography.X509Certificates.X509Certificate2]::CreateFromPem($certPem, $privateKeyPem)
+          $pfxBytes = $certWithKey.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pkcs12, "{{ cert_pass }}")
+          $tempPfx = [System.IO.Path]::GetTempFileName() + ".pfx"
+          [System.IO.File]::WriteAllBytes($tempPfx, $pfxBytes)
+          $keytoolPath = "{{ detected_java_path.output[0] }}\\bin\\keytool.exe"
+          & $keytoolPath -importkeystore -srckeystore $tempPfx -srcstoretype PKCS12 -srcstorepass "{{ cert_pass }}" -destkeystore "{{ win_cert_dir }}\\jks\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.jks" -deststoretype JKS -deststorepass "{{ cert_pass }}" -alias 1 -destalias "{{ settings.hostname }}.{{ settings.domain }}"
+          Remove-Item $tempPfx
+          return "Let's Encrypt JKS keystore created successfully"
 
     -
       name: "Copying Let's Encrypt JKS"
