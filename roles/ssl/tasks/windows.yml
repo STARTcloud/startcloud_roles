@@ -9,7 +9,7 @@
   name: "Detecting Java installation path"
   ansible.windows.win_powershell:
     script: |
-      $javaPath = Get-ChildItem "C:\Program Files\OpenJDK" | Where-Object { $_.Name -like "jdk-{{ java_version }}*" } | Select-Object -First 1 -ExpandProperty FullName
+      $javaPath = Get-ChildItem "C:\Program Files\OpenJDK" | Where-Object { $_.Name -like "jdk-*" } | Select-Object -First 1 -ExpandProperty FullName
       if ($javaPath) {
         Write-Output $javaPath
       } else {
