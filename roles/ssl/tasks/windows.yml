@@ -210,7 +210,7 @@
     -
       name: "Creating clean DNS names list for PowerShell certificate generation"
       ansible.builtin.set_fact:
-        powershell_dns_names: "{{ ([settings.hostname + '.' + settings.domain] + (dns_entries_list | map('regex_replace', '^(.*)$', '\\1.' + settings.hostname + '.' + settings.domain) | list)) | to_json }}"
+        powershell_dns_names: "{{ ([settings.hostname + '.' + settings.domain] + (dns_entries_list | map('regex_replace', '^(.*)$', '\\1.' + settings.hostname + '.' + settings.domain) | list)) }}"
 
     -
       name: "Generating server private key with PowerShell"
@@ -233,7 +233,7 @@
       name: "Creating CSR for server certificate with PowerShell"
       ansible.windows.win_powershell:
         script: |
-          $dnsNames = {{ powershell_dns_names }}
+          $dnsNames = @({{ powershell_dns_names | map('quote') | join(', ') }})
           $subject = "CN={{ settings.hostname }}.{{ settings.domain }}, O={{ organization }}, C={{ countrycode }}"
           $privateKeyPem = Get-Content "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key" -Raw
           $privateKeyBytes = [System.Convert]::FromBase64String(($privateKeyPem -replace "-----BEGIN PRIVATE KEY-----" -replace "-----END PRIVATE KEY-----" -replace "`n" -replace "`r"))
@@ -396,7 +396,7 @@
       name: "Creating CSR for Let's Encrypt with PowerShell"
       ansible.windows.win_powershell:
         script: |
-          $dnsNames = {{ powershell_dns_names }}
+          $dnsNames = @({{ powershell_dns_names | map('quote') | join(', ') }})
           $subject = "CN={{ settings.hostname }}.{{ settings.domain }}, O={{ organization }}, C={{ countrycode }}"
           $privateKeyPem = Get-Content "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.key" -Raw
           $privateKeyBytes = [System.Convert]::FromBase64String(($privateKeyPem -replace "-----BEGIN PRIVATE KEY-----" -replace "-----END PRIVATE KEY-----" -replace "`n" -replace "`r"))
