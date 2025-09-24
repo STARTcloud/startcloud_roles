@@ -35,7 +35,7 @@ private_key_type: RSA
 private_key_size: 2048
 
 # Windows Certificate Store settings
-cert_store_name: WebHosting
+cert_store_name: TrustedPublisher
 cert_store_location: LocalMachine
 cert_key_storage: machine
 cert_key_exportable: true
