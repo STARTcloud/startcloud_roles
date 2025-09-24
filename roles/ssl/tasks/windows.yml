@@ -312,7 +312,7 @@
     -
       name: "Writing self signed PKCS12 file"
       ansible.windows.win_copy:
-        content: "{{ self_signed_pkcs12_result.output[0] | b64decode }}"
+        content: "{{ self_signed_pkcs12_result.result | b64decode }}"
         dest: "{{ win_cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.pfx"
 
     -
