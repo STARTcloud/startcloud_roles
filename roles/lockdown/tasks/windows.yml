@@ -12,7 +12,7 @@
     - lockdown_use_settings_password | default(false)
     - vagrant_user_pass is defined
   ansible.windows.win_user:
-    name: "{{ ansible_user | default('vagrant') }}"
+    name: "{{ vagrant_user | default('Administrator') }}"
     password: "{{ vagrant_user_pass }}"
     state: present
 
@@ -22,7 +22,7 @@
     - not lockdown_use_settings_password
     - lockdown_new_password is defined
   ansible.windows.win_user:
-    name: "{{ ansible_user | default('vagrant') }}"
+    name: "{{ vagrant_user | default('Administrator') }}"
     password: "{{ lockdown_new_password }}"
     state: present
 
