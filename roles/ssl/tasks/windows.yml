@@ -219,76 +219,42 @@
         powershell_dns_names: "{{ ([settings.hostname + '.' + settings.domain] + (dns_entries_list | map('regex_replace', '^(.*)$', '\\1.' + settings.hostname + '.' + settings.domain) | list)) }}"
 
     -
-      name: "Generating server private key with PowerShell"
-      ansible.windows.win_powershell:
-        script: |
-          $rsa = [System.Security.Cryptography.RSA]::Create({{ private_key_size }})
-          $privateKeyPem = "-----BEGIN PRIVATE KEY-----`n"
-          $privateKeyPem += [System.Convert]::ToBase64String($rsa.ExportPkcs8PrivateKey(), [System.Base64FormattingOptions]::InsertLineBreaks)
-          $privateKeyPem += "`n-----END PRIVATE KEY-----"
-          return $privateKeyPem
-      register: server_private_key_result
+      name: "Generating server private key with OpenSSL"
+      ansible.windows.win_command:
+        cmd: '"C:\Program Files\Git\usr\bin\openssl.exe" genrsa -out "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key" {{ private_key_size }}'
 
     -
-      name: "Writing server private key to file"
+      name: "Creating OpenSSL config for CSR with SAN"
       ansible.windows.win_copy:
-        content: "{{ server_private_key_result.output[0] }}"
-        dest: "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key"
+        content: |
+          [req]
+          distinguished_name = req_distinguished_name
+          req_extensions = v3_req
+          prompt = no
+
+          [req_distinguished_name]
+          CN = {{ settings.hostname }}.{{ settings.domain }}
+          O = {{ organization }}
+          C = {{ countrycode }}
+
+          [v3_req]
+          subjectAltName = @alt_names
+
+          [alt_names]
+          {% for dns_name in powershell_dns_names %}
+          DNS.{{ loop.index }} = {{ dns_name }}
+          {% endfor %}
+        dest: "{{ win_cert_dir }}\\csr\\openssl.conf"
 
     -
-      name: "Creating CSR for server certificate with PowerShell"
-      ansible.windows.win_powershell:
-        script: |
-          $dnsNames = @({{ powershell_dns_names | map('quote') | join(', ') }})
-          $subject = "CN={{ settings.hostname }}.{{ settings.domain }}, O={{ organization }}, C={{ countrycode }}"
-          $privateKeyPem = Get-Content "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key" -Raw
-          $privateKeyBytes = [System.Convert]::FromBase64String(($privateKeyPem -replace "-----BEGIN PRIVATE KEY-----" -replace "-----END PRIVATE KEY-----" -replace "`n" -replace "`r"))
-          $rsa = [System.Security.Cryptography.RSA]::Create()
-          $rsa.ImportPkcs8PrivateKey($privateKeyBytes, [ref]$null)
-          $req = [System.Security.Cryptography.X509Certificates.CertificateRequest]::new($subject, $rsa, [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
-          $sanBuilder = [System.Security.Cryptography.X509Certificates.SubjectAlternativeNameBuilder]::new()
-          foreach ($dns in $dnsNames) { $sanBuilder.AddDnsName($dns) }
-          $req.CertificateExtensions.Add($sanBuilder.Build())
-          $csrBytes = $req.CreateSigningRequest()
-          $csrPem = "-----BEGIN CERTIFICATE REQUEST-----`n"
-          $csrPem += [System.Convert]::ToBase64String($csrBytes, [System.Base64FormattingOptions]::InsertLineBreaks)
-          $csrPem += "`n-----END CERTIFICATE REQUEST-----"
-          return $csrPem
-      register: server_csr_result
+      name: "Creating CSR for server certificate with OpenSSL"
+      ansible.windows.win_command:
+        cmd: '"C:\Program Files\Git\usr\bin\openssl.exe" req -new -key "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key" -out "{{ win_cert_dir }}\\csr\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.csr" -config "{{ win_cert_dir }}\\csr\\openssl.conf"'
 
     -
-      name: "Writing server CSR to file"
-      ansible.windows.win_copy:
-        content: "{{ server_csr_result.output[0] }}"
-        dest: "{{ win_cert_dir }}\\csr\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.csr"
-
-    -
-      name: "Generating CA-signed certificate with PowerShell"
-      ansible.windows.win_powershell:
-        script: |
-          $caCertPem = Get-Content "{{ win_cert_dir }}\\ca\\ca-certificate.crt" -Raw
-          $caCertBytes = [System.Convert]::FromBase64String(($caCertPem -replace "-----BEGIN CERTIFICATE-----" -replace "-----END CERTIFICATE-----" -replace "`n" -replace "`r"))
-          $caCert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($caCertBytes)
-          $caPrivateKeyPem = Get-Content "{{ win_cert_dir }}\\ca\\ca-certificate.key" -Raw
-          $caPrivateKeyBytes = [System.Convert]::FromBase64String(($caPrivateKeyPem -replace "-----BEGIN PRIVATE KEY-----" -replace "-----END PRIVATE KEY-----" -replace "`n" -replace "`r"))
-          $caRsa = [System.Security.Cryptography.RSA]::Create()
-          $caRsa.ImportPkcs8PrivateKey($caPrivateKeyBytes, [ref]$null)
-          $csrPem = Get-Content "{{ win_cert_dir }}\\csr\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.csr" -Raw
-          $csrBytes = [System.Convert]::FromBase64String(($csrPem -replace "-----BEGIN CERTIFICATE REQUEST-----" -replace "-----END CERTIFICATE REQUEST-----" -replace "`n" -replace "`r"))
-          $csr = [System.Security.Cryptography.X509Certificates.CertificateRequest]::new($csrBytes)
-          $serverCert = $csr.Create($caCert, (Get-Date), (Get-Date).AddYears(10), [System.Guid]::NewGuid().ToByteArray())
-          $certBytes = $serverCert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert)
-          $certPem = "-----BEGIN CERTIFICATE-----`n"
-          $certPem += [System.Convert]::ToBase64String($certBytes, [System.Base64FormattingOptions]::InsertLineBreaks)
-          $certPem += "`n-----END CERTIFICATE-----"
-          return $certPem
-      register: ca_signed_cert_result
-
-    -
-      name: "Writing CA-signed certificate to file"
-      ansible.windows.win_copy:
-        content: "{{ ca_signed_cert_result.output[0] }}"
-        dest: "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt"
+      name: "Generating CA-signed certificate with OpenSSL"
+      ansible.windows.win_command:
+        cmd: '"C:\Program Files\Git\usr\bin\openssl.exe" x509 -req -in "{{ win_cert_dir }}\\csr\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.csr" -CA "{{ win_cert_dir }}\\ca\\ca-certificate.crt" -CAkey "{{ win_cert_dir }}\\ca\\ca-certificate.key" -CAcreateserial -out "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt" -days 3650 -extensions v3_req -extfile "{{ win_cert_dir }}\\csr\\openssl.conf" -passin "pass:{{ ca_cert_pass }}"'
 
     -
       name: "Copying self-signed SSL key"
@@ -305,21 +271,9 @@
         remote_src: true
 
     -
-      name: "Generating self signed PKCS12 file with PowerShell"
-      ansible.windows.win_powershell:
-        script: |
-          $certPem = Get-Content "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt" -Raw
-          $privateKeyPem = Get-Content "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key" -Raw
-          $certWithKey = [System.Security.Cryptography.X509Certificates.X509Certificate2]::CreateFromPem($certPem, $privateKeyPem)
-          $pfxBytes = $certWithKey.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pkcs12, "{{ cert_pass }}")
-          return [System.Convert]::ToBase64String($pfxBytes)
-      register: self_signed_pkcs12_result
-
-    -
-      name: "Writing self signed PKCS12 file"
-      ansible.windows.win_copy:
-        content: "{{ self_signed_pkcs12_result.result | b64decode }}"
-        dest: "{{ win_cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.pfx"
+      name: "Generating self signed PKCS12 file with OpenSSL"
+      ansible.windows.win_command:
+        cmd: '"C:\Program Files\Git\usr\bin\openssl.exe" pkcs12 -export -out "{{ win_cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.pfx" -inkey "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key" -in "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt" -passout "pass:{{ cert_pass }}"'
 
     -
       name: "Copying PKCS12 file"
@@ -329,19 +283,9 @@
         remote_src: true
 
     -
-      name: "Creating keystore for self-signed certificate with PowerShell"
-      ansible.windows.win_powershell:
-        script: |
-          $certPem = Get-Content "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt" -Raw
-          $privateKeyPem = Get-Content "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key" -Raw
-          $certWithKey = [System.Security.Cryptography.X509Certificates.X509Certificate2]::CreateFromPem($certPem, $privateKeyPem)
-          $pfxBytes = $certWithKey.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pkcs12, "{{ cert_pass }}")
-          $tempPfx = [System.IO.Path]::GetTempFileName() + ".pfx"
-          [System.IO.File]::WriteAllBytes($tempPfx, $pfxBytes)
-          $keytoolPath = "{{ detected_java_path.output[0] }}\\bin\\keytool.exe"
-          & $keytoolPath -importkeystore -srckeystore $tempPfx -srcstoretype PKCS12 -srcstorepass "{{ cert_pass }}" -destkeystore "{{ win_cert_dir }}\\jks\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.jks" -deststoretype JKS -deststorepass "{{ cert_pass }}" -alias 1 -destalias "{{ settings.hostname }}.{{ settings.domain }}"
-          Remove-Item $tempPfx
-          return "JKS keystore created successfully"
+      name: "Creating keystore for self-signed certificate with keytool"
+      ansible.windows.win_command:
+        cmd: '"{{ detected_java_path.output[0] }}\\bin\\keytool.exe" -importkeystore -srckeystore "{{ win_cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.pfx" -srcstoretype PKCS12 -srcstorepass "{{ cert_pass }}" -destkeystore "{{ win_cert_dir }}\\jks\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.jks" -deststoretype JKS -deststorepass "{{ cert_pass }}" -noprompt'
 
     -
       name: "Copying JKS keystore"
