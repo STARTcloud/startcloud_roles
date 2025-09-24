@@ -7,7 +7,7 @@ progress_role_description: "Installing and Configuring SSH for Windows"
 # defaults file for windows_ssh
 
 # SSH key source path (relative to ansible directory)
-ssh_key_source: "../../../../../../ansible/ssh_keys/id_rsa.pub"
+ssh_key_source: "core/ssh_keys/id_rsa.pub"
 
 # SSH configuration
 ssh_default_shell: "C:\\tools\\cygwin\\bin\\bash.exe"
