@@ -77,17 +77,21 @@
       ignore_errors: true
 
     -
-      name: "Generating signed PKCS12 file"
-      community.crypto.openssl_pkcs12:
-        action: export
-        path: "{{ win_cert_dir }}\\pfx\\default-signed.pfx"
-        certificate_path: "{{ win_cert_dir }}\\crt\\default-signed.crt"
-        privatekey_path: "{{ win_cert_dir }}\\key\\default-signed.key"
-        other_certificates_parse_all: true
-        other_certificates:
-          - "{{ win_cert_dir }}\\ca\\default-signed.ca"
-        state: present
-        friendly_name: "pkcs12_file"
+      name: "Generating signed PKCS12 file with PowerShell"
+      ansible.windows.win_powershell:
+        script: |
+          $certPem = Get-Content "{{ win_cert_dir }}\\crt\\default-signed.crt" -Raw
+          $privateKeyPem = Get-Content "{{ win_cert_dir }}\\key\\default-signed.key" -Raw
+          $certWithKey = [System.Security.Cryptography.X509Certificates.X509Certificate2]::CreateFromPem($certPem, $privateKeyPem)
+          $pfxBytes = $certWithKey.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pkcs12, "{{ cert_pass }}")
+          return [System.Convert]::ToBase64String($pfxBytes)
+      register: signed_pkcs12_result
+
+    -
+      name: "Writing signed PKCS12 file"
+      ansible.windows.win_copy:
+        content: "{{ signed_pkcs12_result.output[0] | b64decode }}"
+        dest: "{{ win_cert_dir }}\\pfx\\default-signed.pfx"
 
     -
       name: "Copying signed SSL PFX"
@@ -165,30 +169,19 @@
             dest: "{{ win_cert_dir }}\\ca\\ca-certificate.key"
 
         -
-          name: "Creating CA certificate request with PowerShell"
+          name: "Creating self-signed CA certificate with PowerShell"
           ansible.windows.win_powershell:
             script: |
               $privateKeyPem = Get-Content "{{ win_cert_dir }}\\ca\\ca-certificate.key" -Raw
               $privateKeyBytes = [System.Convert]::FromBase64String(($privateKeyPem -replace "-----BEGIN PRIVATE KEY-----" -replace "-----END PRIVATE KEY-----" -replace "`n" -replace "`r"))
               $rsa = [System.Security.Cryptography.RSA]::Create()
               $rsa.ImportPkcs8PrivateKey($privateKeyBytes, [ref]$null)
-              
               $subject = "CN={{ settings.domain }}, O={{ organization }}, C={{ countrycode }}"
               $req = [System.Security.Cryptography.X509Certificates.CertificateRequest]::new($subject, $rsa, [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
-              
               $basicConstraints = [System.Security.Cryptography.X509Certificates.X509BasicConstraintsExtension]::new($true, $false, 0, $true)
               $req.CertificateExtensions.Add($basicConstraints)
-              
               $keyUsage = [System.Security.Cryptography.X509Certificates.X509KeyUsageExtension]::new([System.Security.Cryptography.X509Certificates.X509KeyUsageFlags]::KeyCertSign, $true)
               $req.CertificateExtensions.Add($keyUsage)
-              
-              return $req
-          register: ca_request_result
-
-        -
-          name: "Creating self-signed CA certificate with PowerShell"
-          ansible.windows.win_powershell:
-            script: |
               $cert = $req.CreateSelfSigned((Get-Date), (Get-Date).AddYears(10))
               $certBytes = $cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert)
               $certPem = "-----BEGIN CERTIFICATE-----`n"
