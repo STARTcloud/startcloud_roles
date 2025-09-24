@@ -145,14 +145,12 @@
         type: "{{ private_key_type }}"
         size: "{{ private_key_size }}"
       register: self_signed_private_key
-      no_log: true
 
     -
       name: "Writing server private key to file"
       ansible.windows.win_copy:
         content: "{{ self_signed_private_key.privatekey }}"
         dest: "{{ cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key"
-      no_log: true
 
     -
       name: "Copying signed SSL key"
@@ -181,7 +179,6 @@
         organization_name: "{{ organization }}"
         common_name: "{{ settings.hostname }}.{{ settings.domain }}"
       register: self_signed_csr
-      no_log: true
 
     -
       name: "Writing CSR to file"
@@ -199,7 +196,6 @@
         ownca_privatekey_content: "{{ lookup('file', 'ssls/ca/ca-certificate.key') }}"
         ownca_privatekey_passphrase: "{{ ca_cert_pass }}"
       register: self_signed_cert
-      no_log: true
 
     -
       name: "Writing self signed certificate to file"
@@ -285,14 +281,12 @@
         type: "{{ private_key_type }}"
         size: "{{ private_key_size }}"
       register: letsencrypt_private_key
-      no_log: true
 
     -
       name: "Writing Let's Encrypt private key to file"
       ansible.windows.win_copy:
         content: "{{ letsencrypt_private_key.privatekey }}"
         dest: "{{ cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.key"
-      no_log: true
 
     -
       name: "Creating CSR for Let's Encrypt"
@@ -303,7 +297,6 @@
         organization_name: "{{ organization }}"
         common_name: "{{ settings.hostname }}.{{ settings.domain }}"
       register: letsencrypt_csr
-      no_log: true
 
     -
       name: "Creating Let's Encrypt certificate with HTTP-01 challenge"
