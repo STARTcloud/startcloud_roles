@@ -210,7 +210,7 @@
     -
       name: "Creating clean DNS names list for PowerShell certificate generation"
       ansible.builtin.set_fact:
-        powershell_dns_names: "{{ [settings.hostname + '.' + settings.domain] + [item + '.' + settings.hostname + '.' + settings.domain for item in dns_entries_list] | to_json }}"
+        powershell_dns_names: "{{ ([settings.hostname + '.' + settings.domain] + (dns_entries_list | map('regex_replace', '^(.*)$', '\\1.' + settings.hostname + '.' + settings.domain) | list)) | to_json }}"
 
     -
       name: "Generating server private key with PowerShell"
@@ -367,7 +367,7 @@
     -
       name: "Creating clean DNS names list for PowerShell certificate generation"
       ansible.builtin.set_fact:
-        powershell_dns_names: "{{ [settings.hostname + '.' + settings.domain] + [item + '.' + settings.hostname + '.' + settings.domain for item in dns_entries_list] | to_json }}"
+        powershell_dns_names: "{{ ([settings.hostname + '.' + settings.domain] + (dns_entries_list | map('regex_replace', '^(.*)$', '\\1.' + settings.hostname + '.' + settings.domain) | list)) | to_json }}"
 
     -
       name: "Checking if certificate exists"
