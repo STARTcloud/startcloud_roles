@@ -1,5 +1,12 @@
 ---
 -
+  name: "Lowering password complexity requirements"
+  community.windows.win_security_policy:
+    section: System Access
+    key: PasswordComplexity
+    value: 0
+
+-
   name: "Changing default user password (using settings password)"
   when: 
     - lockdown_use_settings_password | default(false)
@@ -18,6 +25,13 @@
     name: "{{ ansible_user | default('vagrant') }}"
     password: "{{ lockdown_new_password }}"
     state: present
+
+-
+  name: "Restoring original password complexity requirements"
+  community.windows.win_security_policy:
+    section: System Access
+    key: PasswordComplexity
+    value: 1
 
 -
   name: "Reset WinRM connection to apply user changes"
