@@ -104,8 +104,8 @@
       name: "Creating keystore for signed certificate"
       community.general.java_keystore:
         name: "{{ settings.hostname }}.{{ settings.domain }}"
-        certificate: "{{ lookup('file', win_cert_dir + '\\crt\\default-signed.crt') }}"
-        private_key: "{{ lookup('file', win_cert_dir + '\\key\\default-signed.key') }}"
+        certificate_path: "{{ win_cert_dir }}\\crt\\default-signed.crt"
+        private_key_path: "{{ win_cert_dir }}\\key\\default-signed.key"
         password: "{{ cert_pass }}"
         dest: "{{ win_cert_dir }}\\jks\\default-signed.jks"
 
@@ -326,8 +326,8 @@
       name: "Creating keystore for self-signed certificate"
       community.general.java_keystore:
         name: "{{ settings.hostname }}.{{ settings.domain }}"
-        certificate: "{{ lookup('file', win_cert_dir + '\\crt\\' + settings.hostname + '.' + settings.domain + '-self-signed.crt') }}"
-        private_key: "{{ lookup('file', win_cert_dir + '\\key\\' + settings.hostname + '.' + settings.domain + '-self-signed.key') }}"
+        certificate_path: "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt"
+        private_key_path: "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key"
         password: "{{ cert_pass }}"
         dest: "{{ win_cert_dir }}\\jks\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.jks"
 
@@ -492,8 +492,8 @@
       name: "Creating keystore for Let's Encrypt certificate"
       community.general.java_keystore:
         name: "{{ settings.hostname }}.{{ settings.domain }}"
-        certificate: "{{ lookup('file', win_cert_dir + '\\crt\\' + settings.hostname + '.' + settings.domain + '-letsencrypt.crt') }}"
-        private_key: "{{ lookup('file', win_cert_dir + '\\key\\' + settings.hostname + '.' + settings.domain + '-letsencrypt.key') }}"
+        certificate_path: "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.crt"
+        private_key_path: "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.key"
         password: "{{ cert_pass }}"
         dest: "{{ win_cert_dir }}\\jks\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.jks"
 
