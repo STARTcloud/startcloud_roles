@@ -18,7 +18,9 @@
     - "{{ cert_dir }}/combined"
     - "{{ cert_dir }}/ca"
     - "/usr/local/share/ca-certificates/self-signed"
-- name: "Using existing Certificate"
+
+-
+  name: "Using existing Certificate"
   when: not selfsigned_enabled and not letsencrypt_enabled
   block:
     -
@@ -128,14 +130,16 @@
         group: "{{ service_group }}"
         mode: '0644'
         remote_src: true
-- name: "Generating Self Signed Certificate"
+
+-
+  name: "Generating Self Signed Certificate"
   when: selfsigned_enabled and not letsencrypt_enabled
   block:
     -
-      name: "Generating Certificate Authority"
+      name: "Using STARTcloud Certificate Authority"
       when: not generate_self_signed_certificate_authority
       block:
-    -
+        -
           name: "Copying root CA certificate to trusted certificates directory"
           ansible.builtin.copy:
             src: "ssls/ca/ca-certificate.key"
@@ -143,8 +147,8 @@
             owner: root
             group: root
             mode: '0644'
-    
-    -
+
+        -
           name: "Copying root CA certificate to trusted certificates directory"
           ansible.builtin.copy:
             src: "ssls/ca/ca-certificate.crt"
@@ -157,7 +161,7 @@
       name: "Generating Certificate Authority"
       when: generate_self_signed_certificate_authority
       block:
-    -
+        -
           name: "Creating private key for Certifcate Authority"
           community.crypto.openssl_privatekey:
             path: "{{ cert_dir }}/ca/ca-certificate.key"
@@ -165,7 +169,7 @@
             cipher: 'auto'
             mode: '0777'
     
-    -
+        -
           name: "Creating certificate signing request (CSR) for Certifcate Authority certificate"
           community.crypto.openssl_csr_pipe:
             privatekey_path: "{{ cert_dir }}/ca/ca-certificate.key"
@@ -182,7 +186,7 @@
             key_usage_critical: true
           register: ca_csr
     
-    -
+        -
           name: "Creating self-signed CA certificate from CA CSR"
           community.crypto.x509_certificate:
             path: "{{ cert_dir }}/ca/ca-certificate.crt"
@@ -344,7 +348,9 @@
         group: "{{ service_group }}"
         mode: '0644'
         remote_src: true
-- name: "Beginning Let's Encrypt Provisioning"
+
+-
+  name: "Beginning Let's Encrypt Provisioning"
   when: selfsigned_enabled and letsencrypt_enabled
   block:
     -
