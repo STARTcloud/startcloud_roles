@@ -94,7 +94,7 @@
       community.windows.win_partition:
         disk_number: "{{ available_uninitialized_disks[index] }}"
         drive_letter: "{{ item.drive_letter | default('auto') }}"
-        partition_size: "{{ item.size | default('-1') }}"
+        partition_size: "{{ item.size | default('-1') | regex_replace('([GT])$', '\\1B') }}"
         state: present
       loop: "{{ disks.additional_disks | default([], true) }}"
       loop_control:
