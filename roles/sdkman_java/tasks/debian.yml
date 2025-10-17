@@ -53,6 +53,21 @@
     'is already installed.' not in sdk_install.stdout
 
 -
+  name: "Installing Additional Java versions via SDKMAN: {{ item.version }}"
+  become_user: "{{ sdk_service_user }}"
+  ansible.builtin.shell: . {{ sdkman_dir }}/bin/sdkman-init.sh && sdk install java {{ item.version }}
+  loop: "{{ additional_java_versions }}"
+  args:
+    executable: /bin/bash
+
+-
+  name: "Setting default Java version via SDKMAN: {{ java_version_to_install }}"
+  become_user: "{{ sdk_service_user }}"
+  ansible.builtin.shell: . {{ sdkman_dir }}/bin/sdkman-init.sh && sdk default java {{ java_version_to_install }}
+  args:
+    executable: /bin/bash
+
+-
   name: "Adding Java to /etc/profile.d/java.sh for {{ service_user }}"
   ansible.builtin.lineinfile:
     mode: '0755'
