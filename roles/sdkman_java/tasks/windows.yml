@@ -40,6 +40,17 @@
     'is already installed.' not in sdk_install.stdout
 
 -
+  name: "Installing Additional Java versions via SDKMAN: {{ item.version }}"
+  ansible.windows.win_shell: |
+    C:\tools\msys64\usr\bin\bash.exe -c "source {{ sdkman_dir }}/bin/sdkman-init.sh && sdk install java {{ item.version }}"
+  loop: "{{ additional_java_versions }}"
+
+-
+  name: "Setting default Java version via SDKMAN: {{ java_version_to_install }}"
+  ansible.windows.win_shell: |
+    C:\tools\msys64\usr\bin\bash.exe -c "source {{ sdkman_dir }}/bin/sdkman-init.sh && sdk default java {{ java_version_to_install }}"
+
+-
   name: "Setting Java environment variable"
   ansible.windows.win_environment:
     name: JAVA_HOME
