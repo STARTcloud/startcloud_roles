@@ -44,7 +44,7 @@
         -
           name: "Creating SSH key for sysprep to provision on start"
           ansible.windows.win_copy:
-            src: "{{ ssh_key_source }}"
+            src: "id_rsa.pub"
             dest: C:\ProgramData\ssh\administrators_authorized_keys
 
         -
