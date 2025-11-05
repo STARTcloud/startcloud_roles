@@ -380,6 +380,7 @@
 
     -
       name: "Checking if HAProxy is configured for Let's Encrypt"
+      when: haproxy_installed.stat.exists
       register: haproxy_status
       check_mode: true
       ansible.builtin.lineinfile:
@@ -387,6 +388,14 @@
         regexp: '^\s*server\s+letsencrypt\s+127\.0\.0\.1:'
         line: '        server  letsencrypt             127.0.0.1:8181'
         state: present
+
+    -
+      name: "Set default haproxy_status when HAProxy is not installed"
+      when: not haproxy_installed.stat.exists
+      ansible.builtin.set_fact:
+        haproxy_status:
+          changed: true
+          skipped: false
 
     -
       name: "Check if HAProxy is in enabled_roles"
