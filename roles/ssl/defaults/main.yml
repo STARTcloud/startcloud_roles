@@ -9,7 +9,7 @@ run_tasks: true
 
 # Certificate directory paths (Windows)
 win_cert_dir: "C:\\secure"
-cert_dir: /secure"
+cert_dir: "/secure"
 
 # Certificate generation settings
 selfsigned_enabled: false
