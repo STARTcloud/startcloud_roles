@@ -376,7 +376,7 @@
       register: haproxy_installed
       ansible.builtin.stat:
         path: "/etc/haproxy/haproxy.cfg"
-        get_md5: false
+        get_checksum: false
 
     -
       name: "Checking if HAProxy is configured for Let's Encrypt"
