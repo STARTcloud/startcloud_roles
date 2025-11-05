@@ -389,16 +389,16 @@
         state: present
 
     -
+      name: "Check if HAProxy is in enabled_roles"
+      ansible.builtin.set_fact:
+        haproxy_in_enabled_roles: "{{ 'startcloud.startcloud_roles.haproxy' in (enabled_roles | default([])) }}"
+
+    -
       name: "Ensuring HAproxy is started if installed and letsencrypt via HAproxy is enabled"
       when: haproxy_installed.stat.exists and (not haproxy_status.changed or (haproxy_status.changed and haproxy_in_enabled_roles))
       ansible.builtin.service:
         name: "haproxy"
         state: started
-
-    -
-      name: "Check if HAProxy is in enabled_roles"
-      ansible.builtin.set_fact:
-        haproxy_in_enabled_roles: "{{ 'startcloud.startcloud_roles.haproxy' in (enabled_roles | default([])) }}"
 
     -
       name: "Setting LE entries as a fact to consume"
