@@ -8,7 +8,7 @@
       register: guacamole_installed_check
       ansible.builtin.stat:
         path: "{{ completed_dir }}/guacamole_install"
-        get_md5: false
+        checksum_algorithm: sha256
     
     -
       name: "Installing extra dependencies for Guacamole"

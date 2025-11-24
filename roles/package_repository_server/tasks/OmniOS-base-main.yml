@@ -18,7 +18,7 @@
   register: repo_exists
   ansible.builtin.stat:
     path: "/{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg/pkg5.repository"
-    get_md5: false
+    checksum_algorithm: sha256
 
 -
   name: "Creating {{ pkg_server.omnios_release }} {{ pkg_server.archive }} repo"

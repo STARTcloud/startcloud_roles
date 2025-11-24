@@ -135,7 +135,7 @@
   register: repo_built
   ansible.builtin.stat:
     path: "/{{ storage_disk.path }}/src/completed"
-    get_md5: false
+    checksum_algorithm: sha256
 
 #-
 #  name: "Running Build Script"

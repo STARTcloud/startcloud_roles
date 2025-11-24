@@ -16,7 +16,7 @@
       register: file_exists
       ansible.builtin.stat:
         path: "/var/kayak/kayak/{{ omnios_source_file }}"
-        get_md5: false
+        checksum_algorithm: sha256
 
     - 
       name: "Downloading PXE Boot Installer Image"

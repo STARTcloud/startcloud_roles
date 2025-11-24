@@ -25,7 +25,7 @@
       register: virtualmin_installed
       ansible.builtin.stat:
         path: "{{ completed_dir }}/vmininstalled"
-        get_md5: false
+        checksum_algorithm: sha256
     
     - 
       name: 'Downloading Virtualmin install script'

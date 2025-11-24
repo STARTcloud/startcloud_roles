@@ -230,7 +230,7 @@
       register: autoconfigure
       ansible.builtin.stat:
         path: "{{ domino_home_dir }}/IBM_TECHNICAL_SUPPORT/autoconfigure.log"
-        get_md5: false
+        checksum_algorithm: sha256
       ignore_errors: true
 
     -
