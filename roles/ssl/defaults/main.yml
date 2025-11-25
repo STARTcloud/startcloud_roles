@@ -7,7 +7,7 @@ progress_role_description_step2: "Processing Let's Encrypt certificates"
 
 run_tasks: true
 
-# Certificate directory paths (Windows)
+# Certificate directory paths
 win_cert_dir: "C:\\secure"
 cert_dir: "/secure"
 
@@ -32,7 +32,7 @@ java_keytool: "C:\\Program Files\\OpenJDK\\jdk-22.0.2\\bin\\keytool.exe"
 
 # Private key settings
 private_key_type: RSA
-private_key_size: 2048
+private_key_size: 4096
 
 # Windows Certificate Store settings
 cert_store_name: TrustedPublisher
@@ -41,7 +41,7 @@ cert_key_storage: machine
 cert_key_exportable: true
 
 # DNS entries
-dns_entries_list: []
+dns_entries_list: "{{ dns_entries_list | default([]) }}"
 
 # Variables for Role Certbot certs.
 certbot_create_if_missing: false
