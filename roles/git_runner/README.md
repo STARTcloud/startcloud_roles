@@ -1,6 +1,6 @@
 # Ansible Role: git_runner
 
-Sets up a GitHub Actions JIT (Just-In-Time) self-hosted runner on your system. This role downloads the GitHub Actions runner, configures it with a JIT token obtained from GitHub's API, and optionally sets it up as a systemd service.
+Sets up a GitHub Actions self-hosted runner on your system. This role downloads the GitHub Actions runner, configures it with a token obtained from GitHub's API, and sets it up as a systemd service.
 
 ## Requirements
 
