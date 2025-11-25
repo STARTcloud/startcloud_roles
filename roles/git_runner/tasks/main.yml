@@ -144,3 +144,8 @@
       args:
         executable: /bin/bash
         creates: "/etc/systemd/system/actions.runner.*.service"
+      notify: Start runner service
+
+    -
+      name: "Ensure handlers are notified to start the runner service"
+      ansible.builtin.meta: flush_handlers

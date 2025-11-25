@@ -1,11 +1,10 @@
 ---
 -
-  name: Restart github-actions-runner
+  name: Start runner service
   ansible.builtin.systemd:
-    name: "{{ git_runner_service_name }}"
-    state: restarted
+    name: "actions.runner.{{ git_runner_org if git_runner_org != '' else git_runner_repo.split('/')[0] }}.{{ git_runner_name }}.service"
+    state: started
     daemon_reload: true
-  when: git_runner_service_enabled
 
 -
   name: Reload systemd
