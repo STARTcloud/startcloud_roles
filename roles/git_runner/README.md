@@ -104,19 +104,28 @@ ansible-playbook setup-runner.yml -e "git_runner_github_token=ghp_yourtoken"
 ansible localhost -m include_role -a name=startcloud.startcloud_roles.git_runner -e git_runner_org=my-org -e "@.secrets.yml" --become
 ```
 
-**One-liner with all options**:
+**Complete example with all options**:
 ```bash
-ansible localhost -m include_role -a name=startcloud.startcloud_roles.git_runner -e git_runner_github_token=ghp_token -e git_runner_org=my-org -e git_runner_name=custom-runner -e "git_runner_labels=['self-hosted','linux','x64']" --become
+ansible localhost -m include_role -a name=startcloud.startcloud_roles.git_runner \
+  -e git_runner_github_token=github_pat_TOKEN \
+  -e git_runner_org=STARTcloud \
+  -e git_runner_name=my-runner \
+  -e git_runner_user=startcloud \
+  -e git_runner_dir=/home/startcloud/actions-runner \
+  -e "git_runner_labels=['self-hosted','linux','x64']" \
+  -e git_runner_ephemeral=false \
+  -e git_runner_version=latest \
+  --become
 ```
 
 **For repository-level runner**:
 ```bash
-ansible localhost -m include_role -a name=startcloud.startcloud_roles.git_runner -e git_runner_github_token=ghp_token -e git_runner_repo=owner/repo -e git_runner_name=repo-runner --become
+ansible localhost -m include_role -a name=startcloud.startcloud_roles.git_runner -e git_runner_github_token=github_pat_TOKEN -e git_runner_repo=owner/repo -e git_runner_name=repo-runner --become
 ```
 
 **Ephemeral (one-job) runner**:
 ```bash
-ansible localhost -m include_role -a name=startcloud.startcloud_roles.git_runner -e git_runner_org=my-org -e git_runner_ephemeral=true -e "@.secrets.yml" --become
+ansible localhost -m include_role -a name=startcloud.startcloud_roles.git_runner -e git_runner_org=STARTcloud -e git_runner_name=temp-runner -e git_runner_ephemeral=true -e git_runner_github_token=github_pat_TOKEN --become
 ```
 
 ### Method 3: Reset/Reinstall Runner
