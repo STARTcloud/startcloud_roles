@@ -171,137 +171,79 @@ ansible-playbook reset-runner.yml -e "@.secrets.yml"
 - GitHub token with appropriate permissions
 - Root/sudo access for systemd service installation
 
-
-## Usage in Hosts.yml
-
-### Step 1: Add GitHub Token to .secrets.yml
-
-```yaml
----
-github_token: "ghp_yourGitHubPersonalAccessToken"
-```
-
-### Step 2: Configure in Hosts.yml
-
-For an **organization-level runner**:
-
-```yaml
-vars:
-  git_runner_org: "your-org-name"
-  git_runner_name: "my-custom-runner"
-  git_runner_labels: ["self-hosted", "linux", "domino"]
-
-roles:
-  - name: startcloud.startcloud_roles.git_runner
-    when: true
-```
-
-For a **repository-level runner**:
-
-```yaml
-vars:
-  git_runner_repo: "owner/repo-name"
-  git_runner_name: "repo-runner"
-  
-roles:
-  - name: startcloud.startcloud_roles.git_runner
-    when: true
-```
-
-### Advanced Configuration
-
-```yaml
-vars:
-  git_runner_org: "my-org"
-  git_runner_name: "specialized-runner"
-  git_runner_labels: ["self-hosted", "linux", "gpu", "x64"]
-  git_runner_version: "2.311.0"  # Specific version
-  git_runner_service_enabled: true
-  git_runner_dir: "/opt/github-runner"  # Custom install location
-
-roles:
-  - name: startcloud.startcloud_roles.git_runner
-```
-
-## How It Works
-
-1. **Validation**: Checks that required variables are set
-2. **Version Detection**: Gets latest runner version or uses specified version
-3. **Download**: Downloads GitHub Actions runner binary
-4. **API Call**: Makes REST API call to GitHub to generate JIT configuration
-5. **Service Setup**: 
-   - If `git_runner_service_enabled: true` (default): Creates and starts systemd service
-   - If `git_runner_service_enabled: false`: Starts runner in background
-6. **Documentation**: Creates runner-info.txt with configuration details
-
-## JIT Runner Behavior
-
-JIT (Just-In-Time) runners are **ephemeral** by design:
-- Each runner executes **at most one job**
-- After job completion, the runner **automatically de-registers** from GitHub
-- This ensures a clean environment for every job
-- Perfect for security-sensitive workflows
-
 ## GitHub Token Permissions
 
-Your GitHub token needs these scopes:
+Your GitHub token must be a **Fine-grained Personal Access Token** (not Classic PAT) with:
 
 ### For Organization Runners:
-- `admin:org` - Full control of organizations
+- Organization permissions → **Self-hosted runners** → **Read and Write access**
 
 ### For Repository Runners:
-- `repo` - Full control of private repositories (or `public_repo` for public repos only)
+- Repository permissions → **Administration** → **Read and Write access**
 
 ## Systemd Service
 
-When enabled (default), the runner is installed as a systemd service:
+The runner is installed as a systemd service using GitHub's svc.sh script. The service name follows this pattern:
+
+```
+actions.runner.<organization>.<runner-name>.service
+```
+
+For example, if your org is `STARTcloud` and runner name is `my-runner`, the service is:
+```
+actions.runner.STARTcloud.my-runner.service
+```
+
+**Managing the service:**
 
 ```bash
 # Check status
-sudo systemctl status github-actions-runner
+sudo systemctl status actions.runner.STARTcloud.my-runner.service
 
 # View logs
-sudo journalctl -u github-actions-runner -f
+sudo journalctl -u actions.runner.STARTcloud.my-runner.service -f
 
 # Restart service
-sudo systemctl restart github-actions-runner
+sudo systemctl restart actions.runner.STARTcloud.my-runner.service
+
+# Stop service
+sudo systemctl stop actions.runner.STARTcloud.my-runner.service
 ```
 
-## Runner Information
-
-After installation, check the runner-info.txt file:
+**Using svc.sh helper:**
 
 ```bash
-cat ~/actions-runner/runner-info.txt
+cd ~/actions-runner
+sudo ./svc.sh status
+sudo ./svc.sh stop
+sudo ./svc.sh start
 ```
-
-This file contains:
-- Runner Name
-- Runner ID
-- Status
-- Labels
-- Start time
-- Service information
 
 ## Troubleshooting
 
 ### Runner not appearing in GitHub
 
-1. Check the runner-info.txt file for the runner ID
-2. Verify the GitHub token has correct permissions
-3. Check systemd service status: `sudo systemctl status github-actions-runner`
-4. View runner logs in the runner directory
+1. Verify the GitHub token has correct permissions (Fine-grained PAT with write access)
+2. Check systemd service status: `sudo systemctl status actions.runner.<org>.<name>.service`
+3. View runner logs: `sudo journalctl -u actions.runner.<org>.<name>.service -f`
+4. Check GitHub's runners page to see if it's registered but offline
 
-### API call fails
+### API call fails with 403 Forbidden
 
-- Ensure the github_token is valid
-- Verify org/repo names are correct
-- Check internet connectivity
+- Ensure you're using a **Fine-grained Personal Access Token**, not a Classic PAT
+- Verify the token has **Read and Write** access (not just Read) to "Self-hosted runners"
+- Check that the token hasn't expired
+
+### Service not starting
+
+- Check ownership: `ls -la ~/actions-runner`
+- View service logs: `sudo journalctl -u actions.runner.<org>.<name>.service -f`
+- Try manual start: `cd ~/actions-runner && sudo ./svc.sh start`
 
 ### Permission issues
 
 - Ensure the runner user has proper permissions
-- Check ownership of the runner directory
+- Check ownership of the runner directory: should be owned by the git_runner_user
 
 ## License
 
