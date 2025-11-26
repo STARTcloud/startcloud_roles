@@ -2,7 +2,10 @@
 -
   name: Start runner service
   ansible.builtin.systemd:
-    name: "actions.runner.{{ git_runner_org if git_runner_org != '' else git_runner_repo.split('/')[0] }}.{{ git_runner_name }}.service"
+    # TODO:  get this from the svc.sh script?
+    # Organization:  MyOrg > actions.runner.MyOrg.my-runner-test
+    # Repository:  MyOrg/MyRepo > actions.runner.MyOrg-MyRepo.my-runner-test
+    name: "actions.runner.{{ git_runner_org if git_runner_org != '' else git_runner_repo | replace('/', '-') }}.{{ git_runner_name }}.service"
     state: started
     daemon_reload: true
 
