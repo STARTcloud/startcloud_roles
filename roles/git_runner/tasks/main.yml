@@ -144,7 +144,72 @@
       args:
         executable: /bin/bash
         creates: "/etc/systemd/system/actions.runner.*.service"
-      notify: Start runner service
+
+    -
+      name: "Creating environment file for runner"
+      when: git_runner_use_environment_file
+      ansible.builtin.template:
+        src: environment.j2
+        dest: "{{ git_runner_environment_file_path }}"
+        owner: "{{ git_runner_user }}"
+        group: "{{ git_runner_user }}"
+        mode: '0644'
+
+    # ========================================================================
+    # SYSTEMD SERVICE FILE IDENTIFICATION SECTION
+    # This section finds the service file that svc.sh created.
+    # You may need to tune these patterns based on your testing results.
+    # ========================================================================
+    -
+      name: "Find the GitHub Actions runner service file created by svc.sh"
+      when: git_runner_use_environment_file
+      ansible.builtin.find:
+        paths: /etc/systemd/system
+        # Pattern matches: actions.runner.*.{{ git_runner_name }}.service
+        # The wildcard (*) should match the org or repo identifier
+        patterns: "actions.runner.*.{{ git_runner_name }}.service"
+        file_type: file
+        age: "-5m"  # Only files modified in last 5 minutes
+      register: _git_runner_service_search
+
+    -
+      name: "Fail if service file not found"
+      when: 
+        - git_runner_use_environment_file
+        - _git_runner_service_search.matched == 0
+      ansible.builtin.fail:
+        msg: "Could not find GitHub Actions runner service file for {{ git_runner_name }}. Expected pattern: actions.runner.*.{{ git_runner_name }}.service"
+
+    -
+      name: "Set service file path variable"
+      when:
+        - git_runner_use_environment_file
+        - _git_runner_service_search.matched > 0
+      ansible.builtin.set_fact:
+        _git_runner_service_file: "{{ _git_runner_service_search.files[0].path }}"
+
+    -
+      name: "Debug - Show found service file path"
+      when:
+        - git_runner_use_environment_file
+        - _git_runner_service_file is defined
+      ansible.builtin.debug:
+        msg: "Found service file: {{ _git_runner_service_file }}"
+    # ========================================================================
+    # END OF SYSTEMD SERVICE FILE IDENTIFICATION SECTION
+    # ========================================================================
+
+    -
+      name: "Add EnvironmentFile directive to systemd service"
+      when: git_runner_use_environment_file
+      ansible.builtin.lineinfile:
+        path: "{{ _git_runner_service_file }}"
+        line: "EnvironmentFile={{ git_runner_environment_file_path }}"
+        insertafter: '^\[Service\]'
+        state: present
+      notify:
+        - Reload systemd
+        - Start runner service
 
     -
       name: "Ensure handlers are notified to start the runner service"

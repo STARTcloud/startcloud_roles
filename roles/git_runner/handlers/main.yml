@@ -1,15 +1,13 @@
 ---
 -
-  name: Start runner service
-  ansible.builtin.systemd:
-    # TODO:  get this from the svc.sh script?
-    # Organization:  MyOrg > actions.runner.MyOrg.my-runner-test
-    # Repository:  MyOrg/MyRepo > actions.runner.MyOrg-MyRepo.my-runner-test
-    name: "actions.runner.{{ git_runner_org if git_runner_org != '' else git_runner_repo | replace('/', '-') }}.{{ git_runner_name }}.service"
-    state: started
-    daemon_reload: true
-
--
   name: Reload systemd
   ansible.builtin.systemd:
     daemon_reload: true
+
+-
+  name: Start runner service
+  ansible.builtin.systemd:
+    name: "{{ _git_runner_service_file | basename }}"
+    state: started
+    enabled: true
+  when: _git_runner_service_file is defined
