@@ -3,7 +3,7 @@ run_tasks: true
 web_terminal_path: "/opt/web-terminal"
 
 web_terminal_users:
-  admin: "UjYU@eXq42Xiy^VRKZp"
+  admin: "y3I@kGkn4%pi74zqi8"
 
 startcloud_web_terminal_port_forwards:
   -
