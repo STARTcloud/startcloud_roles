@@ -25,6 +25,7 @@ dns_entries_list:
     - voltmx
     - www
     - web-terminal
+    - api
 
 # Progress reporting
 count_progress: true

@@ -156,6 +156,7 @@ frontend  HTTPS-IN
 {% if domino_nomadweb_use_proxy_url is defined %}
 {% if domino_nomadweb_use_proxy_url and domino_nomadweb_proxy_url is defined %}
         acl host_main                 hdr(host)            -i {{ settings.hostname }}.{{ settings.domain }}
+        acl host_agents_api           hdr(host)            -i api.{{ settings.hostname }}.{{ settings.domain }}
 {% endif %}
 {% endif %}
         acl host_console              hdr(host)            -i console.{{ settings.hostname }}.{{ settings.domain }}
@@ -217,11 +218,11 @@ frontend  HTTPS-IN
 {% if domino_install_proxy_url is defined %}
 {% if domino_nomadweb_use_proxy_url is defined %}
 {% if domino_nomadweb_use_proxy_url and domino_nomadweb_proxy_url is defined %}
-        use_backend                   domino               if host_domino || host_main
+        use_backend                   domino               if host_domino || host_main || host_agents_api
 {% elif not domino_nomadweb_use_proxy_url %}
-        use_backend                   domino               if host_domino
+        use_backend                   domino               if host_domino || host_agents_api
 {% else %}
-        use_backend                   domino               if host_domino
+        use_backend                   domino               if host_domino || host_agents_api
 {% endif %}
 {% endif %}
 {% endif %}
