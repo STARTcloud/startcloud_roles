@@ -120,6 +120,49 @@
       register: _git_runner_registration_token
 
     -
+      name: "Listing existing runners to check for name conflicts"
+      when: not git_runner_ephemeral
+      ansible.builtin.uri:
+        url: "https://api.github.com/{{ _git_runner_api_base }}/actions/runners"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ git_runner_github_token }}"
+          Accept: "application/vnd.github+json"
+          X-GitHub-Api-Version: "2022-11-28"
+        status_code: 200
+        return_content: true
+      register: _git_runner_list
+      failed_when: false
+
+    -
+      name: "Finding runner ID for existing runner with same name"
+      when:
+        - not git_runner_ephemeral
+        - _git_runner_list is defined
+        - _git_runner_list.json is defined
+        - _git_runner_list.json.runners is defined
+      ansible.builtin.set_fact:
+        _existing_runner_id: "{{ (_git_runner_list.json.runners | selectattr('name', 'equalto', git_runner_name) | list | first).id | default('') }}"
+      failed_when: false
+
+    -
+      name: "Force deleting existing runner from GitHub (rebuild scenario)"
+      when:
+        - not git_runner_ephemeral
+        - _existing_runner_id is defined
+        - _existing_runner_id != ''
+      ansible.builtin.uri:
+        url: "https://api.github.com/{{ _git_runner_api_base }}/actions/runners/{{ _existing_runner_id }}"
+        method: DELETE
+        headers:
+          Authorization: "Bearer {{ git_runner_github_token }}"
+          Accept: "application/vnd.github+json"
+          X-GitHub-Api-Version: "2022-11-28"
+        status_code: 204
+      register: _git_runner_delete
+      failed_when: false
+
+    -
       name: "Configuring persistent runner"
       when: not git_runner_ephemeral
       become: true
@@ -133,7 +176,6 @@
           --work {{ git_runner_work_folder }}
       args:
         executable: /bin/bash
-        creates: "{{ git_runner_dir }}/.runner"
 
     -
       name: "Installing systemd service using svc.sh"
