@@ -13,5 +13,6 @@ count_progress: true
 progress_units: 1
 progress_role_description: "Installing system dependencies"
 
-
 manually_intall_updates: false
+
+extra_repos: []

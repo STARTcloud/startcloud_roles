@@ -13,3 +13,10 @@ packages:
   - psutils
   - python3-psutil
   - libxml2-utils
+
+extra_repos:
+  - name: "startcloud"
+    gpg_key_url: "https://public.debian.packages.startcloud.com/debian/startcloud-archive-keyring.asc"
+    gpg_keyring_path: "/etc/apt/keyrings/startcloud-archive-keyring.gpg"
+    repo: "deb [arch={{ deb_architecture.stdout }} signed-by=/etc/apt/keyrings/startcloud-archive-keyring.gpg] https://public.debian.packages.startcloud.com/debian/ {{ ansible_distribution_release }} main"
+    needs_dearmor: true
