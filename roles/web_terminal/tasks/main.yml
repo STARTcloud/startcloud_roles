@@ -44,8 +44,18 @@
             state: started
             enabled: true
 
+        -
+          name: "Copying Web Terminal supervisord configuration file"
+          when: ansible_module_running_in_container
+          ansible.builtin.template:
+            src: supervisord.webterminal.conf.j2
+            dest: /etc/supervisor/conf.d/supervisord.webterminal.conf
+            owner: root
+            group: root
+            mode: '0644'
+
     -
-      name: "Block to Allow Loading of Variables without running task"
+      name: "Building Web Terminal from source"
       when: web_terminal_build_from_source
       block:
 
