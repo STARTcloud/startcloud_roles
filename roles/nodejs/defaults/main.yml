@@ -9,7 +9,7 @@ progress_role_description: "Installing NodeJS"
 nodejs_version: "22.x"
 
 # The user for whom the npm packages will be installed.
-# nodejs_install_npm_user: username
+nodejs_install_npm_user: "{[ service_user | default(ansible_user | default(lookup('env', 'USER'))) ]}"
 
 # The directory for global installations.
 npm_config_prefix: "/usr/local/lib/npm"
