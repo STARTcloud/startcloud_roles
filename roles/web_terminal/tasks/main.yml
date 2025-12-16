@@ -29,12 +29,14 @@
           name: "Placing Configuration file"
           become: true
           ansible.builtin.template:
-            owner: "{{ item.owner }}"
             src: "{{ item.src }}"
             dest: "{{ item.dest }}"
-            mode: '0644'
+            mode: '0755'
           loop:
-            - { src: 'config.yaml.j2', dest: '/etc/web-terminal/config.yaml', owner: 'root' }
+            - { src: 'config.yaml.j2', dest: '/etc/web-terminal/config.yaml' }
+            - { src: 'config.yaml.j2', dest: '/etc/web-terminal/dev-config.yaml' }
+            - { src: 'config.yaml.j2', dest: '/opt/web-terminal/dev-config.yaml' }
+            - { src: 'config.yaml.j2', dest: '/opt/web-terminal/config.yaml' }
 
         -
           name: "Starting Web Terminal Service"
