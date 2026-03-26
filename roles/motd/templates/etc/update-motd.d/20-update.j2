@@ -9,6 +9,7 @@ YEL='\e[0;33m'
 CYN='\e[0;36m'
 R='\e[0m'
 
+{% raw %}
 HR="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 top()    { echo -e "${G}┏${HR}┓${R}"; }
@@ -121,6 +122,7 @@ df -h -x tmpfs -x devtmpfs -x squashfs 2>/dev/null | awk 'NR>1 && $6 !~ /boot/' 
 done
 
 bottom
+{% endraw %}
 
 # === Banner ===
 top
@@ -141,6 +143,7 @@ pline "Info:     " "https://vagrant-zones.startcloud.com/changes" "$CYN"
 pline "Source:   " "https://boxvault.startcloud.com/{{ vendor | default('STARTcloud') }}/{{ distro }}{{ distro_version }}-{{ vm_type }}" "$CYN"
 bottom
 
+{% raw %}
 # === Service Status (optional) ===
 if [ -f /etc/startcloud/motd-services.conf ]; then
   top
@@ -156,3 +159,4 @@ if [ -f /etc/startcloud/motd-services.conf ]; then
   done < /etc/startcloud/motd-services.conf
   bottom
 fi
+{% endraw %}
