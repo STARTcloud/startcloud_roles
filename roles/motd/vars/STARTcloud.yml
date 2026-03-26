@@ -1,22 +1,9 @@
 ---
-run_tasks: true
-count_progress: true
-progress_units: 1
-progress_role_description: "Configuring MOTD"
-
-motd_remove_default_config: false
-motd_restore_default_config: false
-motd_add_footer: false
-motd_add_update: false
 motd_org: STARTcloud
-motd_sysadmins_signature: Random system administrators
-motd_sysadmins_email: "{{ email | default('support@startcloud.com') }}"
-
-# ANSI color codes (without \e[ prefix and m suffix)
+motd_sysadmins_signature: STARTCloud Contact Email
+motd_sysadmins_email: "vagrantup-startcloud@prominic.net"
 motd_color_primary: "38;2;106;179;68"
 motd_color_secondary: "1;37"
-
-# Banner components (vendor-overridable)
 motd_banner_managed_line: >-
   echo -e "${G}┃${R}                  This system is managed by ${G}START${W}cloud${R}                     ${G}┃${R}"
 motd_banner_art: |
@@ -27,5 +14,3 @@ motd_banner_art: |
   echo -e "${G}┃${R}       ${G}/____//_/ /_/  |_/_/ |_| /_/ ${W} \\___/_/\\____/\\__,_/\\__,_/${R}             ${G}┃${R}"
 motd_banner_tagline: >-
   echo -e "${G}┃${R}                            ${W}OWN YOUR DATA${R}                                  ${G}┃${R}"
-
-motd_content: ""

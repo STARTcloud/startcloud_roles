@@ -21,12 +21,12 @@
   when: run_tasks
   block:
     -
-      name: "Including extra vars"
-      ansible.builtin.include_vars: "prominic.yml"
-      when: "motd_extra_vars == 'prominic'"
+      name: "Loading vendor-specific variables"
+      ansible.builtin.include_vars: "{{ vendor }}.yml"
+      when: vendor is defined
 
     -
-      name: "Removeing default motd configuration"
+      name: "Removing default motd configuration"
       when: motd_remove_default_config
       block:
         -
@@ -106,7 +106,44 @@
       tags:
         - motd
         - common
-      when: "motd_add_footer | bool"
+      when: "motd_add_update | bool"
+
+    -
+      name: "Configuring PrintMotd in sshd_config"
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PrintMotd'
+        line: 'PrintMotd no'
+      tags:
+        - motd
+        - common
+      when: "motd_add_update | bool"
+
+    -
+      name: "Creating services config directory"
+      ansible.builtin.file:
+        path: /etc/startcloud
+        state: directory
+        mode: "0755"
+      tags:
+        - motd
+        - common
+
+    -
+      name: "Creating default services config file"
+      ansible.builtin.copy:
+        dest: /etc/startcloud/motd-services.conf
+        content: |
+          # Add service names (one per line) to monitor on login
+          # Example:
+          # sshd
+          # cockpit
+          # ntp
+        mode: "0644"
+        force: false
+      tags:
+        - motd
+        - common
 
     -
       name: "Checking motd tail supported"
@@ -136,14 +173,14 @@
       tags:
         - motd
         - common
-      when: "not tail_supported.stat.exists | bool"
+      when: "not tail_supported.stat.exists | bool and not motd_add_update | bool"
 
     -
       name: "Prepending string to first line in /etc/issue"
       ansible.builtin.lineinfile:
         path: /etc/issue
         regexp: '^(.*)'
-        line: 'Booted - STARTcloud - \1'
+        line: 'Booted - {{ motd_org }} - \1'
         backrefs: true
         firstmatch: true
       tags:
@@ -155,7 +192,7 @@
       ansible.builtin.lineinfile:
         path: /etc/issue.net
         regexp: '^(.*)'
-        line: 'Booted - STARTcloud - \1'
+        line: 'Booted - {{ motd_org }} - \1'
         backrefs: true
         firstmatch: true
       tags:

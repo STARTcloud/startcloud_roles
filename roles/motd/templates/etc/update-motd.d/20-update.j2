@@ -1,1 +1,158 @@
-{{ motd_update_content }}
+#!/bin/bash
+
+# Colors
+G='\e[{{ motd_color_primary }}m'
+W='\e[{{ motd_color_secondary }}m'
+DIM='\e[2;37m'
+RED='\e[0;31m'
+YEL='\e[0;33m'
+CYN='\e[0;36m'
+R='\e[0m'
+
+HR="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+top()    { echo -e "${G}┏${HR}┓${R}"; }
+bottom() { echo -e "${G}┗${HR}┛${R}"; }
+
+pline() {
+  local label="$1" value="$2" color="${3:-$W}"
+  local visible="${label}${value}"
+  local padding=$((74 - ${#visible}))
+  [ $padding -lt 0 ] && padding=0
+  printf "${G}┃${R} ${DIM}%s${R}${color}%s${R}%${padding}s${G}┃${R}\n" "$label" "$value" ""
+}
+
+p2line() {
+  local label="$1" val1="$2" val2="$3" color1="${4:-$W}" color2="${5:-$W}"
+  local visible="${label}${val1}${val2}"
+  local padding=$((74 - ${#visible}))
+  [ $padding -lt 0 ] && padding=0
+  printf "${G}┃${R} ${DIM}%s${R}${color1}%s${R}${color2}%s${R}%${padding}s${G}┃${R}\n" "$label" "$val1" "$val2" ""
+}
+
+blank() { printf "${G}┃${R}%75s${G}┃${R}\n" ""; }
+
+# Gather system info
+UPTIME=$(uptime -p 2>/dev/null || uptime)
+LOAD1=$(cat /proc/loadavg | awk '{print $1}')
+LOAD5=$(cat /proc/loadavg | awk '{print $2}')
+LOAD15=$(cat /proc/loadavg | awk '{print $3}')
+CPUS=$(nproc)
+DATE=$(date)
+HNAME=$(hostname 2>/dev/null)
+DISTRO=$(. /etc/os-release 2>/dev/null && echo "$PRETTY_NAME")
+RAM_TOTAL=$(free -h | awk '/^Mem:/{print $2}')
+RAM_USED=$(free -h | awk '/^Mem:/{print $3}')
+RAM_FREE=$(free -h | awk '/^Mem:/{print $4}')
+RAM_PCT=$(free | awk '/^Mem:/{printf "%.0f", $3/$2*100}')
+SWAP_TOTAL=$(free -h | awk '/Swap:/{print $2}')
+SWAP_USED=$(free -h | awk '/Swap:/{print $3}')
+
+load_color() {
+  local val=$1
+  local int_val=$(echo "$val" | awk '{printf "%d", $1+0.5}')
+  if [ "$int_val" -ge "$CPUS" ] 2>/dev/null; then
+    echo -ne "$RED"
+  elif [ "$int_val" -ge $((CPUS / 2)) ] 2>/dev/null; then
+    echo -ne "$YEL"
+  else
+    echo -ne "$G"
+  fi
+}
+
+RAM_CLR=$G
+[ "$RAM_PCT" -gt 75 ] 2>/dev/null && RAM_CLR=$YEL
+[ "$RAM_PCT" -gt 85 ] 2>/dev/null && RAM_CLR=$RED
+
+L1C=$(load_color "$LOAD1")
+L5C=$(load_color "$LOAD5")
+L15C=$(load_color "$LOAD15")
+LOAD_VISIBLE="${LOAD1}, ${LOAD5}, ${LOAD15}"
+LOAD_LABEL="Load:         "
+LOAD_PAD=$((74 - ${#LOAD_LABEL} - ${#LOAD_VISIBLE}))
+[ $LOAD_PAD -lt 0 ] && LOAD_PAD=0
+
+# === System Info ===
+top
+pline "Uptime:       " "$UPTIME"
+printf "${G}┃${R} ${DIM}%s${R}${L1C}%s${R}, ${L5C}%s${R}, ${L15C}%s${R}%${LOAD_PAD}s${G}┃${R}\n" "$LOAD_LABEL" "$LOAD1" "$LOAD5" "$LOAD15" ""
+pline "Date:         " "$DATE"
+pline "Hostname:     " "$HNAME"
+pline "Distribution: " "$DISTRO"
+pline "CPUs:         " "$CPUS"
+pline "RAM:          " "Total: $RAM_TOTAL, Used: $RAM_USED, Free: $RAM_FREE (${RAM_PCT}%)" "$RAM_CLR"
+pline "Swap:         " "Total: $SWAP_TOTAL, Used: $SWAP_USED"
+
+pline "IP Addresses: " "" "$DIM"
+ip -o -4 addr show scope global 2>/dev/null | while IFS= read -r l; do
+  iface=$(echo "$l" | awk '{print $2}')
+  addr=$(echo "$l" | awk '{print $4}' | cut -d/ -f1)
+  pline "              - " "${iface}: ${addr}" "$CYN"
+done
+
+DNS=$(resolvectl status 2>/dev/null | grep -A1 'DNS Servers' | tail -1 | sed 's/^ *//;s/^DNS Servers: //')
+[ -z "$DNS" ] && DNS=$(awk '/^nameserver/{printf "%s ", $2}' /etc/resolv.conf 2>/dev/null)
+[ -z "$DNS" ] && DNS="N/A"
+pline "DNS Servers:  " "$DNS"
+
+pline "Gateways:     " "" "$DIM"
+ip route 2>/dev/null | awk '/default/{print $3}' | while IFS= read -r gw; do
+  pline "              - " "$gw"
+done
+
+pline "Open Ports:   " "" "$DIM"
+ss -tlnp 2>/dev/null | awk 'NR>1{print $4}' | sort -t: -k1,1 -k2,2n -u | while IFS= read -r port; do
+  pline "              - " "$port" "$CYN"
+done
+
+pline "Disk Usage:   " "" "$DIM"
+df -h -x tmpfs -x devtmpfs -x squashfs 2>/dev/null | awk 'NR>1 && $6 !~ /boot/' | while IFS= read -r l; do
+  mount=$(echo "$l" | awk '{print $6}')
+  used=$(echo "$l" | awk '{print $3}')
+  avail=$(echo "$l" | awk '{print $4}')
+  pct=$(echo "$l" | awk '{print $5}')
+  pct_num=${pct%%%}
+  DCLR=$G
+  [ "$pct_num" -gt 75 ] 2>/dev/null && DCLR=$YEL
+  [ "$pct_num" -gt 85 ] 2>/dev/null && DCLR=$RED
+  mnt_part=$(printf "%-15s" "$mount")
+  stat_part=$(printf "%6s used  %6s free  %s" "$used" "$avail" "$pct")
+  p2line "              " "$mnt_part" "$stat_part" "$W" "$DCLR"
+done
+
+bottom
+
+# === Banner ===
+top
+blank
+{{ motd_banner_managed_line }}
+blank
+{{ motd_banner_art }}
+{{ motd_banner_tagline }}
+blank
+bottom
+
+# === Support Info ===
+top
+pline "Support:  " "{{ motd_sysadmins_signature }}"
+pline "Email:    " "{{ motd_sysadmins_email }}" "$CYN"
+pline "Created:  " "{{ ansible_date_time.iso8601 }}"
+pline "Info:     " "https://vagrant-zones.startcloud.com/changes" "$CYN"
+pline "Source:   " "https://boxvault.startcloud.com/{{ vendor | default('STARTcloud') }}/{{ distro }}{{ distro_version }}-{{ vm_type }}" "$CYN"
+bottom
+
+# === Service Status (optional) ===
+if [ -f /etc/startcloud/motd-services.conf ]; then
+  top
+  pline "Services: " "" "$DIM"
+  while IFS= read -r svc; do
+    [ -z "$svc" ] && continue
+    case "$svc" in \#*) continue ;; esac
+    if systemctl is-active --quiet "$svc" 2>/dev/null; then
+      pline "              " "$svc  ● running" "$G"
+    else
+      pline "              " "$svc  ● stopped" "$RED"
+    fi
+  done < /etc/startcloud/motd-services.conf
+  bottom
+fi
