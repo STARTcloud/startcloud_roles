@@ -76,16 +76,21 @@
     update_cache: true
 
 -
+  name: "Detecting boot disk device"
+  ansible.builtin.set_fact:
+    boot_disk: "{{ (ansible_mounts | selectattr('mount', 'equalto', '/') | first).device | regex_replace('p?[0-9]+$', '') }}"
+
+-
   name: "Installing Grub for BIOS systems"
-  ansible.builtin.command: grub-install --target=i386-pc /dev/vda
-  register: grub_intall
-  changed_when: grub_intall.rc != 0
+  ansible.builtin.command: "grub-install --target=i386-pc {{ boot_disk }}"
+  register: grub_install
+  changed_when: grub_install.rc == 0
 
 -
   name: "Generating Grub configuration"
   ansible.builtin.command: update-grub
   register: grub_config
-  changed_when: grub_config.rc != 0
+  changed_when: grub_config.rc == 0
 
 -
   name: "Creating proper EFI Directory for all BIOS/UEFI Loaders"
