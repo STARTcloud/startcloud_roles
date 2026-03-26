@@ -578,6 +578,17 @@
         PATH: "{{ ansible_env.PATH }}:{{ service_home_dir }}/.sdkman/candidates/java/current/bin"
 
     -
+      name: "Appending Let's Encrypt chain to combined certificate"
+      become: true
+      ansible.builtin.blockinfile:
+        path: "{{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}.pem"
+        block: "{{ lookup('file', '/etc/letsencrypt/live/' + (settings.hostname | lower) + '.' + (settings.domain | lower) + '/chain.pem') }}"
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - LE CHAIN"
+        owner: "{{ service_user }}"
+        group: "{{ service_group }}"
+        mode: '0777'
+
+    -
       name: "Copying JKS"
       become: true
       ansible.builtin.copy:

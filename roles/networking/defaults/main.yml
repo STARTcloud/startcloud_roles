@@ -8,7 +8,6 @@ convert_nat_dhcp_to_static: true
 etc_hosts_entries: []
 dns_entries_list:
     - auth
-    - nomadweb
     - notes
     - domino
     - traveler
@@ -21,11 +20,8 @@ dns_entries_list:
     - sametime
     - leap
     - restapi
-    - guacamole
-    - voltmx
     - www
     - web-terminal
-    - api
 
 # Progress reporting
 count_progress: true
