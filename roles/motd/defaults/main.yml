@@ -11,7 +11,7 @@ motd_add_footer: false
 motd_add_update: false
 motd_org: STARTcloud
 motd_sysadmins_signature: Random system administrators
-motd_sysadmins_email: "{{ email }} | default('support@startcloud.com')"
+motd_sysadmins_email: "{{ email | default('support@startcloud.com') }}"
 motd_update_content: |
   #!/bin/sh
   echo "Uptime:       $(uptime -p)"
