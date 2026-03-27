@@ -33,7 +33,39 @@ p2line() {
 
 blank() { printf "${G}┃${R}%75s${G}┃${R}\n" ""; }
 
-# Gather system info
+lc() { [ "$1" -ge "$CPUS" ] 2>/dev/null && echo -ne "$RED" && return; [ "$1" -ge $((CPUS/2)) ] 2>/dev/null && echo -ne "$YEL" && return; echo -ne "$G"; }
+
+{% endraw %}
+{% if ansible_os_family == 'Windows' %}
+{% raw %}
+# Windows: Cache expensive calls
+IPCFG=$(ipconfig /all 2>/dev/null | tr -d '\r')
+NETST=$(netstat -an 2>/dev/null | tr -d '\r')
+
+HNAME=$(hostname | tr -d '\r')
+DISTRO=$(wmic os get Caption /value 2>/dev/null | grep Caption | cut -d= -f2 | tr -d '\r')
+CPUS=$(nproc)
+DATE=$(date)
+
+read LOAD1 LOAD5 LOAD15 REST < /proc/loadavg
+UPTIME=$(uptime 2>/dev/null | sed 's/^.*up /up /' | sed 's/,  [0-9]* user.*//' | sed 's/, *load average:.*$//')
+
+RAM_INFO=$(free -h | awk '/^Mem:/{print $2"|"$3"|"$4}')
+RAM_TOTAL=${RAM_INFO%%|*}; REST=${RAM_INFO#*|}; RAM_USED=${REST%%|*}; RAM_FREE=${REST#*|}
+RAM_PCT=$(free | awk '/^Mem:/{printf "%.0f", $3/$2*100}')
+SWAP_INFO=$(free -h | awk '/Swap:/{print $2"|"$3}')
+SWAP_TOTAL=${SWAP_INFO%%|*}; SWAP_USED=${SWAP_INFO#*|}
+
+IPS=$(echo "$IPCFG" | grep "IPv4 Address" | awk -F: '{gsub(/^ +/, "", $2); gsub(/\(.*\)/, "", $2); print $2}')
+DNS_FIRST=$(echo "$IPCFG" | grep "DNS Servers" | head -1 | awk -F: '{gsub(/^ +/, "", $2); print $2}')
+DNS_REST=$(echo "$IPCFG" | grep -A1 "DNS Servers" | grep -v "DNS Servers" | head -1 | awk '{gsub(/^ +/, ""); print}')
+DNS="${DNS_FIRST} ${DNS_REST}"
+GW=$(echo "$IPCFG" | grep "Default Gateway" | awk -F: '{gsub(/^ +/, "", $2); print $2}' | grep -v "^$" | head -1)
+PORTS=$(echo "$NETST" | grep LISTENING | awk '{print $2}' | head -20)
+{% endraw %}
+{% else %}
+{% raw %}
+# Linux: Native commands
 UPTIME=$(uptime -p 2>/dev/null || uptime)
 LOAD1=$(cat /proc/loadavg | awk '{print $1}')
 LOAD5=$(cat /proc/loadavg | awk '{print $2}')
@@ -48,26 +80,32 @@ RAM_FREE=$(free -h | awk '/^Mem:/{print $4}')
 RAM_PCT=$(free | awk '/^Mem:/{printf "%.0f", $3/$2*100}')
 SWAP_TOTAL=$(free -h | awk '/Swap:/{print $2}')
 SWAP_USED=$(free -h | awk '/Swap:/{print $3}')
+{% endraw %}
+{% endif %}
 
-load_color() {
-  local val=$1
-  local int_val=$(echo "$val" | awk '{printf "%d", $1+0.5}')
-  if [ "$int_val" -ge "$CPUS" ] 2>/dev/null; then
-    echo -ne "$RED"
-  elif [ "$int_val" -ge $((CPUS / 2)) ] 2>/dev/null; then
-    echo -ne "$YEL"
-  else
-    echo -ne "$G"
-  fi
-}
-
+{% raw %}
 RAM_CLR=$G
 [ "$RAM_PCT" -gt 75 ] 2>/dev/null && RAM_CLR=$YEL
 [ "$RAM_PCT" -gt 85 ] 2>/dev/null && RAM_CLR=$RED
 
-L1C=$(load_color "$LOAD1")
-L5C=$(load_color "$LOAD5")
-L15C=$(load_color "$LOAD15")
+{% endraw %}
+{% if ansible_os_family != 'Windows' %}
+{% raw %}
+L1I=$(echo "$LOAD1" | awk '{printf "%d", $1+0.5}')
+L5I=$(echo "$LOAD5" | awk '{printf "%d", $1+0.5}')
+L15I=$(echo "$LOAD15" | awk '{printf "%d", $1+0.5}')
+{% endraw %}
+{% else %}
+{% raw %}
+L1I=$(echo "$LOAD1" | awk '{printf "%d", $1+0.5}')
+L5I=$(echo "$LOAD5" | awk '{printf "%d", $1+0.5}')
+L15I=$(echo "$LOAD15" | awk '{printf "%d", $1+0.5}')
+{% endraw %}
+{% endif %}
+
+{% raw %}
+L1C=$(lc $L1I); L5C=$(lc $L5I); L15C=$(lc $L15I)
+
 LOAD_VISIBLE="${LOAD1}, ${LOAD5}, ${LOAD15}"
 LOAD_LABEL="Load:         "
 LOAD_PAD=$((74 - ${#LOAD_LABEL} - ${#LOAD_VISIBLE}))
@@ -85,29 +123,71 @@ pline "RAM:          " "Total: $RAM_TOTAL, Used: $RAM_USED, Free: $RAM_FREE (${R
 pline "Swap:         " "Total: $SWAP_TOTAL, Used: $SWAP_USED"
 
 pline "IP Addresses: " "" "$DIM"
+{% endraw %}
+{% if ansible_os_family == 'Windows' %}
+{% raw %}
+echo "$IPS" | while IFS= read -r addr; do
+  [ -n "$addr" ] && pline "              - " "$addr" "$CYN"
+done
+{% endraw %}
+{% else %}
+{% raw %}
 ip -o -4 addr show scope global 2>/dev/null | while IFS= read -r l; do
   iface=$(echo "$l" | awk '{print $2}')
   addr=$(echo "$l" | awk '{print $4}' | cut -d/ -f1)
   pline "              - " "${iface}: ${addr}" "$CYN"
 done
+{% endraw %}
+{% endif %}
 
+{% if ansible_os_family == 'Windows' %}
+{% raw %}
+pline "DNS Servers:  " "$DNS"
+{% endraw %}
+{% else %}
+{% raw %}
 DNS=$(resolvectl status 2>/dev/null | grep -A1 'DNS Servers' | tail -1 | sed 's/^ *//;s/^DNS Servers: //')
 [ -z "$DNS" ] && DNS=$(awk '/^nameserver/{printf "%s ", $2}' /etc/resolv.conf 2>/dev/null)
 [ -z "$DNS" ] && DNS="N/A"
 pline "DNS Servers:  " "$DNS"
+{% endraw %}
+{% endif %}
 
+{% raw %}
 pline "Gateways:     " "" "$DIM"
+{% endraw %}
+{% if ansible_os_family == 'Windows' %}
+{% raw %}
+[ -n "$GW" ] && pline "              - " "$GW"
+{% endraw %}
+{% else %}
+{% raw %}
 ip route 2>/dev/null | awk '/default/{print $3}' | while IFS= read -r gw; do
   pline "              - " "$gw"
 done
+{% endraw %}
+{% endif %}
 
+{% raw %}
 pline "Open Ports:   " "" "$DIM"
+{% endraw %}
+{% if ansible_os_family == 'Windows' %}
+{% raw %}
+echo "$PORTS" | while IFS= read -r port; do
+  [ -n "$port" ] && pline "              - " "$port" "$CYN"
+done
+{% endraw %}
+{% else %}
+{% raw %}
 ss -tlnp 2>/dev/null | awk 'NR>1{print $4}' | sort -t: -k1,1 -k2,2n -u | while IFS= read -r port; do
   pline "              - " "$port" "$CYN"
 done
+{% endraw %}
+{% endif %}
 
+{% raw %}
 pline "Disk Usage:   " "" "$DIM"
-df -h -x tmpfs -x devtmpfs -x squashfs 2>/dev/null | awk 'NR>1 && $6 !~ /boot/' | while IFS= read -r l; do
+df -h {% endraw %}{% if ansible_os_family != 'Windows' %}-x tmpfs -x devtmpfs -x squashfs {% endif %}{% raw %}2>/dev/null | awk 'NR>1 {% endraw %}{% if ansible_os_family != 'Windows' %}&& $6 !~ /boot/{% endif %}{% raw %}' | while IFS= read -r l; do
   mount=$(echo "$l" | awk '{print $6}')
   used=$(echo "$l" | awk '{print $3}')
   avail=$(echo "$l" | awk '{print $4}')
@@ -145,6 +225,26 @@ bottom
 
 {% raw %}
 # === Service Status (optional) ===
+{% endraw %}
+{% if ansible_os_family == 'Windows' %}
+{% raw %}
+if [ -f /etc/startcloud/motd-services.conf ]; then
+  top
+  pline "Services: " "" "$DIM"
+  while IFS= read -r svc; do
+    [ -z "$svc" ] && continue
+    case "$svc" in \#*) continue ;; esac
+    if sc query "$svc" 2>/dev/null | grep -q "RUNNING"; then
+      pline "              " "$svc  ● running" "$G"
+    else
+      pline "              " "$svc  ● stopped" "$RED"
+    fi
+  done < /etc/startcloud/motd-services.conf
+  bottom
+fi
+{% endraw %}
+{% else %}
+{% raw %}
 if [ -f /etc/startcloud/motd-services.conf ]; then
   top
   pline "Services: " "" "$DIM"
@@ -160,3 +260,4 @@ if [ -f /etc/startcloud/motd-services.conf ]; then
   bottom
 fi
 {% endraw %}
+{% endif %}
