@@ -56,7 +56,7 @@
 
 -
   name: "Cleaning up specified sensitive files"
-  when: lockdown_file_cleanups_list is defined and lockdown_file_cleanups_list | length > 0
+  when: lockdown_cleanup_debug_files and lockdown_file_cleanups_list is defined and lockdown_file_cleanups_list | length > 0
   ansible.builtin.file:
     path: "{{ item }}"
     state: absent
