@@ -258,6 +258,12 @@
       when: wsus_target_group is defined
 
 -
+  name: "Ensuring Packer Installations Directory exists"
+  ansible.windows.win_file:
+    path: C:\Windows\Temp\packer
+    state: directory
+    
+-
   name: "Windows Updates"
   when: install_windows_updates | default(true)
   block:
@@ -289,11 +295,7 @@
           ansible.windows.win_reboot:
             reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
 
-    -
-      name: "Ensuring Packer Installations Directory exists"
-      ansible.windows.win_file:
-        path: C:\Windows\Temp\packer
-        state: directory
+
 
     -
       name: "Creating Windows Update Installation Script"
