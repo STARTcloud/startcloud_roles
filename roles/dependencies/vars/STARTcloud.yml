@@ -14,14 +14,14 @@ chocolatey_repos:
 chocolatey_packages:
   - 7zip
   - chromium
+  - librewolf
   - notepadplusplus
   - vcredist140
-  - librewolf
   - git
   - bginfo
   - cyg-get
   - clamwin
-  - winfsp
+  #- winfsp
   - curl
   - cyg-get
   
