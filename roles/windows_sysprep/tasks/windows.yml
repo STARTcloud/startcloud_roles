@@ -35,6 +35,13 @@
 
     -
       name: "Copying provision-Autounattend.xml to packer directory"
+      when: distro_version == "11"
+      ansible.windows.win_template:
+        src: win11-provision-Autounattend.xml.j2
+        dest: C:\Windows\Temp\packer\Autounattend.xml
+
+    -
+      name: "Copying provision-Autounattend.xml to packer directory"
       when: distro_version == "2022"
       ansible.windows.win_template:
         src: server2022-provision-Autounattend.xml.j2

@@ -17,13 +17,10 @@ chocolatey_packages:
   - librewolf
   - notepadplusplus
   - vcredist140
-  - git
   - bginfo
   - cyg-get
   - clamwin
-  #- winfsp
   - curl
-  - cyg-get
   
 # Additional STARTcloud-specific configuration
 vendor_specific_config:
