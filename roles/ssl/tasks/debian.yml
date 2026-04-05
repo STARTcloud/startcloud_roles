@@ -176,7 +176,7 @@
             privatekey_passphrase: "{{ ca_cert_pass }}"
             common_name: "{{ settings.domain }}"
             country_name: "{{ countrycode }}"
-            organization_name: "{{ domino_organization }}"
+            organization_name: "{{ organization }}"
             use_common_name_for_san: false
             basic_constraints:
               - 'CA:TRUE'
@@ -246,7 +246,7 @@
         privatekey_path: "{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}-self-signed.key"
         subject_alt_name: "{{ dns_entries | list }}"
         country_name: "{{ countrycode }}"
-        organization_name: "{{ domino_organization }}"
+        organization_name: "{{ organization }}"
         common_name: "{{ settings.hostname }}.{{ settings.domain }}"
         owner: "{{ service_user }}"
         mode: '0777'
