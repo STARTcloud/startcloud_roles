@@ -181,7 +181,7 @@
     
     -
       name: "Installing individual Haxe library"
-      ansible.builtin.shell: "{{ haxelib }} install {{ haxe_lib_files }}"
+      ansible.builtin.shell: "yes | {{ haxelib }} install {{ haxe_lib_files }}"
       become_user: "{{ service_user | default(ansible_user_id) }}"
       args:
         chdir: ~
