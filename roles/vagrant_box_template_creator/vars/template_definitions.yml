@@ -30,6 +30,9 @@ templates:
   - name: "pfSense 2.6.0"
     path: "definitions/templates/amd64/pfsense2.6.0.json"
     providers: ["virtualbox", "zone"]
+  - name: "OPNsense 25"
+    path: "definitions/templates/amd64/opnsense-25.json"
+    providers: ["virtualbox", "zone"]
   - name: "Ubuntu 23.04 Server ARM64"
     path: "definitions/templates/aarch64/ubuntu2304-server-aarch64.json"
     providers: ["qemu-arm64"]
