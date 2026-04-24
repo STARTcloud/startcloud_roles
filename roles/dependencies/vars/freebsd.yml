@@ -6,8 +6,8 @@ packages:
   - sudo
   - nano
   - lsof
+  - nmap
   - os-qemu-guest-agent
-  - os-nmap
   - os-acme-client
 
 extra_packages:
