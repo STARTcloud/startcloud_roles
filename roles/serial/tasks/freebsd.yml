@@ -1,0 +1,29 @@
+---
+# FreeBSD — serial console + virtio-console kernel module at boot.
+#
+# Writes to /boot/loader.conf.local (not /boot/loader.conf). Reasons:
+#   - FreeBSD convention: loader.conf.local is for site/user overrides and
+#     survives base system updates.
+#   - OPNsense manages /boot/loader.conf itself from config.xml's
+#     <primaryconsole> + <serialspeed>. Editing loader.conf directly on
+#     OPNsense risks being overwritten or conflicting with that logic.
+#     On OPNsense the serial console + virtio_console are already handled
+#     natively, so this role should generally be skipped for OPNsense
+#     playbooks. Kept here for non-OPNsense FreeBSD use.
+
+-
+  name: "Configure FreeBSD boot loader.conf.local for serial console + virtio-console"
+  ansible.builtin.lineinfile:
+    path: /boot/loader.conf.local
+    line: "{{ item }}"
+    create: true
+    mode: '0644'
+  with_items:
+    - 'console="comconsole"'
+    - 'comconsole_speed="115200"'
+    - 'virtio_console_load="YES"'
+
+-
+  name: "Setting fact for serial console configuration"
+  ansible.builtin.set_fact:
+    serial_console_configured: true

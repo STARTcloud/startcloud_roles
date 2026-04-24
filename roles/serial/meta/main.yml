@@ -10,6 +10,9 @@ galaxy_info:
     - name: Debian
       versions:
         - 'bookworm'
+    - name: FreeBSD
+      versions:
+        - '14.0'
 
   galaxy_tags: []
 

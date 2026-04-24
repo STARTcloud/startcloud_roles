@@ -29,3 +29,18 @@
     name: "{{ extra_packages }}"
     state: present
   when: extra_packages | default([]) | length > 0
+
+-
+  name: "Enable qemu-guest-agent service (if os-qemu-guest-agent was installed)"
+  ansible.builtin.service:
+    name: qemu-guest-agent
+    enabled: true
+  when: "'os-qemu-guest-agent' in packages"
+
+-
+  name: "Start qemu-guest-agent service (may already be started by plugin post-install hook)"
+  ansible.builtin.service:
+    name: qemu-guest-agent
+    state: started
+  when: "'os-qemu-guest-agent' in packages"
+  ignore_errors: true
