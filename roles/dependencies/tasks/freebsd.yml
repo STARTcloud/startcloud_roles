@@ -16,18 +16,30 @@
   community.general.pkgng:
     name: pkg
     state: latest
+  register: pkg_self_upgrade
+  until: pkg_self_upgrade is succeeded
+  retries: 5
+  delay: 10
 
 -
   name: "Installing baseline packages"
   community.general.pkgng:
     name: "{{ packages }}"
     state: present
+  register: pkg_baseline
+  until: pkg_baseline is succeeded
+  retries: 5
+  delay: 10
 
 -
   name: "Installing extra packages"
   community.general.pkgng:
     name: "{{ extra_packages }}"
     state: present
+  register: pkg_extra
+  until: pkg_extra is succeeded
+  retries: 5
+  delay: 10
   when: extra_packages | default([]) | length > 0
 
 -
