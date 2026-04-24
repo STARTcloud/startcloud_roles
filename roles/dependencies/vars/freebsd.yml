@@ -10,5 +10,4 @@ packages:
   - os-qemu-guest-agent
   - os-acme-client
 
-extra_packages:
-  - htop
+extra_packages: []
