@@ -39,18 +39,19 @@
       when: not ansible_os_family == 'Windows'
       block:
         -
-          name: "Gathering facts on current container"
+          name: "Gathering facts on current container (Linux only; FreeBSD doesn't have the docker collection's container detection)"
           community.docker.current_container_facts:
-    
+          when: ansible_system == 'Linux'
+
         -
           name: "Printing information on current container when running in a container"
           ansible.builtin.debug:
             msg: "Container ID is {{ ansible_module_container_id }}"
-          when: ansible_module_running_in_container
-        
+          when: ansible_module_running_in_container | default(false)
+
         -
           name: "Setting /etc/hosts"
-          when: not ansible_module_running_in_container
+          when: not (ansible_module_running_in_container | default(false))
           ansible.builtin.replace:
             path: "/etc/hosts"
             regexp: "{{ item.regex }}"

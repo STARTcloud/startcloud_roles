@@ -1,0 +1,14 @@
+---
+# Baseline packages installed on every FreeBSD / OPNsense build.
+# OPNsense plugins are prefixed with "os-" and pull in their FreeBSD deps
+# via the OPNsense repo.
+packages:
+  - sudo
+  - nano
+  - lsof
+  - os-qemu-guest-agent
+  - os-nmap
+  - os-acme-client
+
+extra_packages:
+  - htop
