@@ -1,0 +1,184 @@
+---
+# Linux motd (Debian / Ubuntu / Fedora) — update-motd.d-based, edits /etc/issue
+# and sshd_config PrintMotd. Extracted from the original monolithic main.yml
+# when adding OS-family dispatch for FreeBSD support.
+
+-
+  name: "Loading vendor-specific variables"
+  ansible.builtin.include_vars: "{{ vendor }}.yml"
+  when: vendor is defined
+
+-
+  name: "Removing default motd configuration"
+  when: motd_remove_default_config
+  block:
+    -
+      name: "Creating backup folder"
+      ansible.builtin.file:
+        path: /etc/update-motd.d/backups
+        state: directory
+        mode: "0755"
+
+    - name: "Checking if we need to move files"
+      ansible.builtin.command: "ls /etc/update-motd.d/ --ignore=99-footer --ignore=20-update --ignore=backups"
+      register: move_output
+      changed_when: false
+
+    -
+      name: "Moving files to backup folder"
+      ansible.builtin.shell: "mv $(ls --ignore=99-footer --ignore=20-update --ignore=backups) /etc/update-motd.d/backups/"
+      args:
+        chdir: /etc/update-motd.d/
+      when: 'move_output.stdout != ""'
+      changed_when: 'move_output.stdout != ""'
+
+-
+  name: "Restore default motd configuration from backups folder"
+  ansible.builtin.shell: "mv /etc/update-motd.d/backups/* /etc/update-motd.d/"
+  when: "motd_restore_default_config and not motd_remove_default_config"
+  changed_when: true
+
+-
+  name: "Adding 99-footer file"
+  ansible.builtin.copy:
+    dest: /etc/update-motd.d/99-footer
+    group: root
+    mode: 493
+    owner: root
+    src: 99-footer
+  tags:
+    - motd
+    - common
+  when: "motd_add_footer | bool"
+
+-
+  name: "Deleting 99-footer file"
+  ansible.builtin.file:
+    path: /etc/update-motd.d/99-footer
+    state: absent
+  tags:
+    - motd
+    - common
+  when: "not motd_add_footer | bool"
+
+-
+  name: "Adding dynamic message before motd"
+  ansible.builtin.template:
+    dest: /etc/update-motd.d/20-update
+    mode: a+x
+    src: etc/update-motd.d/20-update.j2
+  tags:
+    - motd
+    - common
+  when: "motd_add_update | bool"
+
+-
+  name: "Removing dynamic message before motd"
+  ansible.builtin.file:
+    path: /etc/update-motd.d/20-update
+    state: absent
+  tags:
+    - motd
+    - common
+  when: "not motd_add_update | bool"
+
+-
+  name: "Deleting /etc/motd file"
+  ansible.builtin.file:
+    path: /etc/motd
+    state: absent
+  tags:
+    - motd
+    - common
+  when: "motd_add_update | bool"
+
+-
+  name: "Configuring PrintMotd in sshd_config"
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PrintMotd'
+    line: 'PrintMotd no'
+  tags:
+    - motd
+    - common
+  when: "motd_add_update | bool"
+
+-
+  name: "Creating services config directory"
+  ansible.builtin.file:
+    path: /etc/startcloud
+    state: directory
+    mode: "0755"
+  tags:
+    - motd
+    - common
+
+-
+  name: "Creating default services config file"
+  ansible.builtin.copy:
+    dest: /etc/startcloud/motd-services.conf
+    content: |
+      # Add service names (one per line) to monitor on login
+      # Example:
+      # sshd
+      # cockpit
+      # ntp
+    mode: "0644"
+    force: false
+  tags:
+    - motd
+    - common
+
+-
+  name: "Checking motd tail supported"
+  register: tail_supported
+  ansible.builtin.stat:
+    path: /etc/update-motd.d/99-footer
+  tags:
+    - motd
+    - common
+
+-
+  name: "Adding motd tail"
+  ansible.builtin.template:
+    dest: /etc/motd.tail
+    src: etc/motd.j2
+    mode: "0644"
+  tags:
+    - motd
+    - common
+  when: "tail_supported.stat.exists | bool"
+
+- name: "Adding motd"
+  ansible.builtin.template:
+    dest: /etc/motd
+    src: etc/motd.j2
+    mode: "0644"
+  tags:
+    - motd
+    - common
+  when: "not tail_supported.stat.exists | bool and not motd_add_update | bool"
+
+-
+  name: "Prepending string to first line in /etc/issue"
+  ansible.builtin.lineinfile:
+    path: /etc/issue
+    regexp: '^(.*)'
+    line: 'Booted - {{ motd_org }} - \1'
+    backrefs: true
+    firstmatch: true
+  tags:
+    - motd
+    - common
+
+-
+  name: "Prepending string to first line in /etc/issue.net"
+  ansible.builtin.lineinfile:
+    path: /etc/issue.net
+    regexp: '^(.*)'
+    line: 'Booted - {{ motd_org }} - \1'
+    backrefs: true
+    firstmatch: true
+  tags:
+    - motd
+    - common
