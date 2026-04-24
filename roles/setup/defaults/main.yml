@@ -12,6 +12,11 @@ core_provisioner_version: v0.0.0
 
 email: support@startcloud.com
 
+# Optional SSH public key string to install for root.
+# Empty = skip (Debian disables root SSH login via preseed; only needed on
+# platforms without a preseed/kickstart equivalent, like OPNsense).
+root_ssh_key: ""
+
 # Progress reporting
 count_progress: true
 progress_units: 1

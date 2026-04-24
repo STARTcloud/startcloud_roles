@@ -17,11 +17,16 @@ galaxy_info:
     - name: Ubuntu
       versions:
         - all
+    - name: FreeBSD
+      versions:
+        - '14.0'
 
   galaxy_tags: []
 
-dependencies:
-  - role: startcloud.startcloud_roles.serial
+# No meta-level dependency on serial — it was vestigial, and pulling it in
+# transitively is undesirable on OPNsense where the serial role should not run.
+# Debian playbooks already list serial explicitly in their roles: order.
+dependencies: []
 
 collections:
   - startcloud.startcloud_roles

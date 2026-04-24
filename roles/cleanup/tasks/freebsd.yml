@@ -1,0 +1,103 @@
+---
+# FreeBSD / OPNsense cleanup for template finalization.
+# Intentionally skips: apt/snap cleanup, netplan regeneration, udev rules,
+# systemd-networkd management — none apply on FreeBSD. OPNsense manages its
+# own networking via config.xml, so regenerating a netplan config would be
+# wrong here.
+
+-
+  name: "Cleaning pkg cache"
+  ansible.builtin.command: pkg clean -ay
+  changed_when: true
+  failed_when: false
+
+-
+  name: "Finding DHCP lease files"
+  ansible.builtin.find:
+    paths: /var/db/dhclient
+    patterns: "*"
+  register: dhclient_leases
+  failed_when: false
+
+-
+  name: "Removing DHCP lease files"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ dhclient_leases.files | default([]) }}"
+
+-
+  name: "Finding rotated/compressed log files"
+  ansible.builtin.find:
+    paths: /var/log
+    patterns:
+      - "*.old"
+      - "*.gz"
+      - "*.bz2"
+      - "*.0"
+      - "*.1"
+      - "*.2"
+      - "*.3"
+      - "*.4"
+    recurse: true
+  register: old_log_files
+
+-
+  name: "Removing rotated/compressed log files"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ old_log_files.files }}"
+
+-
+  name: "Finding active log files to truncate"
+  ansible.builtin.find:
+    paths: /var/log
+    file_type: file
+    recurse: true
+  register: active_log_files
+
+-
+  name: "Truncating active log files"
+  ansible.builtin.copy:
+    content: ""
+    dest: "{{ item.path }}"
+    force: true
+    mode: preserve
+  loop: "{{ active_log_files.files }}"
+  failed_when: false
+
+-
+  name: "Finding SSH host keys"
+  ansible.builtin.find:
+    paths: /etc/ssh
+    patterns: "ssh_host_*"
+    file_type: any
+  register: ssh_host_keys
+
+-
+  name: "Removing SSH host keys (regenerated on next sshd start)"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ ssh_host_keys.files }}"
+
+-
+  name: "Clearing shell histories for root and admin user"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /root/.bash_history
+    - /root/.history
+    - /root/.sh_history
+    - "/home/{{ service_user | default('startcloud') }}/.bash_history"
+    - "/home/{{ service_user | default('startcloud') }}/.history"
+    - "/home/{{ service_user | default('startcloud') }}/.sh_history"
+  failed_when: false
+
+-
+  name: "Cleaning /tmp"
+  ansible.builtin.command: find /tmp -mindepth 1 -delete
+  changed_when: true
+  failed_when: false

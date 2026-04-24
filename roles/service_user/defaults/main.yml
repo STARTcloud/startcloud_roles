@@ -6,6 +6,9 @@ service_home_dir: /local/notesjava
 service_user_soft_limit: "60000"
 service_user_hard_limit: "80000"
 service_user_password: "SecureService2025!@#"
+# Optional SSH public key string to install for the service user.
+# Empty = skip authorized_key install (Debian relies on preseed for this).
+service_user_ssh_key: ""
 
 # Progress reporting
 count_progress: true

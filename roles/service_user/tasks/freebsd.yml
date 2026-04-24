@@ -57,3 +57,21 @@
         mode: '0755'
       with_items:
         - "{{ service_home_dir }}/.ansible/tmp"
+
+    -
+      name: "Ensuring .ssh directory exists for {{ service_user }}"
+      when: (service_user_ssh_key | default('')) | length > 0
+      ansible.builtin.file:
+        path: "{{ service_home_dir }}/.ssh"
+        state: directory
+        owner: "{{ service_user }}"
+        group: "{{ service_group }}"
+        mode: '0700'
+
+    -
+      name: "Installing authorized_key for {{ service_user }}"
+      when: (service_user_ssh_key | default('')) | length > 0
+      ansible.posix.authorized_key:
+        user: "{{ service_user }}"
+        state: present
+        key: "{{ service_user_ssh_key }}"

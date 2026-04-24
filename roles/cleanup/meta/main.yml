@@ -17,6 +17,9 @@ galaxy_info:
     - name: Ubuntu
       versions:
         - all
+    - name: FreeBSD
+      versions:
+        - '14.0'
 
   galaxy_tags: []
 

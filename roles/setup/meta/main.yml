@@ -19,6 +19,9 @@ galaxy_info:
     - name: Debian
       versions:
         - 'bookworm'
+    - name: FreeBSD
+      versions:
+        - '14.0'
 
   galaxy_tags: []
     # List tags for your role here, one per line. A tag is a keyword that describes

@@ -1,0 +1,31 @@
+---
+# FreeBSD / OPNsense setup.
+# The Debian/RedHat setup tasks do timezone + /vagrant support-bundle work.
+# On OPNsense, timezone is already set via config.xml (<timezone>), and the
+# /vagrant/* paths don't exist at Packer build time — they're Vagrant runtime
+# artifacts. So this file focuses on the one thing that matters for a
+# platform without a preseed/kickstart: root SSH key install.
+
+-
+  name: "Loading vendor-specific variables"
+  ansible.builtin.include_vars: "{{ vendor }}.yml"
+  when: vendor is defined
+  failed_when: false
+
+-
+  name: "Ensuring /root/.ssh directory exists"
+  when: (root_ssh_key | default('')) | length > 0
+  ansible.builtin.file:
+    path: /root/.ssh
+    state: directory
+    owner: root
+    group: wheel
+    mode: '0700'
+
+-
+  name: "Installing authorized_key for root"
+  when: (root_ssh_key | default('')) | length > 0
+  ansible.posix.authorized_key:
+    user: root
+    state: present
+    key: "{{ root_ssh_key }}"
