@@ -19,3 +19,6 @@ lockdown:
 # List of files/paths to be cleaned up by the lockdown role.
 # Other roles can append to this list.
 lockdown_file_cleanups_list: []
+
+# Gate the sensitive-file cleanup step. Off by default; opt in via Hosts.yml when ready to scrub.
+lockdown_cleanup_debug_files: false

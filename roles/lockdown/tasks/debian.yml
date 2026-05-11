@@ -57,10 +57,12 @@
 
 -
   name: "Cleaning up specified sensitive files"
-  when: lockdown_cleanup_debug_files and lockdown_file_cleanups_list is defined and lockdown_file_cleanups_list | length > 0
+  when:
+    - lockdown_cleanup_debug_files | default(false)
+    - (lockdown_file_cleanups_list | default([]) | length) > 0
   ansible.builtin.file:
     path: "{{ item }}"
     state: absent
-  loop: "{{ lockdown_file_cleanups_list }}"
+  loop: "{{ lockdown_file_cleanups_list | default([]) }}"
   loop_control:
     label: "{{ item }}"
