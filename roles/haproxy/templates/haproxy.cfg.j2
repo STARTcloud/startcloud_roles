@@ -183,7 +183,7 @@ frontend  HTTPS-IN
 {% if domino_oidc_provider_enabled is defined and domino_oidc_provider_enabled and domino_oidc_install_proxy_url is defined %}
         acl host_domino_oidc          hdr(host)            -i {{ domino_oidc_install_proxy_url }}
 {% endif %}
-{% if startcloud_quick_start_proxy_url is defined %}
+{% if startcloud_quick_start_proxy_url is defined and quick_start | default(false) %}
         acl host_downloads            hdr(host)            -i {{ startcloud_quick_start_proxy_url }}
 {% endif %}
 {% if domino_leap_proxy_url is defined %}
@@ -250,7 +250,7 @@ frontend  HTTPS-IN
 {% if startcloud_web_terminal_proxy_url is defined %}
         use_backend                   web_terminal            if host_web_terminal
 {% endif %}
-{% if startcloud_quick_start_proxy_url is defined %}
+{% if startcloud_quick_start_proxy_url is defined and quick_start | default(false) %}
         use_backend                   downloads            if host_downloads || host_direct_ip
 {% endif %}
 {% if haproxy_default_backend is defined and haproxy_default_backend | length > 0 %}
@@ -300,7 +300,7 @@ backend restapi
         http-response set-header Access-Control-Allow-Methods "GET, DELETE, OPTIONS, POST, PUT, PATCH"
         server  restapi               127.0.0.1:{{ domino_vagrant_rest_api_port_forwards[0].guest }}    check cookie {{ settings.hostname }} init-addr last,libc,none
 {% endif %}
-{% if startcloud_quick_start_port_forwards[0].guest is defined %}
+{% if startcloud_quick_start_port_forwards[0].guest is defined and quick_start | default(false) %}
 # Downloads
 backend downloads
         server  downloads             127.0.0.1:{{ startcloud_quick_start_port_forwards[0].guest }}    ssl verify none sni ssl_fc_sni check cookie {{ settings.hostname }} init-addr last,libc,none
@@ -309,18 +309,12 @@ backend downloads
 # Domino
 backend domino
         server  domino-https          {{ domino_install_proxy_url }}:{{ domino_install_port_forwards[0].guest }}    ssl verify none sni ssl_fc_sni check cookie {{ settings.hostname }} init-addr last,libc,none
-{% if domino_install_port_forwards[1].guest is defined %}
-        server  domino-http           {{ domino_install_proxy_url }}:{{ domino_install_port_forwards[1].guest }}    backup check cookie {{ settings.hostname }} init-addr last,libc,none
-{% endif %}
 {% endif %}
 
 {% if domino_install_port_forwards[0].guest is defined and domino_oidc_install_proxy_url is defined and domino_oidc_provider_enabled %}
 # Domino OIDC
 backend domino_oidc
         server  domino-oidc-https          {{ domino_oidc_install_proxy_url }}:{{ domino_install_port_forwards[0].guest }}    ssl verify none sni ssl_fc_sni check cookie {{ settings.hostname }} init-addr last,libc,none
-{% if domino_install_port_forwards[1].guest is defined %}
-        server  domino-oidc-http           {{ domino_oidc_install_proxy_url }}:{{ domino_install_port_forwards[1].guest }}    backup check cookie {{ settings.hostname }} init-addr last,libc,none
-{% endif %}
 {% endif %}
 
 {% if domino_nomadweb_port_forwards[0].guest is defined %}
@@ -332,17 +326,11 @@ backend nomadweb
 # Traveler
 backend traveler
         server  domino-https          {{ domino_traveler_proxy_url }}:{{ domino_traveler_port_forwards[0].guest }}    ssl verify none sni ssl_fc_sni check cookie {{ settings.hostname }} init-addr last,libc,none
-{% if domino_traveler_port_forwards[1].guest is defined %}
-        server  domino-http           {{ domino_traveler_proxy_url }}:{{ domino_traveler_port_forwards[1].guest }}    backup check cookie {{ settings.hostname }} init-addr last,libc,none
-{% endif %}
 {% endif %}
 {% if domino_leap_port_forwards[0].guest is defined %}
 # Leap
 backend leap
         server  domino-https          {{ domino_leap_proxy_url }}:{{ domino_leap_port_forwards[0].guest }}    ssl verify none sni ssl_fc_sni check cookie {{ settings.hostname }} init-addr last,libc,none
-{% if domino_leap_port_forwards[1].guest is defined %}
-        server  domino-http           {{ domino_leap_proxy_url }}:{{ domino_leap_port_forwards[1].guest }}    backup check cookie {{ settings.hostname }} init-addr last,libc,none
-{% endif %}
 {% endif %}
 {% if startcloud_guacamole_port_forwards[0].guest is defined %}
 # Guacamole
@@ -353,17 +341,11 @@ backend guacamole
 # Verse
 backend verse
         server  domino-https          {{ domino_verse_proxy_url }}:{{ domino_verse_port_forwards[0].guest }}    ssl verify none sni ssl_fc_sni check cookie {{ settings.hostname }} init-addr last,libc,none
-{% if domino_verse_port_forwards[1].guest is defined %}
-        server  domino-http           {{ domino_verse_proxy_url }}:{{ domino_verse_port_forwards[1].guest }}    backup check cookie {{ settings.hostname }} init-addr last,libc,none
-{% endif %}
 {% endif %}
 {% if domino_sametime_port_forwards[0].guest is defined %}
 # Sametime
 backend sametime
         server  domino-https          127.0.0.1:{{ domino_sametime_port_forwards[0].guest }}    ssl verify none sni ssl_fc_sni check cookie {{ settings.hostname }} init-addr last,libc,none
-{% if domino_sametime_port_forwards[1].guest is defined %}
-        server  domino-http           127.0.0.1:{{ domino_sametime_port_forwards[0].guest }}    backup check cookie {{ settings.hostname }} init-addr last,libc,none
-{% endif %}
 {% endif %}
 {% if voltmx_port_forwards[0].guest is defined %}
 # Voltmx

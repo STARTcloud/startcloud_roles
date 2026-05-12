@@ -1,7 +1,7 @@
 ---
 -
   name: "Block to Allow Loading of Variables without running task"
-  when: run_tasks
+  when: run_tasks and (quick_start | default(false))
   block:
     ## This Ansible playbook demonstrates the setup of a Python Simple HTTP server within a virtual environment,
     ## including directory creation, package installation, service configuration, and support bundle generation.
