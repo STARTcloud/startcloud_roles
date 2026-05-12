@@ -1,0 +1,19 @@
+galaxy_info:
+  role_name: support_bundle
+  author: MarkProminic
+  description: Generates a support bundle zip at /vagrant/support-bundle.zip
+  company: STARTCloud
+  license: license (Apache)
+  min_ansible_version: '1.2'
+
+  platforms:
+    - name: Debian
+      versions:
+        - 'bookworm'
+
+  galaxy_tags: []
+
+dependencies: []
+
+collections:
+  - startcloud.startcloud_roles
