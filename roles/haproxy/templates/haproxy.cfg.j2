@@ -268,7 +268,10 @@ backend letsencrypt_80
         mode http
         log global
         http-response set-header Server haproxy
-        server  letsencrypt             127.0.0.1:{{ haproxy_cert_bot_port }}
+        server  letsencrypt             127.0.0.1:{{ haproxy_cert_bot_port }} init-addr last,libc,none check inter 200ms rise 1 fall 1
+{% if domino_install_port_forwards is defined and domino_install_port_forwards | length > 1 and domino_install_proxy_url is defined %}
+        server  domino-http-80          {{ domino_install_proxy_url }}:{{ domino_install_port_forwards[1].guest }}    init-addr last,libc,none check backup
+{% endif %}
 
 # CORS preflight requests
 backend cors_backend
