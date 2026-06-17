@@ -5,6 +5,9 @@ network:
         name: eth*
       dhcp-identifier: mac
       dhcp4: true
+      dhcp4-overrides:
+        send-hostname: true
+        use-hostname: false
       dhcp6: false
       nameservers:
         addresses:

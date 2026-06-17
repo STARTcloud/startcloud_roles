@@ -14,5 +14,8 @@ network:
     ethernets:
         eth0:
             dhcp4: true
+            dhcp4-overrides:
+              send-hostname: true
+              use-hostname: false
             optional: true
     version: 2

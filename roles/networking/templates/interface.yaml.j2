@@ -14,6 +14,11 @@ network:
     {% endif %}
       dhcp-identifier: mac
       dhcp4: {{ networks[0].dhcp4 }}
+      {% if networks[0].dhcp4 %}
+      dhcp4-overrides:
+        send-hostname: true
+        use-hostname: false
+      {% endif %}
       dhcp6: {{ networks[0].dhcp6 }}
       match:
         macaddress: {{ macaddress }}
