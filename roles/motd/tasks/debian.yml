@@ -130,6 +130,16 @@
     - common
 
 -
+  name: "Installing sysinfo command (full system detail, on demand)"
+  ansible.builtin.template:
+    dest: /usr/local/bin/sysinfo
+    src: usr/local/bin/sysinfo.j2
+    mode: "0755"
+  tags:
+    - motd
+    - common
+
+-
   name: "Checking motd tail supported"
   register: tail_supported
   ansible.builtin.stat:

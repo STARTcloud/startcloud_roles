@@ -2,8 +2,8 @@
 motd_org: STARTcloud
 motd_sysadmins_signature: STARTCloud Contact Email
 motd_sysadmins_email: "vagrantup-startcloud@prominic.net"
-motd_color_primary: "38;2;106;179;68"
-motd_color_secondary: "1;37"
+motd_color_primary: "0;32"
+motd_color_secondary: "1"
 motd_banner_managed_line: >-
   echo -e "${G}┃${R}                  This system is managed by ${G}START${W}cloud${R}                     ${G}┃${R}"
 motd_banner_art: |

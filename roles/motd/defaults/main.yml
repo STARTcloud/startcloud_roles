@@ -8,13 +8,19 @@ motd_remove_default_config: false
 motd_restore_default_config: false
 motd_add_footer: false
 motd_add_update: false
+# Support/contact box on login is optional; the same branding is shown in the
+# banner and the full detail lives in the `sysinfo` command, so default it off
+# to keep the login short.
+motd_show_support: false
 motd_org: STARTcloud
 motd_sysadmins_signature: Random system administrators
 motd_sysadmins_email: "{{ email | default('support@startcloud.com') }}"
 
-# ANSI color codes (without \e[ prefix and m suffix)
-motd_color_primary: "38;2;106;179;68"
-motd_color_secondary: "1;37"
+# ANSI color codes (16-color only, no truecolor — "38;2;r;g;b" renders wrong on
+# macOS Terminal.app, over VNC and on older PuTTY). Secondary is bold with NO
+# hardcoded foreground so emphasis stays readable on light AND dark backgrounds.
+motd_color_primary: "0;32"
+motd_color_secondary: "1"
 
 # Banner components (vendor-overridable)
 motd_banner_managed_line: >-
