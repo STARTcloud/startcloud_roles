@@ -68,13 +68,13 @@ appx_packages_to_remove:
   - "*Spotify*"
   - "*LinkedIn*"
 
-# Scheduled tasks to disable
+# Scheduled tasks to disable (path = task folder with leading+trailing backslash, name = leaf task)
 telemetry_tasks_to_disable:
-  - "Microsoft\\Windows\\Application Experience\\Microsoft Compatibility Appraiser"
-  - "Microsoft\\Windows\\Application Experience\\ProgramDataUpdater"
-  - "Microsoft\\Windows\\Customer Experience Improvement Program\\Consolidator"
-  - "Microsoft\\Windows\\Customer Experience Improvement Program\\UsbCeip"
-  - "Microsoft\\Windows\\Feedback\\Siuf\\DmClient"
-  - "Microsoft\\Windows\\Feedback\\Siuf\\DmClientOnScenarioDownload"
-  - "Microsoft\\Windows\\Windows Error Reporting\\QueueReporting"
-  - "Microsoft\\Windows\\Maps\\MapsUpdateTask"
+  - { path: "\\Microsoft\\Windows\\Application Experience\\", name: "Microsoft Compatibility Appraiser" }
+  - { path: "\\Microsoft\\Windows\\Application Experience\\", name: "ProgramDataUpdater" }
+  - { path: "\\Microsoft\\Windows\\Customer Experience Improvement Program\\", name: "Consolidator" }
+  - { path: "\\Microsoft\\Windows\\Customer Experience Improvement Program\\", name: "UsbCeip" }
+  - { path: "\\Microsoft\\Windows\\Feedback\\Siuf\\", name: "DmClient" }
+  - { path: "\\Microsoft\\Windows\\Feedback\\Siuf\\", name: "DmClientOnScenarioDownload" }
+  - { path: "\\Microsoft\\Windows\\Windows Error Reporting\\", name: "QueueReporting" }
+  - { path: "\\Microsoft\\Windows\\Maps\\", name: "MapsUpdateTask" }

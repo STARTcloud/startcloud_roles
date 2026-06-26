@@ -38,9 +38,9 @@
             state: directory
 
         -
-          name: "Downloading Prominic.bgi"
-          ansible.windows.win_get_url:
-            url: "{{ bginfo_config_url }}"
+          name: "Installing STARTcloud.bgi config from role files"
+          ansible.windows.win_copy:
+            src: "{{ vendor | default('STARTcloud') }}.bgi"
             dest: "{{ bginfo_directory }}\\STARTcloud.bgi"
 
         -

@@ -357,9 +357,12 @@
       name: "Disabling Telemetry Scheduled Tasks"
       when: disable_telemetry_tasks
       community.windows.win_scheduled_task:
-        name: "{{ item }}"
+        name: "{{ item.name }}"
+        path: "{{ item.path }}"
         state: absent
       loop: "{{ telemetry_tasks_to_disable }}"
+      loop_control:
+        label: "{{ item.path }}{{ item.name }}"
       ignore_errors: true
 
     -
@@ -396,7 +399,7 @@
             type: dword
 
     -
-      name: "Disable HomeGroup Services"
+      name: "Disable HomeGroup Services (tolerated if not present on this edition)"
       when: disable_homegroup
       ansible.windows.win_service:
         name: "{{ item }}"
@@ -405,7 +408,10 @@
       loop:
         - HomeGroupListener
         - HomeGroupProvider
-      ignore_errors: true
+      register: homegroup_result
+      failed_when:
+        - homegroup_result is failed
+        - "'is not installed' not in (homegroup_result.msg | default(''))"
 
     -
       name: "Additional Enhanced Telemetry Blocking"
