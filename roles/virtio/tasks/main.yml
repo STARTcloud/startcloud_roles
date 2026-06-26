@@ -67,6 +67,24 @@
             expected_return_code:
               - 0
               - 3010
+          async: 600
+          poll: 0
+          register: virtio_gt_install
+
+        -
+          name: "Waiting for WinRM to recover (the NetKVM network driver install briefly resets the NIC)"
+          ansible.builtin.wait_for_connection:
+            delay: 15
+            timeout: 600
+
+        -
+          name: "Confirming the VirtIO driver install finished"
+          ansible.builtin.async_status:
+            jid: "{{ virtio_gt_install.ansible_job_id }}"
+          register: virtio_gt_status
+          until: virtio_gt_status.finished
+          retries: 30
+          delay: 20
 
         -
           name: "Installing QEMU Guest Agent"
