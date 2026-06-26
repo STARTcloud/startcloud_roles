@@ -26,21 +26,42 @@
       name: "Installing VirtIO drivers and QEMU Guest Agent from the attached virtio-win media"
       block:
         -
-          name: "Locating the VirtIO media (CD-ROM containing {{ virtio_gt_msi }})"
+          name: "Locating the VirtIO media, or downloading and mounting the ISO if no CD-ROM is attached"
           ansible.windows.win_powershell:
+            parameters:
+              IsoUrl: "{{ virtio_iso_url | default('') }}"
+              GtMsi: "{{ virtio_gt_msi }}"
             script: |
+              param($IsoUrl, $GtMsi)
               $ErrorActionPreference = 'Stop'
+              # Prefer the attached CD-ROM (additional_iso_files during the Packer build)
               $drive = Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=5' |
-                       Where-Object { Test-Path (Join-Path $_.DeviceID '{{ virtio_gt_msi }}') } |
+                       Where-Object { Test-Path (Join-Path $_.DeviceID $GtMsi) } |
                        Select-Object -First 1 -ExpandProperty DeviceID
-              if ( -not $drive ) { throw 'VirtIO media not found: no CD-ROM contains {{ virtio_gt_msi }}' }
-              $Ansible.Result = $drive
+              if ( $drive ) {
+                $Ansible.Result = @{ drive = $drive; mounted = $false; iso = '' }
+                return
+              }
+              # Fallback: no CD-ROM found - download the virtio-win ISO and mount it
+              if ( -not $IsoUrl ) {
+                throw 'VirtIO media not found on any CD-ROM and no virtio_iso_url is set for the download fallback'
+              }
+              $iso = Join-Path $env:TEMP 'virtio-win.iso'
+              Invoke-WebRequest -Uri $IsoUrl -OutFile $iso -UseBasicParsing
+              Mount-DiskImage -ImagePath $iso | Out-Null
+              Start-Sleep -Seconds 3
+              $letter = (Get-DiskImage -ImagePath $iso | Get-Volume).DriveLetter
+              if ( -not $letter ) { throw 'Mounted VirtIO ISO but could not determine its drive letter' }
+              if ( -not (Test-Path (Join-Path "$($letter):" $GtMsi)) ) {
+                throw "Mounted VirtIO ISO ($($letter):) does not contain $GtMsi"
+              }
+              $Ansible.Result = @{ drive = "$($letter):"; mounted = $true; iso = $iso }
           register: virtio_media
 
         -
           name: "Installing VirtIO drivers (all components)"
           ansible.windows.win_package:
-            path: "{{ virtio_media.result }}\\{{ virtio_gt_msi }}"
+            path: "{{ virtio_media.result.drive }}\\{{ virtio_gt_msi }}"
             arguments: "/qn /norestart ADDLOCAL=ALL"
             state: present
             expected_return_code:
@@ -50,7 +71,7 @@
         -
           name: "Installing QEMU Guest Agent"
           ansible.windows.win_package:
-            path: "{{ virtio_media.result }}\\{{ qemu_ga_msi }}"
+            path: "{{ virtio_media.result.drive }}\\{{ qemu_ga_msi }}"
             arguments: "/qn /norestart"
             state: present
             expected_return_code:
@@ -63,3 +84,16 @@
             name: "{{ qemu_ga_service_name }}"
             start_mode: auto
             state: started
+
+        -
+          name: "Dismounting and removing the downloaded VirtIO ISO (fallback path only)"
+          when: virtio_media.result.mounted | default(false)
+          ansible.windows.win_powershell:
+            parameters:
+              Iso: "{{ virtio_media.result.iso }}"
+            script: |
+              param($Iso)
+              if ( $Iso -and (Test-Path $Iso) ) {
+                Dismount-DiskImage -ImagePath $Iso -ErrorAction SilentlyContinue | Out-Null
+                Remove-Item $Iso -Force -ErrorAction SilentlyContinue
+              }
