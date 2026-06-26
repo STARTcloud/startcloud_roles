@@ -135,6 +135,19 @@
             - "'not found' not in (feature_removal.msg | default(''))"
 
         -
+          name: "Removing Azure Arc Setup capability (Server 2025+ Feature on Demand)"
+          ansible.windows.win_shell: |
+            $caps = Get-WindowsCapability -Online | Where-Object { $_.Name -like 'AzureArcSetup*' -and $_.State -eq 'Installed' }
+            if ($caps) {
+              foreach ($c in $caps) { Remove-WindowsCapability -Online -Name $c.Name | Out-Null }
+              Write-Output ("Removed: " + (($caps | ForEach-Object Name) -join ', '))
+            } else {
+              Write-Output 'AzureArcSetup capability not present'
+            }
+          register: arc_capability_removal
+          changed_when: "'Removed:' in arc_capability_removal.stdout"
+
+        -
           name: "Enabling NFS Client"
           ansible.windows.win_feature:
             name: "NFS-Client"

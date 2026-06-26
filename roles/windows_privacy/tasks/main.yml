@@ -363,7 +363,11 @@
       loop: "{{ telemetry_tasks_to_disable }}"
       loop_control:
         label: "{{ item.path }}{{ item.name }}"
-      ignore_errors: true
+      register: telemetry_result
+      failed_when:
+        - telemetry_result is failed
+        - "'empty task folder' not in (telemetry_result.msg | default(''))"
+        - "'not found' not in (telemetry_result.msg | default(''))"
 
     -
       name: "Performance Optimizations"
