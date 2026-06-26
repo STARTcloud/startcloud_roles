@@ -1,35 +1,39 @@
 ---
+# One robust Windows Update pass.
+#
+# ansible.windows.win_updates with reboot:true installs every applicable update and
+# reboots as many times as needed *within this single task*, re-scanning after each
+# reboot until none remain. windows.yml loops this a few times so updates that only
+# become applicable after a prior batch (or after a fresh WUA session) are still
+# caught -- maximising patch coverage.
+#
+# reject_list skips ONLY the Defender "Windows Security platform" definition update:
+# a known Microsoft reboot-loop (installs fail with HRESULT -1 and the same def is
+# re-offered every reboot, tripping win_updates' loop detector). It is a definition
+# update that refreshes on first boot post-deploy, so excluding it costs no currency.
 -
-  name: "Executing the scheduled task (Pass {{ pass_number }})"
-  ansible.windows.win_shell: schtasks /Run /TN "InstallWindowsUpdatesTask"
+  name: "Installing applicable Windows updates (pass {{ pass_number }}) - reboots as many times as needed"
+  ansible.windows.win_updates:
+    category_names: '*'
+    reject_list: "{{ windows_update_reject_list | default(['Windows Security platform']) }}"
+    skip_optional: false
+    state: installed
+    server_selection: "{{ windows_update_source | default('windows_update') }}"
+    reboot: true
+    reboot_timeout: "{{ windows_update_reboot_timeout | default(3600) }}"
+    log_path: 'C:\Windows\Temp\packer\win-updates-pass-{{ pass_number }}.log'
+  register: wu_pass
+  retries: 3
+  delay: 60
+  until: wu_pass is succeeded
+  ignore_errors: true
 
 -
-  name: "Waiting for the scheduled task to complete (Pass {{ pass_number }})"
-  ansible.windows.win_shell: |
-    $task = Get-ScheduledTask -TaskName "InstallWindowsUpdatesTask"
-    while ($task.State -eq "Running") {
-      Start-Sleep -Seconds 5
-      $task = Get-ScheduledTask -TaskName "InstallWindowsUpdatesTask"
-    }
-
--
-  name: "Checking if task completed successfully (Pass {{ pass_number }})"
-  ansible.windows.win_shell: |
-    $task = Get-ScheduledTask -TaskName "InstallWindowsUpdatesTask"
-    while ($task.State -eq "Running") {
-      Start-Sleep -Seconds 5
-      $task = Get-ScheduledTask -TaskName "InstallWindowsUpdatesTask"
-    }
-    if ($task.LastTaskResult -eq 0) {
-      $completedSuccessfully = $true
-    } else {
-      $completedSuccessfully = $false
-    }
-    $completedSuccessfully
-  register: task_result
-
--
-  name: "Rebooting to Apply Windows Updates (Pass {{ pass_number }})"
-  ansible.windows.win_reboot:
-    reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
-  when: task_result.stdout == "True"
+  name: "Windows update result (pass {{ pass_number }})"
+  ansible.builtin.debug:
+    msg: >-
+      Pass {{ pass_number }}:
+      found={{ wu_pass.found_update_count | default('n/a') }}
+      installed={{ wu_pass.installed_update_count | default('n/a') }}
+      failed={{ wu_pass.failed_update_count | default('n/a') }}
+      reboot_required={{ wu_pass.reboot_required | default('n/a') }}

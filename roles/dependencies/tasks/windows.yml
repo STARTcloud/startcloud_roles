@@ -6,11 +6,10 @@
   ignore_errors: true
 
 -
-  name: "Rebooting to Apply Windows Updates"
-  when: install_windows_updates | default(true)
-  ansible.windows.win_reboot:
-    reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
-  ignore_errors: true
+  name: "Ensuring Packer Installations Directory exists"
+  ansible.windows.win_file:
+    path: C:\Windows\Temp\packer
+    state: directory
 
 -
   name: "Installing Powershell 7"
@@ -36,7 +35,7 @@
       ansible.windows.win_get_url:
         url: "https://aka.ms/install-powershell.ps1"
         dest: C:\temp\install-powershell.ps1
-      
+
     -
       name: "Executing Powershell 7 Installation Script"
       when: ps7_check != "7"
@@ -45,52 +44,48 @@
       ignore_errors: true
 
 -
-  name: "Installing Windows Updates (Pre-Chocolatey)"
+  name: "Windows Updates (initial - fully patch the OS before installing software)"
   when: install_windows_updates | default(true)
   block:
     -
-      name: "Installing all updates and rebooting as many times as needed"
+      name: "Ensuring Windows Update is not paused"
+      ansible.windows.win_shell: |
+        Set-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings' -Name 'PauseUpdatesExpiryTime' -Value ((Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"))
+      ignore_errors: true
+
+    -
+      name: "Resetting Windows Update components (clears stuck/looping update state)"
+      ansible.windows.win_shell: |
+        Stop-Service -Name BITS,wuauserv,CryptSvc,WaaSMedicSvc -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path C:\Windows\System32\catroot2 -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path C:\Windows\SoftwareDistribution -Recurse -Force -ErrorAction SilentlyContinue
+        Start-Service -Name BITS,wuauserv,CryptSvc -ErrorAction SilentlyContinue
+        Start-Service -Name WaaSMedicSvc -ErrorAction SilentlyContinue
+        UsoClient RefreshSettings
+      ignore_errors: true
+
+    -
+      name: "Searching for available updates (visibility)"
       ansible.windows.win_updates:
         category_names: '*'
-        reboot: true
+        reject_list: "{{ windows_update_reject_list | default(['Windows Security platform']) }}"
         skip_optional: false
-        reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
+        state: searched
+        server_selection: "{{ windows_update_source | default('windows_update') }}"
+      register: wu_search
       ignore_errors: true
 
     -
-      name: "Installing all updates and rebooting as many times as needed"
-      ansible.windows.win_updates:
-        category_names: '*'
-        reboot: true
-        skip_optional: false
-        reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
-      ignore_errors: true
+      name: "Updates available before patching"
+      ansible.builtin.debug:
+        var: wu_search.updates
 
     -
-      name: "Manually Installing Updates"
-      when: false
-      block:
-        -
-          name: "Waiting for All Updates to be completed"
-          ansible.windows.win_wait_for:
-            path: C:\temp\updates_installed
-            timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
-          ignore_errors: true
-
-    -
-      name: "Rebooting to Apply Windows Updates"
-      ansible.windows.win_reboot:
-        reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
-      ignore_errors: true
-
-    -
-      name: "Installing all updates and rebooting as many times as needed"
-      ansible.windows.win_updates:
-        category_names: '*'
-        reboot: true
-        skip_optional: false
-        reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
-      ignore_errors: true
+      name: "Installing all applicable updates (initial pass {{ pass_number }})"
+      ansible.builtin.include_tasks: update_pass.yml
+      loop: "{{ range(1, (windows_update_passes | default(3)) + 1) | list }}"
+      loop_control:
+        loop_var: pass_number
 
 -
   name: "Installing Chocolatey"
@@ -147,15 +142,6 @@
       loop: "{{ chocolatey_internal_packages | default([]) }}"
 
 -
-  name: "Installing all updates and rebooting as many times as needed"
-  when: install_windows_updates | default(true)
-  ansible.windows.win_updates:
-    category_names: '*'
-    reboot: true
-    skip_optional: false
-    reboot_timeout: 3600
-
--
   name: "Installing Customer Chocolatey Packages"
   when: template_type | default('customer') == 'customer'
   block:
@@ -167,15 +153,6 @@
       loop: "{{ chocolatey_customer_packages | default([]) }}"
 
 -
-  name: "Installing all updates and rebooting as many times as needed"
-  when: install_windows_updates | default(true)
-  ansible.windows.win_updates:
-    category_names: '*'
-    reboot: true
-    skip_optional: false
-    reboot_timeout: 3600
-
--
   name: "Installing Vendor-Specific Chocolatey Packages"
   when: chocolatey_packages is defined and vendor is defined
   block:
@@ -185,15 +162,6 @@
         name: "{{ item }}"
         state: present
       loop: "{{ chocolatey_packages | default([]) }}"
-
--
-  name: "Installing all updates and rebooting as many times as needed"
-  when: install_windows_updates | default(true)
-  ansible.windows.win_updates:
-    category_names: '*'
-    reboot: true
-    skip_optional: false
-    reboot_timeout: 3600
 
 -
   name: "Installing Cygwin with cyg-get"
@@ -258,96 +226,31 @@
       when: wsus_target_group is defined
 
 -
-  name: "Ensuring Packer Installations Directory exists"
-  ansible.windows.win_file:
-    path: C:\Windows\Temp\packer
-    state: directory
-    
--
-  name: "Windows Updates"
+  name: "Windows Updates (final - catch anything new after software install)"
   when: install_windows_updates | default(true)
   block:
     -
-      name: "Installing PS Updates"
-      block:
-        -
-          name: "Setting NuGet Package Provider"
-          ansible.windows.win_shell: Install-PackageProvider -Name NuGet -Force
-
-        -
-          name: "Setting PSGallery Repository to Trusted"
-          ansible.windows.win_shell: Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted
-
-        -
-          name: "Installing PSWindowsUpdate Module"
-          ansible.windows.win_shell: Install-Module -Name PSWindowsUpdate -Force
-
-        - name: "Adding WUServiceManager"
-          ansible.windows.win_shell: Add-WUServiceManager -ServiceID "7971f918-a847-4430-9279-4a52d1efe18d"  -AddServiceFlag 7 -Confirm:$false
-
-        -
-          name: "Running Updates"
-          ansible.windows.win_powershell:
-            script: Install-WindowsUpdate -AcceptAll -MicrosoftUpdate -IgnoreReboot
-
-        -
-          name: "Rebooting to Apply Windows Updates"
-          ansible.windows.win_reboot:
-            reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
-
-
-
-    -
-      name: "Creating Windows Update Installation Script"
-      ansible.windows.win_copy:
-        dest: C:\Windows\Temp\packer\InstallUpdates.ps1
-        content: |
-          Import-Module PSWindowsUpdate
-          Get-WindowsUpdate -MicrosoftUpdate
-          Install-WindowsUpdate -AcceptAll -MicrosoftUpdate -IgnoreReboot
-
-    -
-      name: "Creating scheduled task to install Windows Updates"
-      community.windows.win_scheduled_task:
-        name: InstallWindowsUpdatesTask
-        description: Install Windows Updates
-        actions:
-          - path: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
-            arguments: -ExecutionPolicy Bypass -File C:\Windows\Temp\packer\InstallUpdates.ps1
-        triggers:
-          - type: registration
-        username: SYSTEM
-        state: present
-        enabled: true
-
-    -
-      name: "Running Windows Updates (Pass {{ item }})"
-      include_tasks: update_pass.yml
-      loop: "{{ range(1, windows_update_passes | default(4) + 1) | list }}"
+      name: "Installing all applicable updates (final pass {{ pass_number }})"
+      ansible.builtin.include_tasks: update_pass.yml
+      loop: "{{ range(1, (windows_update_final_passes | default(2)) + 1) | list }}"
       loop_control:
         loop_var: pass_number
 
     -
-      name: "Deleting the scheduled task"
-      community.windows.win_scheduled_task:
-        name: InstallWindowsUpdatesTask
-        state: absent
-
-    -
-      name: "Installing all updates and rebooting as many times as needed"
+      name: "Confirming remaining updates (excluding rejected)"
       ansible.windows.win_updates:
         category_names: '*'
-        reboot: true
+        reject_list: "{{ windows_update_reject_list | default(['Windows Security platform']) }}"
         skip_optional: false
-        reboot_timeout: 3600
+        state: searched
+        server_selection: "{{ windows_update_source | default('windows_update') }}"
+      register: wu_final
+      ignore_errors: true
 
     -
-      name: "Installing all updates and rebooting as many times as needed"
-      ansible.windows.win_updates:
-        category_names: '*'
-        reboot: true
-        skip_optional: false
-        reboot_timeout: 3600
+      name: "Updates still pending after final pass (should be empty aside from rejected)"
+      ansible.builtin.debug:
+        var: wu_final.updates
 
 -
   name: "Package Maintenance"
