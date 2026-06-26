@@ -48,6 +48,13 @@
         dest: C:\Windows\Temp\packer\Autounattend.xml
 
     -
+      name: "Copying provision-Autounattend.xml to packer directory"
+      when: distro_version == "2025"
+      ansible.windows.win_template:
+        src: server2025-provision-Autounattend.xml.j2
+        dest: C:\Windows\Temp\packer\Autounattend.xml
+
+    -
       name: "Preparing for Sysprep"
       when: prepare_sysprep
       block:
