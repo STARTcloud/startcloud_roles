@@ -5,8 +5,17 @@
   block:
     -
       name: "Installing SNMP Service"
-      ansible.windows.win_powershell:
-        script: Install-WindowsFeature SNMP-Service -IncludeAllSubFeature -IncludeManagementTools
+      ansible.windows.win_feature:
+        name: SNMP-Service
+        include_sub_features: true
+        include_management_tools: true
+        state: present
+      register: snmp_feature
+
+    -
+      name: "Rebooting to finalize SNMP Service installation when required"
+      ansible.windows.win_reboot:
+      when: snmp_feature.reboot_required
 
     -
       name: "Configuring SNMP"
