@@ -123,10 +123,16 @@
             type: dword
 
         -
-          name: "Removing unwanted features"
+          name: "Removing unwanted features (tolerated if not present on this edition/media)"
           ansible.windows.win_feature:
-            name: AzureArcSetup
+            name: "{{ item }}"
             state: absent
+          loop: "{{ remote_access_features_to_remove | default(['AzureArcSetup']) }}"
+          register: feature_removal
+          failed_when:
+            - feature_removal is failed
+            - "'not valid' not in (feature_removal.msg | default(''))"
+            - "'not found' not in (feature_removal.msg | default(''))"
 
         -
           name: "Enabling NFS Client"

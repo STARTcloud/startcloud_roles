@@ -195,6 +195,81 @@
     - img0_768x1024.jpg
 
 -
+  name: "Enforcing STARTcloud branded backgrounds for all users (desktop, lock screen, login) - survives sysprep"
+  block:
+    -
+      name: "Setting enforced desktop wallpaper for all users (PersonalizationCSP)"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP
+        name: DesktopImagePath
+        data: C:\opt\STARTcloud\backgrounds\startcloud-desktop.jpg
+        type: string
+        state: present
+
+    -
+      name: "Setting enforced desktop wallpaper URL for all users (PersonalizationCSP)"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP
+        name: DesktopImageUrl
+        data: C:\opt\STARTcloud\backgrounds\startcloud-desktop.jpg
+        type: string
+        state: present
+
+    -
+      name: "Marking desktop wallpaper as configured (PersonalizationCSP)"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP
+        name: DesktopImageStatus
+        data: 1
+        type: dword
+        state: present
+
+    -
+      name: "Setting enforced lock screen and login background for all users (PersonalizationCSP)"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP
+        name: LockScreenImagePath
+        data: C:\opt\STARTcloud\backgrounds\startcloud-desktop.jpg
+        type: string
+        state: present
+
+    -
+      name: "Setting enforced lock screen and login background URL for all users (PersonalizationCSP)"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP
+        name: LockScreenImageUrl
+        data: C:\opt\STARTcloud\backgrounds\startcloud-desktop.jpg
+        type: string
+        state: present
+
+    -
+      name: "Marking lock screen background as configured (PersonalizationCSP)"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP
+        name: LockScreenImageStatus
+        data: 1
+        type: dword
+        state: present
+
+    -
+      name: "Forcing lock screen image via Personalization policy (belt-and-suspenders)"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization
+        name: LockScreenImage
+        data: C:\opt\STARTcloud\backgrounds\startcloud-desktop.jpg
+        type: string
+        state: present
+
+    -
+      name: "Disabling logon screen acrylic blur so the branded image shows sharp"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\System
+        name: DisableAcrylicBackgroundOnLogon
+        data: 1
+        type: dword
+        state: present
+
+-
   name: "Configuring Local Group Policy Settings"
   block:
     -

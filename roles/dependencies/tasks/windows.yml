@@ -81,7 +81,7 @@
         var: wu_search.updates
 
     -
-      name: "Installing all applicable updates (initial pass {{ pass_number }})"
+      name: "Installing all applicable updates (initial)"
       ansible.builtin.include_tasks: update_pass.yml
       loop: "{{ range(1, (windows_update_passes | default(3)) + 1) | list }}"
       loop_control:
@@ -230,7 +230,7 @@
   when: install_windows_updates | default(true)
   block:
     -
-      name: "Installing all applicable updates (final pass {{ pass_number }})"
+      name: "Installing all applicable updates (final)"
       ansible.builtin.include_tasks: update_pass.yml
       loop: "{{ range(1, (windows_update_final_passes | default(2)) + 1) | list }}"
       loop_control:
