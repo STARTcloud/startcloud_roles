@@ -13,3 +13,18 @@
     bcdedit /ems ON
     bcdedit /bootems ON
     bcdedit /emssettings EMSPORT:1 EMSBAUDRATE:115200
+
+-
+  name: "Preventing SAC command-channel logins from loading a user profile"
+  # The SAC (serial console) cmd channel loads the user profile by default. When a tool
+  # logs in over SAC during early boot/OOBE (e.g. vagrant-zones), that premature profile
+  # load races OOBE's own Administrator profile creation and strands the account in a
+  # temporary profile (C:\Users\TEMP). This setting (a SacSvr-service parameter, scoped
+  # ONLY to SAC cmd sessions) makes SAC authenticate without loading a profile, so the
+  # normal AutoLogon/RDP/console logins still build the real profile. See MS EMS docs.
+  ansible.windows.win_regedit:
+    path: HKLM:\System\CurrentControlSet\Services\SacSvr\Parameters
+    name: LoadProfilesDisabled
+    data: 1
+    type: dword
+    state: present
