@@ -12,6 +12,8 @@
         - C:\temp
         - C:\Windows\Temp\packer
         - C:\vagrant
+        - C:\vagrant\ansible
+        - C:\vagrant\ansible_collections
         - C:\Windows\Setup\Scripts
 
     #-
