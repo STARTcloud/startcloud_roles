@@ -15,6 +15,10 @@
     name: "{{ vagrant_user | default('Administrator') }}"
     password: "{{ vagrant_user_pass }}"
     state: present
+  # changing the connected account's password drops this WinRM session; the change
+  # applies but the result fetch with the old password is rejected. Connection is
+  # switched to the new password below; wait_for_connection re-validates it.
+  ignore_errors: true
 
 -
   name: "Changing default user password (using lockdown password)"
@@ -25,6 +29,27 @@
     name: "{{ vagrant_user | default('Administrator') }}"
     password: "{{ lockdown_new_password }}"
     state: present
+  # changing the connected account's password drops this WinRM session; the change
+  # applies but the result fetch with the old password is rejected. Connection is
+  # switched to the new password below; wait_for_connection re-validates it.
+  ignore_errors: true
+
+-
+  name: "Switching the WinRM connection to the new password"
+  when: >-
+    (lockdown_use_settings_password | default(false) and vagrant_user_pass is defined)
+    or (not (lockdown_use_settings_password | default(false)) and lockdown_new_password is defined)
+  ansible.builtin.set_fact:
+    ansible_password: "{{ vagrant_user_pass if (lockdown_use_settings_password | default(false)) else lockdown_new_password }}"
+
+-
+  name: "Reset WinRM connection to apply the password change"
+  ansible.builtin.meta: reset_connection
+
+-
+  name: "Waiting for WinRM to accept the new password"
+  ansible.builtin.wait_for_connection:
+    timeout: 120
 
 -
   name: "Restoring original password complexity requirements"
@@ -32,10 +57,6 @@
     section: System Access
     key: PasswordComplexity
     value: 1
-
--
-  name: "Reset WinRM connection to apply user changes"
-  ansible.builtin.meta: reset_connection
 
 -
   name: "Cleaning up specified sensitive files and directories"
