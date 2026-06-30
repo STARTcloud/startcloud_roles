@@ -40,6 +40,10 @@
       ansible.windows.win_shell: '[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072'
       register: execution_policy_bypass
 
+# win_timezone is a community.windows module (NOT ansible.windows). Use the
+# community.windows FQCN explicitly: on ansible-core 2.16 (the OmniOS deploy hosts)
+# ansible.windows has no redirect for it, so ansible.windows.win_timezone fails to
+# resolve. community.windows ships the module on both build and deploy hosts.
 -
   name: "Setting timezone to {{ win_timezone }}"
   when: ansible_os_family == 'Windows'
