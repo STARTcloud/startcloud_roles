@@ -21,6 +21,7 @@ chocolatey_packages:
   - cyg-get
   - clamwin
   - curl
+  - git  # provides openssl.exe (C:\Program Files\Git\usr\bin) for the ssl role
   
 # Additional STARTcloud-specific configuration
 vendor_specific_config:

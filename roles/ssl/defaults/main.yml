@@ -30,6 +30,11 @@ java_version: "latest"
 java_home: "C:\\Program Files\\OpenJDK\\jdk-22.0.2"
 java_keytool: "C:\\Program Files\\OpenJDK\\jdk-22.0.2\\bin\\keytool.exe"
 
+# OpenSSL binary (Windows). Used for self-signed server cert generation when this
+# path exists; if it is absent the ssl role falls back to native PowerShell .NET
+# crypto. Provided by Git for Windows (added to the STARTcloud chocolatey packages).
+openssl_bin: "C:\\Program Files\\Git\\usr\\bin\\openssl.exe"
+
 # Private key settings
 private_key_type: RSA
 private_key_size: 4096

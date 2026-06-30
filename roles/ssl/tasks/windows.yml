@@ -219,12 +219,25 @@
         powershell_dns_names: "{{ ([settings.hostname + '.' + settings.domain] + (dns_entries_list | map('regex_replace', '^(.*)$', '\\1.' + settings.hostname + '.' + settings.domain) | list)) }}"
 
     -
+      name: "Detecting OpenSSL availability"
+      ansible.windows.win_stat:
+        path: "{{ openssl_bin }}"
+      register: openssl_stat
+
+    -
+      name: "Setting OpenSSL availability fact"
+      ansible.builtin.set_fact:
+        openssl_available: "{{ openssl_stat.stat.exists }}"
+
+    -
       name: "Generating server private key with OpenSSL"
+      when: openssl_available
       ansible.windows.win_command:
-        cmd: '"C:\Program Files\Git\usr\bin\openssl.exe" genrsa -out "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key" {{ private_key_size }}'
+        cmd: '"{{ openssl_bin }}" genrsa -out "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key" {{ private_key_size }}'
 
     -
       name: "Creating OpenSSL config for CSR with SAN"
+      when: openssl_available
       ansible.windows.win_copy:
         content: |
           [req]
@@ -248,13 +261,75 @@
 
     -
       name: "Creating CSR for server certificate with OpenSSL"
+      when: openssl_available
       ansible.windows.win_command:
-        cmd: '"C:\Program Files\Git\usr\bin\openssl.exe" req -new -key "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key" -out "{{ win_cert_dir }}\\csr\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.csr" -config "{{ win_cert_dir }}\\csr\\openssl.conf"'
+        cmd: '"{{ openssl_bin }}" req -new -key "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key" -out "{{ win_cert_dir }}\\csr\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.csr" -config "{{ win_cert_dir }}\\csr\\openssl.conf"'
 
     -
       name: "Generating CA-signed certificate with OpenSSL"
+      when: openssl_available
       ansible.windows.win_command:
-        cmd: '"C:\Program Files\Git\usr\bin\openssl.exe" x509 -req -in "{{ win_cert_dir }}\\csr\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.csr" -CA "{{ win_cert_dir }}\\ca\\ca-certificate.crt" -CAkey "{{ win_cert_dir }}\\ca\\ca-certificate.key" -CAcreateserial -out "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt" -days 3650 -extensions v3_req -extfile "{{ win_cert_dir }}\\csr\\openssl.conf" -passin "pass:{{ ca_cert_pass }}"'
+        cmd: '"{{ openssl_bin }}" x509 -req -in "{{ win_cert_dir }}\\csr\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.csr" -CA "{{ win_cert_dir }}\\ca\\ca-certificate.crt" -CAkey "{{ win_cert_dir }}\\ca\\ca-certificate.key" -CAcreateserial -out "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt" -days 3650 -extensions v3_req -extfile "{{ win_cert_dir }}\\csr\\openssl.conf" -passin "pass:{{ ca_cert_pass }}"'
+
+    -
+      name: "Generating self-signed server certificate with native PowerShell (OpenSSL fallback)"
+      when: not openssl_available
+      ansible.windows.win_powershell:
+        parameters:
+          KeySize: "{{ private_key_size }}"
+          CertDir: "{{ win_cert_dir }}"
+          HostFqdn: "{{ settings.hostname }}.{{ settings.domain }}"
+          Subject: "CN={{ settings.hostname }}.{{ settings.domain }}, O={{ organization }}, C={{ countrycode }}"
+          CertPass: "{{ cert_pass }}"
+          DnsNames: "{{ powershell_dns_names | join(',') }}"
+        script: |
+          param($KeySize, $CertDir, $HostFqdn, $Subject, $CertPass, $DnsNames)
+          $ErrorActionPreference = 'Stop'
+
+          # Server private key
+          $rsa = [System.Security.Cryptography.RSA]::Create([int]$KeySize)
+          $keyPem = "-----BEGIN PRIVATE KEY-----`n"
+          $keyPem += [System.Convert]::ToBase64String($rsa.ExportPkcs8PrivateKey(), [System.Base64FormattingOptions]::InsertLineBreaks)
+          $keyPem += "`n-----END PRIVATE KEY-----"
+          Set-Content -Path "$CertDir\key\$HostFqdn-self-signed.key" -Value $keyPem
+
+          # Certificate request: server-auth EKU + Subject Alternative Names
+          $req = [System.Security.Cryptography.X509Certificates.CertificateRequest]::new($Subject, $rsa, [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
+          $req.CertificateExtensions.Add([System.Security.Cryptography.X509Certificates.X509BasicConstraintsExtension]::new($false, $false, 0, $false))
+          $req.CertificateExtensions.Add([System.Security.Cryptography.X509Certificates.X509KeyUsageExtension]::new(([System.Security.Cryptography.X509Certificates.X509KeyUsageFlags]::DigitalSignature -bor [System.Security.Cryptography.X509Certificates.X509KeyUsageFlags]::KeyEncipherment), $false))
+          $eku = [System.Security.Cryptography.OidCollection]::new()
+          [void]$eku.Add([System.Security.Cryptography.Oid]::new("1.3.6.1.5.5.7.3.1"))
+          $req.CertificateExtensions.Add([System.Security.Cryptography.X509Certificates.X509EnhancedKeyUsageExtension]::new($eku, $false))
+          $san = [System.Security.Cryptography.X509Certificates.SubjectAlternativeNameBuilder]::new()
+          foreach ($d in ($DnsNames -split ',')) { if ($d) { $san.AddDnsName($d) } }
+          $req.CertificateExtensions.Add($san.Build())
+
+          # Load CA cert + key (unencrypted PKCS8, same PEM decode as the CA-gen tasks)
+          $caKeyPem = Get-Content "$CertDir\ca\ca-certificate.key" -Raw
+          $caKeyB64 = ($caKeyPem -replace "-----BEGIN PRIVATE KEY-----" -replace "-----END PRIVATE KEY-----" -replace "`r" -replace "`n").Trim()
+          $caRsa = [System.Security.Cryptography.RSA]::Create()
+          $caRsa.ImportPkcs8PrivateKey([System.Convert]::FromBase64String($caKeyB64), [ref]$null)
+          $caCertPem = Get-Content "$CertDir\ca\ca-certificate.crt" -Raw
+          $caCertB64 = ($caCertPem -replace "-----BEGIN CERTIFICATE-----" -replace "-----END CERTIFICATE-----" -replace "`r" -replace "`n").Trim()
+          $caCertOnly = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new([System.Convert]::FromBase64String($caCertB64))
+          $caCert = $caCertOnly.CopyWithPrivateKey($caRsa)
+
+          # Sign the request with the CA
+          $serial = [byte[]]::new(16)
+          [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($serial)
+          $serial[0] = $serial[0] -band 0x7F
+          $notBefore = [System.DateTimeOffset]::UtcNow.AddDays(-1)
+          $notAfter = [System.DateTimeOffset]::UtcNow.AddDays(3650)
+          $cert = $req.Create($caCert, $notBefore, $notAfter, $serial)
+          $crtPem = "-----BEGIN CERTIFICATE-----`n"
+          $crtPem += [System.Convert]::ToBase64String($cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert), [System.Base64FormattingOptions]::InsertLineBreaks)
+          $crtPem += "`n-----END CERTIFICATE-----"
+          Set-Content -Path "$CertDir\crt\$HostFqdn-self-signed.crt" -Value $crtPem
+
+          # Export PKCS12 (cert + private key)
+          $certWithKey = $cert.CopyWithPrivateKey($rsa)
+          $pfxBytes = $certWithKey.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pkcs12, $CertPass)
+          [System.IO.File]::WriteAllBytes("$CertDir\pfx\$HostFqdn-self-signed.pfx", $pfxBytes)
 
     -
       name: "Copying self-signed SSL key"
@@ -272,8 +347,9 @@
 
     -
       name: "Generating self signed PKCS12 file with OpenSSL"
+      when: openssl_available
       ansible.windows.win_command:
-        cmd: '"C:\Program Files\Git\usr\bin\openssl.exe" pkcs12 -export -out "{{ win_cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.pfx" -inkey "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key" -in "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt" -passout "pass:{{ cert_pass }}"'
+        cmd: '"{{ openssl_bin }}" pkcs12 -export -out "{{ win_cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.pfx" -inkey "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key" -in "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt" -passout "pass:{{ cert_pass }}"'
 
     -
       name: "Copying PKCS12 file"
