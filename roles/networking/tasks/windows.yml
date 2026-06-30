@@ -100,9 +100,7 @@
   when: networks[0] is defined and networks[0].dns is defined
   ansible.windows.win_dns_client:
     adapter_names: "{{ first_adapter_details.name }}"
-    dns_servers:
-      - "{{ networks[0].dns[0]['nameserver'] }}"
-      - "{{ networks[0].dns[1]['nameserver'] }}"
+    dns_servers: "{{ networks[0].dns | map(attribute='nameserver') | list }}"
 
 -
   name: "Setting host records"
