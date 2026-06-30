@@ -33,6 +33,18 @@
       when: ansible_os_family == 'Windows'
       ansible.builtin.win_hostname:
         name: "{{ settings.hostname }}"
+      register: win_hostname_result
+
+    -
+      name: "Rebooting Windows to apply the hostname change"
+      # win_hostname only stages the rename; Windows needs a reboot for the new
+      # computer name to take effect. Skip when running ansible-local; on remote
+      # (WinRM) hosts reboot here so the new name is live for the rest of the play.
+      when:
+        - ansible_os_family == 'Windows'
+        - win_hostname_result.reboot_required | default(false)
+        - ansible_connection != 'local'
+      ansible.windows.win_reboot:
 
     -
       name: "Block to Allow Loading of Variables without running task"
