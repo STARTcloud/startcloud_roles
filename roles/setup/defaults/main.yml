@@ -22,6 +22,6 @@ count_progress: true
 progress_units: 1
 progress_role_description: "Performing initial system setup"
 
-installer_base_url: "{{ secrets.installer_base_url }}"
-installer_url_user: "{{ secrets.installer_url_user }}"
-installer_url_pass: "{{ secrets.installer_url_pass }}"
+installer_base_url: "{{ (secrets | default({})).get('installer_base_url', '') }}"
+installer_url_user: "{{ (secrets | default({})).get('installer_url_user', '') }}"
+installer_url_pass: "{{ (secrets | default({})).get('installer_url_pass', '') }}"
