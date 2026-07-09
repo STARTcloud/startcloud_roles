@@ -1,0 +1,15 @@
+---
+-
+  name: Ensure NFS client utilities are installed.
+  become: true
+  ansible.builtin.package:
+    name: nfs-utils
+    state: present
+
+-
+  name: Ensure rpcbind is running.
+  become: true
+  ansible.builtin.service:
+    name: rpcbind
+    state: started
+    enabled: true
