@@ -1,37 +1,30 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Setting up BGInfo"
+    - name: "Setting up BGInfo"
       block:
-        -
-          name: "Creating BGInfo directory"
+        - name: "Creating BGInfo directory"
           ansible.windows.win_file:
             path: "{{ bginfo_directory }}"
             state: directory
 
-        -
-          name: "Creating Default Users Startup directory"
+        - name: "Creating Default Users Startup directory"
           ansible.windows.win_file:
             path: "{{ startup_directory }}"
             state: directory
 
-        -
-          name: "Installing STARTcloud.bgi config from role files"
+        - name: "Installing STARTcloud.bgi config from role files"
           ansible.windows.win_copy:
             src: "{{ vendor | default('STARTcloud') }}.bgi"
             dest: "{{ bginfo_directory }}\\STARTcloud.bgi"
 
-        -
-          name: "Creating Startup Directory"
+        - name: "Creating Startup Directory"
           ansible.windows.win_file:
             path: "{{ startup_directory }}"
             state: directory
 
-        -
-          name: "Creating BGInfo shortcut in startup folder"
+        - name: "Creating BGInfo shortcut in startup folder"
           community.windows.win_shortcut:
             src: "C:\\ProgramData\\chocolatey\\lib\\bginfo\\Tools\\Bginfo64.exe"
             dest: "{{ startup_directory }}\\Bginfo64.lnk"

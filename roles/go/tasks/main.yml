@@ -1,17 +1,14 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Checking if Go is Already Installed"
+    - name: "Checking if Go is Already Installed"
       ansible.builtin.command: /usr/local/go/bin/go version
       ignore_errors: true
       register: go_version_result
       changed_when: false
 
-    -
-      name: "Removing Current Go Installation"
+    - name: "Removing Current Go Installation"
       ansible.builtin.file:
         state: absent
         path: /usr/local/go
@@ -19,27 +16,22 @@
         - go_version_result is succeeded
         - go_version not in go_version_result.stdout
 
-    -
-      name: "Downloading Go"
+    - name: "Downloading Go"
       ansible.builtin.get_url:
         url: "{{ go_download_url }}"
         dest: /usr/local/src/{{ go_tarball }}
         checksum: "sha256:{{ go_checksum }}"
         mode: "0644"
-      when: go_version_result is failed
-            or go_version not in go_version_result.stdout
+      when: go_version_result is failed or go_version not in go_version_result.stdout
 
-    -
-      name: "Extracting Go"
+    - name: "Extracting Go"
       ansible.builtin.unarchive:
         src: /usr/local/src/{{ go_tarball }}
         dest: /usr/local
         copy: false
-      when: go_version_result is failed
-            or go_version not in go_version_result.stdout
+      when: go_version_result is failed or go_version not in go_version_result.stdout
 
-    -
-      name: "Adding Go to System-Wide $PATH"
+    - name: "Adding Go to System-Wide $PATH"
       ansible.builtin.copy:
         dest: /etc/profile.d/go-path.sh
         mode: "0644"

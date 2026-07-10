@@ -1,16 +1,13 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
+    - name: "Enabling i386 Repo for Crossover and Updating Sources"
       become: true
-      name: "Enabling i386 Repo for Crossover and Updating Sources"
       ansible.builtin.shell: "dpkg --add-architecture i386 && apt-get update -y"
-    -
+    - name: "Installing Required Dependencies for Crossover -- Takes about 3 Mins"
       ansible.builtin.apt:
         name: "{{ packages }}"
-      name: "Installing Required Dependencies for Crossover -- Takes about 3 Mins"
       vars:
         packages:
           - "gstreamer1.0-plugins-good:i386"
@@ -34,27 +31,24 @@
           - "libncurses6:i386"
           - "libsane:i386"
 
-    -
+    - name: "Downloading Crossover"
       delay: 5
       ansible.builtin.get_url:
         dest: "/tmp/crossover.deb"
         url: "http://crossover.codeweavers.com/redirect/crossover.deb"
-      name: "Downloading Crossover"
       register: Crossover_source
       retries: 5
       until: "Crossover_source is success"
-    -
+    - name: "Downloading and Installing Crossover -- Takes about 5 Mins"
       ansible.builtin.apt:
         deb: "/tmp/crossover.deb"
-      name: "Downloading and Installing Crossover -- Takes about 5 Mins"
       retries: 5
       delay: 10
       register: cxresult
       until: cxresult is success
-    -
+    - name: "Installing Python and Screen"
       ansible.builtin.apt:
         name: "{{ packages }}"
-      name: "Installing Python and Screen"
       retries: 5
       delay: 10
       register: screen
@@ -63,28 +57,23 @@
         packages:
           - screen
           - python3-psutil
-    -
-      name: "Installing PSUtil"
+    - name: "Installing PSUtil"
       ansible.builtin.pip:
         name: psutil
-    -
-      name: "Installing extra Libraries and Drivers"
+    - name: "Installing extra Libraries and Drivers"
       register: cxfixresults
       ansible.builtin.shell: "/opt/cxoffice/bin/cxfix --auto --dry-run"
-    -
-      name: "Checking for Additional Libraries and Software:"
+    - name: "Checking for Additional Libraries and Software:"
       ansible.builtin.set_fact:
-        results: "{{ cxfixresults.stdout | regex_search(regexp,'\\1') }}"
+        results: "{{ cxfixresults.stdout | regex_search(regexp, '\\1') }}"
       vars:
         regexp: \n(None)\n
-    -
+    - name: "Displaying Software Needed:"
       ansible.builtin.debug:
         var: results
-      name: "Displaying Software Needed:"
-    -
-      name: "Changing perm of Jars"
+    - name: "Changing perm of Jars"
       ansible.builtin.file:
-        path:  /jars
+        path: /jars
         owner: vagrant
         mode: "0777"
         recurse: true

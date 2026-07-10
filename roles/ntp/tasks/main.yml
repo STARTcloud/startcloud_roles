@@ -1,12 +1,9 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Including OS-specific vars"
+    - name: "Including OS-specific vars"
       ansible.builtin.include_vars: "{{ ansible_os_family | lower }}.yml"
 
-    -
-      name: "Including OS-specific tasks"
+    - name: "Including OS-specific tasks"
       ansible.builtin.include_tasks: "{{ ansible_os_family | lower }}.yml"

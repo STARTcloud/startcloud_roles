@@ -1,6 +1,5 @@
 ---
--
-  name: "Restarting Redis"
+- name: "Restarting Redis"
   ansible.builtin.systemd:
     name: "{{ redis_service }}"
     state: restarted

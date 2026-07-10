@@ -5,7 +5,6 @@ extra_packages:
   - dos2unix
   - xmlstarlet
 packages:
-
 use_proxy: false
 
 manually_intall_updates: false

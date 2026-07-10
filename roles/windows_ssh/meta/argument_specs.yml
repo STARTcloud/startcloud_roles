@@ -3,7 +3,8 @@ argument_specs:
   main:
     short_description: Configure the Windows OpenSSH server.
     description:
-      - Configures the Windows OpenSSH server by setting the default shell registry keys, installing the administrators authorized_keys file with locked-down ACLs, enabling the sshd service, and staging an uptime helper for monitoring.
+      - Configures the Windows OpenSSH server by setting the default shell registry keys, installing the administrators authorized_keys file with locked-down ACLs, enabling the sshd service, and staging
+        an uptime helper for monitoring.
     author: Mark Gilbert
     options:
       run_tasks:

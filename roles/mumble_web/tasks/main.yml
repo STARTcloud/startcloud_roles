@@ -1,16 +1,13 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Creating mumble-web Docker network"
+    - name: "Creating mumble-web Docker network"
       community.docker.docker_network:
         name: "{{ mumble_web_network }}"
         state: present
 
-    -
-      name: "Deploying mumble-web-proxy container"
+    - name: "Deploying mumble-web-proxy container"
       community.docker.docker_container:
         name: "{{ mumble_web_proxy_container_name }}"
         image: "{{ mumble_web_proxy_image }}"
@@ -27,8 +24,7 @@
           - "{{ mumble_web_ice_port_min }}-{{ mumble_web_ice_port_max }}:{{ mumble_web_ice_port_min }}-{{ mumble_web_ice_port_max }}/udp"
         state: started
 
-    -
-      name: "Deploying mumble-web client container"
+    - name: "Deploying mumble-web client container"
       community.docker.docker_container:
         name: "{{ mumble_web_container_name }}"
         image: "{{ mumble_web_image }}"

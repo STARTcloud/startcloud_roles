@@ -11,7 +11,7 @@ rules:
     level: warning
   # Match the house style: booleans must be true/false, not yes/no/on/off.
   truthy:
-    allowed-values: ['true', 'false']
+    allowed-values: ["true", "false"]
   # Required overrides for ansible-lint's yaml rule / --fix compatibility check.
   comments:
     min-spaces-from-content: 1

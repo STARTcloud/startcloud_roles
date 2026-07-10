@@ -1,13 +1,11 @@
 ---
--
-  name: "Installing NFS client utilities"
+- name: "Installing NFS client utilities"
   become: true
   ansible.builtin.package:
     name: nfs-utils
     state: present
 
--
-  name: "Ensuring rpcbind is running"
+- name: "Ensuring rpcbind is running"
   become: true
   ansible.builtin.service:
     name: rpcbind

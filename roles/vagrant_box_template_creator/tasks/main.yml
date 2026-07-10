@@ -1,30 +1,25 @@
 ---
 # Main orchestration task
--
-  name: "Including template definitions"
+- name: "Including template definitions"
   ansible.builtin.include_vars:
     file: "{{ role_path }}/vars/template_definitions.yml"
     name: templates_list
 
--
-  name: "Setting filtered template list"
+- name: "Setting filtered template list"
   ansible.builtin.set_fact:
     filtered_templates: "{{ templates_list.templates | selectattr('name', 'equalto', template_filter) | list }}"
   when: template_filter != ""
 
--
-  name: "Using all templates when no filter is specified"
+- name: "Using all templates when no filter is specified"
   ansible.builtin.set_fact:
     filtered_templates: "{{ templates_list.templates }}"
   when: template_filter == ""
 
--
-  name: "Displaying selected templates"
+- name: "Displaying selected templates"
   ansible.builtin.debug:
     msg: "Processing {{ filtered_templates | length }} template(s){% if template_filter != '' %} [Filter: {{ template_filter }}]{% endif %}"
 
--
-  name: "Processing each template"
+- name: "Processing each template"
   ansible.builtin.include_tasks: process_template.yml
   loop: "{{ filtered_templates }}"
   loop_control:

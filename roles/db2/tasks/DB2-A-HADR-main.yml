@@ -36,10 +36,10 @@
   ansible.builtin.raw: "su - {{ db2usr }} -c 'db2 update db cfg for {{ db2dbname }} using HADR_PEER_WINDOW {{ peer_window }}'"
 - name: "Creating Backup"
   ansible.builtin.raw: "su - {{ db2usr }} -c 'db2 backup db {{ db2dbname }} online to /local/backup'"
-- ansible.builtin.file:
+- name: "Creating the backup Directory"
+  ansible.builtin.file:
     group: "{{ db2grp }}"
     mode: "0777"
     owner: "{{ db2usr }}"
     path: "/local/backup"
     state: directory
-  name: "Creating the backup Directory"

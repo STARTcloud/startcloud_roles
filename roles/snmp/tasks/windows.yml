@@ -3,8 +3,7 @@
 
 - name: "Installing and configuring SNMP Service"
   block:
-    -
-      name: "Installing SNMP Service"
+    - name: "Installing SNMP Service"
       ansible.windows.win_feature:
         name: SNMP-Service
         include_sub_features: true
@@ -12,48 +11,41 @@
         state: present
       register: snmp_feature
 
-    -
-      name: "Rebooting to finalize SNMP Service installation when required"
+    - name: "Rebooting to finalize SNMP Service installation when required"
       ansible.windows.win_reboot:
       when: snmp_feature.reboot_required
 
-    -
-      name: "Configuring SNMP"
+    - name: "Configuring SNMP"
       block:
-        -
-          name: "Setting sysContact"
+        - name: "Setting sysContact"
           ansible.windows.win_regedit:
             path: HKLM:\SYSTEM\CurrentControlSet\services\SNMP\Parameters\RFC1156Agent
             name: sysContact
             data: "{{ email | default('admin@example.com') }}"
             type: string
 
-        -
-          name: "Setting sysLocation"
+        - name: "Setting sysLocation"
           ansible.windows.win_regedit:
             path: HKLM:\SYSTEM\CurrentControlSet\services\SNMP\Parameters\RFC1156Agent
             name: sysLocation
             data: "{{ syslocation | default('Server Room') }}"
             type: string
 
-        -
-          name: "Setting ValidCommunities"
+        - name: "Setting ValidCommunities"
           ansible.windows.win_regedit:
             path: HKLM:\SYSTEM\CurrentControlSet\Services\SNMP\Parameters\ValidCommunities
             name: "{{ validcommunities | default('public') }}"
             data: 4
             type: dword
 
-        -
-          name: "Setting PermittedManagers"
+        - name: "Setting PermittedManagers"
           ansible.windows.win_regedit:
             path: HKLM:\SYSTEM\CurrentControlSet\Services\SNMP\Parameters\PermittedManagers
             name: "2"
             data: "0.0.0.0"
             type: string
 
-    -
-      name: "Starting and enabling SNMP service"
+    - name: "Starting and enabling SNMP service"
       ansible.windows.win_service:
         name: SNMP
         state: started

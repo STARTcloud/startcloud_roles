@@ -3,9 +3,7 @@ argument_specs:
   main:
     short_description: Install and secure a single-node MariaDB server.
     description:
-      - Installs the MariaDB server package, starts the service, sets the
-        administrative account password, runs the secure-installation hardening
-        steps, and binds the server to all interfaces.
+      - Installs the MariaDB server package, starts the service, sets the administrative account password, runs the secure-installation hardening steps, and binds the server to all interfaces.
     author: Mark Gilbert
     options:
       run_tasks:

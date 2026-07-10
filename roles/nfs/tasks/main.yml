@@ -1,32 +1,26 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Including OS-specific vars"
+    - name: "Including OS-specific vars"
       ansible.builtin.include_vars: "{{ ansible_os_family | lower }}.yml"
 
-    -
-      name: "Including overrides specific to Fedora"
+    - name: "Including overrides specific to Fedora"
       ansible.builtin.include_vars: Fedora.yml
       when:
         - ansible_os_family == 'RedHat'
         - ansible_distribution == "Fedora"
 
-    -
-      name: "Including OS-specific tasks"
+    - name: "Including OS-specific tasks"
       ansible.builtin.include_tasks: "{{ ansible_os_family | lower }}.yml"
 
-    -
-      name: "Ensuring directories to export exist"
+    - name: "Ensuring directories to export exist"
       ansible.builtin.file: # noqa 208
         path: "{{ item.strip().split()[0] }}"
         state: directory
       with_items: "{{ nfs_exports }}"
 
-    -
-      name: "Copying exports file"
+    - name: "Copying exports file"
       ansible.builtin.template:
         src: exports.j2
         dest: /etc/exports
@@ -35,8 +29,7 @@
         mode: "0644"
       notify: Reloading NFS
 
-    -
-      name: "Ensuring NFS is running"
+    - name: "Ensuring NFS is running"
       ansible.builtin.service:
         name: "{{ nfs_server_daemon }}"
         state: "started"

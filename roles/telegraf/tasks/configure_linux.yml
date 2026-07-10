@@ -1,35 +1,31 @@
 ---
--
-  name: "Retrieving ec2 facts"
+- name: "Retrieving ec2 facts"
   amazon.aws.ec2_metadata_facts:
   when:
     - telegraf_agent_aws_tags
 
--
-  name: "Adding prefix path"
+- name: "Adding prefix path"
   ansible.builtin.set_fact:
     telegraf_agent_config_path: /usr/local/etc
   when:
     - ansible_os_family == "FreeBSD"
 
--
-  name: "Retrieving all ec2 tags on the instance"
+- name: "Retrieving all ec2 tags on the instance"
   amazon.aws.ec2_tag:
-    region: '{{ ansible_ec2_placement_region }}'
-    resource: '{{ ansible_ec2_instance_id }}'
+    region: "{{ ansible_ec2_placement_region }}"
+    resource: "{{ ansible_ec2_instance_id }}"
     state: list
   when:
     - telegraf_agent_aws_tags
   register: ec2_tags
 
--
-  name: "Copying the template for versions < 0.10.0"
+- name: "Copying the template for versions < 0.10.0"
   ansible.builtin.template:
     src: etc-opt-telegraf-telegraf.conf.j2
     dest: /etc/opt/telegraf/telegraf.conf
     owner: telegraf
     group: telegraf
-    mode: '0640'
+    mode: "0640"
   become: true
   when:
     - telegraf_agent_version is version_compare('0.10.0', '<')
@@ -37,14 +33,13 @@
     - "Restarting Telegraf"
     - "Restarting Telegraf Container"
 
--
-  name: "Copying the template for versions >= 0.10.0"
+- name: "Copying the template for versions >= 0.10.0"
   ansible.builtin.template:
     src: telegraf.conf.j2
     dest: "{{ telegraf_agent_config_path }}/telegraf.conf"
     owner: telegraf
     group: telegraf
-    mode: '0640'
+    mode: "0640"
   become: true
   when:
     - telegraf_agent_version is version_compare('0.10.0', '>=')
@@ -52,16 +47,14 @@
     - "Restarting Telegraf"
     - "Restarting Telegraf Container"
 
--
-  name: "Checking if extra plugins directory exists in case of exclusive"
+- name: "Checking if extra plugins directory exists in case of exclusive"
   ansible.builtin.stat:
     path: "{{ telegraf_agent_config_path }}/telegraf.d"
   register: telegraf_directory
   when:
     - telegraf_plugins_extra_exclusive
 
--
-  name: "Deleting telegraf extra plugin path"
+- name: "Deleting telegraf extra plugin path"
   ansible.builtin.file:
     state: absent
     path: "{{ telegraf_agent_config_path }}/telegraf.d/"
@@ -73,14 +66,13 @@
     - "Restarting Telegraf"
     - "Restarting Telegraf Container"
 
--
-  name: "Creating telegraf extra plugin path"
+- name: "Creating telegraf extra plugin path"
   ansible.builtin.file:
     state: directory
     path: "{{ telegraf_agent_config_path }}/telegraf.d/"
     owner: telegraf
     group: telegraf
-    mode: '0755'
+    mode: "0755"
   when:
     - telegraf_plugins_extra_exclusive
     - telegraf_directory.stat.exists
@@ -89,14 +81,13 @@
     - "Restarting Telegraf"
     - "Restarting Telegraf Container"
 
--
-  name: "Copying telegraf extra plugins"
+- name: "Copying telegraf extra plugins"
   ansible.builtin.template:
     src: "telegraf-extra-plugin.conf.j2"
     dest: "{{ telegraf_agent_config_path }}/telegraf.d/{{ item.key }}.conf"
     owner: telegraf
     group: telegraf
-    mode: '0640'
+    mode: "0640"
   with_dict: "{{ telegraf_plugins_extra }}"
   loop_control:
     label: "{{ item.key }}"
@@ -109,8 +100,7 @@
     - "Restarting Telegraf"
     - "Restarting Telegraf Container"
 
--
-  name: "Removing telegraf extra plugins"
+- name: "Removing telegraf extra plugins"
   ansible.builtin.file:
     path: "{{ telegraf_agent_config_path }}/telegraf.d/{{ item.key }}.conf"
     state: absent
@@ -126,12 +116,10 @@
     - "Restarting Telegraf"
     - "Restarting Telegraf Container"
 
--
-  name: "Forcing restart service after reread config"
+- name: "Forcing restart service after reread config"
   ansible.builtin.meta: flush_handlers
 
--
-  name: "Starting Telegraf (if it wasn't running)"
+- name: "Starting Telegraf (if it wasn't running)"
   ansible.builtin.service:
     name: telegraf
     state: "{{ telegraf_enabled | ternary('started', 'stopped') }}"
@@ -139,11 +127,11 @@
   become: true
   when: not telegraf_agent_docker
 
--
-  name: "Configuring system for docker plugin"
+- name: "Configuring system for docker plugin"
+  when: "'docker' in telegraf_plugins_extra and not telegraf_agent_docker"
+
   block:
-    -
-      name: "Adding telegraf user to docker group"
+    - name: "Adding telegraf user to docker group"
       ansible.builtin.user:
         name: telegraf
         groups: docker
@@ -151,27 +139,23 @@
       become: true
       notify:
         - "Restarting Telegraf"
-  when: "'docker' in telegraf_plugins_extra and not telegraf_agent_docker"
+- name: "Configuring system for smart plugin"
+  when: "'smart' in telegraf_plugins_extra and not telegraf_agent_docker"
 
--
-  name: "Configuring system for smart plugin"
   block:
-    -
-      name: "Installing smartmontools"
+    - name: "Installing smartmontools"
       become: true
       ansible.builtin.package:
         name: smartmontools
 
-    -
-      name: "Finding path of smartctl"
+    - name: "Finding path of smartctl"
       ansible.builtin.shell: which smartctl
       register: which_smartctl
       ignore_errors: true
       changed_when: false
       become: true
 
-    -
-      name: "Ensuring telegraf user can execute smartctl"
+    - name: "Ensuring telegraf user can execute smartctl"
       ansible.builtin.blockinfile:
         marker: "# {mark} ANSIBLE MANAGED BLOCK (Ensure telegraf user can execute smartctl)"
         dest: "/etc/sudoers.d/telegraf"
@@ -180,13 +164,10 @@
       become: true
       notify:
         - "Restarting Telegraf"
-  when: "'smart' in telegraf_plugins_extra and not telegraf_agent_docker"
-
--
-  name: "Configuring system for sensors plugin"
+- name: "Configuring system for sensors plugin"
+  when: "'sensors' in telegraf_plugins_extra and not telegraf_agent_docker"
   block:
-    -
-      name: "Debian | Installing lm-sensors"
+    - name: "Debian | Installing lm-sensors"
       ansible.builtin.package:
         name: lm-sensors
       become: true
@@ -194,12 +175,10 @@
         - "Restarting Telegraf"
       when: ansible_os_family == "Debian"
 
-    -
-      name: "RedHat | Installing lm-sensors"
+    - name: "RedHat | Installing lm-sensors"
       ansible.builtin.package:
         name: lm_sensors
       become: true
       notify:
         - "Restarting Telegraf"
       when: ansible_os_family == "RedHat"
-  when: "'sensors' in telegraf_plugins_extra and not telegraf_agent_docker"

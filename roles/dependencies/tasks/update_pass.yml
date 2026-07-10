@@ -11,25 +11,23 @@
 # a known Microsoft reboot-loop (installs fail with HRESULT -1 and the same def is
 # re-offered every reboot, tripping win_updates' loop detector). It is a definition
 # update that refreshes on first boot post-deploy, so excluding it costs no currency.
--
-  name: "Installing applicable Windows updates (pass {{ pass_number }}) - reboots as many times as needed"
+- name: "Installing applicable Windows updates (pass {{ pass_number }}) - reboots as many times as needed"
   ansible.windows.win_updates:
-    category_names: '*'
+    category_names: "*"
     reject_list: "{{ windows_update_reject_list | default(['Windows Security platform']) }}"
     skip_optional: false
     state: installed
     server_selection: "{{ windows_update_source | default('windows_update') }}"
     reboot: true
     reboot_timeout: "{{ windows_update_reboot_timeout | default(3600) }}"
-    log_path: 'C:\Windows\Temp\packer\win-updates-pass-{{ pass_number }}.log'
+    log_path: "C:\\Windows\\Temp\\packer\\win-updates-pass-{{ pass_number }}.log"
   register: wu_pass
   retries: 3
   delay: 60
   until: wu_pass is succeeded
   ignore_errors: true
 
--
-  name: "Windows update result (pass {{ pass_number }})"
+- name: "Windows update result (pass {{ pass_number }})"
   ansible.builtin.debug:
     msg: >-
       Pass {{ pass_number }}:

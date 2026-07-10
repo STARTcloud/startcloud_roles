@@ -1,11 +1,11 @@
 ---
-- ansible.builtin.file:
+- name: "Creating the Directory to for the Database"
+  ansible.builtin.file:
     group: "{{ db2grp }}"
     mode: "0755"
     owner: "{{ db2usr }}"
     path: "/local/{{ database_dir }}"
     state: directory
-  name: "Creating the Directory to for the Database"
 - name: "Creating DB2 Database: {{ db2dbname }}"
   ansible.builtin.raw: "su - {{ db2usr }} -c 'db2 create database {{ db2dbname }} on /local/{{ database_dir }}'"
   ignore_errors: true

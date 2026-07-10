@@ -4,8 +4,7 @@ argument_specs:
     short_description: Configure a FreeIPA client for Smart Card authentication.
     description:
       - Configures an already-enrolled FreeIPA client for Smart Card authentication.
-      - Installs the required packages, uploads and validates the smartcard CA
-        certificates, and enables smartcard login via authselect or authconfig.
+      - Installs the required packages, uploads and validates the smartcard CA certificates, and enables smartcard login via authselect or authconfig.
     author: Mark Gilbert
     options:
       run_tasks:

@@ -1,6 +1,5 @@
 ---
--   name: restart haproxy
-    service: name=rh-haproxy18-haproxy state=restarted
-
--   name: reload haproxy
-    service: name=rh-haproxy18-haproxy state=reloaded
+- name: restart haproxy
+  ansible.builtin.service: name=rh-haproxy18-haproxy state=restarted
+- name: reload haproxy
+  ansible.builtin.service: name=rh-haproxy18-haproxy state=reloaded

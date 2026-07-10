@@ -34,9 +34,9 @@ packages:
   - cloud-init
   - dkms
   - uuid
-#  - authbind
-#  - lynx
-#  - systemd-resolved
+  #  - authbind
+  #  - lynx
+  #  - systemd-resolved
   - nano
   - vim
   - rsync

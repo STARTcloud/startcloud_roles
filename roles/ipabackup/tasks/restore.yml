@@ -2,8 +2,7 @@
 # tasks file for ipabackup
 
 ### VARIABLES
--
-  name: "Importing variables specific to distribution"
+- name: "Importing variables specific to distribution"
   ansible.builtin.include_vars: "{{ item }}"
   with_first_found:
     - "{{ role_path }}/vars/{{ ansible_facts['distribution'] }}-{{ ansible_facts['distribution_version'] }}.yml"
@@ -19,38 +18,32 @@
     - "{{ role_path }}/vars/default.yml"
 
 ### GET SERVICES FROM BACKUP
--
-  name: "Stating backup on server"
+- name: "Stating backup on server"
   ansible.builtin.stat:
     path: "{{ ipabackup_dir }}/{{ ipabackup_item }}"
   register: result_backup_stat
 
--
-  name: "Failing on missing backup directory"
+- name: "Failing on missing backup directory"
   ansible.builtin.fail:
     msg: "Unable to find backup {{ ipabackup_item }}"
   when: result_backup_stat.stat.isdir is not defined
 
--
-  name: "Stating header file in backup {{ ipabackup_item }}"
+- name: "Stating header file in backup {{ ipabackup_item }}"
   ansible.builtin.stat:
     path: "{{ ipabackup_dir }}/{{ ipabackup_item }}/header"
   register: result_backup_header_stat
 
--
-  name: "Failing on missing header file in backup"
+- name: "Failing on missing header file in backup"
   ansible.builtin.fail:
     msg: "Unable to find backup {{ ipabackup_item }} header file"
   when: result_backup_header_stat.stat.isreg is not defined
 
--
-  name: "Getting services from backup"
+- name: "Getting services from backup"
   ansible.builtin.shell: >
     grep "^services = " "{{ ipabackup_dir }}/{{ ipabackup_item }}/header" | cut -d"=" -f2 | tr -d '[:space:]'
   register: result_services_grep
 
--
-  name: "Setting ipabackup_services"
+- name: "Setting ipabackup_services"
   ansible.builtin.set_fact:
     ipabackup_services: "{{ result_services_grep.stdout.split(',') }}"
     ipabackup_service_dns: DNS
@@ -58,59 +51,50 @@
     ipabackup_service_ntp: NTP
 
 ### INSTALL PACKAGES
--
-  name: "Installing IPA server packages"
+- name: "Installing IPA server packages"
   when: ipabackup_install_packages | bool
   block:
-    -
-      name: "Ensuring that IPA server packages are installed"
+    - name: "Ensuring that IPA server packages are installed"
       ansible.builtin.package:
         name: "{{ ipaserver_packages }}"
         state: present
 
-    -
-      name: "Ensuring that IPA server packages for dns are installed"
+    - name: "Ensuring that IPA server packages for dns are installed"
       ansible.builtin.package:
         name: "{{ ipaserver_packages_dns }}"
         state: present
       when: ipabackup_service_dns in ipabackup_services
 
-    -
-      name: "Ensuring that IPA server packages for adtrust are installed"
+    - name: "Ensuring that IPA server packages for adtrust are installed"
       ansible.builtin.package:
         name: "{{ ipaserver_packages_adtrust }}"
         state: present
       when: ipabackup_service_adtrust in ipabackup_services
 
-    -
-      name: "Ensuring that firewalld packages are installed"
+    - name: "Ensuring that firewalld packages are installed"
       ansible.builtin.package:
         name: "{{ ipaserver_packages_firewalld }}"
         state: present
       when: ipabackup_setup_firewalld | bool
 
 ### START FIREWALLD
--
-  name: "Configuring firewalld services"
+- name: "Configuring firewalld services"
   when: ipabackup_setup_firewalld | bool
   block:
-    -
-      name: "Ensuring that firewalld is running"
+    - name: "Ensuring that firewalld is running"
       ansible.builtin.systemd:
         name: firewalld
         enabled: true
         state: started
 
-    -
-      name: "Verifying firewalld runtime zone {{ ipabackup_firewalld_zone }}"
+    - name: "Verifying firewalld runtime zone {{ ipabackup_firewalld_zone }}"
       ansible.builtin.shell: >
         firewall-cmd
         --info-zone="{{ ipabackup_firewalld_zone }}"
         >/dev/null
       when: ipabackup_firewalld_zone is defined
 
-    -
-      name: "Verifying firewalld permanent zone {{ ipabackup_firewalld_zone }}"
+    - name: "Verifying firewalld permanent zone {{ ipabackup_firewalld_zone }}"
       ansible.builtin.shell: >
         firewall-cmd
         --permanent
@@ -119,9 +103,8 @@
       when: ipabackup_firewalld_zone is defined
 
 ### RESTORE
--
-  name: "Restoring backup"
-  no_log: True
+- name: "Restoring backup"
+  no_log: true
   ansible.builtin.shell: >
     ipa-restore
     {{ ipabackup_item }}
@@ -136,16 +119,14 @@
   register: result_iparestore
   ignore_errors: true
 
--
-  name: "Reporting error for restore operation"
+- name: "Reporting error for restore operation"
   ansible.builtin.debug:
     msg: "{{ result_iparestore.stderr }}"
   when: result_iparestore is failed
   failed_when: true
 
 ### CONFIGURE FIREWALLD
--
-  name: "Configuring firewalld permanent services"
+- name: "Configuring firewalld permanent services"
   ansible.builtin.command: >
     firewall-cmd
     --permanent
@@ -157,8 +138,7 @@
     {{ "--add-service=ntp" if ipabackup_service_ntp in ipabackup_services else "" }}
   when: ipabackup_setup_firewalld | bool
 
--
-  name: "Configuring firewalld runtime services"
+- name: "Configuring firewalld runtime services"
   ansible.builtin.command: >
     firewall-cmd
     {{ "--zone=" + ipabackup_firewalld_zone if ipabackup_firewalld_zone is defined else "" }}

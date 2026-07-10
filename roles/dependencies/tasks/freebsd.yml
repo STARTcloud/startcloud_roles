@@ -1,18 +1,15 @@
 ---
--
-  name: "Including OS-specific vars"
+- name: "Including OS-specific vars"
   ansible.builtin.include_vars: "{{ ansible_os_family | lower }}.yml"
 
--
-  name: "Creating pkg proxy configuration: /usr/local/etc/pkg/repos/proxy.conf"
+- name: "Creating pkg proxy configuration: /usr/local/etc/pkg/repos/proxy.conf"
   ansible.builtin.template:
     src: pkg_proxy.conf.j2
     dest: /usr/local/etc/pkg/repos/proxy.conf
-    mode: '0644'
+    mode: "0644"
   when: use_proxy | bool
 
--
-  name: "Self-upgrading pkg before installing other packages (pkg mid-install self-upgrades can abort subsequent work)"
+- name: "Self-upgrading pkg before installing other packages (pkg mid-install self-upgrades can abort subsequent work)"
   community.general.pkgng:
     name: pkg
     state: latest
@@ -21,8 +18,7 @@
   retries: 5
   delay: 10
 
--
-  name: "Installing baseline packages"
+- name: "Installing baseline packages"
   community.general.pkgng:
     name: "{{ packages }}"
     state: present
@@ -31,8 +27,7 @@
   retries: 5
   delay: 10
 
--
-  name: "Installing extra packages"
+- name: "Installing extra packages"
   community.general.pkgng:
     name: "{{ extra_packages }}"
     state: present
@@ -42,15 +37,13 @@
   delay: 10
   when: extra_packages | default([]) | length > 0
 
--
-  name: "Enabling qemu-guest-agent service (if os-qemu-guest-agent was installed)"
+- name: "Enabling qemu-guest-agent service (if os-qemu-guest-agent was installed)"
   ansible.builtin.service:
     name: qemu-guest-agent
     enabled: true
   when: "'os-qemu-guest-agent' in packages"
 
--
-  name: "Starting qemu-guest-agent service (may already be started by plugin post-install hook)"
+- name: "Starting qemu-guest-agent service (may already be started by plugin post-install hook)"
   ansible.builtin.service:
     name: qemu-guest-agent
     state: started
