@@ -8,3 +8,5 @@ vault-Docova.yml
 __pycache__/
 .cache/
 *.log
+.ansible/
+lint-*.txt
