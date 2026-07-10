@@ -73,7 +73,7 @@
     -
       name: "Updating apt cache"
       ansible.builtin.apt:
-        update_cache: yes
+        update_cache: true
 
 -
   name: "Installing Tomcat {{ tomcat_version }}"
@@ -98,7 +98,7 @@
     -
       name: "Updating apt cache"
       ansible.builtin.apt:
-        update_cache: yes
+        update_cache: true
 
 -
   name: "Starting and Enabling Tomcat {{ tomcat_version }}"

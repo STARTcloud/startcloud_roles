@@ -1,0 +1,68 @@
+---
+argument_specs:
+  main:
+    short_description: Frigate NVR container deployment
+    description:
+      - Deploys Frigate, a Docker-based NVR with real-time object detection, rendering a config file and running the official container with configurable ports, media/config volumes, and optional hardware-acceleration devices.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      frigate_image:
+        type: str
+        default: "ghcr.io/blakeblackshear/frigate:stable"
+        description: Frigate container image and tag.
+      frigate_container_name:
+        type: str
+        default: frigate
+        description: Name of the Frigate container.
+      frigate_restart_policy:
+        type: str
+        default: unless-stopped
+        description: Docker restart policy for the container.
+      frigate_shm_size:
+        type: str
+        default: "256mb"
+        description: Shared memory size for the container (raise for more cameras).
+      frigate_config_dir:
+        type: str
+        default: /opt/frigate/config
+        description: Host directory holding the rendered Frigate config.yml.
+      frigate_media_dir:
+        type: str
+        default: /opt/frigate/media
+        description: Host directory for Frigate recordings and snapshots.
+      frigate_web_port:
+        type: int
+        default: 5000
+        description: Host port mapped to the Frigate web UI (container 5000).
+      frigate_rtsp_port:
+        type: int
+        default: 8554
+        description: Host port mapped to Frigate's RTSP restream (container 8554).
+      frigate_webrtc_port:
+        type: int
+        default: 8555
+        description: Host port mapped to Frigate's WebRTC (container 8555 tcp/udp).
+      frigate_devices:
+        type: list
+        elements: str
+        description: Hardware-acceleration devices passed through to the container (Coral/GPU).
+      frigate_mqtt_enabled:
+        type: bool
+        default: false
+        description: Enable MQTT integration in the Frigate config.
+      frigate_mqtt_host:
+        type: str
+        default: ""
+        description: MQTT broker host (when MQTT is enabled).
+      frigate_mqtt_port:
+        type: int
+        default: 1883
+        description: MQTT broker port (when MQTT is enabled).
+      frigate_cameras:
+        type: list
+        elements: dict
+        description: Camera definitions (name, path, optional width/height/roles) rendered into the Frigate config.

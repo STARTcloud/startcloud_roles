@@ -1,0 +1,84 @@
+---
+argument_specs:
+  main:
+    short_description: Build and install Apache Guacamole from source
+    description:
+      - Compiles and installs the Apache Guacamole server (guacd) and web client from source on Debian.
+      - Configures the MySQL-backed authentication, extensions, and branding for HTML5 RDP and SSH access.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      guacamole_version:
+        type: str
+        default: '1.5.0'
+        description: Guacamole release version used for source checkout and install paths.
+      guacamole_admin_user:
+        type: str
+        default: guacadmin
+        description: Administrative username written into the Guacamole configuration.
+      guacamole_admin_pass:
+        type: str
+        default: guacadmin
+        description: Administrative password written into the Guacamole configuration.
+      guacamole_guacd_port:
+        type: int
+        default: 4822
+        description: Port the guacd proxy daemon listens on.
+      guacamole_branding:
+        type: bool
+        default: true
+        description: Whether to install the custom branding extension jar.
+      guacamole_branding_jar:
+        type: str
+        default: branding.jar
+        description: Filename of the branding extension jar copied into the extensions directory.
+      guacamole_httpcomponents_archive:
+        type: str
+        default: httpcomponents-client-4.5.6-bin.zip
+        description: Archive filename for the Apache HttpComponents client dependency.
+      guacamole_httpcomponents_version:
+        type: str
+        default: '4.5.6'
+        description: Version of the Apache HttpComponents client dependency to download.
+      guacamole_log4j_version:
+        type: str
+        default: '1.2.17'
+        description: Version of the log4j jar dependency to download into the lib directory.
+      guacamole_auth_domino_version:
+        type: str
+        default: '1.0.0'
+        description: Version of the Domino authentication extension jar to install.
+      mysql_db_name:
+        type: str
+        default: guacdb
+        description: Name of the MySQL database holding the Guacamole schema.
+      mysql_database_user:
+        type: str
+        default: guacadmin
+        description: MySQL user for the Guacamole database.
+      mysql_database_pass:
+        type: str
+        default: guacadmin
+        description: Password for the Guacamole MySQL database user.
+      mysql_java_connector_jar:
+        type: str
+        default: mariadb-java-client-3.4.0.jar
+        description: Filename of the JDBC connector jar downloaded and installed into the lib directory.
+      mysql_java_connector_version:
+        type: str
+        default: '8.4.0'
+        description: Version identifier of the MySQL/MariaDB JDBC connector.
+      mysql_java_connector_jar_url:
+        type: str
+        default: "https://dlm.mariadb.com/3824147/Connectors/java/connector-java-3.4.0/{{ mysql_java_connector_jar }}"
+        description: Download URL for the JDBC connector jar.
+      startcloud_guacamole_port_forwards:
+        type: list
+        elements: dict
+        description: Port-forward definitions mapping the Guacamole web and guacd ports to proxy URLs.
+      startcloud_guacamole_proxy_url:
+        type: str
+        description: Fully qualified proxy URL for the Guacamole web interface.

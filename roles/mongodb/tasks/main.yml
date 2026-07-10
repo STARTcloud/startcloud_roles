@@ -1,71 +1,72 @@
+---
 -
-  name: "Block to Allow Loading of Variables without running task"
+  name: "Blocking to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    - name: Check value of variable mongodb_net_ssl_host
-      fail:
+    - name: "Checking value of variable mongodb_net_ssl_host"
+      ansible.builtin.fail:
         msg: 'Set mongodb_net_ssl_mode is preferSSL or set valid hostname for mongodb_net_ssl_host!'
       when: ( mongodb_net_ssl_mode == 'requireSSL'
               and mongodb_net_ssl_host|length == 0 )
-    
-    - name: Check value of variable mongodb_login_host
-      fail:
+
+    - name: "Checking value of variable mongodb_login_host"
+      ansible.builtin.fail:
         msg: 'Set mongodb_login_host equal mongodb_net_ssl_host!'
       when: ( mongodb_net_ssl_mode == 'requireSSL'
               and mongodb_net_ssl_host != mongodb_login_host
               and not mongodb_replication_replset )
-    
-    - name: Include OS-specific variables
-      include_vars: "{{ item }}"
+
+    - name: "Including OS-specific variables"
+      ansible.builtin.include_vars: "{{ item }}"
       with_first_found:
         - "{{ ansible_distribution_release }}.yml"
         - "{{ ansible_distribution }}.yml"
         - "{{ ansible_os_family }}.yml"
-    
-    - name: Include installation tasks
-      include_tasks: "{{ item }}"
+
+    - name: "Including installation tasks"
+      ansible.builtin.include_tasks: "{{ item }}"
       with_first_found:
         - "install.{{ ansible_distribution | lower }}.yml"
         - "install.{{ ansible_os_family | lower }}.yml"
       tags: [mongodb]
-    
-    - name: Include configuration.yml
-      include_tasks: configure.yml
+
+    - name: "Including configuration.yml"
+      ansible.builtin.include_tasks: configure.yml
       tags: [mongodb]
-    
-    - name: Include replication and auth configuration
-      include_tasks: replication_init_auth.yml
+
+    - name: "Including replication and auth configuration"
+      ansible.builtin.include_tasks: replication_init_auth.yml
       when: ( mongodb_replication_replset | length > 0
             and mongodb_security_authorization == 'enabled'
             and mongodb_master is defined and mongodb_master )
       tags: [mongodb]
-    
-    - name: Include replication configuration
-      include_tasks: replication.yml
+
+    - name: "Including replication configuration"
+      ansible.builtin.include_tasks: replication.yml
       when: mongodb_replication_replset | length > 0
       tags: [mongodb]
-    
-    - name: Check whether admin user is already exist
-      command: >
+
+    - name: "Checking whether admin user is already exist"
+      ansible.builtin.command: >
         mongo --quiet {{ '--ssl --host ' + mongodb_net_ssl_host if mongodb_net_ssl_mode == 'requireSSL' else '' }} -u {{ mongodb_user_admin_name }} \
               -p {{ mongodb_user_admin_password }} --port {{ mongodb_net_port }} --eval 'db.version()' admin
       register: mongodb_user_admin_check
       changed_when: false
-      check_mode: no
+      check_mode: false
       ignore_errors: true
       when: ( mongodb_security_authorization == 'enabled'
               and not mongodb_replication_replset )
       no_log: true
       tags: [mongodb]
-    
-    - name: Include authorization configuration
-      include_tasks: auth_initialization.yml
+
+    - name: "Including authorization configuration"
+      ansible.builtin.include_tasks: auth_initialization.yml
       when: ( mongodb_security_authorization == 'enabled'
               and not mongodb_replication_replset
               and mongodb_user_admin_check.rc != 0 )
       tags: [mongodb]
-    
-    - name: create normal users with replicaset
+
+    - name: "Creating normal users with replicaset"
       mongodb_user:
         database: "{{ item.database }}"
         name: "{{ item.name }}"
@@ -84,8 +85,8 @@
             and mongodb_master is defined and mongodb_master )
       no_log: true
       tags: [mongodb]
-    
-    - name: create normal users without replicaset
+
+    - name: "Creating normal users without replicaset"
       mongodb_user:
         database: "{{ item.database }}"
         name: "{{ item.name }}"
@@ -103,8 +104,8 @@
               and not mongodb_replication_replset )
       no_log: true
       tags: [mongodb]
-    
-    - name: create oplog user with replicaset
+
+    - name: "Creating oplog user with replicaset"
       mongodb_user:
         database: admin
         user: "{{ item.user }}"
@@ -125,14 +126,14 @@
             and mongodb_master is defined and mongodb_master )
       no_log: true
       tags: [mongodb]
-    
-    - name: service started
-      service:
+
+    - name: "Starting service"
+      ansible.builtin.service:
         name: "{{ mongodb_daemon_name }}"
         state: started
         enabled: true
-    
-    - name: Include MMS Agent configuration
-      include_tasks: mms-agent.yml
+
+    - name: "Including MMS Agent configuration"
+      ansible.builtin.include_tasks: mms-agent.yml
       when: mongodb_mms_api_key | length > 0
       tags: [mongodb]

@@ -1,8 +1,5 @@
 ---
 run_tasks: true
-count_progress: true
-progress_units: 1
-progress_role_description: "Mounting NFS shares"
 
 ## List of NFS shares to mount. Driven from Hosts.yml. Empty = no-op.
 ## Each item:

@@ -1,0 +1,26 @@
+---
+galaxy_info:
+  role_name: snmp
+  author: Mark Gilbert
+  description: Installs and configures the SNMP daemon (net-snmp/snmpd on Linux, SNMP-Service on Windows), deploys LibreNMS extension scripts, and renders the snmpd configuration.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
+  platforms:
+    - name: Debian
+      versions: ['bookworm', 'trixie']
+    - name: Ubuntu
+      versions: ['jammy', 'noble']
+    - name: EL
+      versions: ['8', '9']
+    - name: Windows
+      versions: ['2022']
+  galaxy_tags:
+    - snmp
+    - monitoring
+    - net-snmp
+    - librenms
+dependencies: []
+collections:
+  - startcloud.startcloud_roles

@@ -1,0 +1,36 @@
+---
+argument_specs:
+  main:
+    short_description: Install and configure a single-node Mattermost server
+    description:
+      - Downloads the Mattermost team server, creates its service account, provisions a MySQL database and user, wires up config.json, and installs the systemd unit and nginx reverse-proxy config on Debian-family systems.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      mattermost_user:
+        type: str
+        default: mattermost
+        description: System user account that owns the install and runs the Mattermost service.
+      mattermost_group:
+        type: str
+        default: mattermost
+        description: System group account for the Mattermost service user.
+      mattermost_db_user:
+        type: str
+        default: "{{ mattermost_team_name }}_mattermost"
+        description: MySQL user granted access to the Mattermost database.
+      mattermost_db_name:
+        type: str
+        default: "{{ mattermost_team_name }}_mattermost"
+        description: Name of the MySQL database created for Mattermost.
+      mattermost_root_dir:
+        type: str
+        default: "/opt/{{ mattermost_team_name }}_mattermost"
+        description: Install directory where the Mattermost server is unpacked and run from.
+      mattermost_port:
+        type: int
+        default: 8065
+        description: TCP port Mattermost listens on and that nginx proxies to.

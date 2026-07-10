@@ -1,32 +1,32 @@
 ---
 galaxy_info:
-  author: Werner Dijkerman
-  description: Installing and configuring Telegraf
   role_name: telegraf
-  company: myCompany.Dotcom
-  license: MIT
-  min_ansible_version: 2.4
+  author: Mark Gilbert
+  description: Installs and configures the Telegraf metrics agent on Linux, FreeBSD, macOS, Windows, and Docker.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
   platforms:
-    - name: EL
-      versions:
-        - all
-    - name: Ubuntu
-      versions:
-        - all
     - name: Debian
-      versions:
-        - all
+      versions: ['bookworm', 'trixie']
+    - name: Ubuntu
+      versions: ['jammy', 'noble']
+    - name: EL
+      versions: ['8', '9']
     - name: opensuse
-      versions:
-        - all
+      versions: ['15.5']
+    - name: FreeBSD
+      versions: ['14.0']
+    - name: MacOSX
+      versions: ['all']
     - name: Windows
-      versions:
-        - all
-    - name: MacOS
-      versions:
-        - all
-
+      versions: ['2022']
   galaxy_tags:
     - monitoring
-
+    - telegraf
+    - metrics
+    - influxdb
 dependencies: []
+collections:
+  - startcloud.startcloud_roles

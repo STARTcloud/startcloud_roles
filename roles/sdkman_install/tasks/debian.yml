@@ -1,6 +1,6 @@
 ---
 -
-  name: "Set SDKMAN user/group vars"
+  name: "Setting SDKMAN user/group variables"
   ansible.builtin.set_fact:
     sdk_service_user: '{{ service_user }}'
     sdk_service_group: '{{ service_group }}'
@@ -59,13 +59,13 @@
   become_user: '{{ sdk_service_user }}'
   block:
     -
-      name: "Check service user and group"
+      name: "Checking service user and group"
       ansible.builtin.command: id {{ sdk_service_user }}
       register: sdk_service_user_info
 
     -
-      name: "Debugging User"
-      debug:
+      name: "Debugging service user info"
+      ansible.builtin.debug:
         var: sdk_service_user_info
 
     -
@@ -105,7 +105,7 @@
   name: "Configuring SDKMAN"
   block:
     -
-      name: Configure SDKMAN
+      name: "Configuring SDKMAN config file"
       ansible.builtin.template:
         src: templates/sdkman_config.j2
         dest: '{{ sdkman_dir }}/etc/config'
@@ -114,7 +114,7 @@
         mode: '0755'
 
     -
-      name: Flush SDK caches (before)
+      name: "Flushing SDK caches before install"
       become_user: '{{ sdk_service_user }}'
       ansible.builtin.shell: >-
         . {{ sdkman_dir }}/bin/sdkman-init.sh && sdk flush {{ item }}
@@ -124,7 +124,7 @@
       changed_when: false
 
     -
-      name: Update SDKMAN
+      name: "Updating SDKMAN"
       become_user: '{{ sdk_service_user }}'
       ansible.builtin.shell: >-
        . {{ sdkman_dir }}/bin/sdkman-init.sh && sdk selfupdate
@@ -135,7 +135,7 @@
       when: sdkman_update
 
     -
-      name: Install SDK candidates/versions
+      name: "Installing SDK candidates/versions"
       become_user: '{{ sdk_service_user }}'
       ansible.builtin.shell: >-
         . {{ sdkman_dir }}/bin/sdkman-init.sh &&
@@ -151,7 +151,7 @@
         'is already installed.' not in sdk_install.stdout
 
     -
-      name: Uninstall SDK candidates/versions
+      name: "Uninstalling SDK candidates/versions"
       become_user: '{{ sdk_service_user }}'
       ansible.builtin.shell: >-
         . {{ sdkman_dir }}/bin/sdkman-init.sh &&

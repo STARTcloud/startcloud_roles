@@ -1,0 +1,305 @@
+---
+argument_specs:
+  main:
+    short_description: Install and configure PHP with FPM, OpCache, and APCu
+    description:
+      - Installs PHP and common extensions from OS packages (or from source),
+        then renders a managed php.ini plus OpCache, APCu, and PHP-FPM
+        configuration on Debian/Ubuntu and RHEL-based systems.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      php_enablerepo:
+        type: str
+        default: ""
+        description: Comma-separated repos to enable when installing PHP packages (RHEL/CentOS only).
+      php_packages_extra:
+        type: list
+        default: []
+        description: Extra PHP packages to install in addition to the distro default list.
+      php_packages_state:
+        type: str
+        default: present
+        description: Package state for PHP packages (present to install, latest to upgrade/switch repos).
+      php_install_recommends:
+        type: bool
+        default: false
+        description: Whether apt installs recommended packages alongside PHP (Debian/Ubuntu only).
+      php_enable_webserver:
+        type: bool
+        default: true
+        description: Whether PHP is tied to a web server; when false the role does not touch the webserver.
+      php_enable_php_fpm:
+        type: bool
+        default: false
+        description: Whether to configure and manage PHP-FPM pools and service.
+      php_fpm_state:
+        type: str
+        default: started
+        description: Desired service state for the PHP-FPM daemon.
+      php_fpm_handler_state:
+        type: str
+        default: restarted
+        description: Action the restart handler performs on PHP-FPM (restarted or reloaded).
+      php_fpm_enabled_on_boot:
+        type: bool
+        default: true
+        description: Whether the PHP-FPM service is enabled to start at boot.
+      php_fpm_listen:
+        type: str
+        default: "127.0.0.1:9000"
+        description: Default address/socket the PHP-FPM pool listens on.
+      php_fpm_listen_allowed_clients:
+        type: str
+        default: "127.0.0.1"
+        description: Default list of clients allowed to connect to the PHP-FPM pool.
+      php_fpm_pm_max_children:
+        type: int
+        default: 50
+        description: Maximum number of child processes for the default FPM pool.
+      php_fpm_pm_start_servers:
+        type: int
+        default: 5
+        description: Number of child processes created at FPM startup for the default pool.
+      php_fpm_pm_min_spare_servers:
+        type: int
+        default: 5
+        description: Minimum number of idle FPM child processes for the default pool.
+      php_fpm_pm_max_spare_servers:
+        type: int
+        default: 5
+        description: Maximum number of idle FPM child processes for the default pool.
+      php_fpm_pm_max_requests:
+        type: int
+        default: 0
+        description: Requests each FPM child handles before respawning (0 disables respawn).
+      php_fpm_pm_status_path:
+        type: str
+        default: ""
+        description: URI path for the FPM pool status page (empty disables it).
+      php_fpm_pools:
+        type: list
+        elements: dict
+        description: List of PHP-FPM pool definitions to render and manage.
+      php_executable:
+        type: str
+        default: "php"
+        description: Executable used when invoking PHP from the command line.
+      php_opcache_zend_extension:
+        type: str
+        default: "opcache.so"
+        description: Zend extension loaded for OpCache.
+      php_opcache_enable:
+        type: str
+        default: "1"
+        description: Whether OpCache is enabled.
+      php_opcache_enable_cli:
+        type: str
+        default: "0"
+        description: Whether OpCache is enabled for the PHP CLI.
+      php_opcache_memory_consumption:
+        type: str
+        default: "96"
+        description: OpCache shared memory size in MB.
+      php_opcache_interned_strings_buffer:
+        type: str
+        default: "16"
+        description: Memory in MB used to store interned strings in OpCache.
+      php_opcache_max_accelerated_files:
+        type: str
+        default: "4096"
+        description: Maximum number of files OpCache can cache.
+      php_opcache_max_wasted_percentage:
+        type: str
+        default: "5"
+        description: Percentage of wasted memory allowed before an OpCache restart.
+      php_opcache_validate_timestamps:
+        type: str
+        default: "1"
+        description: Whether OpCache checks file timestamps for updates.
+      php_opcache_revalidate_path:
+        type: str
+        default: "0"
+        description: Whether OpCache revalidates full paths on each lookup.
+      php_opcache_revalidate_freq:
+        type: str
+        default: "2"
+        description: Seconds between OpCache timestamp revalidation checks.
+      php_opcache_max_file_size:
+        type: str
+        default: "0"
+        description: Maximum file size in bytes cached by OpCache (0 means no limit).
+      php_opcache_blacklist_filename:
+        type: str
+        default: ""
+        description: Path to an OpCache blacklist file (empty disables it).
+      php_enable_apc:
+        type: bool
+        default: true
+        description: Whether to enable and configure APCu.
+      php_apc_shm_size:
+        type: str
+        default: "96M"
+        description: Shared memory size allocated to APCu.
+      php_apc_enable_cli:
+        type: str
+        default: "0"
+        description: Whether APCu is enabled for the PHP CLI.
+      php_use_managed_ini:
+        type: bool
+        default: true
+        description: Whether the role manages php.ini; when false the ini settings below are ignored.
+      php_expose_php:
+        type: str
+        default: "On"
+        description: Whether PHP advertises its presence via the X-Powered-By header.
+      php_memory_limit:
+        type: str
+        default: "256M"
+        description: Maximum memory a script may consume.
+      php_max_execution_time:
+        type: str
+        default: "60"
+        description: Maximum time in seconds a script may run.
+      php_max_input_time:
+        type: str
+        default: "60"
+        description: Maximum time in seconds a script may spend parsing request data.
+      php_max_input_vars:
+        type: str
+        default: "1000"
+        description: Maximum number of input variables accepted per request.
+      php_realpath_cache_size:
+        type: str
+        default: "32K"
+        description: Size of the realpath cache.
+      php_file_uploads:
+        type: str
+        default: "On"
+        description: Whether HTTP file uploads are allowed.
+      php_upload_max_filesize:
+        type: str
+        default: "64M"
+        description: Maximum size of an uploaded file.
+      php_max_file_uploads:
+        type: str
+        default: "20"
+        description: Maximum number of files allowed per upload request.
+      php_post_max_size:
+        type: str
+        default: "32M"
+        description: Maximum size of POST data a script accepts.
+      php_date_timezone:
+        type: str
+        default: "America/Chicago"
+        description: Default timezone used by PHP date/time functions.
+      php_allow_url_fopen:
+        type: str
+        default: "On"
+        description: Whether URLs may be treated as files by fopen wrappers.
+      php_cgi_fix_pathinfo:
+        type: int
+        default: 1
+        description: Value for cgi.fix_pathinfo in php.ini.
+      php_sendmail_path:
+        type: str
+        default: "/usr/sbin/sendmail -t -i"
+        description: Command used to send mail on Unix systems.
+      php_output_buffering:
+        type: str
+        default: "4096"
+        description: Output buffer size in bytes.
+      php_short_open_tag:
+        type: str
+        default: "Off"
+        description: Whether the short open tag is enabled.
+      php_disable_functions:
+        type: list
+        default: []
+        description: List of PHP functions to disable.
+      php_precision:
+        type: int
+        default: 14
+        description: Number of significant digits displayed for floating point numbers.
+      php_serialize_precision:
+        type: str
+        default: "-1"
+        description: Precision used when serializing floating point numbers.
+      php_session_cookie_lifetime:
+        type: int
+        default: 0
+        description: Session cookie lifetime in seconds (0 until the browser closes).
+      php_session_gc_probability:
+        type: int
+        default: 1
+        description: Numerator of the session garbage collection probability.
+      php_session_gc_divisor:
+        type: int
+        default: 1000
+        description: Denominator of the session garbage collection probability.
+      php_session_gc_maxlifetime:
+        type: int
+        default: 1440
+        description: Seconds after which session data is treated as garbage.
+      php_session_save_handler:
+        type: str
+        default: files
+        description: Handler used to store session data.
+      php_session_save_path:
+        type: str
+        default: ''
+        description: Path where session data is stored (empty uses the PHP default).
+      php_error_reporting:
+        type: str
+        default: "E_ALL & ~E_DEPRECATED & ~E_STRICT"
+        description: Error reporting level for php.ini.
+      php_display_errors:
+        type: str
+        default: "Off"
+        description: Whether PHP prints errors as part of the output.
+      php_display_startup_errors:
+        type: str
+        default: "Off"
+        description: Whether PHP prints startup sequence errors.
+      php_install_from_source:
+        type: bool
+        default: false
+        description: Whether to compile and install PHP from source instead of using packages.
+      php_source_repo:
+        type: str
+        default: "https://github.com/php/php-src.git"
+        description: Git repository cloned when installing PHP from source.
+      php_source_version:
+        type: str
+        default: "master"
+        description: Git branch, tag, or commit of PHP source to build.
+      php_source_clone_dir:
+        type: str
+        default: "~/php-src"
+        description: Directory into which the PHP source is cloned.
+      php_source_clone_depth:
+        type: int
+        default: 1
+        description: Git clone depth used for the PHP source checkout.
+      php_source_install_path:
+        type: str
+        default: "/opt/php"
+        description: Prefix where PHP built from source is installed.
+      php_source_install_gmp_path:
+        type: str
+        default: "/usr/include/x86_64-linux-gnu/gmp.h"
+        description: Path to the GMP header symlinked for the source build.
+      php_source_mysql_config:
+        type: str
+        default: "/usr/bin/mysql_config"
+        description: Path to mysql_config used when building mysqli from source.
+      php_source_make_command:
+        type: str
+        default: "make"
+        description: Make command used to compile PHP from source.
+      php_source_configure_command:
+        type: str
+        description: Full ./configure command used when building PHP from source.

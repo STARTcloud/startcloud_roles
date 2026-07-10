@@ -4,34 +4,96 @@
   when: run_tasks
   block:
     -
-      name: "Setting up Debian Installations"
-      when: "ansible_os_family == 'Debian'"
+      name: "Installing BoxVault from the STARTcloud APT repository"
+      when: "ansible_os_family == 'Debian' and not boxvault_build_from_source"
       block:
         -
-          name: "Gathering DEB architecture"
-          ansible.builtin.command: dpkg --print-architecture
-          register: deb_architecture
-          changed_when: false
-    
+          name: "Creating keyrings directory for repository GPG keys"
+          ansible.builtin.file:
+            path: /etc/apt/keyrings
+            state: directory
+            mode: '0755'
+
         -
-          name: "Printing DEB architecture"
-          ansible.builtin.debug:
-            msg: "deb_architecture.stdout: {{ deb_architecture.stdout }}"
-    
+          name: "Downloading armored STARTcloud GPG key"
+          ansible.builtin.get_url:
+            url: "{{ boxvault_apt_key_url }}"
+            dest: /tmp/startcloud-archive-keyring.asc
+            mode: '0644'
+
         -
-          name: "Ensuring apt cache is updated"
-          ansible.builtin.apt:
-            cache_valid_time: 3600
-            update_cache: true
-    
+          name: "Dearmoring STARTcloud GPG key"
+          ansible.builtin.command:
+            cmd: "gpg --dearmor -o /etc/apt/keyrings/startcloud-archive-keyring.gpg /tmp/startcloud-archive-keyring.asc"
+            creates: /etc/apt/keyrings/startcloud-archive-keyring.gpg
+
         -
-          name: "Upgrading all apt packages"
-          ansible.builtin.apt:
-            upgrade: dist
-            update_cache: true
-    
-        -
-          name: "Adding Additional Dependencies {{ packages }}"
-          ansible.builtin.apt:
-            name: "{{ packages }}"
+          name: "Adding STARTcloud APT repository"
+          ansible.builtin.apt_repository:
+            repo: "deb [signed-by=/etc/apt/keyrings/startcloud-archive-keyring.gpg] {{ boxvault_apt_repo_url }} {{ ansible_distribution_release }} main"
             state: present
+            filename: startcloud
+
+        -
+          name: "Installing BoxVault"
+          ansible.builtin.apt:
+            name: "{{ boxvault_package }}"
+            state: present
+            update_cache: true
+
+    -
+      name: "Building BoxVault from source"
+      when: "ansible_os_family == 'Debian' and boxvault_build_from_source"
+      block:
+        -
+          name: "Installing Node.js, npm, and git"
+          ansible.builtin.apt:
+            name:
+              - nodejs
+              - npm
+              - git
+            state: present
+            update_cache: true
+
+        -
+          name: "Creating BoxVault installation directory"
+          ansible.builtin.file:
+            path: "{{ boxvault_path }}"
+            state: directory
+            mode: '0755'
+            owner: "{{ service_user }}"
+            group: "{{ service_group }}"
+
+        -
+          name: "Cloning BoxVault repository"
+          become: true
+          become_user: "{{ service_user }}"
+          ansible.builtin.git:
+            repo: "{{ boxvault_git_repo }}"
+            dest: "{{ boxvault_path }}"
+            version: "{{ boxvault_git_version }}"
+            force: true
+
+        -
+          name: "Installing backend npm packages"
+          become: true
+          become_user: "{{ service_user }}"
+          community.general.npm:
+            path: "{{ boxvault_path }}/backend"
+
+        -
+          name: "Installing frontend npm packages"
+          become: true
+          become_user: "{{ service_user }}"
+          community.general.npm:
+            path: "{{ boxvault_path }}/frontend"
+
+        -
+          name: "Building BoxVault frontend"
+          become: true
+          become_user: "{{ service_user }}"
+          ansible.builtin.command: npm run build
+          args:
+            chdir: "{{ boxvault_path }}/frontend"
+          register: boxvault_build
+          changed_when: boxvault_build.rc == 0

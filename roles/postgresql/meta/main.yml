@@ -1,29 +1,24 @@
 ---
 galaxy_info:
   role_name: postgresql
-  author: MarkProminic
-  description: PostgreSQL server for Linux
-  company: STARTCloud
-  issue_tracker_url: https://github.com/PhoneSwitchboard/switchboard_roles/issues
-  license: license (Apache)
-  min_ansible_version: '2.9'
+  author: Mark Gilbert
+  description: Installs and configures a PostgreSQL database server.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
   platforms:
     - name: Debian
-      versions:
-        - buster
-        - bullseye
-        - bookworm
-
+      versions: ['bookworm', 'trixie']
+    - name: Ubuntu
+      versions: ['jammy', 'noble']
+    - name: EL
+      versions: ['8', '9']
   galaxy_tags:
     - database
     - postgresql
     - postgres
     - rdbms
-
-
 dependencies: []
-
 collections:
   - startcloud.startcloud_roles
-
-allow_duplicates: false

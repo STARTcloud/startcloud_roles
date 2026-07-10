@@ -1,3 +1,4 @@
+---
 -
   name: "Setting up Vagrant NAT Provisioning Network"
   when: not convert_nat_dhcp_to_static
@@ -85,7 +86,7 @@
   tags: once
   block:
     -
-      name: "Gather Networking Details"
+      name: "Gathering networking details"
       ansible.builtin.include_tasks: "gather.yml"
 
 -
@@ -121,7 +122,7 @@
         seconds: 2
 
 -
-  name: "When No Bridged Adapter included, Setting configurations to use 127.0.0.1 in case of VBox Port Forwards"
+  name: "Setting configurations to use 127.0.0.1 when no bridged adapter included (VBox port forwards)"
   when: networks[0] is not defined
   block:
     -
@@ -151,5 +152,5 @@
   become: true
   block:
     -
-      name: "Gather Networking Details"
+      name: "Gathering networking details"
       ansible.builtin.include_tasks: "gather.yml"

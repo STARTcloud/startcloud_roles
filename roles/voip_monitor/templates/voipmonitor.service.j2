@@ -1,0 +1,20 @@
+# {{ ansible_managed }}
+[Unit]
+Description=VoIPmonitor sniffer
+After=syslog.target network.target mysql.service
+
+[Service]
+Type=forking
+RemainAfterExit=yes
+TimeoutSec=5min
+Restart=no
+KillMode=process
+GuessMainPID=no
+IgnoreSIGPIPE=no
+SuccessExitStatus=5 6
+ExecStart=/etc/init.d/voipmonitor start
+ExecStop=/etc/init.d/voipmonitor stop
+PrivateTmp=false
+
+[Install]
+WantedBy=multi-user.target

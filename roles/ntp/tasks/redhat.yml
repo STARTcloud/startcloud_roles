@@ -40,7 +40,7 @@
   name: "Setting timezone."
   community.general.timezone:
     name: "{{ ntp_timezone }}"
-  notify: restart cron
+  notify: "Restarting cron"
 
 -
   name: "Populating service facts."
@@ -78,5 +78,5 @@
     src: "{{ ntp_config_file | basename }}.j2"
     dest: "{{ ntp_config_file }}"
     mode: "0644"
-  notify: restart ntp
+  notify: "Restarting NTP"
   when: ntp_manage_config | bool

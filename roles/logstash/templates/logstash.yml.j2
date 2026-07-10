@@ -1,0 +1,6 @@
+# {{ ansible_managed }}
+node.name: {{ logstash_node_name }}
+path.data: /var/lib/logstash
+path.logs: /var/log/logstash
+path.config: {{ logstash_pipeline_dir }}/*.conf
+pipeline.workers: {{ logstash_pipeline_workers }}

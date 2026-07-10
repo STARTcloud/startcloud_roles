@@ -1,0 +1,97 @@
+---
+argument_specs:
+  main:
+    short_description: Configure Windows privacy, telemetry, and debloat settings
+    description:
+      - Applies Windows privacy hardening by disabling telemetry, feedback, location tracking, Cortana, and Bing search.
+      - Removes AppX bloatware, disables telemetry scheduled tasks, debloats Microsoft Edge, and applies performance and enhanced-privacy tweaks.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      disable_security_notifications:
+        type: bool
+        default: true
+        description: Hides the Windows Defender Security Center systray icon and notifications.
+      disable_telemetry:
+        type: bool
+        default: true
+        description: Sets AllowTelemetry to 0 across the DataCollection policy keys.
+      disable_feedback:
+        type: bool
+        default: true
+        description: Disables the Windows Feedback Experience advertising info.
+      disable_location_tracking:
+        type: bool
+        default: true
+        description: Disables location sensor permissions and the location service configuration.
+      disable_activity_history:
+        type: bool
+        default: true
+        description: Disables the Activity History / Timeline feature (applied under enhanced_privacy).
+      disable_wifi_sense:
+        type: bool
+        default: true
+        description: Disables Wi-Fi Sense hotspot reporting and auto-connect (applied under enhanced_privacy).
+      disable_cortana:
+        type: bool
+        default: true
+        description: Disables Cortana in Windows Search via the AllowCortana policy.
+      disable_bing_search:
+        type: bool
+        default: true
+        description: Disables Bing web search in the Start Menu search box.
+      disable_consumer_features:
+        type: bool
+        default: true
+        description: Sets DisableWindowsConsumerFeatures to prevent suggested/bloatware apps returning.
+      disable_content_delivery:
+        type: bool
+        default: true
+        description: Disables ContentDeliveryManager pre-installed and silently installed app suggestions.
+      remove_appx_bloatware:
+        type: bool
+        default: true
+        description: Removes the AppX packages listed in appx_packages_to_remove for all users and provisioned installs.
+      disable_diagnostics_tracking:
+        type: bool
+        default: true
+        description: Stops and disables the DiagTrack (Connected User Experiences and Telemetry) service.
+      disable_telemetry_tasks:
+        type: bool
+        default: true
+        description: Disables the telemetry scheduled tasks listed in telemetry_tasks_to_disable.
+      debloat_edge:
+        type: bool
+        default: true
+        description: Applies privacy and debloat policy registry keys to Microsoft Edge.
+      optimize_performance:
+        type: bool
+        default: true
+        description: Applies performance tweaks such as network throttling, system responsiveness, and long path support.
+      disable_hibernation:
+        type: bool
+        default: true
+        description: Turns off hibernation via powercfg (applied under optimize_performance).
+      enhanced_privacy:
+        type: bool
+        default: true
+        description: Enables the additional ChrisTitusTech-inspired privacy and telemetry-blocking tweaks.
+      disable_homegroup:
+        type: bool
+        default: true
+        description: Stops and sets the HomeGroup services to manual start.
+      disable_gameDVR:
+        type: bool
+        default: true
+        description: Disables GameDVR registry settings and policy (applied under enhanced_privacy).
+      appx_packages_to_remove:
+        type: list
+        elements: str
+        description: List of AppX package name patterns to remove when remove_appx_bloatware is true.
+      telemetry_tasks_to_disable:
+        type: list
+        elements: dict
+        description: List of scheduled tasks (path and name) to disable when disable_telemetry_tasks is true.

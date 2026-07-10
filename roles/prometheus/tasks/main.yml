@@ -4,34 +4,98 @@
   when: run_tasks
   block:
     -
-      name: "Setting up Debian Installations"
-      when: "ansible_os_family == 'Debian'"
-      block:
-        -
-          name: "Gathering DEB architecture"
-          ansible.builtin.command: dpkg --print-architecture
-          register: deb_architecture
-          changed_when: false
-    
-        -
-          name: "Printing DEB architecture"
-          ansible.builtin.debug:
-            msg: "deb_architecture.stdout: {{ deb_architecture.stdout }}"
-    
-        -
-          name: "Ensuring apt cache is updated"
-          ansible.builtin.apt:
-            cache_valid_time: 3600
-            update_cache: true
-    
-        -
-          name: "Upgrading all apt packages"
-          ansible.builtin.apt:
-            upgrade: dist
-            update_cache: true
-    
-        -
-          name: "Adding Additional Dependencies {{ packages }}"
-          ansible.builtin.apt:
-            name: "{{ packages }}"
-            state: present
+      name: "Resolving Prometheus Release Architecture"
+      ansible.builtin.set_fact:
+        prometheus_arch: "{{ prometheus_arch_map[ansible_architecture] | default('amd64') }}"
+
+    -
+      name: "Creating Prometheus System Group"
+      ansible.builtin.group:
+        name: "{{ prometheus_group }}"
+        system: true
+        state: present
+
+    -
+      name: "Creating Prometheus System User"
+      ansible.builtin.user:
+        name: "{{ prometheus_user }}"
+        group: "{{ prometheus_group }}"
+        system: true
+        shell: /usr/sbin/nologin
+        home: "{{ prometheus_data_dir }}"
+        create_home: false
+        state: present
+
+    -
+      name: "Creating Prometheus Configuration Directory"
+      ansible.builtin.file:
+        path: "{{ prometheus_config_dir }}"
+        state: directory
+        owner: "{{ prometheus_user }}"
+        group: "{{ prometheus_group }}"
+        mode: '0755'
+
+    -
+      name: "Creating Prometheus Data Directory"
+      ansible.builtin.file:
+        path: "{{ prometheus_data_dir }}"
+        state: directory
+        owner: "{{ prometheus_user }}"
+        group: "{{ prometheus_group }}"
+        mode: '0755'
+
+    -
+      name: "Downloading Prometheus Release Archive"
+      ansible.builtin.get_url:
+        url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-{{ prometheus_arch }}.tar.gz"
+        dest: "/tmp/prometheus-{{ prometheus_version }}.linux-{{ prometheus_arch }}.tar.gz"
+        mode: '0644'
+
+    -
+      name: "Extracting Prometheus Release Archive"
+      ansible.builtin.unarchive:
+        src: "/tmp/prometheus-{{ prometheus_version }}.linux-{{ prometheus_arch }}.tar.gz"
+        dest: /tmp
+        remote_src: true
+
+    -
+      name: "Installing Prometheus Binaries"
+      ansible.builtin.copy:
+        src: "/tmp/prometheus-{{ prometheus_version }}.linux-{{ prometheus_arch }}/{{ item }}"
+        dest: "{{ prometheus_install_dir }}/{{ item }}"
+        owner: root
+        group: root
+        mode: '0755'
+        remote_src: true
+      loop:
+        - prometheus
+        - promtool
+      notify: "Restarting Prometheus"
+
+    -
+      name: "Templating Prometheus Configuration"
+      ansible.builtin.template:
+        src: prometheus.yml.j2
+        dest: "{{ prometheus_config_dir }}/prometheus.yml"
+        owner: "{{ prometheus_user }}"
+        group: "{{ prometheus_group }}"
+        mode: '0644'
+      notify: "Restarting Prometheus"
+
+    -
+      name: "Templating Prometheus Systemd Unit"
+      ansible.builtin.template:
+        src: prometheus.service.j2
+        dest: /etc/systemd/system/prometheus.service
+        owner: root
+        group: root
+        mode: '0644'
+      notify: "Restarting Prometheus"
+
+    -
+      name: "Enabling and Starting Prometheus Service"
+      ansible.builtin.systemd:
+        name: prometheus
+        state: started
+        enabled: true
+        daemon_reload: true

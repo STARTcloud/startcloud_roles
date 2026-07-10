@@ -4,7 +4,7 @@
   community.docker.current_container_facts:
 
 -
-  name: "Network Cleanup"
+  name: "Cleaning up network configuration"
   when:
     - not ansible_module_running_in_container
   become: true
@@ -40,7 +40,7 @@
   tags: once
   block:
     -
-      name: "Gather Networking Details"
+      name: "Gathering networking details"
       ansible.builtin.include_tasks: "gather.yml"
 
 -
@@ -118,4 +118,4 @@
         path: /etc/hosts
         marker: "# {mark} SHI ANSIBLE MANAGED HOST ENTRIES"
         block: "{{ hosts_block }}"
-        create: yes
+        create: true

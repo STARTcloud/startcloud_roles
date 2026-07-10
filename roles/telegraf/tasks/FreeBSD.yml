@@ -1,24 +1,26 @@
 ---
-# description: FreeBSD specific installation
-
-- name: "FreeBSD | set package name"
-  set_fact:
+-
+  name: "FreeBSD | Setting package name"
+  ansible.builtin.set_fact:
     telegraf_agent_package: telegraf
 
-- name: "FreeBSD | Install Telegraf package"
-  pkgng:
+-
+  name: "FreeBSD | Installing Telegraf package"
+  community.general.pkgng:
     name: "{{ telegraf_agent_package }}"
     state: "{{ telegraf_agent_package_state }}"
   register: is_telegraf_package_installed
   until: is_telegraf_package_installed is succeeded
-  notify: "Restart Telegraf"
+  notify: "Restarting Telegraf"
 
-- name: "FreeBSD | add telegraf_flags for extra plugins"
-  shell: sysrc telegraf_flags="-quiet -config-directory=/usr/local/etc/telegraf.d"
+-
+  name: "FreeBSD | Adding telegraf_flags for extra plugins"
+  ansible.builtin.shell: sysrc telegraf_flags="-quiet -config-directory=/usr/local/etc/telegraf.d"
   tags:
     - skip_ansible_lint
 
-- name: "FreeBSD | add telegraf to init"
-  shell: sysrc telegraf_enable="YES"
+-
+  name: "FreeBSD | Adding telegraf to init"
+  ansible.builtin.shell: sysrc telegraf_enable="YES"
   tags:
     - skip_ansible_lint

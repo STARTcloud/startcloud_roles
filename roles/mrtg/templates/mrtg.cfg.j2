@@ -1,0 +1,11 @@
+# {{ ansible_managed }}
+WorkDir: {{ mrtg_working_directory }}
+EnableIPv6: no
+Options[_]: bits,growright
+Refresh: {{ mrtg_refresh_interval }}
+Interval: 5
+
+Target[{{ mrtg_snmp_target }}]: 2:{{ mrtg_snmp_community }}@{{ mrtg_snmp_target }}
+MaxBytes[{{ mrtg_snmp_target }}]: 1250000
+Title[{{ mrtg_snmp_target }}]: Traffic Analysis for {{ mrtg_snmp_target }}
+PageTop[{{ mrtg_snmp_target }}]: <h1>Traffic Analysis for {{ mrtg_snmp_target }}</h1>

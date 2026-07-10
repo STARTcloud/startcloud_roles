@@ -1,30 +1,25 @@
 ---
-dependencies: []
-
 galaxy_info:
   role_name: php
-  author: geerlingguy
-  description: PHP for RedHat/CentOS/Fedora/Debian/Ubuntu.
-  company: "Midwestern Mac, LLC"
-  license: "license (BSD, MIT)"
-  min_ansible_version: 2.10
+  author: Mark Gilbert
+  description: Installs and configures PHP (CLI, FPM, OpCache, APCu) on Debian/Ubuntu and RHEL-based systems.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
   platforms:
-    - name: Fedora
-      versions:
-        - all
     - name: Debian
-      versions:
-        - all
+      versions: ['bookworm', 'trixie']
     - name: Ubuntu
-      versions:
-        - all
+      versions: ['jammy', 'noble']
+    - name: EL
+      versions: ['8', '9']
   galaxy_tags:
-    - development
-    - web
     - php
-    - language
     - fpm
-    - drupal
-    - wordpress
-    - joomla
-    - magento
+    - web
+    - development
+    - language
+dependencies: []
+collections:
+  - startcloud.startcloud_roles

@@ -1,0 +1,108 @@
+---
+argument_specs:
+  main:
+    short_description: TLS certificate provisioning
+    description:
+      - Imports a supplied certificate, generates a self-signed CA and server certificate, or obtains Let's Encrypt certificates, then exports PFX/PEM/JKS bundles and trusts the CA. Supports Debian/Ubuntu and Windows.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      win_cert_dir:
+        type: str
+        default: "C:\\secure"
+        description: Certificate output directory on Windows.
+      cert_dir:
+        type: str
+        default: /secure
+        description: Certificate output directory on Linux.
+      selfsigned_enabled:
+        type: bool
+        default: false
+        description: Generate a self-signed CA and certificate instead of importing an existing one.
+      generate_self_signed_certificate_authority:
+        type: bool
+        default: false
+        description: Generate a fresh CA rather than reusing the bundled STARTcloud CA.
+      letsencrypt_enabled:
+        type: bool
+        default: false
+        description: Obtain certificates from Let's Encrypt (requires selfsigned_enabled).
+      letsencrypt_staging_enabled:
+        type: bool
+        default: false
+        description: Use the Let's Encrypt staging environment.
+      cert_pass:
+        type: str
+        default: ThisNeedstoBeSecure!
+        description: Password protecting generated PKCS12/JKS bundles; change for production.
+      ca_cert_pass:
+        type: str
+        default: STARTSecure25@!
+        description: Passphrase protecting the CA private key; change for production.
+      countrycode:
+        type: str
+        default: US
+        description: Certificate subject country code.
+      organization:
+        type: str
+        description: Certificate subject organization name.
+      java_version:
+        type: str
+        default: "latest"
+        description: OpenJDK version hint used to locate keytool on Windows.
+      java_home:
+        type: str
+        description: JAVA_HOME path on Windows.
+      java_keytool:
+        type: str
+        description: Path to keytool.exe on Windows.
+      openssl_bin:
+        type: str
+        description: Path to openssl.exe on Windows; falls back to native PowerShell crypto when absent.
+      private_key_type:
+        type: str
+        default: RSA
+        description: Private key algorithm.
+      private_key_size:
+        type: int
+        default: 4096
+        description: Private key size in bits.
+      cert_store_name:
+        type: str
+        default: TrustedPublisher
+        description: Windows certificate store name to install into.
+      cert_store_location:
+        type: str
+        default: LocalMachine
+        description: Windows certificate store location.
+      cert_key_storage:
+        type: str
+        default: machine
+        description: Windows key storage scope.
+      cert_key_exportable:
+        type: bool
+        default: true
+        description: Whether the imported Windows key is exportable.
+      certbot_create_if_missing:
+        type: bool
+        default: false
+        description: Create a certbot certificate if none exists.
+      certbot_create_method:
+        type: str
+        default: standalone
+        description: Certbot authenticator method.
+      certbot_admin_email:
+        type: str
+        default: "support@startcloud.com"
+        description: Admin email registered with certbot/ACME.
+      certbot_create_standalone_stop_services:
+        type: list
+        elements: str
+        description: Services to stop while running certbot in standalone mode.
+      dns_entries_list:
+        type: list
+        elements: str
+        description: Service subdomain labels added as certificate subjectAltNames.

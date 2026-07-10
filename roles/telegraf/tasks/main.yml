@@ -3,47 +3,59 @@
   name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    - name: "Install on RedHat"
-      include_tasks: "RedHat.yml"
+    -
+      name: "Installing on RedHat"
+      ansible.builtin.include_tasks: "RedHat.yml"
       when:
         - ansible_os_family == "RedHat" and not telegraf_agent_docker
-    
-    - name: "Install on Debian"
-      include_tasks: "Debian.yml"
+
+    -
+      name: "Installing on Debian"
+      ansible.builtin.include_tasks: "Debian.yml"
       when:
         - ansible_os_family == "Debian" and not telegraf_agent_docker
       tags:
         - telegraf
         - packages
-    
-    - name: "Install on Suse"
-      include_tasks: "Suse.yml"
-      when: ansible_os_family == "Suse" and not telegraf_agent_docker
-    
-    - name: "Install on FreeBSD"
-      include_tasks: "FreeBSD.yml"
+
+    -
+      name: "Installing on Suse"
+      ansible.builtin.include_tasks: "Suse.yml"
+      when:
+        - ansible_os_family == "Suse" and not telegraf_agent_docker
+
+    -
+      name: "Installing on FreeBSD"
+      ansible.builtin.include_tasks: "FreeBSD.yml"
       when:
         - ansible_os_family == "FreeBSD" and not telegraf_agent_docker
-    
-    - name: "Install on MacOS"
-      include_tasks: "MacOS.yml"
+
+    -
+      name: "Installing on MacOS"
+      ansible.builtin.include_tasks: "MacOS.yml"
       when:
         - ansible_os_family == "Darwin" and not telegraf_agent_docker
-    
-    - include_tasks: "docker.yml"
-      when: telegraf_agent_docker
-    
-    - name: "Configure Telegraf"
-      include_tasks: "configure_linux.yml"
+
+    -
+      name: "Installing via Docker"
+      ansible.builtin.include_tasks: "docker.yml"
+      when:
+        - telegraf_agent_docker
+
+    -
+      name: "Configuring Telegraf"
+      ansible.builtin.include_tasks: "configure_linux.yml"
       when:
         - ansible_os_family not in ['Windows', 'Darwin']
-    
-    - name: "Install / Configure telegraf on Windows"
-      include_tasks: "configure_windows.yml"
+
+    -
+      name: "Installing and Configuring Telegraf on Windows"
+      ansible.builtin.include_tasks: "configure_windows.yml"
       when:
         - ansible_os_family == "Windows" and not telegraf_agent_docker
-    
-    - name: "Install / Configure telegraf on MacOS"
-      include_tasks: "configure_macos.yml"
+
+    -
+      name: "Installing and Configuring Telegraf on MacOS"
+      ansible.builtin.include_tasks: "configure_macos.yml"
       when:
         - ansible_os_family == "Darwin" and not telegraf_agent_docker

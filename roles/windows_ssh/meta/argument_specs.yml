@@ -1,0 +1,24 @@
+---
+argument_specs:
+  main:
+    short_description: Configure the Windows OpenSSH server.
+    description:
+      - Configures the Windows OpenSSH server by setting the default shell registry keys, installing the administrators authorized_keys file with locked-down ACLs, enabling the sshd service, and staging an uptime helper for monitoring.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      ssh_default_shell:
+        type: str
+        default: "C:\\tools\\cygwin\\bin\\bash.exe"
+        description: Path written to the OpenSSH DefaultShell registry value.
+      ssh_default_shell_option:
+        type: str
+        default: "-c"
+        description: Path written to the OpenSSH DefaultShellCommandOption registry value.
+      uptime_files:
+        type: list
+        elements: str
+        description: Destination paths the uptime helper binary is copied to and granted Everyone execute rights.

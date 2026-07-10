@@ -1,5 +1,5 @@
 ---
-- name: Create external SIP provider configuration for FreeSWITCH
+- name: "Creating external SIP provider configuration for FreeSWITCH"
   ansible.builtin.template:
     src: templates/sip_provider.xml.j2
     dest: /opt/freeswitch/conf/sip_profiles/external/{{ item.key }}.xml
@@ -12,7 +12,7 @@
   tags:
     - bbb-add-sip-provider-config
 
-- name: Create dialplan for SIP provider
+- name: "Creating dialplan for SIP provider"
   ansible.builtin.template:
     src: templates/sip_dialplan.xml.j2
     dest: /opt/freeswitch/conf/dialplan/{{ item.value.context | default("public") }}/{{ item.key }}.xml
@@ -25,7 +25,7 @@
   tags:
     - bbb-add-sip-provider-config
 
-- name: Restart FreeSWITCH to activate SIP changes
+- name: "Restarting FreeSWITCH to activate SIP changes"
   ansible.builtin.systemd:
     name: freeswitch
     state: restarted
@@ -34,7 +34,7 @@
   tags:
     - bbb-add-sip-provider-config
 
-- name: Configure default dial-in number
+- name: "Configuring default dial-in number"
   ansible.builtin.replace:
     path: "/usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties"
     regexp: '^defaultDialAccessNumber=.*'
@@ -43,7 +43,7 @@
   tags:
     - bbb-add-sip-dialin-config
 
-- name: Configure dial-in numbers in welcome footer
+- name: "Configuring dial-in numbers in welcome footer"
   ansible.builtin.replace:
     path: "/usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties"
     regexp: '^defaultWelcomeMessageFooter=.*'

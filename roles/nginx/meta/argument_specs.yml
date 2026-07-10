@@ -1,0 +1,141 @@
+---
+argument_specs:
+  main:
+    short_description: Installs and configures the Nginx web server
+    description:
+      - Installs Nginx from the appropriate repository for the target OS and renders its main configuration.
+      - Manages virtual hosts, upstreams and service state on Linux, FreeBSD and OpenBSD hosts.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      nginx_default_release:
+        type: str
+        default: ""
+        description: Debian/Ubuntu apt -t target release used when installing Nginx.
+      nginx_port_forwards:
+        type: list
+        elements: dict
+        description: Port-forward definitions consumed by the STARTcloud provisioner for the Nginx service.
+      nginx_yum_repo_enabled:
+        type: bool
+        default: true
+        description: Whether to install the upstream Nginx yum repo on RedHat-family hosts.
+      nginx_zypper_repo_enabled:
+        type: bool
+        default: true
+        description: Whether to install the upstream Nginx zypper repo on Suse hosts.
+      nginx_ppa_use:
+        type: bool
+        default: false
+        description: Whether to install Nginx from the official Nginx PPA on Ubuntu.
+      nginx_ppa_version:
+        type: str
+        default: stable
+        description: Nginx PPA channel to use when nginx_ppa_use is enabled (stable or development).
+      nginx_package_name:
+        type: str
+        default: nginx
+        description: Name of the Nginx package to install.
+      nginx_service_state:
+        type: str
+        default: started
+        description: Desired running state of the nginx service.
+      nginx_service_enabled:
+        type: bool
+        default: true
+        description: Whether the nginx service is enabled at boot.
+      nginx_conf_template:
+        type: str
+        default: nginx.conf.j2
+        description: Template used to render the main nginx.conf file.
+      nginx_vhost_template:
+        type: str
+        default: vhost.j2
+        description: Default template used to render each managed virtual host.
+      nginx_worker_processes:
+        type: str
+        description: Number of worker processes; defaults to the host vCPU/CPU count.
+      nginx_worker_connections:
+        type: str
+        default: "1024"
+        description: Maximum simultaneous connections per worker process.
+      nginx_multi_accept:
+        type: str
+        default: "off"
+        description: Whether a worker accepts all new connections at once (on/off).
+      nginx_error_log:
+        type: str
+        default: "/var/log/nginx/error.log warn"
+        description: error_log directive value for the main configuration.
+      nginx_access_log:
+        type: str
+        default: "/var/log/nginx/access.log main buffer=16k flush=2m"
+        description: access_log directive value for the main configuration.
+      nginx_sendfile:
+        type: str
+        default: "on"
+        description: sendfile directive value (on/off).
+      nginx_tcp_nopush:
+        type: str
+        default: "on"
+        description: tcp_nopush directive value (on/off).
+      nginx_tcp_nodelay:
+        type: str
+        default: "on"
+        description: tcp_nodelay directive value (on/off).
+      nginx_keepalive_timeout:
+        type: str
+        default: "75"
+        description: keepalive_timeout directive value in seconds.
+      nginx_keepalive_requests:
+        type: str
+        default: "600"
+        description: keepalive_requests directive value.
+      nginx_server_tokens:
+        type: str
+        default: "on"
+        description: server_tokens directive value controlling version disclosure (on/off).
+      nginx_client_max_body_size:
+        type: str
+        default: "64m"
+        description: client_max_body_size directive value (largest allowed request body).
+      nginx_server_names_hash_bucket_size:
+        type: str
+        default: "64"
+        description: server_names_hash_bucket_size directive value.
+      nginx_proxy_cache_path:
+        type: str
+        default: ""
+        description: proxy_cache_path directive value; empty disables proxy caching.
+      nginx_extra_conf_options:
+        type: str
+        default: ""
+        description: Extra literal directives inserted at the top of nginx.conf.
+      nginx_extra_http_options:
+        type: str
+        default: ""
+        description: Extra literal directives inserted inside the http block of nginx.conf.
+      nginx_remove_default_vhost:
+        type: bool
+        default: false
+        description: Whether to remove the default vhost shipped by the Nginx package.
+      nginx_listen_ipv6:
+        type: bool
+        default: true
+        description: Whether managed vhosts also listen on IPv6.
+      nginx_vhosts:
+        type: list
+        elements: dict
+        default: []
+        description: List of virtual host (server block) definitions to render and manage.
+      nginx_upstreams:
+        type: list
+        elements: dict
+        default: []
+        description: List of upstream (load-balancer pool) definitions to render in nginx.conf.
+      nginx_log_format:
+        type: str
+        description: log_format directive value for the main access log.

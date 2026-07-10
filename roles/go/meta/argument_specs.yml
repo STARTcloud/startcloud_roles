@@ -1,0 +1,36 @@
+---
+argument_specs:
+  main:
+    short_description: Install the Go programming language on Linux.
+    description:
+      - Downloads the official Google Go binary tarball, verifies its checksum, extracts it to /usr/local, and adds the Go bin directory to the system-wide PATH.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      go_version:
+        type: str
+        default: "1.17.3"
+        description: Version of Go to download and install.
+      go_platform:
+        type: str
+        default: linux
+        description: Operating system platform component of the Go tarball name.
+      go_arch:
+        type: str
+        default: amd64
+        description: CPU architecture component of the Go tarball name.
+      go_tarball:
+        type: str
+        default: go{{ go_version }}.{{ go_platform }}-{{ go_arch }}.tar.gz
+        description: Filename of the Go release tarball, built from version, platform, and architecture.
+      go_download_url:
+        type: str
+        default: https://dl.google.com/go/{{ go_tarball }}
+        description: URL the Go tarball is downloaded from.
+      go_checksum:
+        type: str
+        default: '550f9845451c0c94be679faf116291e7807a8d78b43149f9506c1b15eb89008c'
+        description: SHA256 checksum used to verify the downloaded Go tarball.

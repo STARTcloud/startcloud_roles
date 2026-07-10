@@ -1,14 +1,41 @@
 ---
 run_tasks: true
-packages:
-  - htop
-  - lynx
-  - lshw
-  - libxml2-utils
-  - tree
-  - python3-pexpect
-  - python3-pymongo
-  - python3-pymysql
-  - psutils
-  - python3-psutil
-  - libxml2-utils
+
+# Prerequisite packages installed before MongoDB, OpenSearch and Graylog.
+graylog_packages:
+    - apt-transport-https
+    - ca-certificates
+    - gnupg
+    - pwgen
+    - uuid-runtime
+    - openjdk-17-jre-headless
+
+# Graylog server
+graylog_version: "6.1"
+graylog_http_bind_address: "0.0.0.0"
+graylog_http_port: 9000
+graylog_http_publish_uri: "http://127.0.0.1:9000/"
+# password_secret must be a long random string shared by all Graylog nodes.
+# Generate a real one with:  pwgen -N 1 -s 96
+# OVERRIDE this default in production.
+graylog_password_secret: "cHaNgEmEcHaNgEmEcHaNgEmEcHaNgEmEcHaNgEmEcHaNgEmEcHaNgEmEcHaNgEmEcHaNgEmEcHaNgEmEcHaNgEmEcHaNgEmE"
+# SHA-256 hash of the initial admin (root) password. Default below is the
+# hash of the literal string "admin" — OVERRIDE this default in production.
+# Generate with:  echo -n 'yourpassword' | sha256sum
+graylog_root_password_sha2: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918"
+graylog_root_timezone: "UTC"
+graylog_heap_size: "1g"
+graylog_message_journal_dir: "/var/lib/graylog-server/journal"
+graylog_mongodb_uri: "mongodb://127.0.0.1:27017/graylog"
+
+# MongoDB (Graylog metadata store)
+graylog_mongodb_version: "7.0"
+graylog_mongodb_bind_ip: "127.0.0.1"
+
+# OpenSearch (Graylog search / message backend)
+graylog_opensearch_version: "2.x"
+graylog_opensearch_heap_size: "1g"
+graylog_opensearch_cluster_name: "graylog"
+graylog_opensearch_network_host: "127.0.0.1"
+graylog_opensearch_admin_password: "Gr4yl0g-0penS3arch!"
+graylog_elasticsearch_hosts: "http://127.0.0.1:9200"

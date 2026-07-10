@@ -1,8 +1,9 @@
+---
 -
-  name: "Block to Allow Loading of Variables without running task"
+  name: "Allowing loading of variables without running task"
   when: run_tasks
   block:
-    - name: Import variables specific to distribution
+    - name: "Importing variables specific to distribution"
       ansible.builtin.include_vars: "{{ item }}"
       with_first_found:
         - "vars/{{ ansible_facts['distribution'] }}-{{ ansible_facts['distribution_version'] }}.yml"
@@ -16,12 +17,11 @@
         - "vars/{{ ansible_facts['os_family'] }}.yml"
         # If neither distro nor family is supported, try a default configuration.
         - "vars/default.yml"
-    
-    - name: Install IPA server
+
+    - name: "Installing IPA server"
       ansible.builtin.include_tasks: install.yml
       when: state|default('present') == 'present'
-    
-    - name: Uninstall IPA server
+
+    - name: "Uninstalling IPA server"
       ansible.builtin.include_tasks: uninstall.yml
       when: state|default('present') == 'absent'
-    

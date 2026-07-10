@@ -1,0 +1,28 @@
+---
+argument_specs:
+  main:
+    short_description: OS image cleanup for template finalization
+    description:
+      - Purges unneeded packages, caches, logs, machine-ids and stale network configs to reduce and sanitize an OS image before it is captured as a Packer template. Dispatches to OS-specific tasks for Debian, RedHat, FreeBSD and Windows.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      verify:
+        type: bool
+        default: true
+        description: Run Windows DISM image health verification and component cleanup.
+      cleanup_proxy:
+        type: bool
+        default: true
+        description: Remove system-wide proxy settings at the end of provisioning (Windows).
+      windows_page_file_size_initial:
+        type: int
+        default: 512
+        description: Initial Windows page file size in MB.
+      windows_page_file_size_max:
+        type: int
+        default: 512
+        description: Maximum Windows page file size in MB.

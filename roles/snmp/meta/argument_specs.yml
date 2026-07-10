@@ -1,0 +1,59 @@
+---
+argument_specs:
+  main:
+    short_description: Install and configure the SNMP daemon
+    description:
+      - Installs the net-snmp packages and starts the snmpd service on Linux, or enables the SNMP-Service feature on Windows.
+      - Deploys the LibreNMS extension scripts and renders the snmpd daemon and configuration files from templates.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      snmp_access_adress:
+        type: str
+        default: "0.0.0.0"
+        description: Address allowed to query the SNMP agent.
+      snmp_additional_packages:
+        type: list
+        elements: str
+        default: []
+        description: Extra packages to install alongside the base SNMP packages.
+      snmp_agentadress_adress:
+        type: dict
+        description: IPv4 and IPv6 addresses the SNMP agent listens on.
+      snmp_agentadress_port:
+        type: dict
+        description: IPv4 and IPv6 ports the SNMP agent listens on.
+      snmp_agentadress_protocol:
+        type: dict
+        description: IPv4 and IPv6 transport protocols the SNMP agent uses.
+      snmp_encryption:
+        type: str
+        default: snmp_encryption
+        description: SNMPv3 authentication/privacy passphrase for the user.
+      snmp_extension_list:
+        type: list
+        elements: dict
+        description: LibreNMS extension scripts to download, each with an extend directive and a source url.
+      snmp_extension_scripts:
+        type: str
+        default: /usr/local/lib/snmpd
+        description: Directory where the SNMP extension scripts are installed.
+      snmp_logging_options:
+        type: str
+        default: ""
+        description: Command-line logging options passed to the snmpd daemon.
+      snmp_monitoring_server:
+        type: str
+        default: "0.0.0.0"
+        description: Address of the monitoring server permitted to poll the agent.
+      snmp_password:
+        type: str
+        default: snmp_password
+        description: SNMPv3 password for the configured user.
+      snmp_user:
+        type: str
+        default: snmp
+        description: SNMPv3 username created on the agent.

@@ -4,34 +4,26 @@
   when: run_tasks
   block:
     -
-      name: "Setting up Debian Installations"
-      when: "ansible_os_family == 'Debian'"
-      block:
-        -
-          name: "Gathering DEB architecture"
-          ansible.builtin.command: dpkg --print-architecture
-          register: deb_architecture
-          changed_when: false
-    
-        -
-          name: "Printing DEB architecture"
-          ansible.builtin.debug:
-            msg: "deb_architecture.stdout: {{ deb_architecture.stdout }}"
-    
-        -
-          name: "Ensuring apt cache is updated"
-          ansible.builtin.apt:
-            cache_valid_time: 3600
-            update_cache: true
-    
-        -
-          name: "Upgrading all apt packages"
-          ansible.builtin.apt:
-            upgrade: dist
-            update_cache: true
-    
-        -
-          name: "Adding Additional Dependencies {{ packages }}"
-          ansible.builtin.apt:
-            name: "{{ packages }}"
-            state: present
+      name: "Installing Redis"
+      ansible.builtin.apt:
+        name: "{{ redis_package }}"
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    -
+      name: "Deploying Redis Configuration"
+      ansible.builtin.template:
+        src: "redis.conf.j2"
+        dest: "{{ redis_config_file }}"
+        owner: redis
+        group: redis
+        mode: '0640'
+      notify: "Restarting Redis"
+
+    -
+      name: "Enabling and Starting Redis Service"
+      ansible.builtin.systemd:
+        name: "{{ redis_service }}"
+        state: started
+        enabled: true

@@ -1,0 +1,14 @@
+---
+argument_specs:
+  main:
+    short_description: Install and configure balena wifi-connect on Debian-based ARM devices
+    description:
+      - Downloads and runs the balena wifi-connect Raspbian installer on Debian
+        family ARM devices, deploys the wifi-connect systemd service and start
+        script, and configures netplan to use the NetworkManager renderer.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.

@@ -1,0 +1,111 @@
+---
+argument_specs:
+  main:
+    short_description: Install and configure a Kubernetes cluster with kubeadm.
+    description:
+      - Installs Kubernetes packages and configures a host as either a control plane or a node.
+      - Sets up the apt/yum repositories, initializes the control plane with kubeadm, applies a CNI, and joins nodes.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      kubernetes_packages:
+        type: list
+        elements: dict
+        description: Kubernetes packages to install, each with a name and desired state.
+      kubernetes_version:
+        type: str
+        default: '1.25'
+        description: Minor version of Kubernetes to install and pin.
+      kubernetes_version_rhel_package:
+        type: str
+        default: '1.25.1'
+        description: Specific Kubernetes release used to pin the package version on Red Hat / CentOS.
+      kubernetes_role:
+        type: str
+        default: control_plane
+        description: Whether this host is a Kubernetes control_plane or a node.
+      kubernetes_kubelet_extra_args:
+        type: str
+        default: ''
+        description: Deprecated extra args passed to kubelet at startup; prefer kubernetes_config_kubelet_configuration.
+      kubernetes_kubeadm_init_extra_opts:
+        type: str
+        default: ''
+        description: Extra arguments passed to the kubeadm init command on the control plane.
+      kubernetes_join_command_extra_opts:
+        type: str
+        default: ''
+        description: Extra arguments appended to the generated kubeadm join command on nodes.
+      kubernetes_allow_pods_on_control_plane:
+        type: bool
+        default: true
+        description: Whether to remove the taint that prevents pods from scheduling on the control plane.
+      kubernetes_pod_network:
+        type: dict
+        description: Pod network settings selecting the CNI plugin and pod CIDR.
+      kubernetes_kubeadm_kubelet_config_file_path:
+        type: str
+        default: '/etc/kubernetes/kubeadm-kubelet-config.yaml'
+        description: Path where the generated kubeadm and kubelet config file is written.
+      kubernetes_config_kubelet_configuration:
+        type: dict
+        description: Options rendered under the KubeletConfiguration section of the kubeadm config file.
+      kubernetes_config_init_configuration:
+        type: dict
+        description: Options rendered under the InitConfiguration section of the kubeadm config file.
+      kubernetes_config_cluster_configuration:
+        type: dict
+        description: Options rendered under the ClusterConfiguration section of the kubeadm config file.
+      kubernetes_config_kube_proxy_configuration:
+        type: dict
+        description: Options rendered under the KubeProxyConfiguration section of the kubeadm config file.
+      kubernetes_apiserver_advertise_address:
+        type: str
+        default: ''
+        description: Address the API server advertises; defaults to ansible_default_ipv4.address when empty.
+      kubernetes_version_kubeadm:
+        type: str
+        default: 'stable-{{ kubernetes_version }}'
+        description: Kubernetes version string passed to kubeadm.
+      kubernetes_ignore_preflight_errors:
+        type: str
+        default: 'all'
+        description: Value passed to kubeadm init --ignore-preflight-errors.
+      kubernetes_apt_release_channel:
+        type: str
+        default: 'stable'
+        description: Kubernetes apt release channel to use for the package repository.
+      kubernetes_apt_keyring_file:
+        type: str
+        default: '/etc/apt/keyrings/kubernetes-apt-keyring.asc'
+        description: Path to the Kubernetes apt signing keyring on Debian-family hosts.
+      kubernetes_apt_repository:
+        type: str
+        description: Apt repository line for the Kubernetes package repository on Debian-family hosts.
+      kubernetes_yum_base_url:
+        type: str
+        default: 'https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/rpm/'
+        description: Base URL for the Kubernetes yum repository on Red Hat-family hosts.
+      kubernetes_yum_gpg_key:
+        type: str
+        default: 'https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/rpm/repodata/repomd.xml.key'
+        description: GPG key URL for the Kubernetes yum repository.
+      kubernetes_yum_gpg_check:
+        type: bool
+        default: true
+        description: Whether yum verifies package GPG signatures for the Kubernetes repository.
+      kubernetes_yum_repo_gpg_check:
+        type: bool
+        default: true
+        description: Whether yum verifies the repository metadata GPG signature for the Kubernetes repository.
+      kubernetes_flannel_manifest_file:
+        type: str
+        default: 'https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml'
+        description: Flannel manifest URL applied to the cluster when the Flannel CNI is selected.
+      kubernetes_calico_manifest_file:
+        type: str
+        default: 'https://projectcalico.docs.tigera.io/manifests/calico.yaml'
+        description: Calico manifest URL applied to the cluster when the Calico CNI is selected.

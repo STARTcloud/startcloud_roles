@@ -1,24 +1,5 @@
 ---
 -
-  name: "Managing progress for {{ ansible_role_name }}"
-  when: count_progress | default(false)
-  run_once: true
-  block:
-    -
-      name: "Incrementing global progress step counter for {{ ansible_role_name }}"
-      ansible.builtin.set_fact:
-        global_current_progress_step: "{{ global_current_progress_step | default(0) | int + 1 }}"
-
-    -
-      name: "Including progress reporting task for {{ ansible_role_name }}"
-      ansible.builtin.include_role:
-        name: startcloud.startcloud_roles.progress
-      vars:
-        _progress_role_is_setup_run: false
-        current_progress_step: "{{ global_current_progress_step | default(0) }}"
-        progress_description: "{{ progress_role_description | default('Processing ' + ansible_role_name) }}"
-
--
   name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
@@ -144,7 +125,7 @@
       when: disable_telemetry
       block:
         -
-          name: "Disable Data Collection for HKLM"
+          name: "Disabling Data Collection for HKLM"
           ansible.windows.win_regedit:
             path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection
             name: AllowTelemetry
@@ -232,11 +213,11 @@
         type: dword
 
     -
-      name: "Enhanced Privacy Settings (ChrisTitusTech inspired)"
+      name: "Applying Enhanced Privacy Settings (ChrisTitusTech inspired)"
       when: enhanced_privacy
       block:
         -
-          name: "Disable Activity History"
+          name: "Disabling Activity History"
           ansible.windows.win_regedit:
             path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\System
             name: "{{ item }}"
@@ -248,7 +229,7 @@
             - UploadUserActivities
 
         -
-          name: "Disable Wi-Fi Sense"
+          name: "Disabling Wi-Fi Sense"
           when: disable_wifi_sense
           ansible.windows.win_regedit:
             path: "HKLM:\\Software\\Microsoft\\PolicyManager\\default\\WiFi\\{{ item }}"
@@ -260,11 +241,11 @@
             - AllowAutoConnectToWiFiSenseHotspots
 
         -
-          name: "Disable GameDVR"
+          name: "Disabling GameDVR"
           when: disable_gameDVR
           block:
             -
-              name: "Disable GameDVR registry settings"
+              name: "Disabling GameDVR registry settings"
               ansible.windows.win_regedit:
                 path: "{{ item.path }}"
                 name: "{{ item.name }}"
@@ -277,7 +258,7 @@
                 - { path: "HKCU:\\System\\GameConfigStore", name: "GameDVR_EFSEFeatureFlags", value: 0 }
 
             -
-              name: "Disable GameDVR policy"
+              name: "Disabling GameDVR policy"
               ansible.windows.win_regedit:
                 path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\GameDVR
                 name: AllowGameDVR
@@ -370,16 +351,16 @@
         - "'not found' not in (telemetry_result.msg | default(''))"
 
     -
-      name: "Performance Optimizations"
+      name: "Applying Performance Optimizations"
       when: optimize_performance
       block:
         -
-          name: "Disable Hibernation"
+          name: "Disabling Hibernation"
           when: disable_hibernation
           ansible.windows.win_shell: "powercfg.exe /hibernate off"
 
         -
-          name: "Set Network Throttling Index for better performance"
+          name: "Setting Network Throttling Index for better performance"
           ansible.windows.win_regedit:
             path: HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile
             name: NetworkThrottlingIndex
@@ -387,7 +368,7 @@
             type: dword
 
         -
-          name: "Set System Responsiveness for better performance"
+          name: "Setting System Responsiveness for better performance"
           ansible.windows.win_regedit:
             path: HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile
             name: SystemResponsiveness
@@ -395,7 +376,7 @@
             type: dword
 
         -
-          name: "Enable Long Path Support"
+          name: "Enabling Long Path Support"
           ansible.windows.win_regedit:
             path: HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem
             name: LongPathsEnabled
@@ -403,7 +384,7 @@
             type: dword
 
     -
-      name: "Disable HomeGroup Services (tolerated if not present on this edition)"
+      name: "Disabling HomeGroup Services (tolerated if not present on this edition)"
       when: disable_homegroup
       ansible.windows.win_service:
         name: "{{ item }}"
@@ -418,11 +399,11 @@
         - "'is not installed' not in (homegroup_result.msg | default(''))"
 
     -
-      name: "Additional Enhanced Telemetry Blocking"
+      name: "Applying Additional Enhanced Telemetry Blocking"
       when: enhanced_privacy
       block:
         -
-          name: "Disable Windows Error Reporting"
+          name: "Disabling Windows Error Reporting"
           ansible.windows.win_regedit:
             path: HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting
             name: Disabled
@@ -430,7 +411,7 @@
             type: dword
 
         -
-          name: "Disable Delivery Optimization"
+          name: "Disabling Delivery Optimization"
           ansible.windows.win_regedit:
             path: "{{ item.path }}"
             name: "{{ item.name }}"
@@ -441,7 +422,7 @@
             - { path: "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DeliveryOptimization", name: "DODownloadMode", value: 0 }
 
         -
-          name: "Disable Remote Assistance"
+          name: "Disabling Remote Assistance"
           ansible.windows.win_regedit:
             path: HKLM:\SYSTEM\CurrentControlSet\Control\Remote Assistance
             name: fAllowToGetHelp
@@ -449,7 +430,7 @@
             type: dword
 
         -
-          name: "Disable Advertising ID"
+          name: "Disabling Advertising ID"
           ansible.windows.win_regedit:
             path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo
             name: DisabledByGroupPolicy
@@ -457,7 +438,7 @@
             type: dword
 
         -
-          name: "Disable Tailored Experiences"
+          name: "Disabling Tailored Experiences"
           ansible.windows.win_regedit:
             path: HKCU:\SOFTWARE\Policies\Microsoft\Windows\CloudContent
             name: DisableTailoredExperiencesWithDiagnosticData

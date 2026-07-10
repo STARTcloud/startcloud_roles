@@ -21,6 +21,6 @@
       name: "Enabling ZFS Unlock"
       ansible.builtin.service:
         name: zfs-unlock
-        enabled:  yes
+        enabled: true
         state: stopped
         daemon_reload: true

@@ -12,7 +12,7 @@
 #     playbooks. Kept here for non-OPNsense FreeBSD use.
 
 -
-  name: "Configure FreeBSD boot loader.conf.local for serial console + virtio-console"
+  name: "Configuring FreeBSD boot loader.conf.local for serial console + virtio-console"
   ansible.builtin.lineinfile:
     path: /boot/loader.conf.local
     line: "{{ item }}"

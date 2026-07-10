@@ -1,0 +1,53 @@
+---
+argument_specs:
+  main:
+    short_description: Initial per-host system setup
+    description:
+      - Performs baseline setup before other roles run — sets the timezone, creates support-bundle directories, writes the resolved Ansible variables to the support bundle, reports provisioner versions, and installs the root SSH key on platforms without a preseed/kickstart.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      show_help:
+        type: bool
+        default: true
+        description: Whether to display help/informational output during setup.
+      installer_dir:
+        type: str
+        default: /vagrant/installers
+        description: Directory where installer artifacts are staged.
+      completed_dir:
+        type: str
+        default: /vagrant/completed
+        description: Directory used to mark completed provisioning steps.
+      timezone:
+        type: str
+        default: America/Chicago
+        description: System timezone to set on Linux/BSD guests.
+      win_timezone:
+        type: str
+        default: Central Standard Time
+        description: System timezone to set on Windows guests.
+      debug_all:
+        type: bool
+        default: false
+        description: Enable verbose debug output across the role.
+      email:
+        type: str
+        default: support@startcloud.com
+        description: Contact email recorded for the setup.
+      root_ssh_key:
+        type: str
+        default: ""
+        description: Optional SSH public key installed for root on platforms without a preseed/kickstart (empty = skip).
+      installer_base_url:
+        type: str
+        description: Base URL for downloading installers; resolved from secrets when set.
+      installer_url_user:
+        type: str
+        description: Username for authenticating to the installer base URL; resolved from secrets.
+      installer_url_pass:
+        type: str
+        description: Password for authenticating to the installer base URL; resolved from secrets.

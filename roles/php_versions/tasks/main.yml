@@ -1,22 +1,26 @@
+---
 -
   name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    - name: Include OS-specific variables.
-      include_vars: "{{ item }}"
+    -
+      name: "Including OS-specific Variables"
+      ansible.builtin.include_vars: "{{ item }}"
       with_fileglob:
         - "{{ role_path }}/vars/{{ ansible_os_family }}.yml"
         - "{{ role_path }}/vars/{{ ansible_os_family }}-php{{ php_version }}.yml"
-    
-    - name: Remove missing JSON extension for PHP 8.0 (included by default)
-      set_fact:
-        __php_packages: "{{ __php_packages | reject('search','php' + php_version | string + '-json') | list }}"
+
+    -
+      name: "Removing missing JSON extension for PHP 8.0 (included by default)"
+      ansible.builtin.set_fact:
+        __php_packages: "{{ __php_packages | reject('search', 'php' + php_version | string + '-json') | list }}"
       when:
         - __php_packages is defined
         - php_version is version('8.0', '>=')
-    
-    - name: Define PHP variables.
-      set_fact: "{{ item.key }}={{ lookup('vars', item.value) }}"
+
+    -
+      name: "Defining PHP Variables"
+      ansible.builtin.set_fact: "{{ item.key }}={{ lookup('vars', item.value) }}"
       when:
         - vars[item.key] is undefined
         - vars[item.value] is defined
@@ -35,10 +39,12 @@
         php_xdebug_module_path: __php_xdebug_module_path
         php_xhprof_module_path: __php_xhprof_module_path
         php_packages: __php_packages
-    
-    - name: Define php_install_recommends variable.
-      set_fact:
+
+    -
+      name: "Defining php_install_recommends Variable"
+      ansible.builtin.set_fact:
         php_install_recommends: "{{ php_versions_install_recommends }}"
-    
-    # Setup tasks.
-    - include_tasks: "setup-{{ ansible_os_family }}.yml"
+
+    -
+      name: "Including OS-specific Setup Tasks"
+      ansible.builtin.include_tasks: "setup-{{ ansible_os_family }}.yml"

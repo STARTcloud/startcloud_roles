@@ -1,0 +1,103 @@
+---
+argument_specs:
+  main:
+    short_description: Apache 2.x web server installation and configuration
+    description:
+      - Installs Apache 2.x and configures listen ports, enabled/disabled mods, and virtual hosts (including SSL vhosts) across Debian, RedHat, SUSE and Solaris families.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      apache_enablerepo:
+        type: str
+        default: ""
+        description: Repository to enable when installing Apache packages on RHEL.
+      apache_listen_ip:
+        type: str
+        default: "*"
+        description: IP address Apache virtual hosts listen on.
+      apache_listen_port:
+        type: int
+        default: 80
+        description: HTTP port Apache listens on.
+      apache_listen_port_ssl:
+        type: int
+        default: 443
+        description: HTTPS port Apache listens on for SSL vhosts.
+      apache_create_vhosts:
+        type: bool
+        default: true
+        description: Whether to generate and enable the vhosts configuration file.
+      apache_vhosts_filename:
+        type: str
+        default: vhosts.conf
+        description: Filename for the generated vhosts configuration.
+      apache_vhosts_template:
+        type: str
+        default: vhosts.conf.j2
+        description: Template used to render the vhosts configuration.
+      apache_remove_default_vhost:
+        type: bool
+        default: false
+        description: Remove the distribution's default virtual host (Debian/Ubuntu).
+      apache_global_vhost_settings:
+        type: str
+        description: Global directives inserted at the top of the vhosts file.
+      apache_vhosts:
+        type: list
+        elements: dict
+        description: List of non-SSL virtual hosts to configure.
+      apache_allow_override:
+        type: str
+        default: "All"
+        description: Default AllowOverride directive for vhost directories.
+      apache_options:
+        type: str
+        default: "-Indexes +FollowSymLinks"
+        description: Default Options directive for vhost directories.
+      apache_vhosts_ssl:
+        type: list
+        elements: dict
+        description: List of SSL virtual hosts to configure.
+      apache_ignore_missing_ssl_certificate:
+        type: bool
+        default: true
+        description: Emit SSL vhosts even when the referenced certificate file is missing.
+      apache_ssl_no_log:
+        type: bool
+        default: true
+        description: Suppress logging when checking for SSL certificate files.
+      apache_ssl_protocol:
+        type: str
+        default: "All -SSLv2 -SSLv3"
+        description: SSLProtocol directive for SSL vhosts.
+      apache_ssl_cipher_suite:
+        type: str
+        default: "AES256+EECDH:AES256+EDH"
+        description: SSLCipherSuite directive for SSL vhosts.
+      apache_mods_enabled:
+        type: list
+        elements: str
+        description: Apache modules to enable (Debian/Ubuntu/RedHat).
+      apache_mods_disabled:
+        type: list
+        elements: str
+        description: Apache modules to disable (Debian/Ubuntu/RedHat).
+      apache_state:
+        type: str
+        default: started
+        description: Initial Apache service state.
+      apache_enabled:
+        type: bool
+        default: true
+        description: Whether Apache is enabled on boot.
+      apache_restart_state:
+        type: str
+        default: restarted
+        description: Service action applied by the restart handler on config change.
+      apache_packages_state:
+        type: str
+        default: present
+        description: Package state for Apache (present or latest).

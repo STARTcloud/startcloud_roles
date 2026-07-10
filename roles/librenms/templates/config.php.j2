@@ -1,0 +1,21 @@
+<?php
+
+// Database configuration
+$config['db_host'] = 'localhost';
+$config['db_port'] = 3306;
+$config['db_user'] = '{{ librenms_mysql_user }}';
+$config['db_pass'] = '{{ librenms_mysql_password }}';
+$config['db_name'] = '{{ librenms_mysql_database }}';
+$config['db_socket'] = '';
+
+// This is the user LibreNMS will run as
+$config['user'] = '{{ librenms_user }}';
+
+// Base URL of the installation
+$config['base_url'] = 'http://{{ librenms_server_name }}/';
+
+// Default SNMP community
+$config['snmp']['community'] = ['{{ librenms_community_string }}'];
+
+// RRDCached socket
+$config['rrdcached'] = 'unix:/run/rrdcached.sock';

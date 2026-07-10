@@ -1,0 +1,29 @@
+---
+argument_specs:
+  main:
+    short_description: Configure RDP and OpenSSH remote access on Windows
+    description:
+      - Enables Remote Desktop and installs the OpenSSH Server capability on Windows hosts.
+      - Applies server-specific tweaks such as disabling Server Manager on login and pruning unwanted features.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      enable_rdp:
+        type: bool
+        default: true
+        description: When true, enables Remote Desktop by clearing fDenyTSConnections.
+      enable_openssh:
+        type: bool
+        default: true
+        description: When true, installs and starts the OpenSSH Server capability.
+      openssh_install_script_path:
+        type: str
+        default: "C:\\Windows\\Temp\\packer\\InstallOpenSSHServer.ps1"
+        description: Path where the OpenSSH install PowerShell script is written on the host.
+      is_server:
+        type: bool
+        default: false
+        description: Marks whether this is a server (versus desktop) installation.

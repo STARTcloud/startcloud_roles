@@ -1,0 +1,73 @@
+---
+argument_specs:
+  main:
+    short_description: Installs and configures the VoIPmonitor sniffer sensor.
+    description:
+      - Downloads the VoIPmonitor static sniffer package, runs its install script,
+        deploys the sniffer configuration and a systemd unit, then enables and
+        starts the voipmonitor service.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      voipmonitor_sniffer_url:
+        type: str
+        default: "https://download.voipmonitor.org/current-stable-sniffer-static-64bit.tar.gz"
+        description: URL of the VoIPmonitor static sniffer archive to download.
+      voipmonitor_src_dir:
+        type: str
+        default: "/usr/src/voipmonitor"
+        description: Directory into which the sniffer archive is downloaded and extracted.
+      voipmonitor_binary_path:
+        type: str
+        default: "/usr/local/sbin/voipmonitor"
+        description: Path to the installed voipmonitor binary, used as the install idempotency marker.
+      voipmonitor_config_path:
+        type: str
+        default: "/etc/voipmonitor.conf"
+        description: Destination path for the rendered voipmonitor configuration file.
+      voipmonitor_spool_dir:
+        type: str
+        default: "/var/spool/voipmonitor"
+        description: Spool directory where the sniffer stores captured call data.
+      voipmonitor_interface:
+        type: str
+        default: "eth0"
+        description: Network interface the sniffer listens on for SIP/RTP traffic.
+      voipmonitor_sip_port:
+        type: int
+        default: 5060
+        description: SIP port the sniffer monitors.
+      voipmonitor_maxpoolsize:
+        type: int
+        default: 102400
+        description: Maximum spool pool size in megabytes before old data is pruned.
+      voipmonitor_cleandatabase:
+        type: int
+        default: 31
+        description: Number of days of call data to retain in the database.
+      voipmonitor_mysql_host:
+        type: str
+        default: "localhost"
+        description: Hostname of the MySQL server storing VoIPmonitor call records.
+      voipmonitor_mysql_db:
+        type: str
+        default: "voipmonitor"
+        description: Name of the MySQL database used by VoIPmonitor.
+      voipmonitor_mysql_user:
+        type: str
+        default: "voipmonitor"
+        description: MySQL username VoIPmonitor connects with.
+      voipmonitor_mysql_password:
+        type: str
+        default: "voipmonitor"
+        description: MySQL password VoIPmonitor connects with.
+      voipmonitor_dependencies:
+        type: list
+        elements: str
+        default:
+          - libpcap0.8
+          - tcpdump
+        description: APT packages installed as runtime dependencies for the sniffer.

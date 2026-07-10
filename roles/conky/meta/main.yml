@@ -1,0 +1,21 @@
+galaxy_info:
+  role_name: conky
+  author: Mark Gilbert
+  description: Installs the Conky system monitor and configures it to autostart a resource dashboard for all users on Debian-family systems.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
+  platforms:
+    - name: Debian
+      versions: ['bookworm', 'trixie']
+    - name: Ubuntu
+      versions: ['jammy', 'noble']
+  galaxy_tags:
+    - conky
+    - monitor
+    - desktop
+    - system
+dependencies: []
+collections:
+  - startcloud.startcloud_roles

@@ -1,0 +1,184 @@
+---
+argument_specs:
+  main:
+    short_description: Install and configure the Telegraf metrics agent.
+    description:
+      - Installs the InfluxData Telegraf agent from the upstream repositories (or a downloaded package) and renders its configuration.
+      - Supports Linux (Debian, RedHat, SUSE), FreeBSD, macOS, Windows, and a containerised Docker deployment.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      telegraf_enabled:
+        type: bool
+        default: true
+        description: Whether the Telegraf service is started and enabled at boot.
+      telegraf_agent_version:
+        type: str
+        default: 1.10.0
+        description: Telegraf version to install.
+      telegraf_agent_version_patch:
+        type: int
+        default: 1
+        description: Package patch/release suffix appended to the version for deb and rpm package files.
+      telegraf_agent_package:
+        type: str
+        default: telegraf
+        description: Package name used when installing Telegraf.
+      telegraf_agent_package_file_deb:
+        type: str
+        description: Filename of the Debian package to download for the online install method.
+      telegraf_agent_package_file_rpm:
+        type: str
+        description: Filename of the RPM package to download for the online install method.
+      telegraf_agent_package_path:
+        type: str
+        default: /tmp
+        description: Local path where a downloaded package is stored before installation.
+      telegraf_agent_package_method:
+        type: str
+        default: repo
+        description: Install method - repo, online, or offline.
+      telegraf_agent_package_state:
+        type: str
+        default: present
+        description: Desired package state (present or latest).
+      telegraf_agent_hostname:
+        type: str
+        default: "{{ ansible_fqdn }}"
+        description: Hostname reported by the Telegraf agent.
+      telegraf_agent_interval:
+        type: int
+        default: 10
+        description: Data collection interval in seconds.
+      telegraf_agent_debug:
+        type: bool
+        default: false
+        description: Enable Telegraf debug logging.
+      telegraf_agent_round_interval:
+        type: bool
+        default: true
+        description: Round the collection interval to the nearest whole interval.
+      telegraf_agent_flush_interval:
+        type: int
+        default: 10
+        description: Interval in seconds at which to flush data to outputs.
+      telegraf_agent_flush_jitter:
+        type: int
+        default: 0
+        description: Random jitter in seconds added to the flush interval.
+      telegraf_agent_aws_tags:
+        type: bool
+        default: false
+        description: Collect and attach EC2 instance tags as metric tags.
+      telegraf_agent_aws_tags_prefix:
+        type: str
+        default: ""
+        description: Prefix applied to EC2 tag names when they are added as metric tags.
+      telegraf_agent_config_path:
+        type: str
+        default: /etc/telegraf
+        description: Directory that holds telegraf.conf and the telegraf.d plugin directory.
+      telegraf_uid_docker:
+        type: int
+        default: 998
+        description: UID for the telegraf user when running via Docker.
+      telegraf_gid_docker:
+        type: int
+        default: 995
+        description: GID for the telegraf group when running via Docker.
+      telegraf_agent_docker:
+        type: bool
+        default: false
+        description: Run Telegraf as a Docker container instead of a native package.
+      telegraf_agent_docker_name:
+        type: str
+        default: telegraf
+        description: Name of the Telegraf Docker container.
+      telegraf_agent_docker_network_mode:
+        type: str
+        default: bridge
+        description: Docker network mode for the Telegraf container.
+      telegraf_agent_docker_restart_policy:
+        type: str
+        default: unless-stopped
+        description: Docker restart policy for the Telegraf container.
+      telegraf_agent_collection_jitter:
+        type: int
+        default: 0
+        description: Random jitter in seconds added to each collection interval.
+      telegraf_agent_metric_batch_size:
+        type: int
+        default: 1000
+        description: Number of metrics sent to outputs per write batch.
+      telegraf_agent_metric_buffer_limit:
+        type: int
+        default: 10000
+        description: Maximum number of unsent metrics buffered per output.
+      telegraf_agent_quiet:
+        type: bool
+        default: false
+        description: Run Telegraf in quiet mode, suppressing non-error output.
+      telegraf_agent_logfile:
+        type: str
+        default: ""
+        description: Path to the Telegraf log file (empty logs to stderr).
+      telegraf_agent_omit_hostname:
+        type: bool
+        default: false
+        description: Omit the hostname tag from emitted metrics.
+      telegraf_global_tags:
+        type: list
+        elements: dict
+        description: Global tags applied to every metric.
+      telegraf_agent_output:
+        type: list
+        elements: dict
+        description: Output plugin definitions Telegraf writes metrics to.
+      telegraf_plugins_default:
+        type: list
+        elements: dict
+        description: Default input plugins enabled in the main telegraf.conf.
+      telegraf_plugins_extra:
+        type: dict
+        description: Extra input plugins rendered into individual files under telegraf.d.
+      telegraf_plugins_extra_exclusive:
+        type: bool
+        default: false
+        description: When true, remove any telegraf.d plugin files not defined by this role.
+      telegraf_redhat_releasever:
+        type: str
+        default: "$releasever"
+        description: RedHat releasever value used when building the yum repository baseurl.
+      telegraf_yum_baseurl:
+        type: dict
+        description: Per-distribution InfluxData yum repository base URLs.
+      telegraf_yum_gpgkey:
+        type: str
+        default: https://repos.influxdata.com/influxdb.key
+        description: URL of the InfluxData GPG key used to verify yum packages.
+      telegraf_win_install_dir:
+        type: str
+        default: 'C:\Telegraf'
+        description: Windows installation directory for Telegraf.
+      telegraf_win_logfile:
+        type: str
+        default: 'C:\\Telegraf\\telegraf.log'
+        description: Windows Telegraf log file path.
+      telegraf_win_include:
+        type: str
+        default: 'C:\Telegraf\telegraf_agent.d'
+        description: Windows directory for extra Telegraf plugin configuration files.
+      telegraf_win_service_args:
+        type: list
+        description: Arguments passed to telegraf.exe when registering the Windows service.
+      telegraf_mac_user:
+        type: str
+        default: user
+        description: Owner user for Telegraf configuration files on macOS.
+      telegraf_mac_group:
+        type: str
+        default: admin
+        description: Owner group for Telegraf configuration files on macOS.

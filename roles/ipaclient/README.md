@@ -5,20 +5,18 @@ This [Ansible](https://www.ansible.com/) role allows to join hosts as clients to
 
 **Note**: The ansible playbooks and role require a configured ansible environment where the ansible nodes are reachable and are properly set up to have an IP address and a working package manager.
 
-
 Features
 --------
+
 * Client deployment
 * One-time-password (OTP) support
 * Repair mode
 * DNS resolver configuration support
 
-
 Supported FreeIPA Versions
 --------------------------
 
 FreeIPA versions 4.5 and up are supported by the client role. There is also limited support for version 4.4.
-
 
 Supported Distributions
 -----------------------
@@ -29,17 +27,17 @@ Supported Distributions
 * Ubuntu
 * Debian
 
-
 Requirements
 ------------
 
 **Controller**
+
 * Ansible version: 2.13+
 
 **Node**
+
 * Supported FreeIPA version (see above)
 * Supported distribution (needed for package installation only, see above)
-
 
 Usage
 =====
@@ -148,12 +146,13 @@ Playbooks
 =========
 
 The playbooks needed to deploy or undeploy a client are part of the repository in the playbooks folder. There are also playbooks to deploy and undeploy clusters.
+
 ```
 install-client.yml
 uninstall-client.yml
 ```
-Please remember to link or copy the playbooks to the base directory of ansible-freeipa if you want to use the roles within the source archive.
 
+Please remember to link or copy the playbooks to the base directory of ansible-freeipa if you want to use the roles within the source archive.
 
 How to setup a client
 ---------------------
@@ -161,8 +160,8 @@ How to setup a client
 ```bash
 ansible-playbook -v -i inventory/hosts install-client.yml
 ```
-This will deploy the clients defined in the inventory file.
 
+This will deploy the clients defined in the inventory file.
 
 Variables
 =========
@@ -203,7 +202,6 @@ Variable | Description | Required
 `ipaclient_keytab` | The string value contains the path on the node of a backup host keytab from a previous enrollment. | no
 `ipaclient_automount_location` | Automount location | no
 
-
 Server Variables
 ----------------
 
@@ -214,7 +212,6 @@ Variable | Description | Required
 `ipaadmin_principal` | The string variable only needs to be set if the name of the Kerberos admin principal is not "admin". If `ipaadmin_principal` is not set it will be set internally to "admin". | no
 `ipaadmin_password` | The string variable contains the Kerberos password of the Kerberos admin principal. If `ipaadmin_keytab` is used, then `ipaadmin_password` does not need to be set. | mostly
 
-
 Topology Variables
 ------------------
 
@@ -224,7 +221,6 @@ Variable | Description | Required
 -------- | ----------- | --------
 `ipaclient_no_dns_lookup` | The bool value defines if the `ipaservers` group will be used as servers for the clients automatically. If enabled this deactivates DNS lookup in Kerberos in client installations. `ipaclient_no_dns_lookup` defaults to `no`. | no
 `ipaclient_servers` | The optional list can be used to manually override list of servers on a per client basis. The list of servers is normally taken from from `ipaservers` group. | no
-
 
 Special Variables
 -----------------
@@ -239,7 +235,6 @@ Variable | Description | Required
 `ipaclient_configure_dns_resolver` | The bool value defines if the DNS resolver is configured. This is useful if the IPA server has internal DNS support. `ipaclient_dns_server` need to be set also. The installation of packages is happening before the DNS resolver is configured, therefore package installation needs to be possible without the configuration of the DNS resolver. The DNS nameservers are configured for `NetworkManager`, `systemd-resolved` (if installed and enabled) and `/etc/resolv.conf` if neither NetworkManager nor systemd-resolved is used. | no
 `ipaclient_dns_servers` | The list of DNS server IP addresses. This is only useful with `ipaclient_configure_dns_resolver`. | no
 `ipaclient_cleanup_dns_resolver` | The bool value defines if DNS resolvers that have been configured before with `ipaclient_configure_dns_resolver` will be cleaned up again. | no
-
 
 Authors
 =======

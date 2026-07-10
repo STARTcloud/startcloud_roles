@@ -19,14 +19,14 @@
         format: zip
 
     -
-      name: "Check if /vagrant/installers directory exists"
+      name: "Checking if /vagrant/installers directory exists"
       ansible.builtin.stat:
         path: /vagrant/installers
       register: installers_dir_stat
       when: not ansible_module_running_in_container
 
     -
-      name: "Check if /vagrant/installers directory is empty"
+      name: "Checking if /vagrant/installers directory is empty"
       ansible.builtin.find:
         paths: /vagrant/installers
         file_type: any
@@ -84,13 +84,13 @@
       ignore_errors: true
 
     -
-      name: "Check if /vagrant/completed directory exists"
+      name: "Checking if /vagrant/completed directory exists"
       ansible.builtin.stat:
         path: /vagrant/completed
       register: completed_dir_stat
 
     -
-      name: "Check if /vagrant/completed directory is empty"
+      name: "Checking if /vagrant/completed directory is empty"
       ansible.builtin.find:
         paths: /vagrant/completed
         file_type: any
@@ -125,7 +125,7 @@
       ignore_errors: true
 
     -
-      name: "Zip Support Bundle"
+      name: "Zipping Support Bundle"
       community.general.archive:
         mode: '0777'
         path: "/vagrant/support-bundle"

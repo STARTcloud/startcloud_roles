@@ -4,34 +4,127 @@
   when: run_tasks
   block:
     -
-      name: "Setting up Debian Installations"
+      name: "Setting up the InfluxData Repository on Debian Family Systems"
       when: "ansible_os_family == 'Debian'"
       block:
         -
-          name: "Gathering DEB architecture"
-          ansible.builtin.command: dpkg --print-architecture
-          register: deb_architecture
-          changed_when: false
-    
-        -
-          name: "Printing DEB architecture"
-          ansible.builtin.debug:
-            msg: "deb_architecture.stdout: {{ deb_architecture.stdout }}"
-    
-        -
-          name: "Ensuring apt cache is updated"
+          name: "Installing InfluxData Repository Prerequisites"
           ansible.builtin.apt:
-            cache_valid_time: 3600
+            name:
+              - "apt-transport-https"
+              - "ca-certificates"
+              - "gnupg"
+            state: "present"
             update_cache: true
-    
         -
-          name: "Upgrading all apt packages"
+          name: "Ensuring the APT Keyrings Directory Exists"
+          ansible.builtin.file:
+            path: "/etc/apt/keyrings"
+            state: "directory"
+            mode: "0755"
+        -
+          name: "Downloading the InfluxData APT Signing Key"
+          ansible.builtin.get_url:
+            url: "{{ influxdb_apt_key_url }}"
+            dest: "{{ influxdb_apt_keyring_path }}"
+            mode: "0644"
+        -
+          name: "Adding the InfluxData APT Repository"
+          ansible.builtin.apt_repository:
+            repo: "{{ influxdb_apt_repo }}"
+            filename: "influxdata"
+            state: "present"
+        -
+          name: "Installing InfluxDB and the Influx CLI"
           ansible.builtin.apt:
-            upgrade: dist
+            name:
+              - "{{ influxdb_package }}{{ ('=' + influxdb_version) if influxdb_version != 'latest' else '' }}"
+              - "{{ influxdb_cli_package }}"
+            state: "{{ influxdb_package_state }}"
             update_cache: true
-    
+    -
+      name: "Setting up the InfluxData Repository on RedHat Family Systems"
+      when: "ansible_os_family == 'RedHat'"
+      block:
         -
-          name: "Adding Additional Dependencies {{ packages }}"
-          ansible.builtin.apt:
-            name: "{{ packages }}"
-            state: present
+          name: "Adding the InfluxData YUM Repository"
+          ansible.builtin.yum_repository:
+            name: "influxdata"
+            description: "InfluxData Repository - Stable"
+            baseurl: "{{ influxdb_yum_baseurl }}"
+            gpgcheck: true
+            gpgkey: "{{ influxdb_yum_gpgkey }}"
+            state: "present"
+        -
+          name: "Installing InfluxDB and the Influx CLI"
+          ansible.builtin.dnf:
+            name:
+              - "{{ influxdb_package }}{{ ('-' + influxdb_version) if influxdb_version != 'latest' else '' }}"
+              - "{{ influxdb_cli_package }}"
+            state: "{{ influxdb_package_state }}"
+    -
+      name: "Ensuring the InfluxDB Configuration Directory Exists"
+      ansible.builtin.file:
+        path: "{{ influxdb_config_dir }}"
+        state: "directory"
+        owner: "influxdb"
+        group: "influxdb"
+        mode: "0755"
+    -
+      name: "Ensuring the InfluxDB Data Directory Exists"
+      ansible.builtin.file:
+        path: "{{ influxdb_data_dir }}"
+        state: "directory"
+        owner: "influxdb"
+        group: "influxdb"
+        mode: "0750"
+    -
+      name: "Templating the InfluxDB Configuration File"
+      ansible.builtin.template:
+        src: "config.toml.j2"
+        dest: "{{ influxdb_config_dir }}/config.toml"
+        owner: "influxdb"
+        group: "influxdb"
+        mode: "0644"
+      notify: "Restarting InfluxDB"
+    -
+      name: "Enabling and Starting the InfluxDB Service"
+      ansible.builtin.systemd:
+        name: "{{ influxdb_service_name }}"
+        state: "{{ influxdb_service_state }}"
+        enabled: "{{ influxdb_service_enabled }}"
+        daemon_reload: true
+    -
+      name: "Running the Initial InfluxDB Onboarding"
+      when: influxdb_setup | bool
+      block:
+        -
+          name: "Waiting for the InfluxDB HTTP API to Become Available"
+          ansible.builtin.wait_for:
+            host: "127.0.0.1"
+            port: "{{ influxdb_http_port }}"
+            delay: 3
+            timeout: 60
+        -
+          name: "Checking Whether InfluxDB Onboarding is Still Allowed"
+          ansible.builtin.uri:
+            url: "http://127.0.0.1:{{ influxdb_http_port }}/api/v2/setup"
+            method: "GET"
+            return_content: true
+          register: influxdb_onboarding
+        -
+          name: "Performing the Initial InfluxDB Setup"
+          ansible.builtin.command:
+            cmd: >-
+              influx setup
+              --host http://127.0.0.1:{{ influxdb_http_port }}
+              --username {{ influxdb_username }}
+              --password {{ influxdb_password }}
+              --org {{ influxdb_org }}
+              --bucket {{ influxdb_bucket }}
+              --retention {{ influxdb_retention }}
+              --force
+          register: influxdb_setup_result
+          changed_when: influxdb_setup_result.rc == 0
+          no_log: true
+          when: influxdb_onboarding.json.allowed | default(false)

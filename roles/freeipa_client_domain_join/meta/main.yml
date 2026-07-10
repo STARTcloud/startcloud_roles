@@ -1,0 +1,25 @@
+---
+galaxy_info:
+  role_name: freeipa_client_domain_join
+  author: Mark Gilbert
+  description: Installs the FreeIPA client packages and repoints the Firefox NSS trust store at the system p11-kit trust store so the host can join a FreeIPA domain.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
+  platforms:
+    - name: Debian
+      versions: ['bookworm', 'trixie']
+    - name: Ubuntu
+      versions: ['jammy', 'noble']
+    - name: EL
+      versions: ['8', '9']
+  galaxy_tags:
+    - freeipa
+    - identity
+    - kerberos
+    - sssd
+    - firefox
+dependencies: []
+collections:
+  - startcloud.startcloud_roles

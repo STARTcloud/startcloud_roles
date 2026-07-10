@@ -1,0 +1,63 @@
+---
+argument_specs:
+  main:
+    short_description: Deploys Greenbone Community Edition (GVM / OpenVAS) via Docker Compose.
+    description:
+      - Renders the official Greenbone Community Containers compose file, brings the
+        stack up with docker compose, and creates the initial administrator account.
+      - On first start the stack downloads and synchronises the vulnerability feeds
+        before scans can run and before the web UI becomes usable.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      greenbone_install_dir:
+        type: str
+        default: /opt/greenbone
+        description: Host directory that holds the rendered docker-compose.yml.
+      greenbone_project_name:
+        type: str
+        default: greenbone-community-edition
+        description: Docker Compose project name, also used to derive container names.
+      greenbone_registry:
+        type: str
+        default: registry.community.greenbone.net/community
+        description: Container registry namespace for the Greenbone community images.
+      greenbone_image_tag:
+        type: str
+        default: stable
+        description: Pinned image tag applied to every Greenbone community image.
+      greenbone_web_bind:
+        type: str
+        default: 127.0.0.1
+        description: Host address the Greenbone Security Assistant web UI binds to.
+      greenbone_web_port:
+        type: int
+        default: 9392
+        description: Host port the Greenbone Security Assistant web UI is published on.
+      greenbone_mqtt_bind:
+        type: str
+        default: 127.0.0.1
+        description: Host address the internal MQTT broker binds to.
+      greenbone_mqtt_port:
+        type: int
+        default: 1883
+        description: Host port the internal MQTT broker is published on.
+      greenbone_compose_state:
+        type: str
+        default: present
+        description: Desired state of the compose stack (present, absent, stopped, restarted).
+      greenbone_compose_pull:
+        type: str
+        default: missing
+        description: Image pull policy handed to docker compose (always, missing, never, policy).
+      greenbone_admin_user:
+        type: str
+        default: admin
+        description: Username of the initial gvmd administrator account created on first deploy.
+      greenbone_admin_password:
+        type: str
+        default: "admin"
+        description: Password of the initial gvmd administrator account created on first deploy.

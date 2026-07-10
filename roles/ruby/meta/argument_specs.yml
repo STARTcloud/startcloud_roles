@@ -1,0 +1,49 @@
+---
+argument_specs:
+  main:
+    short_description: Installs Ruby, Bundler, and configured gems
+    description:
+      - Installs Ruby from system packages or from source, adds the user RubyGems bin directory to the global PATH, and optionally installs Bundler and a list of configured gems.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      workspace:
+        type: str
+        default: /root
+        description: Directory where source tarballs are downloaded and extracted when building Ruby from source.
+      ruby_install_bundler:
+        type: bool
+        default: true
+        description: Whether to install the Bundler gem.
+      ruby_install_gems:
+        type: list
+        elements: raw
+        default: []
+        description: List of gems to install; each entry is either a gem name string or a dict with name, version, and user_install keys.
+      ruby_install_gems_user:
+        type: str
+        default: "{{ ansible_user }}"
+        description: User account under which the configured gems are installed.
+      ruby_install_from_source:
+        type: bool
+        default: false
+        description: When true, build and install Ruby from source instead of using system packages.
+      ruby_download_url:
+        type: str
+        default: http://cache.ruby-lang.org/pub/ruby/3.0/ruby-3.0.0.tar.gz
+        description: URL of the Ruby source tarball, used only when installing from source.
+      ruby_version:
+        type: str
+        default: 3.0.0
+        description: Ruby version built when installing from source.
+      ruby_source_configure_command:
+        type: str
+        default: ./configure --enable-shared
+        description: Configure command run during a source build.
+      ruby_rubygems_package_name:
+        type: str
+        default: rubygems
+        description: Name of the RubyGems package; overridden automatically on Ubuntu Trusty.

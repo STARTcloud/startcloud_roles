@@ -1,8 +1,5 @@
 ---
 run_tasks: true
-count_progress: true
-progress_units: 1
-progress_role_description: "Configuring MOTD"
 
 motd_remove_default_config: false
 motd_restore_default_config: false

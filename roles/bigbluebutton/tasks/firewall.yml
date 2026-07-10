@@ -1,26 +1,26 @@
 ---
-- name: Install UFW firewall
+- name: "Installing UFW firewall"
   ansible.builtin.apt:
     name: ufw
     state: present
   tags:
     - bbb_configure_ufw
 
-- name: Allow OpenSSH access in firewall
+- name: "Allowing OpenSSH access in firewall"
   community.general.ufw:
     rule: allow
     name: OpenSSH
   tags:
     - bbb_configure_ufw
 
-- name: Allow HTTP/HTTPS access in firewall
+- name: "Allowing HTTP/HTTPS access in firewall"
   community.general.ufw:
     rule: allow
     name: "Nginx Full"
   tags:
     - bbb_configure_ufw
 
-- name: Allow media connections in firewall
+- name: "Allowing media connections in firewall"
   community.general.ufw:
     rule: allow
     proto: udp
@@ -28,7 +28,7 @@
   tags:
     - bbb_configure_ufw
 
-- name: Allow connections from SIP gateways in firewall
+- name: "Allowing connections from SIP gateways in firewall"
   community.general.ufw:
     rule: allow
     from: "{{ lookup('dig', item[0]) }}"
@@ -40,7 +40,7 @@
   tags:
     - bbb_configure_ufw
 
-- name: Enable firewall rules
+- name: "Enabling firewall rules"
   community.general.ufw:
     state: enabled
     policy: deny

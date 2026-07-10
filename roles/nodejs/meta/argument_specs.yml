@@ -1,0 +1,40 @@
+---
+argument_specs:
+  main:
+    short_description: Node.js and npm installation
+    description:
+      - Installs Node.js and npm from the NodeSource repositories, provisions a global npm prefix, and optionally installs global packages or a package.json.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      nodejs_version:
+        type: str
+        default: "22.x"
+        description: NodeSource release line to install (e.g. "20.x", "22.x").
+      nodejs_install_npm_user:
+        type: str
+        description: User who owns the global npm prefix and for whom packages are installed.
+      npm_config_prefix:
+        type: str
+        default: /usr/local/lib/npm
+        description: Directory used as the global npm installation prefix.
+      npm_config_unsafe_perm:
+        type: str
+        default: "false"
+        description: Value of NPM_CONFIG_UNSAFE_PERM when running package scripts.
+      nodejs_npm_global_packages:
+        type: list
+        elements: raw
+        default: []
+        description: Global npm packages to install (name string, or a mapping with name/version/state).
+      nodejs_package_json_path:
+        type: str
+        default: ""
+        description: Path to a package.json whose dependencies are installed globally; empty to skip.
+      nodejs_generate_etc_profile:
+        type: str
+        default: "true"
+        description: Whether to generate /etc/profile.d/npm.sh exporting the npm prefix onto the global PATH.

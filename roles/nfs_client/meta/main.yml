@@ -1,28 +1,22 @@
 ---
 galaxy_info:
   role_name: nfs_client
-  author: MarkProminic
-  description: Mount NFS shares on a client
-  company: STARTCloud
+  author: Mark Gilbert
+  description: Installs NFS client utilities and mounts remote NFS shares on the host.
+  company: STARTcloud
   issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
-  license: license (Apache)
-  min_ansible_version: '2.9'
+  license: Apache-2.0
+  min_ansible_version: '2.15'
   platforms:
-    - name: Fedora
-      versions:
-        - all
     - name: Debian
-      versions:
-        - all
+      versions: ['bookworm', 'trixie']
     - name: Ubuntu
-      versions:
-        - all
-
+      versions: ['jammy', 'noble']
+    - name: EL
+      versions: ['8', '9']
   galaxy_tags:
-    - system
     - nfs
     - filesystem
-    - share
     - mount
     - client
 
@@ -30,5 +24,3 @@ dependencies: []
 
 collections:
   - startcloud.startcloud_roles
-
-allow_duplicates: false

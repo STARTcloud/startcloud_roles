@@ -1,0 +1,19 @@
+argument_specs:
+  main:
+    short_description: Install Java-free IPMI console tools
+    description:
+      - Installs command-line IPMI and BMC tooling that provides serial-over-LAN and iKVM console access without requiring a Java runtime.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      packages:
+        type: list
+        elements: str
+        default:
+          - ipmitool
+          - freeipmi-tools
+          - openipmi
+        description: Java-free IPMI console packages to install on Debian-family hosts.

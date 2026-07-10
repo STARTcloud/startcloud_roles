@@ -1,0 +1,266 @@
+---
+argument_specs:
+  main:
+    short_description: Install and configure MongoDB
+    description:
+      - Installs the mongodb-org packages, lays down the mongod configuration and systemd unit, and manages the service.
+      - Optionally configures authentication, replica sets, and the MMS monitoring agent.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      mongodb_package:
+        type: str
+        default: mongodb-org
+        description: Name of the MongoDB package to install.
+      mongodb_package_state:
+        type: str
+        default: present
+        description: Desired state of the MongoDB package.
+      mongodb_version:
+        type: str
+        default: "4.4"
+        description: MongoDB release to install (major version or full version string).
+      mongodb_apt_key_from_url:
+        type: bool
+        default: false
+        description: Fetch the APT signing key from a URL instead of a keyserver.
+      mongodb_apt_keyserver:
+        type: str
+        default: 'hkp://keyserver.ubuntu.com:80'
+        description: Keyserver used to fetch the MongoDB APT signing key.
+      mongodb_apt_key_id:
+        type: dict
+        description: Map of MongoDB major version to APT signing key ID.
+      mongodb_apt_key_url:
+        type: dict
+        description: Map of MongoDB major version to APT signing key URL.
+      mongodb_pymongo_from_pip:
+        type: bool
+        default: true
+        description: Install PyMongo via pip rather than the system package manager.
+      mongodb_pymongo_pip_version:
+        type: str
+        default: "3.11.3"
+        description: PyMongo version to install when using pip.
+      mongodb_user_update_password:
+        type: str
+        default: "on_create"
+        description: Password update policy passed to the mongodb_user module.
+      mongodb_manage_service:
+        type: bool
+        default: true
+        description: Whether the role manages the MongoDB service state.
+      mongodb_manage_systemd_unit:
+        type: bool
+        default: true
+        description: Whether the role deploys and links a systemd unit for MongoDB.
+      mongodb_systemd_unit_limit_nofile:
+        type: int
+        default: 64000
+        description: LimitNOFILE value for the MongoDB systemd unit.
+      mongodb_systemd_unit_limit_nproc:
+        type: int
+        default: 64000
+        description: LimitNPROC value for the MongoDB systemd unit.
+      mongodb_disable_transparent_hugepages:
+        type: bool
+        default: false
+        description: Deploy a systemd service to disable transparent huge pages.
+      mongodb_use_numa:
+        type: bool
+        default: true
+        description: Launch mongod under numactl when NUMA is available.
+      mongodb_user:
+        type: str
+        default: "{{ 'mongod' if ('RedHat' == ansible_os_family) else 'mongodb' }}"
+        description: System user and group that owns MongoDB files and processes.
+      mongodb_uid:
+        type: int
+        description: Explicit UID for the MongoDB user (optional).
+      mongodb_gid:
+        type: int
+        description: Explicit GID for the MongoDB group (optional).
+      mongodb_daemon_name:
+        type: str
+        default: "{{ 'mongod' if ('mongodb-org' in mongodb_package) else 'mongodb' }}"
+        description: Name of the MongoDB service/daemon.
+      mongodb_net_bindip:
+        type: str
+        default: 127.0.0.1
+        description: Comma-separated list of IP addresses mongod listens on.
+      mongodb_net_http_enabled:
+        type: bool
+        default: false
+        description: Enable the legacy HTTP interface (MongoDB < 3.6).
+      mongodb_net_ipv6:
+        type: bool
+        default: false
+        description: Enable IPv6 support.
+      mongodb_net_maxconns:
+        type: int
+        default: 65536
+        description: Maximum number of simultaneous connections.
+      mongodb_net_port:
+        type: int
+        default: 27017
+        description: TCP port mongod listens on.
+      mongodb_net_ssl:
+        type: str
+        default: disabled
+        description: Enable or disable SSL connections in the config template.
+      mongodb_net_ssl_mode:
+        type: str
+        default: ""
+        description: SSL mode (requireSSL / preferSSL / allowSSL / disabled).
+      mongodb_net_ssl_pemfile:
+        type: str
+        default: ""
+        description: Path to the PEM file used for SSL.
+      mongodb_net_ssl_host:
+        type: str
+        default: ""
+        description: Valid SSL hostname used for authentication checks.
+      mongodb_processmanagement_fork:
+        type: bool
+        default: "{{ 'RedHat' == ansible_os_family }}"
+        description: Fork the mongod process (defaults to true on RedHat).
+      mongodb_security_authorization:
+        type: str
+        default: "disabled"
+        description: Enable or disable access control (enabled / disabled).
+      mongodb_security_keyfile:
+        type: str
+        default: /etc/mongodb-keyfile
+        description: Path to the keyfile used for inter-process authentication.
+      mongodb_security_javascript_enabled:
+        type: bool
+        default: true
+        description: Enable or disable server-side JavaScript execution.
+      mongodb_storage_dbpath:
+        type: str
+        default: /data/db
+        description: Directory where MongoDB stores data files.
+      mongodb_storage_dirperdb:
+        type: bool
+        default: false
+        description: Store each database in its own subdirectory.
+      mongodb_storage_engine:
+        type: str
+        default: "wiredTiger"
+        description: Storage engine for mongod (wiredTiger or mmapv1).
+      mongodb_storage_quota_enforced:
+        type: bool
+        default: false
+        description: Limit each database to a maximum number of data files (mmapv1).
+      mongodb_storage_quota_maxfiles:
+        type: int
+        default: 8
+        description: Number of quota files per database when quota is enforced.
+      mongodb_storage_smallfiles:
+        type: bool
+        default: false
+        description: Use smaller default data file sizes (mmapv1).
+      mongodb_storage_journal_enabled:
+        type: bool
+        default: true
+        description: Enable write-ahead journaling.
+      mongodb_storage_prealloc:
+        type: bool
+        default: true
+        description: Enable data file preallocation.
+      mongodb_wiredtiger_directory_for_indexes:
+        type: bool
+        default: false
+        description: Store WiredTiger indexes in a separate directory.
+      mongodb_systemlog_destination:
+        type: str
+        default: "file"
+        description: Where mongod sends log output (file or syslog).
+      mongodb_systemlog_logappend:
+        type: bool
+        default: true
+        description: Append to the log file instead of overwriting it.
+      mongodb_systemlog_logrotate:
+        type: str
+        default: "rename"
+        description: Log rotation behavior (rename or reopen).
+      mongodb_systemlog_path:
+        type: str
+        default: /var/log/mongodb/{{ mongodb_daemon_name }}.log
+        description: Path to the MongoDB log file.
+      mongodb_operation_profiling_slow_op_threshold_ms:
+        type: int
+        default: 100
+        description: Threshold in milliseconds above which operations are considered slow.
+      mongodb_operation_profiling_mode:
+        type: str
+        default: "off"
+        description: Database profiler mode (off / slowOp / all).
+      mongodb_cloud_monitoring_free_state:
+        type: str
+        default: "runtime"
+        description: Free cloud monitoring state (MongoDB >= 4.0).
+      mongodb_replication_replset:
+        type: str
+        default: ""
+        description: Replica set name; enables replication when non-empty.
+      mongodb_replication_replindexprefetch:
+        type: str
+        default: "all"
+        description: Index prefetching behavior for secondaries (none / _id_only / all).
+      mongodb_replication_oplogsize:
+        type: int
+        default: 1024
+        description: Maximum size in megabytes for the replication operation log.
+      mongodb_mms_agent_pkg:
+        type: str
+        default: https://cloud.mongodb.com/download/agent/monitoring/mongodb-mms-monitoring-agent_7.2.0.488-1_amd64.ubuntu1604.deb
+        description: URL or package name for the MMS monitoring agent.
+      mongodb_mms_group_id:
+        type: str
+        default: ""
+        description: MMS group ID for the monitoring agent.
+      mongodb_mms_api_key:
+        type: str
+        default: ""
+        description: MMS API key; the agent is configured only when this is set.
+      mongodb_mms_base_url:
+        type: str
+        default: https://mms.mongodb.com
+        description: Base URL for the MMS monitoring service.
+      mongodb_keyfile_content:
+        type: str
+        description: Contents of the inter-process authentication keyfile.
+      mongodb_user_admin_name:
+        type: str
+        default: siteUserAdmin
+        description: Username for the user-administration admin account.
+      mongodb_user_admin_password:
+        type: str
+        default: passw0rd
+        description: Password for the user-administration admin account.
+      mongodb_root_admin_name:
+        type: str
+        default: siteRootAdmin
+        description: Username for the root admin account.
+      mongodb_root_admin_password:
+        type: str
+        default: passw0rd
+        description: Password for the root admin account.
+      mongodb_root_backup_name:
+        type: str
+        default: backupuser
+        description: Username for the backup account.
+      mongodb_root_backup_password:
+        type: str
+        default: passw0rd
+        description: Password for the backup account.
+      mongodb_set_parameters:
+        type: dict
+        description: Map of setParameter options rendered into mongod.conf.
+      mongodb_config:
+        type: dict
+        description: Free-form additional mongod.conf options keyed by config section.

@@ -1,8 +1,5 @@
 ---
 run_tasks: true
-count_progress: true
-progress_units: 1
-progress_role_description: "Configuring SNMP"
 
 snmp_access_adress: "0.0.0.0"
 snmp_additional_packages: []

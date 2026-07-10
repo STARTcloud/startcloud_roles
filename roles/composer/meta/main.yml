@@ -1,41 +1,23 @@
----
-dependencies: []
-
 galaxy_info:
   role_name: composer
-  author: geerlingguy
-  description: Composer PHP Dependency Manager
-  company: "Midwestern Mac, LLC"
-  license: "license (BSD, MIT)"
-  min_ansible_version: 2.10
+  author: Mark Gilbert
+  description: Installs Composer, the PHP dependency manager, and optionally manages global packages, PATH entries, and GitHub OAuth authentication.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
   platforms:
-    - name: GenericUNIX
-      versions:
-        - all
-    - name: Fedora
-      versions:
-        - all
-    - name: opensuse
-      versions:
-        - all
-    - name: GenericBSD
-      versions:
-        - all
-    - name: FreeBSD
-      versions:
-        - all
-    - name: Ubuntu
-      versions:
-        - all
-    - name: SLES
-      versions:
-        - all
-    - name: GenericLinux
-      versions:
-        - all
     - name: Debian
-      versions:
-        - all
+      versions: ['bookworm', 'trixie']
+    - name: Ubuntu
+      versions: ['jammy', 'noble']
+    - name: EL
+      versions: ['8', '9']
   galaxy_tags:
+    - composer
+    - php
     - packaging
-    - web
+    - dependency
+dependencies: []
+collections:
+  - startcloud.startcloud_roles

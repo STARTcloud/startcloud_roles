@@ -1,0 +1,56 @@
+{{ ansible_managed | comment }}
+# Graylog server configuration rendered by the startcloud.startcloud_roles.graylog role.
+
+is_leader = true
+node_id_file = /etc/graylog/server/node-id
+
+# Shared secret used to salt/encrypt stored user passwords.
+password_secret = {{ graylog_password_secret }}
+
+# Initial administrator account.
+root_username = admin
+root_password_sha2 = {{ graylog_root_password_sha2 }}
+root_timezone = {{ graylog_root_timezone }}
+
+bin_dir = /usr/share/graylog-server/bin
+data_dir = /var/lib/graylog-server
+plugin_dir = /usr/share/graylog-server/plugin
+
+# Web interface / REST API.
+http_bind_address = {{ graylog_http_bind_address }}:{{ graylog_http_port }}
+http_publish_uri = {{ graylog_http_publish_uri }}
+
+# Search backend (OpenSearch / Elasticsearch OSS).
+elasticsearch_hosts = {{ graylog_elasticsearch_hosts }}
+
+# Index rotation / retention.
+rotation_strategy = count
+elasticsearch_max_docs_per_index = 20000000
+elasticsearch_max_number_of_indices = 20
+retention_strategy = delete
+elasticsearch_shards = 1
+elasticsearch_replicas = 0
+elasticsearch_index_prefix = graylog
+elasticsearch_analyzer = standard
+
+allow_leading_wildcard_searches = false
+allow_highlighting = false
+
+# Disk-backed message journal.
+message_journal_enabled = true
+message_journal_dir = {{ graylog_message_journal_dir }}
+
+# Metadata store.
+mongodb_uri = {{ graylog_mongodb_uri }}
+mongodb_max_connections = 1000
+
+# Outputs / processing.
+output_batch_size = 500
+output_flush_interval = 1
+processbuffer_processors = 5
+outputbuffer_processors = 3
+processor_wait_strategy = blocking
+ring_size = 65536
+inputbuffer_ring_size = 65536
+inputbuffer_processors = 2
+inputbuffer_wait_strategy = blocking

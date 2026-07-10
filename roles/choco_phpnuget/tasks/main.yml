@@ -142,7 +142,7 @@
         mode: '0644'
     
     -
-      name: "Set Horizon View to Start for All Users"
+      name: "Setting Horizon View to Start for All Users"
       ansible.builtin.copy:
         src: /usr/share/applications/vmware-view-s2-rantoul.desktop
         dest: /etc/xdg/autostart/

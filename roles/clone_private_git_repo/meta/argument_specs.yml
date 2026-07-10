@@ -1,0 +1,29 @@
+---
+argument_specs:
+  main:
+    short_description: Clone a private GitHub repository and include its roles
+    description:
+      - Clones a private GitHub repository using either a vaulted token or an SSH deploy key, then discovers and includes any Ansible roles the repository provides.
+      - Note - github_org, github_repo, github_branch, github_token_file and github_deploy_key must be supplied by the caller; they are not defaulted here.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      git_repo_url:
+        type: str
+        default: "https://github.com/MyOrg/template_roles"
+        description: Repository URL placeholder default.
+      git_dest:
+        type: str
+        default: "/home/startcloud/template_role"
+        description: Destination directory the repository is cloned into.
+      git_vault_password:
+        type: str
+        default: SomePass1234
+        description: Password used to decrypt the vaulted GitHub token file.
+      git_user:
+        type: str
+        default: "MyGitHubUsername"
+        description: GitHub username placeholder default.

@@ -1,0 +1,134 @@
+---
+argument_specs:
+  main:
+    short_description: Installs and configures Docker on Linux.
+    description:
+      - Installs Docker CE from the official Docker repository, optionally installs the
+        docker-compose plugin and standalone binary, configures the Docker daemon, and
+        manages membership of the docker group.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      docker_edition:
+        type: str
+        default: 'ce'
+        description: Docker edition to install, either 'ce' (Community) or 'ee' (Enterprise).
+      docker_packages:
+        type: list
+        description: List of Docker packages to install.
+      docker_packages_state:
+        type: str
+        default: present
+        description: Desired state of the Docker packages (present, absent, or latest).
+      docker_service_manage:
+        type: bool
+        default: true
+        description: Whether the role manages the docker service state and boot enablement.
+      docker_service_state:
+        type: str
+        default: started
+        description: Desired running state of the docker service.
+      docker_service_enabled:
+        type: bool
+        default: true
+        description: Whether the docker service is enabled to start at boot.
+      docker_restart_handler_state:
+        type: str
+        default: restarted
+        description: State applied by the restart handler when the docker service is notified.
+      docker_install_compose_plugin:
+        type: bool
+        default: true
+        description: Whether to install the docker-compose plugin package.
+      docker_compose_package:
+        type: str
+        default: docker-compose-plugin
+        description: Name of the docker-compose plugin package to install.
+      docker_compose_package_state:
+        type: str
+        default: present
+        description: Desired state of the docker-compose plugin package.
+      docker_install_compose:
+        type: bool
+        default: false
+        description: Whether to install the standalone docker-compose binary.
+      docker_compose_version:
+        type: str
+        default: "v2.30.3"
+        description: Version of the standalone docker-compose binary to install.
+      docker_compose_arch:
+        type: str
+        default: "{{ ansible_architecture }}"
+        description: Architecture used to build the docker-compose download URL.
+      docker_compose_url:
+        type: str
+        description: Download URL for the standalone docker-compose binary.
+      docker_compose_path:
+        type: str
+        default: /usr/local/bin/docker-compose
+        description: Filesystem path where the standalone docker-compose binary is installed.
+      docker_add_repo:
+        type: bool
+        default: true
+        description: Whether to add the official Docker package repository.
+      docker_repo_url:
+        type: str
+        default: https://download.docker.com/linux
+        description: Base URL of the official Docker repository, shared between Debian and RHEL.
+      docker_apt_release_channel:
+        type: str
+        default: stable
+        description: APT release channel to use (stable or nightly) on Debian/Ubuntu.
+      docker_apt_ansible_distribution:
+        type: str
+        description: Distribution name used to build the APT repository, mapping variants to ubuntu.
+      docker_apt_arch:
+        type: str
+        description: Architecture used in the APT repository definition.
+      docker_trusted_key:
+        type: str
+        default: "signed-by=/etc/apt/trusted.gpg.d/docker.asc"
+        description: signed-by clause pointing at the imported Docker APT signing key.
+      docker_apt_repository:
+        type: str
+        description: Full APT repository line for the Docker repository.
+      docker_apt_ignore_key_error:
+        type: bool
+        default: true
+        description: Whether to ignore errors when adding the Docker APT GPG key.
+      docker_apt_gpg_key:
+        type: str
+        description: URL of the Docker APT GPG signing key.
+      docker_apt_gpg_key_checksum:
+        type: str
+        default: "sha256:1500c1f56fa9e26b9b8f42452a553675796ade0807cdce11975eb98170b3a570"
+        description: Checksum used to verify the downloaded Docker APT GPG key.
+      docker_apt_filename:
+        type: str
+        default: "docker"
+        description: Name of the APT sources list file created for the Docker repository.
+      docker_yum_repo_url:
+        type: str
+        description: URL of the Docker YUM/DNF repository definition on RHEL-family systems.
+      docker_yum_repo_enable_nightly:
+        type: str
+        default: '0'
+        description: Whether to enable the Docker nightly YUM repo ('1' to enable).
+      docker_yum_repo_enable_test:
+        type: str
+        default: '0'
+        description: Whether to enable the Docker test YUM repo ('1' to enable).
+      docker_yum_gpg_key:
+        type: str
+        default: "https://download.docker.com/linux/centos/gpg"
+        description: URL of the Docker YUM GPG signing key.
+      docker_users:
+        type: list
+        default: []
+        description: System users to add to the docker group.
+      docker_daemon_options:
+        type: dict
+        description: Options written to /etc/docker/daemon.json as the dockerd configuration.

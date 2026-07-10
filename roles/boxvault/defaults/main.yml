@@ -1,14 +1,17 @@
 ---
 run_tasks: true
-packages:
-  - htop
-  - lynx
-  - lshw
-  - libxml2-utils
-  - tree
-  - python3-pexpect
-  - python3-pymongo
-  - python3-pymysql
-  - psutils
-  - python3-psutil
-  - libxml2-utils
+
+# Install mode: false = STARTcloud apt package (production default),
+# true = git clone + npm build (dev environments).
+boxvault_build_from_source: false
+
+# STARTcloud APT repository BoxVault is installed from
+# (matches roles/dependencies/vars/debian.yml).
+boxvault_apt_key_url: "https://public.debian.packages.startcloud.com/debian/startcloud-archive-keyring.asc"
+boxvault_apt_repo_url: "https://public.debian.packages.startcloud.com/debian/"
+boxvault_package: boxvault
+
+# Source build settings.
+boxvault_path: "/opt/boxvault"
+boxvault_git_repo: "https://github.com/Makr91/BoxVault.git"
+boxvault_git_version: main

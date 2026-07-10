@@ -1,0 +1,12 @@
+---
+argument_specs:
+  main:
+    short_description: Raspberry Pi x728 UPS HAT setup
+    description:
+      - Installs the Geekworm x728 UPS HAT power-management scripts to /usr/local/bin and enables the DS1307 RTC kernel module on Raspberry Pi (arm64/armhf Debian) hosts.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.

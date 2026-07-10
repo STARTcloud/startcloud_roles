@@ -1,0 +1,22 @@
+---
+argument_specs:
+  main:
+    short_description: Reference/example role
+    description:
+      - A reference role that demonstrates STARTcloud conventions — it stands up a Python simple HTTP server, renders a welcome page, and assembles a support bundle. Intended as an example/template, not for production.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      python_simple_web_server_path:
+        type: str
+        description: Base path served by the Python simple HTTP server.
+      startcloud_quick_start_port_forwards:
+        type: list
+        elements: dict
+        description: Port-forward entries (guest port + URL slug) for the demo web server.
+      startcloud_quick_start_proxy_url:
+        type: str
+        description: Proxy URL assembled from the first port-forward entry and the host settings.

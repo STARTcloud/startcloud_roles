@@ -1,50 +1,60 @@
 ---
-- ansible.builtin.file:
+- name: "Creating /mnt/hgfs directory for synced folder mounts."
+  ansible.builtin.file:
     path: /mnt/hgfs
     state: directory
-  name: "Create /mnt/hgfs directory for synced folder mounts."
-- ansible.builtin.apt: "name=open-vm-tools state=present"
-  name: "Install open-vm-tools."
+
+- name: "Installing open-vm-tools."
+  ansible.builtin.apt: "name=open-vm-tools state=present"
   when: vmware_install_open_vm_tools
-- block:
-    - ansible.builtin.file:
+
+- name: "Installing VMware Tools from the bundled ISO."
+  when: "not vmware_install_open_vm_tools"
+  block:
+    - name: "Creating temporary directories for VMware tools."
+      ansible.builtin.file:
         path: "/tmp/{{ item }}"
         state: directory
-      name: "Create temporary directories for VMware tools."
       with_items:
         - vmfusion
         - vmfusion-archive
-    - mount:
+
+    - name: "Mounting VMware tools."
+      ansible.posix.mount:
         fstype: iso9660
         name: /tmp/vmfusion
         src: "/home/{{ user }}/linux.iso"
         state: mounted
-      name: "Mount VMware tools."
-    - command: "tar xzf /tmp/vmfusion/VMwareTools-*.tar.gz -C /tmp/vmfusion-archive"
-      name: "Decompress VMware Tools installer into archive folder."
+
+    - name: "Decompressing VMware Tools installer into archive folder."
+      ansible.builtin.command: "tar xzf /tmp/vmfusion/VMwareTools-*.tar.gz -C /tmp/vmfusion-archive"
       tags:
         - skip_ansible_lint
-    - command: "/tmp/vmfusion-archive/vmware-tools-distrib/vmware-install.pl --default"
-      name: "Run the VMware tools installer."
+
+    - name: "Running the VMware tools installer."
+      ansible.builtin.command: "/tmp/vmfusion-archive/vmware-tools-distrib/vmware-install.pl --default"
       register: vmtools_installer_output
-    - command: "/tmp/vmfusion-archive/vmware-tools-distrib/vmware-install.pl --default --force-install"
-      name: "Run the VMware tools installer with --force-install."
+
+    - name: "Running the VMware tools installer with --force-install."
+      ansible.builtin.command: "/tmp/vmfusion-archive/vmware-tools-distrib/vmware-install.pl --default --force-install"
       when: "vmtools_installer_output.stdout.find('open-vm-tools') != -1"
-    - mount:
+
+    - name: "Unmounting VMware tools."
+      ansible.posix.mount:
         fstype: iso9660
         name: /tmp/vmfusion
         src: "/home/{{ user }}/linux.iso"
         state: absent
-      name: "Unmount VMware tools."
-    - ansible.builtin.file:
+
+    - name: "Removing temporary directories for VMware tools."
+      ansible.builtin.file:
         path: "/tmp/{{ item }}"
         state: absent
-      name: "Remove temporary directories for VMware tools."
       with_items:
         - vmfusion
         - vmfusion-archive
-    - ansible.builtin.file:
+
+    - name: "Deleting VMWare Tools."
+      ansible.builtin.file:
         path: "/home/{{ user }}/linux.iso"
         state: absent
-      name: "Delete VMWare Tools."
-  when: "not vmware_install_open_vm_tools"

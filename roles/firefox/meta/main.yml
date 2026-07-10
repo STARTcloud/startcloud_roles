@@ -1,0 +1,23 @@
+galaxy_info:
+  role_name: firefox
+  author: Mark Gilbert
+  description: Installs the .deb Firefox build from the Mozilla Team PPA (avoiding the snap), pins it, and deploys hardened enterprise policies and preferences.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
+  platforms:
+    - name: Debian
+      versions: ['bookworm', 'trixie']
+    - name: Ubuntu
+      versions: ['jammy', 'noble']
+    - name: EL
+      versions: ['8', '9']
+  galaxy_tags:
+    - firefox
+    - browser
+    - mozilla
+    - ppa
+dependencies: []
+collections:
+  - startcloud.startcloud_roles

@@ -1,0 +1,45 @@
+---
+argument_specs:
+  main:
+    short_description: Haxe toolchain installation
+    description:
+      - Installs build dependencies, downloads and installs a pinned Haxe release, installs Neko, and sets up haxelib plus configured Haxe libraries and OpenFL.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      haxe_version:
+        type: str
+        default: "4.3.6"
+        description: Haxe release version to download and install.
+      haxe_home:
+        type: str
+        description: Base directory for the Haxe installation.
+      haxelib_dir:
+        type: str
+        default: "/opt/haxe/haxelib_default"
+        description: Directory used as the haxelib library store.
+      haxe:
+        type: str
+        description: Path to the haxe binary.
+      haxelib:
+        type: str
+        description: Path to the haxelib binary.
+      install_neko:
+        type: bool
+        default: true
+        description: Install Neko (required by Haxe).
+      install_openfl:
+        type: bool
+        default: true
+        description: Set up OpenFL via haxelib.
+      additional_haxe_libraries:
+        type: list
+        elements: str
+        description: Haxe libraries to install via haxelib install.
+      additional_haxe_libraries_dev:
+        type: list
+        elements: dict
+        description: Haxe libraries to install from git (library, repo, branch).

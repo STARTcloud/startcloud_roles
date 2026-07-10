@@ -4,7 +4,14 @@
   when: run_tasks
   block:
     -
+      name: "Gathering DEB architecture"
+      ansible.builtin.command: dpkg --print-architecture
+      register: deb_architecture
+      changed_when: false
+
+    -
       name: "Installing python3 packages for GPIO"
+      when: ansible_os_family == 'Debian' and (deb_architecture.stdout == 'arm64' or deb_architecture.stdout == 'armhf')
       ansible.builtin.apt:
         name:
           - python3-smbus
@@ -46,6 +53,7 @@
     
     -
       name: "Enabling LCD-Display Service"
+      when: ansible_os_family == 'Debian' and (deb_architecture.stdout == 'arm64' or deb_architecture.stdout == 'armhf')
       ansible.builtin.service:
         name: lcd-display
         enabled: true

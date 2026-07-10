@@ -1,8 +1,5 @@
 ---
 run_tasks: true
-count_progress: true
-progress_units: 1
-progress_role_description: "Setting up GitHub JIT Runner"
 
 # Runner configuration
 git_runner_user: "{{ service_user | default('startcloud') }}"

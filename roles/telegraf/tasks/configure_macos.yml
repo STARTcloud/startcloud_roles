@@ -1,19 +1,20 @@
 ---
-# description: Configure telegraf and get all relevent ec2 information
-
-- name: Retrieve ec2 facts
-  ec2_metadata_facts:
+-
+  name: "Retrieving ec2 facts"
+  amazon.aws.ec2_metadata_facts:
   when:
     - telegraf_agent_aws_tags
 
-- name: "Add prefix path"
-  set_fact:
+-
+  name: "Adding prefix path"
+  ansible.builtin.set_fact:
     telegraf_agent_config_path: /usr/local/etc
   when:
     - ansible_os_family in ["FreeBSD", "Darwin"]
 
-- name: Retrieve all ec2 tags on the instance
-  ec2_tag:
+-
+  name: "Retrieving all ec2 tags on the instance"
+  amazon.aws.ec2_tag:
     region: '{{ ansible_ec2_placement_region }}'
     resource: '{{ ansible_ec2_instance_id }}'
     state: list
@@ -21,43 +22,47 @@
     - telegraf_agent_aws_tags
   register: ec2_tags
 
-- name: "Copy the template for versions < 0.10.0"
-  template:
+-
+  name: "Copying the template for versions < 0.10.0"
+  ansible.builtin.template:
     src: etc-opt-telegraf-telegraf.conf.j2
     dest: /etc/opt/telegraf/telegraf.conf
     owner: "{{ telegraf_mac_user }}"
     group: "{{ telegraf_mac_group }}"
-    mode: 0640
+    mode: '0640'
   become: true
   when:
     - telegraf_agent_version is version_compare('0.10.0', '<')
   notify:
-    - Restart Telegraf
-    - Restart Telegraf container
+    - "Restarting Telegraf"
+    - "Restarting Telegraf Container"
 
-- name: "Copy the template for versions >= 0.10.0"
-  template:
+-
+  name: "Copying the template for versions >= 0.10.0"
+  ansible.builtin.template:
     src: telegraf.conf.j2
     dest: "{{ telegraf_agent_config_path }}/telegraf.conf"
     owner: "{{ telegraf_mac_user }}"
     group: "{{ telegraf_mac_group }}"
-    mode: 0640
+    mode: '0640'
   become: true
   when:
     - telegraf_agent_version is version_compare('0.10.0', '>=')
   notify:
-    - Restart MacOS Telegraf
-    - Restart Telegraf container
+    - "Restarting MacOS Telegraf"
+    - "Restarting Telegraf Container"
 
-- name: "Check if extra plugins directory exists in case of exclusive"
-  stat:
+-
+  name: "Checking if extra plugins directory exists in case of exclusive"
+  ansible.builtin.stat:
     path: "{{ telegraf_agent_config_path }}/telegraf.d"
   register: telegraf_directory
   when:
     - telegraf_plugins_extra_exclusive
 
-- name: "Delete telegraf extra plugin path"
-  file:
+-
+  name: "Deleting telegraf extra plugin path"
+  ansible.builtin.file:
     state: absent
     path: "{{ telegraf_agent_config_path }}/telegraf.d/"
   when:
@@ -65,31 +70,33 @@
     - telegraf_directory.stat.exists
   become: true
   notify:
-    - Restart MacOS Telegraf
-    - Restart Telegraf container
+    - "Restarting MacOS Telegraf"
+    - "Restarting Telegraf Container"
 
-- name: "Create telegraf extra plugin path"
-  file:
+-
+  name: "Creating telegraf extra plugin path"
+  ansible.builtin.file:
     state: directory
     path: "{{ telegraf_agent_config_path }}/telegraf.d/"
     owner: "{{ telegraf_mac_user }}"
     group: "{{ telegraf_mac_group }}"
-    mode: 0755
+    mode: '0755'
   when:
     - telegraf_plugins_extra_exclusive
     - telegraf_directory.stat.exists
   become: true
   notify:
-    - Restart MacOS Telegraf
-    - Restart Telegraf container
+    - "Restarting MacOS Telegraf"
+    - "Restarting Telegraf Container"
 
-- name: "Copy telegraf extra plugins"
-  template:
+-
+  name: "Copying telegraf extra plugins"
+  ansible.builtin.template:
     src: "telegraf-extra-plugin.conf.j2"
     dest: "{{ telegraf_agent_config_path }}/telegraf.d/{{ item.key }}.conf"
     owner: "{{ telegraf_mac_user }}"
     group: "{{ telegraf_mac_group }}"
-    mode: 0640
+    mode: '0640'
   with_dict: "{{ telegraf_plugins_extra }}"
   loop_control:
     label: "{{ item.key }}"
@@ -99,11 +106,12 @@
     - item.value.state|default('present') != 'absent'
   become: true
   notify:
-    - Restart MacOS Telegraf
-    - Restart Telegraf container
+    - "Restarting MacOS Telegraf"
+    - "Restarting Telegraf Container"
 
-- name: "Remove telegraf extra plugins"
-  file:
+-
+  name: "Removing telegraf extra plugins"
+  ansible.builtin.file:
     path: "{{ telegraf_agent_config_path }}/telegraf.d/{{ item.key }}.conf"
     state: absent
   with_dict: "{{ telegraf_plugins_extra }}"
@@ -115,14 +123,16 @@
     - item.value.state|default('present') == 'absent'
   become: true
   notify:
-    - Restart MacOS Telegraf
-    - Restart Telegraf container
+    - "Restarting MacOS Telegraf"
+    - "Restarting Telegraf Container"
 
-- name: "Force restart service after reread config"
-  meta: flush_handlers
+-
+  name: "Forcing restart service after reread config"
+  ansible.builtin.meta: flush_handlers
 
-- name: "Start Telegraf (If it wasn't running)"
-  shell: brew services start telegraf
+-
+  name: "Starting Telegraf (if it wasn't running)"
+  ansible.builtin.shell: brew services start telegraf
   register: brew_services_start_telegraf
   changed_when: '"Successfully started `telegraf`" in brew_services_start_telegraf.stdout'
   when: not telegraf_agent_docker

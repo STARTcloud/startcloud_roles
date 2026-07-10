@@ -2,9 +2,9 @@
 # tasks file for sbaerlocher.snmp
 
 -
-  name: 'linux : install snmp'
+  name: "linux : installing snmp"
   become: true
-  package:
+  ansible.builtin.package:
     name: '{{ item }}'
   with_items:
     - '{{ snmp_packages }}'
@@ -13,7 +13,7 @@
     - packages
 
 -
-  name: 'linux : create snmp extension directory'
+  name: "linux : creating snmp extension directory"
   become: true
   ansible.builtin.file:
     path: '{{ snmp_extension_scripts }}'
@@ -29,9 +29,9 @@
     - configuration
 
 -
-  name: 'linux : install snmp extension'
+  name: "linux : installing snmp extension"
   become: true
-  get_url:
+  ansible.builtin.get_url:
     url: '{{ item.url }}'
     dest: '{{ snmp_extension_scripts + "/" }}'
     owner: root
@@ -47,9 +47,9 @@
     - configuration
 
 -
-  name: 'linux : install snmp extension proxmox'
+  name: "linux : installing snmp extension proxmox"
   become: true
-  get_url:
+  ansible.builtin.get_url:
     url: 'https://raw.githubusercontent.com/librenms/librenms-agent/master/agent-local/proxmox'
     dest: '{{ snmp_extension_scripts + "/" }}'
     owner: root
@@ -64,7 +64,7 @@
     - configuration
 
 -
-  name: 'linux : configure snmpd daemon'
+  name: "linux : configuring snmpd daemon"
   become: true
   ansible.builtin.template:
     src: 'default/snmpd.{{ ansible_os_family }}.j2'
@@ -80,7 +80,7 @@
     - restart snmp
 
 -
-  name: 'linux : check create snmp config'
+  name: "linux : checking snmp config"
   become: true
   ansible.builtin.template:
     src: 'snmp/snmpd.conf.j2'
@@ -98,16 +98,16 @@
     - configuration
 
 -
- name: "Configuring SNMP"
- block:
+  name: "Configuring SNMP"
+  block:
 
-    - name: 'linux : stopped snmp'
+    - name: "linux : stopping snmp"
       become: true
-      service:
+      ansible.builtin.service:
         name: '{{ snmp_service_name }}'
         state: stopped
 
-    - name: 'linux : create snmp config'
+    - name: "linux : creating snmp config"
       become: true
       ansible.builtin.template:
         src: 'snmp/snmpd.conf.j2'
@@ -123,9 +123,9 @@
         - restart snmp
         - enabled snmp
 
-    - name: 'linux : started snmp'
+    - name: "linux : starting snmp"
       become: true
-      service:
+      ansible.builtin.service:
         name: '{{ snmp_service_name }}'
         state: started
 

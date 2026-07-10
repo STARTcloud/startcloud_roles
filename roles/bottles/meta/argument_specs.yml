@@ -1,0 +1,16 @@
+---
+argument_specs:
+  main:
+    short_description: Bottles (Wine) Flatpak installation
+    description:
+      - Installs the Bottles application (a Wine prefix manager) as a system Flatpak from Flathub.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      packages:
+        type: list
+        elements: str
+        description: List of base apt packages associated with the role's defaults.

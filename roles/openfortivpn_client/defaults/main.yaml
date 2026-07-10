@@ -1,10 +1,10 @@
 ---
 run_tasks: true
 openfortivpn_packages:
-  - openconnect
-  - network-manager-openconnect-gnome
-  - network-manager-fortisslvpn-gnome
-  - network-manager-openvpn
-  - network-manager-openvpn-gnome
   - openfortivpn
-  - openvpn
+openfortivpn_enable_service: false
+openfortivpn_host: ""
+openfortivpn_port: 443
+openfortivpn_user: ""
+openfortivpn_password: ""
+openfortivpn_trusted_cert: ""

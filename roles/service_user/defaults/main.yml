@@ -5,12 +5,7 @@ service_group: java_group
 service_home_dir: /local/notesjava
 service_user_soft_limit: "60000"
 service_user_hard_limit: "80000"
-service_user_password: "SecureService2025!@#"
+service_user_password: "{{ lookup('password', '/dev/null length=20 chars=ascii_letters,digits') }}"
 # Optional SSH public key string to install for the service user.
 # Empty = skip authorized_key install (Debian relies on preseed for this).
 service_user_ssh_key: ""
-
-# Progress reporting
-count_progress: true
-progress_units: 1
-progress_role_description: "Configuring service user"

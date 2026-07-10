@@ -1,3 +1,37 @@
 ---
 run_tasks: true
-# defaults file for gse_build_source
+
+# Greenbone Community Edition (GVM / OpenVAS) is deployed as the official
+# Greenbone Community Containers via Docker Compose. On the FIRST start the
+# stack downloads and synchronises the vulnerability feeds (NVTs, SCAP, CERT,
+# Notus data), which can take a considerable amount of time and disk space
+# before scans can run. The Greenbone Security Assistant web UI only becomes
+# usable once gvmd has finished loading the initial feed.
+
+# Host directory that holds the rendered docker-compose.yml
+greenbone_install_dir: /opt/greenbone
+
+# Compose project name (also used to derive the container names)
+greenbone_project_name: greenbone-community-edition
+
+# Container registry and pinned image tag for the community images
+greenbone_registry: registry.community.greenbone.net/community
+greenbone_image_tag: stable
+
+# Greenbone Security Assistant (web UI) host binding
+greenbone_web_bind: 127.0.0.1
+greenbone_web_port: 9392
+
+# MQTT broker host binding (used internally by the scanner services)
+greenbone_mqtt_bind: 127.0.0.1
+greenbone_mqtt_port: 1883
+
+# Desired state of the compose stack (present, absent, stopped, restarted)
+greenbone_compose_state: present
+
+# Image pull policy handed to docker compose (always, missing, never, policy)
+greenbone_compose_pull: missing
+
+# Initial administrator account created inside gvmd on first deployment
+greenbone_admin_user: admin
+greenbone_admin_password: "admin"

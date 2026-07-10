@@ -1,24 +1,22 @@
 galaxy_info:
   role_name: git_runner
-  author: MarkProminic
-  description: Setup GitHub Actions JIT (Just-In-Time) self-hosted runner
-  company: STARTCloud
-  license: Apache
-  min_ansible_version: '2.9'
-
+  author: Mark Gilbert
+  description: Sets up a GitHub Actions JIT or persistent self-hosted runner as a systemd service.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
   platforms:
     - name: Debian
-      versions:
-        - 'bookworm'
-
+      versions: ['bookworm', 'trixie']
+    - name: Ubuntu
+      versions: ['jammy', 'noble']
   galaxy_tags:
     - github
     - actions
     - runner
     - ci
     - cd
-
 dependencies: []
-
 collections:
   - startcloud.startcloud_roles

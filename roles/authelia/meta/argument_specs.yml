@@ -1,0 +1,88 @@
+---
+argument_specs:
+  main:
+    short_description: Install and configure a single-node Authelia server
+    description:
+      - Downloads a pinned Authelia release binary, creates a dedicated system account and directories, renders the Authelia configuration and file-based users database, and installs a systemd service on Debian and Ubuntu.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      authelia_version:
+        type: str
+        default: "4.38.17"
+        description: Pinned Authelia release version to download and install.
+      authelia_arch:
+        type: str
+        default: "amd64"
+        description: CPU architecture suffix of the Authelia release binary.
+      authelia_checksum:
+        type: str
+        default: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        description: Checksum (algorithm-prefixed) verified against the downloaded Authelia binary.
+      authelia_binary_url:
+        type: str
+        default: "https://github.com/authelia/authelia/releases/download/v{{ authelia_version }}/authelia-linux-{{ authelia_arch }}"
+        description: URL the Authelia release binary is downloaded from.
+      authelia_binary_path:
+        type: str
+        default: "/usr/local/bin/authelia"
+        description: Destination path for the installed Authelia binary.
+      authelia_user:
+        type: str
+        default: "authelia"
+        description: System user that owns the configuration and runs the service.
+      authelia_group:
+        type: str
+        default: "authelia"
+        description: System group that owns the configuration and data.
+      authelia_config_dir:
+        type: str
+        default: "/etc/authelia"
+        description: Directory holding the Authelia configuration and users database.
+      authelia_data_dir:
+        type: str
+        default: "/var/lib/authelia"
+        description: Directory holding the SQLite storage and notifier files.
+      authelia_listen_address:
+        type: str
+        default: "0.0.0.0"
+        description: Address the Authelia server listener binds to.
+      authelia_listen_port:
+        type: int
+        default: 9091
+        description: TCP port the Authelia server listens on.
+      authelia_log_level:
+        type: str
+        default: "info"
+        description: Authelia log verbosity level.
+      authelia_domain:
+        type: str
+        default: "example.com"
+        description: Protected domain used for the session cookie and access-control rule.
+      authelia_default_redirection_url:
+        type: str
+        default: "https://www.example.com"
+        description: URL users are redirected to after successful authentication.
+      authelia_jwt_secret:
+        type: str
+        default: "insecure_jwt_secret_change_me"
+        description: Secret used to sign identity-validation JSON web tokens.
+      authelia_session_secret:
+        type: str
+        default: "insecure_session_secret_change_me"
+        description: Secret used to encrypt the session cookie.
+      authelia_storage_encryption_key:
+        type: str
+        default: "insecure_storage_encryption_key_change_me"
+        description: Key used to encrypt sensitive data at rest in the storage backend.
+      authelia_default_policy:
+        type: str
+        default: "one_factor"
+        description: Default access-control policy applied to protected resources.
+      authelia_users:
+        type: list
+        elements: dict
+        description: Users rendered into the file-based authentication backend, each with username, displayname, password digest, email, and groups.

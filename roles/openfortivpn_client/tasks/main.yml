@@ -1,44 +1,50 @@
+---
 -
   name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
     -
-      name: "Adding Additional Dependencies {{ packages }}"
+      name: "Installing openfortivpn Packages"
       ansible.builtin.apt:
         name: "{{ openfortivpn_packages }}"
         state: present
-    
+        update_cache: true
+
     -
-      name: "Placing s1.nmconnection"
-      ansible.builtin.template:
-        src: s1.nmconnection.j2
-        dest: "/etc/NetworkManager/system-connections/s1.nmconnection"
-        owner: root
-        mode: "0600"
-    
+      name: "Creating openfortivpn Configuration Directory"
+      ansible.builtin.file:
+        path: "/etc/openfortivpn"
+        state: directory
+        owner: "root"
+        group: "root"
+        mode: "0750"
+
     -
-      name: "Placing s2.nmconnection"
+      name: "Rendering openfortivpn Client Configuration"
       ansible.builtin.template:
-        src: s2.nmconnection.j2
-        dest: "/etc/NetworkManager/system-connections/s2.nmconnection"
-        owner: root
+        src: "client.conf.j2"
+        dest: "/etc/openfortivpn/config"
+        owner: "root"
+        group: "root"
         mode: "0600"
-    
-    #-
-    #  name: "Copying certificates and keys from the server to the client"
-    #  ansible.builtin.copy:
-    #    src: /etc/openvpn/easy-rsa/pki/{{ item }}
-    #    dest: /etc/openvpn/client/{{ item | basename }}
-    #    mode: "0640"
-    #    remote_src: true
-    #  loop:
-    #    - ca.crt
-    #    - issued/client.crt
-    #    - private/client.key
-    #    - ta.key
-    
-    #-
-    #  name: "Enabling OpenVPN"
-    #  service:
-    #    name: openvpn
-    #    enabled: true
+      notify: "Restarting openfortivpn"
+
+    -
+      name: "Deploying openfortivpn systemd Service Unit"
+      ansible.builtin.template:
+        src: "openfortivpn.service.j2"
+        dest: "/etc/systemd/system/openfortivpn.service"
+        owner: "root"
+        group: "root"
+        mode: "0644"
+      notify: "Reloading systemd Daemon"
+      when: openfortivpn_enable_service
+
+    -
+      name: "Enabling and Starting openfortivpn Service"
+      ansible.builtin.systemd_service:
+        name: "openfortivpn.service"
+        enabled: true
+        state: started
+        daemon_reload: true
+      when: openfortivpn_enable_service

@@ -24,4 +24,3 @@
   ansible.builtin.yum:
     name: "{{ packages }}"
     state: present
-    

@@ -11,7 +11,7 @@
           - conky-all
     
     -
-      name: Set Conky Start for All Users
+      name: "Setting Conky Start for All Users"
       ansible.builtin.copy:
         src: /usr/share/applications/conky.desktop
         dest: /etc/xdg/autostart/

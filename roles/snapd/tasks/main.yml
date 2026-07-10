@@ -3,61 +3,70 @@
   name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    - name: run only for debian based
+    -
+      name: "Running Only for Debian-Based Distributions"
       when:
         - ansible_os_family | lower != "debian"
       block:
-        - name: message
+        -
+          name: "Notifying Unsupported Distribution"
           ansible.builtin.debug:
             msg: "This role only works with Debian-based distributions."
 
-        - name: end
+        -
+          name: "Ending Host Execution on Unsupported Distribution"
           ansible.builtin.meta: end_host
 
-    - name: merge snapd configuration between defaults and custom
+    -
+      name: "Merging Snapd Configuration Between Defaults and Custom"
       ansible.builtin.set_fact:
         snapd_services: "{{ snapd_defaults_services | union(snapd_services) | unique }}"
         snapd_files: "{{ snapd_defaults_files | union(snapd_files) | unique }}"
         snapd_block_packages: "{{ snapd_defaults_block_packages | union(snapd_block_packages) | unique }}"
 
-    - name: shutdown services, sockets and timers
+    -
+      name: "Shutting Down Services, Sockets and Timers"
       ansible.builtin.service:
         name: "{{ item }}"
         state: "{{ snapd_state }}"
         enabled: "{{ snapd_enabled }}"
       failed_when: false
-      loop:
-        "{{ snapd_services }}"
+      loop: "{{ snapd_services }}"
       loop_control:
         label: "{{ item }}"
 
-    - name: purge all this bullshit
+    -
+      name: "Purging Snapd Packages and Files"
       when:
         - snapd_purge
       block:
-        - name: remove snapd packages
+        -
+          name: "Removing Snapd Packages"
           ansible.builtin.package:
             name: "{{ snapd_block_packages }}"
             state: absent
             purge: true
 
-        - name: block installation
+        -
+          name: "Blocking Installation"
           when:
             - snapd_block_packages is defined
             - snapd_block_packages | count > 0
           block:
-            - name: block later installations of snapd
+            -
+              name: "Blocking Later Installations of Snapd"
               ansible.builtin.template:
                 src: apt/preferences.d/snapd.pref.j2
                 dest: /etc/apt/preferences.d/snapd.pref
-                mode: 0644
+                mode: "0644"
               notify:
                 - clean apt cache
                 - update package cache
               when:
                 - snapd_block_later_installation
 
-        - name: remove snapd-related directories
+        -
+          name: "Removing Snapd-Related Directories"
           ansible.builtin.file:
             path: "{{ item }}"
             state: absent
@@ -65,6 +74,7 @@
           loop_control:
             label: "{{ item }}"
 
-    - name: flush handlers
+    -
+      name: "Flushing Handlers"
       ansible.builtin.meta: flush_handlers
-
+...

@@ -1,0 +1,21 @@
+galaxy_info:
+  role_name: crossover
+  author: Mark Gilbert
+  description: Installs CodeWeavers CrossOver and its 32-bit runtime dependencies on Debian-based systems, then runs cxfix and adjusts jar permissions.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
+  platforms:
+    - name: Debian
+      versions: ['bookworm', 'trixie']
+    - name: Ubuntu
+      versions: ['jammy', 'noble']
+  galaxy_tags:
+    - crossover
+    - codeweavers
+    - wine
+    - desktop
+dependencies: []
+collections:
+  - startcloud.startcloud_roles

@@ -1,22 +1,22 @@
 ---
-dependencies: []
-
 galaxy_info:
-  author: Thomas Woerner
-  description: A role to setup IPA server(s) for Smart Card authentication
-  company: Red Hat, Inc
-  license: GPLv3
-  min_ansible_version: "2.13"
+  role_name: ipasmartcard_server
+  author: Mark Gilbert
+  description: Configures an IPA server (master or replica) for Smart Card authentication.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
   platforms:
-  - name: Fedora
-    versions:
-    - all
-  - name: EL
-    versions:
-    - "7"
-    - "8"
+    - name: EL
+      versions: ['8', '9']
+    - name: Fedora
+      versions: ['all']
   galaxy_tags:
     - identity
     - ipa
     - freeipa
     - smartcard
+dependencies: []
+collections:
+  - startcloud.startcloud_roles

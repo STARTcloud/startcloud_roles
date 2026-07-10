@@ -1,0 +1,48 @@
+argument_specs:
+  main:
+    short_description: Install and configure a single-node Redis server
+    description:
+      - Installs the Redis in-memory data store and deploys a managed
+        configuration file, then enables and starts the service.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      redis_package:
+        type: str
+        default: redis-server
+        description: Name of the Redis package to install.
+      redis_service:
+        type: str
+        default: redis-server
+        description: Name of the systemd service managing Redis.
+      redis_config_file:
+        type: str
+        default: /etc/redis/redis.conf
+        description: Path where the rendered Redis configuration file is written.
+      redis_bind:
+        type: str
+        default: 127.0.0.1
+        description: Address Redis listens on.
+      redis_port:
+        type: int
+        default: 6379
+        description: TCP port Redis listens on.
+      redis_databases:
+        type: int
+        default: 16
+        description: Number of logical databases Redis provides.
+      redis_maxmemory:
+        type: str
+        default: 256mb
+        description: Memory limit for the Redis dataset; empty disables the limit.
+      redis_maxmemory_policy:
+        type: str
+        default: noeviction
+        description: Eviction policy applied when the memory limit is reached.
+      redis_requirepass:
+        type: str
+        default: ''
+        description: Password clients must authenticate with; empty disables auth.

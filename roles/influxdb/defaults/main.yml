@@ -1,14 +1,41 @@
 ---
 run_tasks: true
-packages:
-  - htop
-  - lynx
-  - lshw
-  - libxml2-utils
-  - tree
-  - python3-pexpect
-  - python3-pymongo
-  - python3-pymysql
-  - psutils
-  - python3-psutil
-  - libxml2-utils
+
+# Package selection and repository channel
+influxdb_version: "latest"
+influxdb_channel: "stable"
+influxdb_package: "influxdb2"
+influxdb_cli_package: "influxdb2-cli"
+influxdb_package_state: "present"
+
+# HTTP API bind address and port
+influxdb_http_bind_address: "0.0.0.0"
+influxdb_http_port: 8086
+
+# On-disk locations
+influxdb_config_dir: "/etc/influxdb"
+influxdb_data_dir: "/var/lib/influxdb"
+influxdb_bolt_path: "{{ influxdb_data_dir }}/influxd.bolt"
+influxdb_engine_path: "{{ influxdb_data_dir }}/engine"
+
+# systemd service management
+influxdb_service_name: "influxdb"
+influxdb_service_state: "started"
+influxdb_service_enabled: true
+
+# Debian / Ubuntu repository definition
+influxdb_apt_key_url: "https://repos.influxdata.com/influxdata-archive_compat.key"
+influxdb_apt_keyring_path: "/etc/apt/keyrings/influxdata-archive_compat.gpg"
+influxdb_apt_repo: "deb [signed-by={{ influxdb_apt_keyring_path }}] https://repos.influxdata.com/debian {{ influxdb_channel }} main"
+
+# Enterprise Linux repository definition
+influxdb_yum_baseurl: "https://repos.influxdata.com/{{ influxdb_channel }}/$basearch/main"
+influxdb_yum_gpgkey: "https://repos.influxdata.com/influxdata-archive_compat.key"
+
+# Optional initial onboarding (org / bucket / admin user)
+influxdb_setup: false
+influxdb_org: "startcloud"
+influxdb_bucket: "default"
+influxdb_username: "admin"
+influxdb_password: "changeme"
+influxdb_retention: "0"

@@ -1,0 +1,13 @@
+# {{ ansible_managed }}
+bind {{ redis_bind }}
+port {{ redis_port }}
+databases {{ redis_databases }}
+maxmemory-policy {{ redis_maxmemory_policy }}
+supervised systemd
+dir /var/lib/redis
+{% if redis_maxmemory | length > 0 %}
+maxmemory {{ redis_maxmemory }}
+{% endif %}
+{% if redis_requirepass | length > 0 %}
+requirepass {{ redis_requirepass }}
+{% endif %}

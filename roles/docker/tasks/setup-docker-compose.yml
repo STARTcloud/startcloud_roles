@@ -1,6 +1,6 @@
 ---
 -
-  name: Check current docker-compose version.
+  name: "Checking current docker-compose version"
   ansible.builtin.command: "{{ docker_compose_path }} --version"
   register: docker_compose_vsn
   check_mode: false
@@ -8,7 +8,7 @@
   failed_when: false
 
 -
-  name: Check current docker-compose version.
+  name: "Setting current docker-compose version fact"
   ansible.builtin.set_fact:
     docker_compose_current_version: "{{ docker_compose_vsn.stdout | regex_search('(\\d+(\\.\\d+)+)') }}"
   when: >
@@ -16,7 +16,7 @@
     and (docker_compose_vsn.stdout | length > 0)
 
 -
-  name: Delete existing docker-compose version if it's different.
+  name: "Deleting existing docker-compose version if it's different"
   ansible.builtin.file:
     path: "{{ docker_compose_path }}"
     state: absent
@@ -25,7 +25,7 @@
     and (docker_compose_version | regex_replace('v', '')) not in docker_compose_current_version
 
 -
-  name: Install Docker Compose (if configured).
+  name: "Installing Docker Compose (if configured)"
   ansible.builtin.get_url:
     url: "{{ docker_compose_url }}"
     dest: "{{ docker_compose_path }}"

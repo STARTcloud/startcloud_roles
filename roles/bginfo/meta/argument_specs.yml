@@ -1,0 +1,20 @@
+---
+argument_specs:
+  main:
+    short_description: BGInfo desktop system-information display
+    description:
+      - Deploys the STARTcloud BGInfo configuration and a startup shortcut so system information is rendered on the Windows desktop background at login.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      bginfo_directory:
+        type: str
+        default: "C:\\opt\\STARTcloud\\backgrounds"
+        description: Directory the BGInfo configuration is installed into.
+      startup_directory:
+        type: str
+        default: "C:\\Users\\Administrator\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup"
+        description: Startup folder where the BGInfo launch shortcut is placed.

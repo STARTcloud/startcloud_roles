@@ -1,3 +1,4 @@
+---
 -
   name: "Setting up UTM NAT Network (First Adapter)"
   when: not convert_nat_dhcp_to_static
@@ -60,7 +61,7 @@
   tags: once
   block:
     -
-      name: "Gather Networking Details"
+      name: "Gathering networking details"
       ansible.builtin.include_tasks: "gather.yml"
 
 -
@@ -99,7 +100,7 @@
         network_name: "public_adapter"
 
 -
-  name: "When No External Adapter included, Setting configurations to use VLAN adapter IP"
+  name: "Setting configurations to use VLAN adapter IP when no external adapter included"
   when: networks[0] is not defined
   block:
     -
@@ -129,20 +130,20 @@
   become: true
   block:
     -
-      name: "Gather Networking Details"
+      name: "Gathering networking details"
       ansible.builtin.include_tasks: "gather.yml"
 
 -
-  name: "Apply All Netplan Configurations"
+  name: "Applying all netplan configurations"
   become: true
   block:
     -
-      name: "Register if any network configs changed"
+      name: "Registering whether any network configs changed"
       ansible.builtin.set_fact:
         network_configs_changed: "{{ nat_adapter_config.changed | default(false) or static_nat_adapter_config.changed | default(false) or vagrant_adapter_config.changed | default(false) or public_adapter_config.changed | default(false) }}"
 
     -
-      name: "Apply netplan configurations"
+      name: "Applying netplan configurations"
       when: network_configs_changed
       changed_when: false
       ansible.builtin.command: netplan apply

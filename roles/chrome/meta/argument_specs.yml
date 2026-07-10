@@ -1,0 +1,28 @@
+---
+argument_specs:
+  main:
+    short_description: Google Chrome and Chromedriver installation
+    description:
+      - Adds the Google Chrome apt repository, installs google-chrome-stable, and downloads/extracts a matching Chromedriver for web development.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      chrome_signing_key_url:
+        type: str
+        default: https://dl-ssl.google.com/linux/linux_signing_key.pub
+        description: URL of the Google apt signing key.
+      chrome_driver_version:
+        type: str
+        default: "2.41"
+        description: Chromedriver version to download.
+      chrome_driver_server_installer_tar:
+        type: str
+        default: chromedriver_linux64.zip
+        description: Chromedriver archive filename.
+      chrome_driver_url:
+        type: str
+        default: https://chromedriver.storage.googleapis.com/
+        description: Base URL Chromedriver is downloaded from.

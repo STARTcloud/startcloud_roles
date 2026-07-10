@@ -1,45 +1,50 @@
 ---
-
-- name: "Suse | Adding Telegraf group"
-  group:
+-
+  name: "Suse | Adding Telegraf group"
+  ansible.builtin.group:
     name: telegraf
     state: present
 
-- name: "Suse | Adding Telegraf user"
-  user:
+-
+  name: "Suse | Adding Telegraf user"
+  ansible.builtin.user:
     name: telegraf
     group: telegraf
     state: present
   become: true
 
-- name: "Suse | Install repo dependencies"
-  zypper:
+-
+  name: "Suse | Installing repo dependencies"
+  community.general.zypper:
     name: ["python-libxml2", "python-xml"]
-    update_cache: True
+    update_cache: true
     state: present
   register: are_telegraf_dependencies_packages_installed
   until: are_telegraf_dependencies_packages_installed is succeeded
   become: true
 
-- name: "Suse | Install basic repo file"
-  zypper_repository:
+-
+  name: "Suse | Installing basic repo file"
+  community.general.zypper_repository:
     repo: "http://download.opensuse.org/repositories/devel:/languages:/go/openSUSE_Factory/"
     name: The Go Programming Language (openSUSE_Factory)
     state: present
-    runrefresh: True
-    auto_import_keys: True
+    runrefresh: true
+    auto_import_keys: true
   become: true
 
-- name: "Suse | Install Telegraf"
-  zypper:
+-
+  name: "Suse | Installing Telegraf"
+  community.general.zypper:
     name: "{{ telegraf_agent_package }}"
     state: "{{ telegraf_agent_package_state }}"
   register: is_telegraf_package_installed
   until: is_telegraf_package_installed is succeeded
   become: true
 
-- name: "Suse | Create directories for telegraf"
-  file:
+-
+  name: "Suse | Creating directories for telegraf"
+  ansible.builtin.file:
     path: "{{ item.path }}"
     owner: "{{ item.owner }}"
     state: directory
@@ -49,8 +54,9 @@
     - path: /var/log/telegraf
       owner: telegraf
 
-- name: "Suse | Install init file"
-  copy:
+-
+  name: "Suse | Installing init file"
+  ansible.builtin.copy:
     src: telegraf.init
     dest: /etc/init.d/telegraf
-    mode: 0755
+    mode: '0755'

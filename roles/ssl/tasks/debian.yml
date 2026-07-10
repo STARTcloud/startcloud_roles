@@ -1,6 +1,6 @@
 ---
 -
-  name: "Create Directories for SSLs"
+  name: "Creating directories for SSLs"
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
@@ -317,7 +317,7 @@
         remote_src: true
 
     -
-      name: "Append CA certificate to combined certificate"
+      name: "Appending CA certificate to combined certificate"
       ansible.builtin.blockinfile:
         path: "{{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}.pem"
         block: "{{ lookup('file', cert_dir + '/ca/ca-certificate.crt') }}"
@@ -390,7 +390,7 @@
         state: present
 
     -
-      name: "Set default haproxy_status when HAProxy is not installed"
+      name: "Setting default haproxy_status when HAProxy is not installed"
       when: not haproxy_installed.stat.exists
       ansible.builtin.set_fact:
         haproxy_status:
@@ -398,7 +398,7 @@
           skipped: false
 
     -
-      name: "Check if HAProxy is in enabled_roles"
+      name: "Checking if HAProxy is in enabled_roles"
       ansible.builtin.set_fact:
         haproxy_in_enabled_roles: "{{ 'startcloud.startcloud_roles.haproxy' in (enabled_roles | default([])) }}"
 
@@ -415,7 +415,7 @@
         le_entries: "{{ ['-d ' + settings.hostname + '.' + settings.domain] }}"
 
     -
-      name: "Add subdomain entries to LE entries"
+      name: "Adding subdomain entries to LE entries"
       ansible.builtin.set_fact:
         le_entries: "{{ le_entries + ['-d ' + item + '.' + settings.hostname + '.' + settings.domain] }}"
       loop: "{{ dns_entries_list }}"
@@ -454,7 +454,7 @@
       when: (not haproxy_status.changed or (haproxy_status.changed and haproxy_in_enabled_roles)) and not letsencrypt_cert.stat.exists and not letsencrypt_staging_enabled
 
     -
-      name: "Remove old certs Directories for SSLs"
+      name: "Removing old cert directories for SSLs"
       ansible.builtin.file:
         path: "{{ item }}"
         state: absent

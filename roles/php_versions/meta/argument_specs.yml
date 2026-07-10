@@ -1,0 +1,20 @@
+---
+argument_specs:
+  main:
+    short_description: Installs and switches between PHP versions
+    description:
+      - Selects a single PHP version and installs its packages from the Ondrej Sury repositories on Debian/Ubuntu or the Remi repositories on EL, purging other PHP versions on Debian.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      php_version:
+        type: str
+        default: '8.2'
+        description: The PHP major version to install (e.g. '7.4', '8.0', '8.1', '8.2').
+      php_versions_install_recommends:
+        type: bool
+        default: false
+        description: (Debian/Ubuntu only) Whether to install recommended packages; disabled by default to avoid pulling in multiple PHP versions.

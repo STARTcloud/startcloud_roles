@@ -1,14 +1,63 @@
 ---
 run_tasks: true
-packages:
-  - htop
-  - lynx
-  - lshw
-  - libxml2-utils
-  - tree
-  - python3-pexpect
-  - python3-pymongo
+
+# LibreNMS source checkout
+librenms_git_repo: "https://github.com/librenms/librenms.git"
+librenms_git_version: "24.11.0"
+librenms_install_dir: "/opt/librenms"
+librenms_user: "librenms"
+librenms_group: "librenms"
+
+# PHP runtime
+librenms_php_version: "8.2"
+librenms_php_timezone: "Etc/UTC"
+
+# Web front-end
+librenms_server_name: "librenms.local"
+librenms_fpm_pool: "librenms"
+librenms_fpm_socket: "/run/php-fpm-librenms.sock"
+
+# MariaDB database
+librenms_mysql_database: "librenms"
+librenms_mysql_user: "librenms"
+librenms_mysql_password: "librenms"
+librenms_mysql_root_password: "librenms"
+
+# SNMP
+librenms_community_string: "public"
+
+# System packages required by a single-node LibreNMS install
+librenms_packages:
+  - acl
+  - curl
+  - fping
+  - git
+  - graphviz
+  - imagemagick
+  - mariadb-client
+  - mariadb-server
+  - mtr-tiny
+  - nginx-full
+  - nmap
+  - rrdtool
+  - rrdcached
+  - snmp
+  - snmpd
+  - unzip
+  - whois
   - python3-pymysql
-  - psutils
-  - python3-psutil
-  - libxml2-utils
+  - python3-dotenv
+  - python3-redis
+  - python3-setuptools
+  - python3-systemd
+  - "php{{ librenms_php_version }}-cli"
+  - "php{{ librenms_php_version }}-curl"
+  - "php{{ librenms_php_version }}-fpm"
+  - "php{{ librenms_php_version }}-gd"
+  - "php{{ librenms_php_version }}-gmp"
+  - "php{{ librenms_php_version }}-mbstring"
+  - "php{{ librenms_php_version }}-mysql"
+  - "php{{ librenms_php_version }}-snmp"
+  - "php{{ librenms_php_version }}-xml"
+  - "php{{ librenms_php_version }}-zip"
+  - "php{{ librenms_php_version }}-bcmath"

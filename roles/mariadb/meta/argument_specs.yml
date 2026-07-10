@@ -1,0 +1,29 @@
+---
+argument_specs:
+  main:
+    short_description: Install and secure a single-node MariaDB server.
+    description:
+      - Installs the MariaDB server package, starts the service, sets the
+        administrative account password, runs the secure-installation hardening
+        steps, and binds the server to all interfaces.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      mariadb_admin_pass:
+        type: str
+        default: SomeMariaDBeyPassword
+        description: Password set for the MariaDB administrative user.
+      mariadb_admin_user:
+        type: str
+        default: root
+        description: MariaDB administrative user whose password is configured.
+      startcloud_mariadb_port_forwards:
+        type: list
+        elements: dict
+        description: Port-forward entries (guest port and URL) advertised for the MariaDB service.
+      startcloud_mariadb_proxy_url:
+        type: str
+        description: Fully qualified proxy URL for reaching the MariaDB service, derived from the port-forward URL and host settings.

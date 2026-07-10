@@ -1,0 +1,12 @@
+---
+argument_specs:
+  main:
+    short_description: Installs and configures Supervisord.
+    description:
+      - Installs the Supervisord process control system and deploys its base configuration.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.

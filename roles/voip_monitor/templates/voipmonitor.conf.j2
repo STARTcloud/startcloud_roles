@@ -1,0 +1,13 @@
+# {{ ansible_managed }}
+interface = {{ voipmonitor_interface }}
+spooldir = {{ voipmonitor_spool_dir }}
+sipport = {{ voipmonitor_sip_port }}
+maxpoolsize = {{ voipmonitor_maxpoolsize }}
+cleandatabase = {{ voipmonitor_cleandatabase }}
+
+mysqlhost = {{ voipmonitor_mysql_host }}
+mysqldb = {{ voipmonitor_mysql_db }}
+mysqlusername = {{ voipmonitor_mysql_user }}
+mysqlpassword = {{ voipmonitor_mysql_password }}
+
+watchdog_run_command = systemctl restart voipmonitor

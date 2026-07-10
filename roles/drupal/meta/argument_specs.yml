@@ -1,0 +1,153 @@
+---
+argument_specs:
+  main:
+    short_description: Deploy, build, and install Drupal.
+    description:
+      - Deploys Drupal from a Git repository, builds it from a Drush make file or a
+        Composer file/project, and optionally installs the site with Drush.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      drupal_deploy:
+        type: bool
+        default: false
+        description: Deploy Drupal from an existing Git repository.
+      drupal_deploy_repo:
+        type: str
+        default: ""
+        description: Git repository address to deploy Drupal from.
+      drupal_deploy_version:
+        type: str
+        default: master
+        description: Git branch, tag, or commit to check out when deploying.
+      drupal_deploy_update:
+        type: bool
+        default: true
+        description: Whether the deploy checkout is updated to the latest commit.
+      drupal_deploy_dir:
+        type: str
+        default: "/var/www/drupal"
+        description: Directory the Drupal Git repository is checked out into.
+      drupal_deploy_accept_hostkey:
+        type: bool
+        default: false
+        description: Automatically accept the Git server host key on first connection.
+      drupal_deploy_composer_install:
+        type: bool
+        default: true
+        description: Run composer install after the Git deploy checkout completes.
+      drupal_build_makefile:
+        type: bool
+        default: false
+        description: Build the Drupal site from a Drush make file.
+      drush_makefile_path:
+        type: str
+        default: "/path/to/drupal.make.yml"
+        description: Path to the Drush make file used when building from a makefile.
+      drush_make_options:
+        type: str
+        default: "--no-gitinfofile"
+        description: Extra options passed to the drush make command.
+      drupal_composer_bin_dir:
+        type: str
+        default: "vendor/bin"
+        description: Composer bin-dir where a project-specific drush binary is found.
+      drupal_build_composer:
+        type: bool
+        default: false
+        description: Build the Drupal site from an existing composer.json file.
+      drupal_composer_path:
+        type: str
+        default: "/path/to/drupal.composer.json"
+        description: Path to the composer.json used when building with Composer.
+      drupal_composer_install_dir:
+        type: str
+        default: "{{ drupal_deploy_dir }}"
+        description: Directory Composer installs the Drupal project into.
+      drupal_composer_no_dev:
+        type: bool
+        default: true
+        description: Pass --no-dev to composer install for the deployed project.
+      drupal_composer_dependencies:
+        type: list
+        default:
+          - "drush/drush:^10.1"
+        description: Extra Composer packages required into the project after build.
+      drupal_build_composer_project:
+        type: bool
+        default: true
+        description: Build the Drupal site using composer create-project.
+      drupal_composer_project_package:
+        type: str
+        default: "drupal/recommended-project:^9@dev"
+        description: Composer package used by create-project to scaffold the site.
+      drupal_composer_project_options:
+        type: str
+        default: "--prefer-dist --stability dev --no-interaction"
+        description: Options passed to composer create-project.
+      drupal_core_path:
+        type: str
+        default: "{{ drupal_deploy_dir }}/web"
+        description: Path to the Drupal docroot (core) directory.
+      drupal_core_owner:
+        type: str
+        description: System user that owns the Drupal core path.
+      drupal_core_owner_become:
+        type: bool
+        default: false
+        description: Become the core owner user for Git and Composer operations.
+      drupal_db_user:
+        type: str
+        default: drupal
+        description: Database username used in the Drupal install db-url.
+      drupal_db_password:
+        type: str
+        default: drupal
+        description: Database password used in the Drupal install db-url.
+      drupal_db_name:
+        type: str
+        default: drupal
+        description: Database name used in the Drupal install db-url.
+      drupal_db_backend:
+        type: str
+        default: mysql
+        description: Database backend for the install (e.g. mysql or pgsql).
+      drupal_db_host:
+        type: str
+        default: "127.0.0.1"
+        description: Database host used in the Drupal install db-url.
+      drupal_install_site:
+        type: bool
+        default: true
+        description: Install the Drupal site with Drush site-install.
+      drupal_domain:
+        type: str
+        default: "drupaltest.test"
+        description: Domain name for the Drupal site.
+      drupal_site_name:
+        type: str
+        default: "Drupal"
+        description: Site name passed to drush site-install.
+      drupal_install_profile:
+        type: str
+        default: standard
+        description: Install profile passed to drush site-install.
+      drupal_site_install_extra_args:
+        type: list
+        default: []
+        description: Extra arguments appended to the drush site-install command.
+      drupal_enable_modules:
+        type: list
+        default: []
+        description: Modules to enable with drush pm-enable after install.
+      drupal_account_name:
+        type: str
+        default: admin
+        description: Admin account name created during site install.
+      drupal_account_pass:
+        type: str
+        default: admin
+        description: Admin account password created during site install.

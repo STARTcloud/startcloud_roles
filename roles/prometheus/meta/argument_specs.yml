@@ -1,0 +1,55 @@
+---
+argument_specs:
+  main:
+    short_description: Install and run the Prometheus monitoring server
+    description:
+      - Downloads the official Prometheus release binaries, installs them, writes a base configuration, and runs Prometheus as a systemd service.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      prometheus_version:
+        type: str
+        default: '2.53.1'
+        description: Prometheus release version to download and install.
+      prometheus_user:
+        type: str
+        default: prometheus
+        description: System user that owns the configuration and data and runs the service.
+      prometheus_group:
+        type: str
+        default: prometheus
+        description: System group for the Prometheus user and files.
+      prometheus_install_dir:
+        type: str
+        default: /usr/local/bin
+        description: Directory the prometheus and promtool binaries are installed into.
+      prometheus_config_dir:
+        type: str
+        default: /etc/prometheus
+        description: Directory holding the generated prometheus.yml configuration.
+      prometheus_data_dir:
+        type: str
+        default: /var/lib/prometheus
+        description: Directory used for the Prometheus time-series database.
+      prometheus_listen_address:
+        type: str
+        default: '0.0.0.0:9090'
+        description: Address and port Prometheus binds its web interface to.
+      prometheus_storage_retention:
+        type: str
+        default: '15d'
+        description: How long the time-series database retains data.
+      prometheus_scrape_interval:
+        type: str
+        default: '15s'
+        description: Default interval between metric scrapes.
+      prometheus_evaluation_interval:
+        type: str
+        default: '15s'
+        description: Default interval between rule evaluations.
+      prometheus_arch_map:
+        type: dict
+        description: Maps ansible_architecture values to Prometheus release architecture names.

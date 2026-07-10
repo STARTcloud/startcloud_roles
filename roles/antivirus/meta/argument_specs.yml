@@ -1,0 +1,36 @@
+---
+argument_specs:
+  main:
+    short_description: Antivirus installation and configuration
+    description:
+      - Installs and configures antivirus on Linux and Windows guests, supporting ClamAV (with freshclam) and Sophos.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      clamav_daemon_localsocket:
+        type: str
+        default: /var/run/clamav/clamd.ctl
+        description: Local socket path the ClamAV daemon listens on.
+      clamav_daemon_configuration_changes:
+        type: list
+        elements: dict
+        description: List of regexp/line/state edits applied to the ClamAV daemon config file.
+      clamav_daemon_state:
+        type: str
+        default: started
+        description: Desired service state for the ClamAV daemon.
+      clamav_daemon_enabled:
+        type: bool
+        default: true
+        description: Whether the ClamAV daemon is enabled on boot.
+      clamav_freshclam_daemon_state:
+        type: str
+        default: started
+        description: Desired service state for the freshclam daemon.
+      clamav_freshclam_daemon_enabled:
+        type: bool
+        default: true
+        description: Whether the freshclam daemon is enabled on boot.

@@ -1,27 +1,24 @@
----
-dependencies: []
-
 galaxy_info:
   role_name: nodejs
-  author: geerlingguy
-  description: Node.js installation for Linux
-  company: "Midwestern Mac, LLC"
-  license: "license (BSD, MIT)"
-  min_ansible_version: "2.10"
+  author: Mark Gilbert
+  description: Installs Node.js and npm from the NodeSource repositories on Debian/Ubuntu and RHEL-family systems.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
   platforms:
     - name: Debian
-      versions:
-        - all
+      versions: ['bookworm', 'trixie']
     - name: Ubuntu
-      versions:
-        - trusty
-        - xenial
-        - bionic
+      versions: ['jammy', 'noble']
+    - name: EL
+      versions: ['8', '9']
   galaxy_tags:
-    - development
-    - web
-    - javascript
-    - js
-    - node
-    - npm
     - nodejs
+    - npm
+    - javascript
+    - node
+    - development
+dependencies: []
+collections:
+  - startcloud.startcloud_roles

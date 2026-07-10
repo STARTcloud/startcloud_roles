@@ -40,7 +40,7 @@
     owner: "{{ db2usr }}"
     path: /local
     state: directory
-  name: "Check if /local data directory is mounted and writeable by user: {{ db2usr }}"
+  name: "Checking if /local data directory is mounted and writeable by user: {{ db2usr }}"
   register: local_exists
 - 
   file: 
@@ -49,7 +49,7 @@
     owner: "{{ db2usr }}"
     path: "/local/{{ database_dir }}"
     state: directory
-  name: "Check if /local/{{ database_dir }} data directory is mounted and writeable by user: {{ db2usr }}"
+  name: "Checking if /local/{{ database_dir }} data directory is mounted and writeable by user: {{ db2usr }}"
 - 
   file: 
     group: "{{ db2grp }}"
@@ -57,7 +57,7 @@
     owner: "{{ db2usr }}"
     path: /local/backup
     state: directory
-  name: "Check if /local/backup data directory is mounted and writeable by user: {{ db2usr }}"
+  name: "Checking if /local/backup data directory is mounted and writeable by user: {{ db2usr }}"
 - 
   file: 
     group: "{{ db2grp }}"
@@ -65,10 +65,10 @@
     owner: "{{ db2usr }}"
     path: /local-log
     state: directory
-  name: "Check if /local-log directory is mounted and writeable by user: {{ db2usr }}"
+  name: "Checking if /local-log directory is mounted and writeable by user: {{ db2usr }}"
   register: local_log_exists
 - 
-  name: "Check if /local/server_t to skip extraction if already extracted: {{ db2usr }}"
+  name: "Checking if /local/server_t exists to skip extraction if already extracted: {{ db2usr }}"
   register: server_t_exists
   stat: 
     path: /local/server_t
@@ -90,7 +90,7 @@
       name: "Checking Command"
       raw: "su - {{ db2usr }} -c 'db2licm -l'"
       register: db2_installed
-  name: "Check if DB2 is Already Installed"
+  name: "Checking if DB2 is Already Installed"
   rescue: 
     - 
       become_user: db2inst1
@@ -123,7 +123,7 @@
   name: "Checking Licensing"
   raw: "su - {{ db2usr }} -c 'db2licm -l'"
 - 
-  name: "Check if /local/backup data directory already exists"
+  name: "Checking if /local/backup data directory already exists"
   register: local_backup_exists
   stat: 
     path: /local/backup

@@ -1,8 +1,5 @@
 ---
 run_tasks: true
-count_progress: true
-progress_units: 1
-progress_role_description: "Securing Server"
 
 show_help: true
 lockdown_user_private_key_path: /home/startcloud/.ssh/id_ssh_rsa

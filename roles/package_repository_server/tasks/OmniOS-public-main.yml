@@ -37,7 +37,7 @@
     - "/{{ storage_disk.path }}/src"
 
 - 
-  name: "Install pip pexpect"
+  name: "Installing pip pexpect"
   ansible.builtin.pip:
     name: pexpect
 

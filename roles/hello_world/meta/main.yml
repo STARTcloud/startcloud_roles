@@ -1,0 +1,23 @@
+galaxy_info:
+  role_name: hello_world
+  author: Mark Gilbert
+  description: Prints a debug message containing the hello_world variable supplied from Hosts.yml.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
+  platforms:
+    - name: Debian
+      versions: ['bookworm', 'trixie']
+    - name: Ubuntu
+      versions: ['jammy', 'noble']
+    - name: EL
+      versions: ['8', '9']
+  galaxy_tags:
+    - hello-world
+    - debug
+    - example
+    - testing
+dependencies: []
+collections:
+  - startcloud.startcloud_roles

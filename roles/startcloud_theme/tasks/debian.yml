@@ -4,7 +4,7 @@
   when: "vm_type == 'desktop'"
   block:
     -
-      name: Setting User Dconf
+      name: "Setting User Dconf"
       ansible.builtin.copy:
         content: |
           user-db:user
@@ -21,14 +21,14 @@
         mode: "0774"
 
     -
-      name: "Setting Screensaver Setings"
+      name: "Setting Screensaver Settings"
       ansible.builtin.template:
         src: 00-session.j2
         dest: /etc/dconf/db/local.d/00-session
         mode: "0774"
 
     -
-      name: "Setting Screensaver Setings"
+      name: "Setting Power Settings"
       ansible.builtin.template:
         src: 00-power.j2
         dest: /etc/dconf/db/local.d/00-power
@@ -108,7 +108,7 @@
         theme_grub_params: "loglevel=3 rd.systemd.show_status=false rd.udev.log_level=3 vt.global_cursor_default=0 plymouth.ignore-serial-consoles splash"
 
     -
-      name: "Build final GRUB command line using serial role variables"
+      name: "Building final GRUB command line using serial role variables"
       ansible.builtin.set_fact:
         grub_cmdline: "{{ serial_grub_cmdline }} {{ theme_grub_params }}"
 

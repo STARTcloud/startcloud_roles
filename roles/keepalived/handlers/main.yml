@@ -1,12 +1,12 @@
 ---
 -
-  name: Restart keepalived
+  name: "Restarting keepalived"
   ansible.builtin.service:
     name: keepalived
     state: restarted
 
 -
-  name: Reload keepalived
+  name: "Reloading keepalived"
   ansible.builtin.service:
     name: keepalived
     state: reloaded

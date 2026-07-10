@@ -1,0 +1,20 @@
+---
+argument_specs:
+  main:
+    short_description: Maven installation via SDKMAN
+    description:
+      - Installs the requested Maven version through SDKMAN and exposes it on PATH, with MAVEN_HOME set on Windows.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      maven_version:
+        type: str
+        default: 3.6.3
+        description: Maven version to install via SDKMAN.
+      sdkman_update_alternatives:
+        type: list
+        elements: dict
+        description: update-alternatives entries (candidate, name, link) registering the SDKMAN Maven binary system-wide on Linux.

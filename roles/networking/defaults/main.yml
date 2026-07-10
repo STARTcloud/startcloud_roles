@@ -22,8 +22,3 @@ dns_entries_list:
     - restapi
     - www
     - web-terminal
-
-# Progress reporting
-count_progress: true
-progress_units: 1
-progress_role_description: "Configuring system networking"

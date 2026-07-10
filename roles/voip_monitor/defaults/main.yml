@@ -1,14 +1,22 @@
 ---
 run_tasks: true
-packages:
-  - htop
-  - lynx
-  - lshw
-  - libxml2-utils
-  - tree
-  - python3-pexpect
-  - python3-pymongo
-  - python3-pymysql
-  - psutils
-  - python3-psutil
-  - libxml2-utils
+
+voipmonitor_sniffer_url: "https://download.voipmonitor.org/current-stable-sniffer-static-64bit.tar.gz"
+voipmonitor_src_dir: "/usr/src/voipmonitor"
+voipmonitor_binary_path: "/usr/local/sbin/voipmonitor"
+voipmonitor_config_path: "/etc/voipmonitor.conf"
+voipmonitor_spool_dir: "/var/spool/voipmonitor"
+
+voipmonitor_interface: "eth0"
+voipmonitor_sip_port: 5060
+voipmonitor_maxpoolsize: 102400
+voipmonitor_cleandatabase: 31
+
+voipmonitor_mysql_host: "localhost"
+voipmonitor_mysql_db: "voipmonitor"
+voipmonitor_mysql_user: "voipmonitor"
+voipmonitor_mysql_password: "voipmonitor"
+
+voipmonitor_dependencies:
+  - libpcap0.8
+  - tcpdump

@@ -1,0 +1,86 @@
+---
+argument_specs:
+  main:
+    short_description: Single-node Graylog (open) install
+    description:
+      - Installs MongoDB, OpenSearch and graylog-server from their official APT repositories on Debian/Ubuntu.
+      - Renders /etc/graylog/server/server.conf and enables the MongoDB, OpenSearch and Graylog services.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      graylog_packages:
+        type: list
+        elements: str
+        description: Prerequisite packages installed before MongoDB, OpenSearch and Graylog.
+      graylog_version:
+        type: str
+        default: "6.1"
+        description: Graylog major.minor version, selecting the repository package and apt channel.
+      graylog_http_bind_address:
+        type: str
+        default: "0.0.0.0"
+        description: Address the Graylog web/API listens on (combined with graylog_http_port in server.conf).
+      graylog_http_port:
+        type: int
+        default: 9000
+        description: TCP port the Graylog web interface and REST API bind to.
+      graylog_http_publish_uri:
+        type: str
+        default: "http://127.0.0.1:9000/"
+        description: URI other nodes and the browser use to reach this Graylog node.
+      graylog_password_secret:
+        type: str
+        description: Long shared secret used to encrypt/salt stored user passwords; override with a pwgen-generated value.
+      graylog_root_password_sha2:
+        type: str
+        description: SHA-256 hash of the initial admin (root) account password.
+      graylog_root_timezone:
+        type: str
+        default: "UTC"
+        description: Default time zone for the Graylog root user.
+      graylog_heap_size:
+        type: str
+        default: "1g"
+        description: JVM heap size applied to the graylog-server process via GRAYLOG_SERVER_JAVA_OPTS.
+      graylog_message_journal_dir:
+        type: str
+        default: "/var/lib/graylog-server/journal"
+        description: On-disk directory for the Graylog message journal.
+      graylog_mongodb_uri:
+        type: str
+        default: "mongodb://127.0.0.1:27017/graylog"
+        description: MongoDB connection URI Graylog uses for its metadata store.
+      graylog_mongodb_version:
+        type: str
+        default: "7.0"
+        description: MongoDB release series to install from the mongodb-org APT repository.
+      graylog_mongodb_bind_ip:
+        type: str
+        default: "127.0.0.1"
+        description: Address MongoDB binds to in /etc/mongod.conf.
+      graylog_opensearch_version:
+        type: str
+        default: "2.x"
+        description: OpenSearch release channel to install from the OpenSearch APT repository.
+      graylog_opensearch_heap_size:
+        type: str
+        default: "1g"
+        description: JVM heap size applied to OpenSearch via jvm.options.d.
+      graylog_opensearch_cluster_name:
+        type: str
+        default: "graylog"
+        description: OpenSearch cluster name written to opensearch.yml.
+      graylog_opensearch_network_host:
+        type: str
+        default: "127.0.0.1"
+        description: Address OpenSearch binds to in opensearch.yml.
+      graylog_opensearch_admin_password:
+        type: str
+        description: Initial admin password required by the OpenSearch package installer.
+      graylog_elasticsearch_hosts:
+        type: str
+        default: "http://127.0.0.1:9200"
+        description: OpenSearch/Elasticsearch endpoint Graylog connects to for message storage.

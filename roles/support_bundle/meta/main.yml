@@ -1,19 +1,24 @@
 galaxy_info:
   role_name: support_bundle
-  author: MarkProminic
-  description: Generates a support bundle zip at /vagrant/support-bundle.zip
-  company: STARTCloud
-  license: license (Apache)
-  min_ansible_version: '1.2'
-
+  author: Mark Gilbert
+  description: Gathers playbook archives, installer and completion manifests, and Domino autoconfigure output into a support bundle zip at /vagrant/support-bundle.zip
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
   platforms:
     - name: Debian
-      versions:
-        - 'bookworm'
-
-  galaxy_tags: []
-
+      versions: ['bookworm', 'trixie']
+    - name: Ubuntu
+      versions: ['jammy', 'noble']
+    - name: EL
+      versions: ['8', '9']
+  galaxy_tags:
+    - support
+    - bundle
+    - diagnostics
+    - logs
+    - debug
 dependencies: []
-
 collections:
   - startcloud.startcloud_roles

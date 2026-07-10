@@ -1,0 +1,73 @@
+---
+argument_specs:
+  main:
+    short_description: Install and configure Elastic Logstash.
+    description:
+      - Adds the Elastic package repository, installs Logstash, deploys its base
+        configuration and a single ingestion pipeline, then enables the service.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      logstash_version:
+        type: str
+        default: '8.x'
+        description: Elastic package channel used for the APT and YUM repositories.
+      logstash_apt_key_url:
+        type: str
+        default: "https://artifacts.elastic.co/GPG-KEY-elasticsearch"
+        description: URL of the Elastic GPG signing key fetched on Debian-family hosts.
+      logstash_apt_keyring:
+        type: str
+        default: "/usr/share/keyrings/elasticsearch-keyring.asc"
+        description: Destination path for the downloaded Elastic APT keyring.
+      logstash_apt_repo:
+        type: str
+        default: "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.asc] https://artifacts.elastic.co/packages/8.x/apt stable main"
+        description: APT repository line configured on Debian-family hosts.
+      logstash_yum_repo_baseurl:
+        type: str
+        default: "https://artifacts.elastic.co/packages/8.x/yum"
+        description: Base URL for the Elastic YUM repository on RedHat-family hosts.
+      logstash_yum_gpg_key:
+        type: str
+        default: "https://artifacts.elastic.co/GPG-KEY-elasticsearch"
+        description: GPG key URL for the Elastic YUM repository.
+      logstash_config_dir:
+        type: str
+        default: "/etc/logstash"
+        description: Directory holding the main Logstash configuration.
+      logstash_pipeline_dir:
+        type: str
+        default: "/etc/logstash/conf.d"
+        description: Directory holding Logstash pipeline configuration files.
+      logstash_service_name:
+        type: str
+        default: "logstash"
+        description: Name of the systemd service managed by the role.
+      logstash_service_enabled:
+        type: bool
+        default: true
+        description: Whether the Logstash service is enabled at boot.
+      logstash_service_state:
+        type: str
+        default: "started"
+        description: Desired runtime state of the Logstash service.
+      logstash_node_name:
+        type: str
+        default: "{{ inventory_hostname }}"
+        description: Node name written into logstash.yml.
+      logstash_pipeline_workers:
+        type: int
+        default: 2
+        description: Number of pipeline worker threads Logstash runs.
+      logstash_beats_port:
+        type: int
+        default: 5044
+        description: TCP port the default beats input listens on.
+      logstash_elasticsearch_hosts:
+        type: list
+        elements: str
+        description: Elasticsearch endpoints the default pipeline output ships events to.

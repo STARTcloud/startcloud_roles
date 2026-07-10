@@ -1,0 +1,36 @@
+---
+argument_specs:
+  main:
+    short_description: Configure a Linux swap file
+    description:
+      - Creates and sizes a swap file, manages its fstab entry, activates it, and sets vm.swappiness.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      swap_file_path:
+        type: str
+        default: /swapfile
+        description: Filesystem path of the swap file to create and manage.
+      swap_file_size_mb:
+        type: str
+        default: '512'
+        description: Size of the swap file in mebibytes.
+      swap_swappiness:
+        type: str
+        default: '60'
+        description: Value written to the vm.swappiness kernel parameter.
+      swap_file_state:
+        type: str
+        default: present
+        description: Whether the swap file should be present or absent.
+      swap_file_create_command:
+        type: str
+        default: "dd if=/dev/zero of={{ swap_file_path }} bs=1M count={{ swap_file_size_mb }}"
+        description: Command used to allocate the swap file on disk.
+      swap_test_mode:
+        type: bool
+        default: false
+        description: When true, skip the swapon step so the role can run without activating swap.

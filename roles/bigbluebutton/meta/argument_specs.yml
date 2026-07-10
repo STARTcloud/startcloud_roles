@@ -1,0 +1,130 @@
+---
+argument_specs:
+  main:
+    short_description: BigBlueButton web conferencing installation
+    description:
+      - Installs BigBlueButton on Ubuntu and optionally configures the UFW firewall, NAT, LetsEncrypt SSL, SIP dial-in providers, and the Greenlight frontend.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      bbb_apt_repo_url:
+        type: str
+        default: "https://ubuntu.bigbluebutton.org/xenial-220/"
+        description: APT repository URL for the BigBlueButton packages.
+      bbb_ubuntu_version:
+        type: str
+        default: "16.04"
+        description: Ubuntu version the role requires (installation aborts otherwise).
+      bbb_install_html5:
+        type: bool
+        default: true
+        description: Install the HTML5 client.
+      bbb_install_playback_notes:
+        type: bool
+        default: true
+        description: Install the shared-notes playback package.
+      bbb_install_playback_podcast:
+        type: bool
+        default: true
+        description: Install the podcast (audio) playback package.
+      bbb_install_playback_screenshare:
+        type: bool
+        default: true
+        description: Install the screenshare playback package.
+      bbb_install_webhooks:
+        type: bool
+        default: true
+        description: Install the bbb-webhooks integration package.
+      bbb_install_greenlight:
+        type: bool
+        default: false
+        description: Install the Greenlight frontend (via Docker).
+      bbb_install_demo:
+        type: bool
+        default: false
+        description: Install the bbb-demo package.
+      bbb_install_check:
+        type: bool
+        default: false
+        description: Install the bbb-check diagnostics package.
+      bbb_configure_firewall:
+        type: bool
+        default: true
+        description: Configure the local UFW firewall.
+      bbb_configure_nat:
+        type: bool
+        default: false
+        description: Configure NAT support for servers behind an external firewall.
+      bbb_configure_ssl:
+        type: bool
+        default: false
+        description: Configure LetsEncrypt SSL.
+      bbb_server_names:
+        type: list
+        elements: str
+        description: FQDN hostname(s) pointing at the server (mandatory).
+      bbb_ssl_webroot_path:
+        type: str
+        default: /var/www/bigbluebutton-default
+        description: Webroot path used for LetsEncrypt HTTP-01 validation.
+      bbb_ssl_renewal_command_args:
+        type: str
+        default: '--post-hook "systemctl reload nginx"'
+        description: Extra arguments passed to the certificate renewal command.
+      bbb_greenlight_image:
+        type: str
+        default: bigbluebutton/greenlight:v2
+        description: Docker image used for the Greenlight frontend.
+      bbb_greenlight_etcdir:
+        type: str
+        default: /etc/bigbluebutton/greenlight
+        description: Greenlight configuration directory.
+      bbb_greenlight_libdir:
+        type: str
+        default: /var/lib/greenlight
+        description: Greenlight working directory.
+      bbb_greenlight_dbdir:
+        type: str
+        default: /var/lib/greenlight/production
+        description: Greenlight database directory.
+      bbb_greenlight_storagedir:
+        type: str
+        default: /var/lib/greenlight/storage
+        description: Greenlight storage directory.
+      bbb_greenlight_logdir:
+        type: str
+        default: /var/log/greenlight
+        description: Greenlight log directory.
+      bbb_greenlight_redirect_root:
+        type: bool
+        default: false
+        description: Redirect the domain root URL to Greenlight.
+      bbb_greenlight_db_adapter:
+        type: str
+        default: postgresql
+        description: Greenlight database adapter (sqlite3 or postgresql).
+      bbb_greenlight_db_host:
+        type: str
+        default: db
+        description: Greenlight database host (special name 'db' spawns a container).
+      bbb_greenlight_db_username:
+        type: str
+        default: postgres
+        description: Greenlight database username.
+      bbb_greenlight_db_name:
+        type: str
+        default: greenlight_production
+        description: Greenlight database name.
+      bbb_greenlight_db_port:
+        type: int
+        default: 5432
+        description: Greenlight database port.
+      bbb_greenlight_environment:
+        type: dict
+        description: Additional Greenlight environment variables (merged over defaults).
+      bbb_greenlight_environment_defaults:
+        type: dict
+        description: Default Greenlight environment variables.

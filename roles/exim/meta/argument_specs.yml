@@ -1,0 +1,25 @@
+---
+argument_specs:
+  main:
+    short_description: Install and configure the Exim MTA
+    description:
+      - Installs the Exim mail transfer agent and applies basic configuration
+        such as the config type, local delivery method, and primary hostname.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      exim_dc_eximconfig_configtype:
+        type: str
+        default: internet
+        description: Main Exim configuration type (Debian/Ubuntu), e.g. internet for public mail sending or local for local-only delivery.
+      exim_dc_localdelivery:
+        type: str
+        default: mail_spool
+        description: Default transport used for local mail delivery (Debian/Ubuntu).
+      exim_primary_hostname:
+        type: str
+        default: ""
+        description: Forces the primary server hostname Exim uses; ignored when left empty.

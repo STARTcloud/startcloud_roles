@@ -1,6 +1,6 @@
 ---
 -
-  name: Configure Apache.
+  name: "Configuring Apache"
   ansible.builtin.lineinfile:
     dest: "{{ apache_server_root }}/{{ apache_daemon }}.conf"
     regexp: "{{ item.regexp }}"
@@ -8,15 +8,15 @@
     state: present
     mode: "0644"
   with_items: "{{ apache_ports_configuration_items }}"
-  notify: restart apache
+  notify: Restarting apache
 
 -
-  name: Add apache vhosts configuration.
+  name: "Adding apache vhosts configuration"
   ansible.builtin.template:
     src: "{{ apache_vhosts_template }}"
     dest: "{{ apache_conf_path }}/{{ apache_vhosts_filename }}"
     owner: root
     group: root
     mode: "0644"
-  notify: restart apache
+  notify: Restarting apache
   when: apache_create_vhosts | bool

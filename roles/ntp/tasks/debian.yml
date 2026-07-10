@@ -48,7 +48,7 @@
   name: "Setting timezone."
   community.general.timezone:
     name: "{{ ntp_timezone }}"
-  notify: restart cron
+  notify: "Restarting cron"
 
 -
   name: "Populating service facts."
@@ -87,8 +87,8 @@
     src: "timesyncd.conf.j2"
     dest: "{{ ntp_config_file }}"
     mode: "0644"
-  notify: restart ntp
-  when: 
+  notify: "Restarting NTP"
+  when:
     - ntp_manage_config | bool
     - __use_systemd_timesyncd | bool
 
@@ -98,7 +98,7 @@
     src: "{{ ntp_config_file | basename }}.j2"
     dest: "{{ ntp_config_file }}"
     mode: "0644"
-  notify: restart ntp
-  when: 
+  notify: "Restarting NTP"
+  when:
     - ntp_manage_config | bool
     - not (__use_systemd_timesyncd | bool)

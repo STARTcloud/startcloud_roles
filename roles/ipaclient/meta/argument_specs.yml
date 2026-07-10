@@ -1,0 +1,125 @@
+---
+argument_specs:
+  main:
+    short_description: Enrol a host into a FreeIPA domain
+    description:
+      - Joins a host to a FreeIPA domain as a client, or unenrols it.
+      - Handles package installation, DNS resolver setup, Kerberos, SSSD, SSH, NIS and certmonger configuration.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      ipaclient_force_join:
+        type: bool
+        default: false
+        description: Allow an already enrolled host to join again.
+      ipaclient_mkhomedir:
+        type: bool
+        default: false
+        description: Configure PAM to create a user home directory on first login if it does not exist.
+      ipaclient_kinit_attempts:
+        type: int
+        default: 5
+        description: Number of tries to repeat a failed request for the host Kerberos ticket.
+      ipaclient_use_otp:
+        type: bool
+        default: false
+        description: Generate a one-time password to join a new or existing host.
+      ipaclient_allow_repair:
+        type: bool
+        default: false
+        description: Allow an already joined or partly set-up client to be repaired without changing the host entry on the server.
+      ipaclient_on_master:
+        type: bool
+        default: false
+        description: Internal flag used only when installing the client part during server or replica installation.
+      ipaclient_no_ntp:
+        type: bool
+        default: false
+        description: Do not configure or enable NTP.
+      ipaclient_no_dns_lookup:
+        type: bool
+        default: false
+        description: Use the ipaservers group directly and deactivate Kerberos DNS lookup during installation.
+      ipaclient_ssh_trust_dns:
+        type: bool
+        default: false
+        description: Configure the OpenSSH client to trust DNS SSHFP records.
+      ipaclient_no_ssh:
+        type: bool
+        default: false
+        description: Do not configure the OpenSSH client.
+      ipaclient_no_sshd:
+        type: bool
+        default: false
+        description: Do not configure the OpenSSH server.
+      ipaclient_no_sudo:
+        type: bool
+        default: false
+        description: Do not configure SSSD as a data source for sudo.
+      ipaclient_subid:
+        type: bool
+        default: false
+        description: Configure SSSD as a data source for subid.
+      ipaclient_no_dns_sshfp:
+        type: bool
+        default: false
+        description: Do not create DNS SSHFP records automatically.
+      ipaclient_force:
+        type: bool
+        default: false
+        description: Force settings even in the error case.
+      ipaclient_force_ntpd:
+        type: bool
+        default: false
+        description: Force ntpd usage (deprecated, leads to a warning).
+      ipaclient_no_nisdomain:
+        type: bool
+        default: false
+        description: Do not configure the NIS domain name.
+      ipaclient_configure_firefox:
+        type: bool
+        default: false
+        description: Configure Firefox to use IPA domain credentials.
+      ipaclient_all_ip_addresses:
+        type: bool
+        default: false
+        description: Create DNS A/AAAA records for every IP address on the client.
+      ipasssd_fixed_primary:
+        type: bool
+        default: false
+        description: Configure SSSD to use a fixed server as the primary IPA server.
+      ipasssd_permit:
+        type: bool
+        default: false
+        description: Configure SSSD to permit all access instead of relying on HBAC.
+      ipasssd_enable_dns_updates:
+        type: bool
+        default: false
+        description: Tell SSSD to automatically update DNS with the client IP address.
+      ipasssd_no_krb5_offline_passwords:
+        type: bool
+        default: false
+        description: Configure SSSD not to store the user password when the server is offline.
+      ipasssd_preserve_sssd:
+        type: bool
+        default: false
+        description: Preserve the old SSSD configuration if it cannot be merged with a new one.
+      ipaclient_request_cert:
+        type: bool
+        default: false
+        description: Request a certificate for the machine (deprecated).
+      ipaclient_install_packages:
+        type: bool
+        default: true
+        description: Install the required IPA client packages on the node.
+      ipaclient_configure_dns_resolver:
+        type: bool
+        default: false
+        description: Configure the DNS resolver, useful when the IPA server provides internal DNS.
+      ipaclient_cleanup_dns_resolver:
+        type: bool
+        default: false
+        description: Clean up DNS resolvers previously configured by ipaclient_configure_dns_resolver.

@@ -1,0 +1,26 @@
+---
+argument_specs:
+  main:
+    short_description: Install and configure NFS
+    description:
+      - Installs NFS server and client utilities, renders /etc/exports from a
+        list of export definitions, and enables the NFS service.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      nfs_exports:
+        type: list
+        elements: str
+        default: []
+        description: Export lines written verbatim to /etc/exports; each entry's first field is created as a directory.
+      nfs_rpcbind_state:
+        type: str
+        default: started
+        description: Desired state of the rpcbind service on RedHat-family hosts.
+      nfs_rpcbind_enabled:
+        type: bool
+        default: true
+        description: Whether the rpcbind service is enabled at boot on RedHat-family hosts.

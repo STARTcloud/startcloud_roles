@@ -4,8 +4,8 @@
   when: run_tasks
   block:
     -
-      name: "Add OS specific variables"
-      include_vars: "{{ loop_vars }}"
+      name: "Adding OS specific variables"
+      ansible.builtin.include_vars: "{{ loop_vars }}"
       loop_control:
         loop_var: loop_vars
       tags:
@@ -23,8 +23,8 @@
             - vars
 
     -
-      name: "include distribution tasks"
-      include_tasks: "{{ loop_distribution }}"
+      name: "Including distribution tasks"
+      ansible.builtin.include_tasks: "{{ loop_distribution }}"
       loop_control:
         loop_var: loop_distribution
       tags:

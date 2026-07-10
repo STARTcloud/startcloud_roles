@@ -1,13 +1,13 @@
 ---
 -
-  name: Update apt cache.
+  name: "Updating apt cache"
   ansible.builtin.apt:
     update_cache: true
     cache_valid_time: 600
   changed_when: false
 
 -
-  name: Ensure nginx is installed.
+  name: "Ensuring nginx is installed"
   ansible.builtin.apt:
     name: "{{ nginx_package_name }}"
     state: present

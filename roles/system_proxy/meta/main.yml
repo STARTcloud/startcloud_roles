@@ -1,0 +1,25 @@
+galaxy_info:
+  role_name: system_proxy
+  author: Mark Gilbert
+  description: Configures system-wide HTTP/HTTPS proxy and package-manager proxy settings on Debian, RedHat, and Windows guests.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
+  platforms:
+    - name: Debian
+      versions: ['bookworm', 'trixie']
+    - name: Ubuntu
+      versions: ['jammy', 'noble']
+    - name: EL
+      versions: ['8', '9']
+    - name: Windows
+      versions: ['2022']
+  galaxy_tags:
+    - proxy
+    - networking
+    - squid
+    - environment
+dependencies: []
+collections:
+  - startcloud.startcloud_roles

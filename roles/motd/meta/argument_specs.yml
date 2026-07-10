@@ -1,0 +1,65 @@
+---
+argument_specs:
+  main:
+    short_description: Configure a branded message-of-the-day
+    description:
+      - Renders /etc/motd, optional update-motd.d scripts, an on-demand sysinfo command and branded /etc/issue banners for Linux and FreeBSD logins.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      motd_remove_default_config:
+        type: bool
+        default: false
+        description: When true, back up and remove the distribution's default update-motd.d scripts.
+      motd_restore_default_config:
+        type: bool
+        default: false
+        description: When true, restore the previously backed-up default update-motd.d scripts.
+      motd_add_footer:
+        type: bool
+        default: false
+        description: When true, install the 99-footer update-motd.d script that appends /etc/motd.tail.
+      motd_add_update:
+        type: bool
+        default: false
+        description: When true, install the dynamic 20-update motd script and disable static PrintMotd.
+      motd_show_support:
+        type: bool
+        default: false
+        description: When true, show the optional support/contact box in the login banner.
+      motd_org:
+        type: str
+        default: STARTcloud
+        description: Organisation name shown in the banner and prepended to /etc/issue.
+      motd_sysadmins_signature:
+        type: str
+        default: Random system administrators
+        description: Support signature line shown in the motd support box.
+      motd_sysadmins_email:
+        type: str
+        default: "{{ email | default('support@startcloud.com') }}"
+        description: Support email address shown in the motd support box.
+      motd_color_primary:
+        type: str
+        default: "0;32"
+        description: ANSI 16-color code for the banner frame and ASCII art.
+      motd_color_secondary:
+        type: str
+        default: "1"
+        description: ANSI 16-color code for emphasis text in the banner.
+      motd_banner_managed_line:
+        type: str
+        description: Shell echo line rendering the "managed by" banner row.
+      motd_banner_art:
+        type: str
+        description: Shell echo lines rendering the vendor ASCII-art logo.
+      motd_banner_tagline:
+        type: str
+        description: Shell echo line rendering the banner tagline row.
+      motd_content:
+        type: str
+        default: ""
+        description: Optional extra content injected into the rendered /etc/motd.

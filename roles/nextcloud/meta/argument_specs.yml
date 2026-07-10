@@ -1,0 +1,78 @@
+---
+argument_specs:
+  main:
+    short_description: Install and configure a single-node Nextcloud server.
+    description:
+      - Downloads a Nextcloud server release, extracts it to the webroot, installs
+        nginx, PHP-FPM, and the required PHP extensions, provisions a MariaDB
+        database, and runs the occ installer to bootstrap the instance.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      nextcloud_version:
+        type: str
+        default: "30.0.2"
+        description: Nextcloud server release version to download and install.
+      nextcloud_download_url:
+        type: str
+        default: "https://download.nextcloud.com/server/releases/nextcloud-{{ nextcloud_version }}.zip"
+        description: URL of the Nextcloud release archive to fetch and extract.
+      nextcloud_webroot:
+        type: str
+        default: "/var/www/nextcloud"
+        description: Directory the Nextcloud release is extracted into and served from.
+      nextcloud_data_dir:
+        type: str
+        default: "/var/www/nextcloud/data"
+        description: Directory Nextcloud uses to store user data.
+      nextcloud_web_user:
+        type: str
+        default: "www-data"
+        description: System user that owns the webroot and runs the occ commands.
+      nextcloud_web_group:
+        type: str
+        default: "www-data"
+        description: System group that owns the Nextcloud files.
+      nextcloud_server_name:
+        type: str
+        default: "{{ settings.hostname }}.{{ settings.domain }}"
+        description: Server name for the nginx virtual host and Nextcloud trusted domain.
+      nextcloud_php_fpm_socket:
+        type: str
+        default: "/run/php/php-fpm.sock"
+        description: PHP-FPM listen socket nginx passes PHP requests to.
+      nextcloud_db_type:
+        type: str
+        default: "mysql"
+        description: Database backend passed to the occ installer.
+      nextcloud_db_host:
+        type: str
+        default: "localhost"
+        description: Database host Nextcloud connects to.
+      nextcloud_db_name:
+        type: str
+        default: "nextcloud"
+        description: Name of the database created for Nextcloud.
+      nextcloud_db_user:
+        type: str
+        default: "nextcloud"
+        description: Database user Nextcloud authenticates as.
+      nextcloud_db_password:
+        type: str
+        default: "SomeNextcloudDBPassword"
+        description: Password for the Nextcloud database user.
+      nextcloud_admin_user:
+        type: str
+        default: "admin"
+        description: Initial administrator account created by occ maintenance:install.
+      nextcloud_admin_password:
+        type: str
+        default: "SomeNextcloudAdminPassword"
+        description: Password for the initial administrator account.
+      nextcloud_packages:
+        type: list
+        elements: str
+        description: System packages installed for a single-node Nextcloud stack.

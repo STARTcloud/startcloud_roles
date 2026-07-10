@@ -1,6 +1,6 @@
 ---
 -
-  name: Ensure NFS client utilities are installed.
+  name: "Installing NFS client utilities"
   become: true
   ansible.builtin.apt:
     name:

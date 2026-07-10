@@ -1,11 +1,11 @@
-
+---
 -
   name: "Configuring AutoUnattend.xml and Post Provisioning Setup scripts"
   when: prepare_template
   block:
     -
       name: "Creating STARTcloud Directories"
-      ansible.builtin.win_file:
+      ansible.windows.win_file:
         path: "{{ item }}"
         state: directory
       with_items:
@@ -61,7 +61,7 @@
       when: prepare_sysprep
       block:
         -
-          name: "Create sysprep.bat"
+          name: "Creating sysprep.bat"
           ansible.windows.win_copy:
             dest: C:\Windows\Temp\packer\sysprep.bat
             content: |

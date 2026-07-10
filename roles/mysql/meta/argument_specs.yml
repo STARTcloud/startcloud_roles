@@ -1,0 +1,264 @@
+---
+argument_specs:
+  main:
+    short_description: Install and configure MySQL or MariaDB
+    description:
+      - Installs and configures a MySQL or MariaDB server on Debian/Ubuntu, EL, and Arch Linux.
+      - Manages the global configuration, root and application users, databases, and optional replication.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      mysql_user_home:
+        type: str
+        default: /root
+        description: Home directory of the login user whose .my.cnf credentials Ansible uses to connect.
+      mysql_user_name:
+        type: str
+        default: root
+        description: Login username Ansible uses to connect to MySQL.
+      mysql_user_password:
+        type: str
+        default: root
+        description: Password for the login user Ansible uses to connect to MySQL.
+      mysql_root_home:
+        type: str
+        default: /root
+        description: Home directory of the MySQL root account where root .my.cnf is written.
+      mysql_root_username:
+        type: str
+        default: root
+        description: MySQL root account username.
+      mysql_root_password:
+        type: str
+        default: root
+        description: MySQL root account password.
+      mysql_root_password_update:
+        type: bool
+        default: false
+        description: When true, forcibly update the root password even if MySQL is already configured.
+      mysql_user_password_update:
+        type: bool
+        default: false
+        description: When true, forcibly update the login user's password even if MySQL is already configured.
+      mysql_enabled_on_startup:
+        type: bool
+        default: true
+        description: Whether the MySQL service is enabled to start on boot.
+      overwrite_global_mycnf:
+        type: bool
+        default: true
+        description: Whether the global my.cnf is overwritten on every run.
+      mysql_enablerepo:
+        type: str
+        default: ""
+        description: Comma-separated list of extra repositories to enable when installing packages (RedHat only).
+      mysql_python_package_debian:
+        type: str
+        default: python3-mysqldb
+        description: Python MySQL client package installed on Debian/Ubuntu.
+      mysql_port:
+        type: str
+        default: "3306"
+        description: TCP port MySQL listens on.
+      mysql_bind_address:
+        type: str
+        default: '0.0.0.0'
+        description: Address MySQL binds to.
+      mysql_skip_name_resolve:
+        type: bool
+        default: false
+        description: When true, disable reverse DNS resolution of client hosts.
+      mysql_datadir:
+        type: str
+        default: /var/lib/mysql
+        description: MySQL data directory.
+      mysql_sql_mode:
+        type: str
+        description: SQL mode written to my.cnf; unset (null) leaves the server default.
+      mysql_log_file_group:
+        type: str
+        default: mysql
+        description: Group owning the MySQL log files (OS-specific override applies).
+      mysql_slow_query_log_enabled:
+        type: bool
+        default: false
+        description: Whether the slow query log is enabled.
+      mysql_slow_query_time:
+        type: str
+        default: "2"
+        description: Threshold in seconds above which a query is logged as slow.
+      mysql_key_buffer_size:
+        type: str
+        default: "256M"
+        description: MyISAM key buffer size.
+      mysql_max_allowed_packet:
+        type: str
+        default: "64M"
+        description: Maximum size of one packet or generated/intermediate string.
+      mysql_table_open_cache:
+        type: str
+        default: "256"
+        description: Number of open tables for all threads.
+      mysql_sort_buffer_size:
+        type: str
+        default: "1M"
+        description: Per-session sort buffer size.
+      mysql_read_buffer_size:
+        type: str
+        default: "1M"
+        description: Per-session sequential-scan read buffer size.
+      mysql_read_rnd_buffer_size:
+        type: str
+        default: "4M"
+        description: Per-session random-read buffer size.
+      mysql_myisam_sort_buffer_size:
+        type: str
+        default: "64M"
+        description: Buffer used when sorting MyISAM indexes.
+      mysql_thread_cache_size:
+        type: str
+        default: "8"
+        description: Number of threads cached for reuse.
+      mysql_query_cache_type:
+        type: str
+        default: "0"
+        description: Query cache type (ignored on MySQL 8.0+).
+      mysql_query_cache_size:
+        type: str
+        default: "16M"
+        description: Query cache size (ignored on MySQL 8.0+).
+      mysql_query_cache_limit:
+        type: str
+        default: "1M"
+        description: Maximum size of an individual cached query result (ignored on MySQL 8.0+).
+      mysql_max_connections:
+        type: str
+        default: "300"
+        description: Maximum number of simultaneous client connections.
+      mysql_tmp_table_size:
+        type: str
+        default: "16M"
+        description: Maximum size of internal in-memory temporary tables.
+      mysql_max_heap_table_size:
+        type: str
+        default: "16M"
+        description: Maximum size of user-created MEMORY tables.
+      mysql_group_concat_max_len:
+        type: str
+        default: "1024"
+        description: Maximum length of the GROUP_CONCAT result.
+      mysql_join_buffer_size:
+        type: str
+        default: "262144"
+        description: Minimum size of the buffer used for plain-index joins.
+      mysql_lower_case_table_names:
+        type: str
+        default: "0"
+        description: How table names are stored and compared for case sensitivity.
+      mysql_wait_timeout:
+        type: str
+        default: "28800"
+        description: Seconds the server waits for activity on a non-interactive connection before closing it.
+      mysql_event_scheduler_state:
+        type: str
+        default: "OFF"
+        description: Event scheduler state.
+      mysql_innodb_file_per_table:
+        type: str
+        default: "1"
+        description: Whether InnoDB stores each table in its own tablespace file.
+      mysql_innodb_buffer_pool_size:
+        type: str
+        default: "256M"
+        description: InnoDB buffer pool size.
+      mysql_innodb_log_file_size:
+        type: str
+        default: "64M"
+        description: InnoDB redo log file size.
+      mysql_innodb_log_buffer_size:
+        type: str
+        default: "8M"
+        description: InnoDB log buffer size.
+      mysql_innodb_flush_log_at_trx_commit:
+        type: str
+        default: "1"
+        description: InnoDB transaction commit flush behaviour.
+      mysql_innodb_lock_wait_timeout:
+        type: str
+        default: "50"
+        description: Seconds an InnoDB transaction waits for a row lock before giving up.
+      mysql_innodb_large_prefix:
+        type: str
+        default: "1"
+        description: Whether InnoDB allows large index key prefixes (requires MySQL > 5.5).
+      mysql_innodb_file_format:
+        type: str
+        default: "barracuda"
+        description: InnoDB file format (requires MySQL > 5.5).
+      mysql_mysqldump_max_allowed_packet:
+        type: str
+        default: "64M"
+        description: max_allowed_packet used by mysqldump.
+      mysql_log:
+        type: str
+        default: ""
+        description: General query log destination; set to syslog to log to syslog.
+      mysql_config_include_files:
+        type: list
+        elements: dict
+        default: []
+        description: Additional my.cnf override files copied into the include directory.
+      mysql_databases:
+        type: list
+        elements: dict
+        default: []
+        description: Databases to create or remove, each with name, encoding, collation, and state.
+      mysql_users:
+        type: list
+        elements: dict
+        default: []
+        description: Users to create or remove, each with name, host, password, priv, and state.
+      mysql_disable_log_bin:
+        type: bool
+        default: false
+        description: When true and not a replication master, disable the binary log to save disk space.
+      mysql_server_id:
+        type: str
+        default: "1"
+        description: Unique server ID used for replication.
+      mysql_max_binlog_size:
+        type: str
+        default: "100M"
+        description: Maximum size of a single binary log file.
+      mysql_binlog_format:
+        type: str
+        default: "ROW"
+        description: Binary log format.
+      mysql_expire_logs_days:
+        type: str
+        default: "10"
+        description: Number of days after which binary logs are purged.
+      mysql_replication_role:
+        type: str
+        default: ''
+        description: Replication role for this host (master or slave); empty disables replication config.
+      mysql_replication_master:
+        type: str
+        default: ''
+        description: Hostname or IP of the replication master reachable by the slaves.
+      mysql_replication_master_inventory_host:
+        type: str
+        default: "{{ mysql_replication_master }}"
+        description: Inventory host used to reach the master when it differs from mysql_replication_master.
+      mysql_replication_user:
+        type: list
+        elements: dict
+        default: []
+        description: Replication user created on the master and used by slaves (same keys as mysql_users).
+      mysql_hide_passwords:
+        type: bool
+        default: false
+        description: When true, suppress task output that would reveal passwords via no_log.

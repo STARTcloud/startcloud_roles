@@ -1,0 +1,27 @@
+mqtt:
+  enabled: {{ frigate_mqtt_enabled | bool | lower }}
+{% if frigate_mqtt_enabled %}
+  host: {{ frigate_mqtt_host }}
+  port: {{ frigate_mqtt_port }}
+{% endif %}
+
+detectors:
+  cpu1:
+    type: cpu
+
+{% if frigate_cameras | length > 0 %}
+cameras:
+{% for cam in frigate_cameras %}
+  {{ cam.name }}:
+    ffmpeg:
+      inputs:
+        - path: {{ cam.path }}
+          roles:
+{% for role in cam.roles | default(['detect']) %}
+            - {{ role }}
+{% endfor %}
+    detect:
+      width: {{ cam.width | default(1280) }}
+      height: {{ cam.height | default(720) }}
+{% endfor %}
+{% endif %}

@@ -1,12 +1,12 @@
 ---
 -
-  name: Ensure nginx is installed.
+  name: "Ensuring nginx is installed"
   community.general.openbsd_pkg:
     name: "{{ nginx_package_name }}"
     state: present
 
 -
-  name: Create logs directory.
+  name: "Creating logs directory"
   ansible.builtin.file:
     path: /var/log/nginx
     state: directory

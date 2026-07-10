@@ -1,0 +1,28 @@
+---
+argument_specs:
+  main:
+    short_description: Chocolatey package manager installation
+    description:
+      - Installs the Chocolatey package manager on Windows (latest or a specific version) and adds it to the machine PATH.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      chocolatey_installer:
+        type: str
+        default: https://chocolatey.org/install.ps1
+        description: URL of the Chocolatey install script.
+      chocolatey_path:
+        type: str
+        default: c:/ProgramData/chocolatey
+        description: Install location checked for an existing choco.exe.
+      chocolatey_version:
+        type: str
+        default: latest
+        description: Chocolatey version to install ('latest' or a specific version).
+      chocolatey_windows_compression:
+        type: str
+        default: "false"
+        description: Value for $env:chocolateyUseWindowsCompression during install.

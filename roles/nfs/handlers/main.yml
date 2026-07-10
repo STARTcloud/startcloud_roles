@@ -1,4 +1,4 @@
 ---
 -
-  name: Reload nfs
+  name: "Reloading NFS"
   ansible.builtin.command: 'exportfs -ra'

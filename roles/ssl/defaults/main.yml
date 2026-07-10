@@ -1,10 +1,4 @@
 ---
-count_progress: true
-progress_units: 2
-progress_role_description: "Initial SSL certificate setup"
-progress_role_description_step1: "Processing self-signed/CA certificates"
-progress_role_description_step2: "Processing Let's Encrypt certificates"
-
 run_tasks: true
 
 # Certificate directory paths

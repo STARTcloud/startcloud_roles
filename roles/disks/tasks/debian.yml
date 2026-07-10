@@ -22,7 +22,7 @@
       name: "Extending the unecrypted Root Partition"
       ansible.builtin.shell: "{{ item }}"
       register: extend_root_partition
-      failed_when: 
+      failed_when:
         - extend_root_partition.rc != 0
         - "'NOCHANGE' not in extend_root_partition.stdout"
         - "'Bad magic number' not in extend_root_partition.stderr"
@@ -81,12 +81,14 @@
           ansible.builtin.shell: "lsblk -no NAME -x NAME | grep -v {{ root_disk }}"
           register: lsblk_output
 
-        - name: "Parsing available disks"
-          set_fact:
+        -
+          name: "Parsing available disks"
+          ansible.builtin.set_fact:
             available_disks: "{{ lsblk_output.stdout_lines }}"
 
-        - name: "Debug: available_disks"
-          debug:
+        -
+          name: "Debugging available_disks"
+          ansible.builtin.debug:
             var: available_disks
 
     -

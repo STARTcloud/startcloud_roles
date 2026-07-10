@@ -1,6 +1,7 @@
 ---
 # Create and configure the vnc user
-- name: Create the VNC user
+-
+  name: "Creating the VNC User"
   ansible.builtin.user:
     # Ansible will start treating append: true and groups omitted as
     # an error in version 2.14, so we need append: true only if groups
@@ -11,17 +12,20 @@
     shell: /bin/bash
     uid: "{{ vnc_server_user_uid | default(omit) }}"
 
-- name: Set VNC password for VNC user
+-
+  name: "Setting VNC Password for VNC User"
   block:
-    - name: Create .vnc directory for VNC user
+    -
+      name: "Creating .vnc Directory for VNC User"
       ansible.builtin.file:
         path: /home/{{ vnc_server_username }}/.vnc
         state: directory
-        mode: 0755
+        mode: "0755"
         owner: "{{ vnc_server_username }}"
         group: "{{ vnc_server_username }}"
 
-    - name: Set VNC password for VNC user
+    -
+      name: "Setting VNC Password File for VNC User"
       ansible.builtin.shell: |
         set -o pipefail
         echo {{ vnc_server_password }} | vncpasswd -f > /home/{{ vnc_server_username }}/.vnc/passwd
@@ -29,18 +33,21 @@
         executable: /bin/bash
         creates: /home/{{ vnc_server_username }}/.vnc/passwd
 
-    - name: Set correct permissions for VNC passwd file
+    -
+      name: "Setting Correct Permissions for VNC passwd File"
       ansible.builtin.file:
         path: /home/{{ vnc_server_username }}/.vnc/passwd
         owner: "{{ vnc_server_username }}"
         group: "{{ vnc_server_username }}"
-        mode: 0600
+        mode: "0600"
 
 # Install an SSH keypair for the VNC user.  This will enable Guacamole
 # to perform file transfers to/from this instance.
-- name: Install SSH keys for VNC user
+-
+  name: "Installing SSH Keys for VNC User"
   block:
-    - name: Validate value of ssh_key_type
+    -
+      name: "Validating Value of ssh_key_type"
       ansible.builtin.assert:
         fail_msg: >
           "{{ vnc_server_ssh_key_type }} is not a valid value for the SSH key
@@ -49,37 +56,41 @@
         that:
           - (vnc_server_ssh_key_type | lower) in ["dsa", "ecdsa", "ecdsa_sk", "ed25519", "ed25519_sk", "rsa"]
 
-    - name: Create .ssh directory for VNC user
+    -
+      name: "Creating .ssh Directory for VNC User"
       ansible.builtin.file:
         path: "/home/{{ vnc_server_username }}/.ssh"
         state: directory
         owner: "{{ vnc_server_username }}"
         group: "{{ vnc_server_username }}"
-        mode: 0755
+        mode: "0755"
 
-    - name: Install SSH public key for VNC user
+    -
+      name: "Installing SSH Public Key for VNC User"
       ansible.builtin.copy:
         content: "{{ vnc_server_public_ssh_key }}"
         dest: "/home/{{ vnc_server_username }}/.ssh/id_{{ vnc_server_ssh_key_type | lower }}.pub"
-        mode: 0644
+        mode: "0644"
         owner: "{{ vnc_server_username }}"
         group: "{{ vnc_server_username }}"
-      when: vnc_server_public_ssh_key|length > 0
+      when: vnc_server_public_ssh_key | length > 0
 
-    - name: Install SSH private key for VNC user
+    -
+      name: "Installing SSH Private Key for VNC User"
       ansible.builtin.copy:
         content: "{{ vnc_server_private_ssh_key }}"
         dest: "/home/{{ vnc_server_username }}/.ssh/id_{{ vnc_server_ssh_key_type | lower }}"
-        mode: 0600
+        mode: "0600"
         owner: "{{ vnc_server_username }}"
         group: "{{ vnc_server_username }}"
       no_log: true
-      when: vnc_server_private_ssh_key|length > 0
+      when: vnc_server_private_ssh_key | length > 0
 
-    - name: Add VNC SSH public key as authorized key
+    -
+      name: "Adding VNC SSH Public Key as Authorized Key"
       ansible.posix.authorized_key:
         user: "{{ vnc_server_username }}"
         key: "{{ vnc_server_public_ssh_key }}"
       when:
-        - vnc_server_public_ssh_key|length > 0
-        - vnc_server_private_ssh_key|length > 0
+        - vnc_server_public_ssh_key | length > 0
+        - vnc_server_private_ssh_key | length > 0

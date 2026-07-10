@@ -1,0 +1,38 @@
+---
+argument_specs:
+  main:
+    short_description: Installs the UDS Actor on Windows guests.
+    description:
+      - Downloads the UDS Actor installer and waits for it to register the guest with an OpenUDS broker for VDI.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      uds_actor_version:
+        type: str
+        default: 3.6.0
+        description: Version of the UDS Actor installer to download.
+      uds_actor_managed:
+        type: bool
+        default: false
+        description: Whether the UDS Actor runs in managed mode against the broker.
+      uds_actor_installer:
+        type: str
+        default: "UDSActorSetup-{{ uds_actor_version }}.exe"
+        description: Filename of the UDS Actor installer executable.
+      uds_site:
+        type: str
+        default: S2
+        description: UDS site identifier used to build the installer download path.
+      installer_url_app_path:
+        type: str
+        default: "SHI/UDS_Actor/{{ uds_site }}"
+        description: Relative path on the download host to the UDS Actor installer.
+      installer_base_url:
+        type: str
+        description: Base URL of the host serving the UDS Actor installer.
+      uds_installer_url:
+        type: str
+        description: Fully resolved URL used to download the UDS Actor installer.

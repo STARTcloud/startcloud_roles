@@ -1,0 +1,39 @@
+---
+argument_specs:
+  main:
+    short_description: HAProxy reverse proxy
+    description:
+      - Installs HAProxy and renders its configuration plus branded HTTP error pages, running under systemd or supervisord (in containers).
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      haproxy_http_port:
+        type: int
+        default: 80
+        description: HTTP listen port.
+      haproxy_https_port:
+        type: int
+        default: 443
+        description: HTTPS listen port.
+      haproxy_cfg:
+        type: str
+        default: haproxy.cfg.j2
+        description: Template used to render /etc/haproxy/haproxy.cfg.
+      haproxy_ssl_redirect:
+        type: bool
+        default: true
+        description: Redirect HTTP to HTTPS.
+      haproxy_default_backend:
+        type: str
+        description: Default backend selection expression.
+      haproxy_cert_bot_port:
+        type: int
+        default: 8181
+        description: Port reserved for certbot HTTP-01 challenges behind the proxy.
+      startcloud_haproxy_port_forwards:
+        type: list
+        elements: dict
+        description: Port-forward entries (guest port + URL slug) exposed by the proxy.

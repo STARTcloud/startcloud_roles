@@ -1,0 +1,13 @@
+[Unit]
+Description=OpenFortiVPN Client
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/openfortivpn -c /etc/openfortivpn/config
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

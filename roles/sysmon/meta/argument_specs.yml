@@ -1,0 +1,32 @@
+---
+argument_specs:
+  main:
+    short_description: Installs Sysinternals Sysmon on Windows.
+    description:
+      - Downloads Sysinternals Sysmon, extracts it to the install location, retrieves a Sysmon configuration, and installs the Sysmon service.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      sysmon_download_url_base:
+        type: str
+        default: "https://download.sysinternals.com/files"
+        description: Base URL from which the Sysmon archive is downloaded.
+      sysmon_install_location:
+        type: str
+        default: "c:\\sysmon"
+        description: Windows directory where Sysmon is installed and run from.
+      sysmon_download_file:
+        type: str
+        default: Sysmon
+        description: Base name of the Sysmon download archive, without extension.
+      file_ext:
+        type: str
+        default: .zip
+        description: File extension appended to the Sysmon download file name.
+      sysmon_config_url:
+        type: str
+        default: "https://www.domain.net/sysmonconfig-export.xml"
+        description: URL of the Sysmon configuration XML applied during installation.

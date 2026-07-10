@@ -1,0 +1,39 @@
+---
+argument_specs:
+  main:
+    short_description: Service user provisioning
+    description:
+      - Creates the service group and user, grants passwordless sudo, sets nofile limits, and prepares the home/ansible tmp directories; on Windows also manages the account and password policy.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      service_user:
+        type: str
+        default: java_user
+        description: Username of the service account to create.
+      service_group:
+        type: str
+        default: java_group
+        description: Primary group of the service account.
+      service_home_dir:
+        type: str
+        default: /local/notesjava
+        description: Home directory of the service account.
+      service_user_soft_limit:
+        type: str
+        default: "60000"
+        description: Soft nofile ulimit applied via pam_limits.
+      service_user_hard_limit:
+        type: str
+        default: "80000"
+        description: Hard nofile ulimit applied via pam_limits.
+      service_user_password:
+        type: str
+        description: Windows service-account password; defaults to a randomly generated value.
+      service_user_ssh_key:
+        type: str
+        default: ""
+        description: Optional SSH public key to install as an authorized_key (FreeBSD); empty skips the install.

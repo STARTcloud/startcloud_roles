@@ -1,6 +1,7 @@
 ---
-- name: Ensure procps is installed.
-  package:
+-
+  name: "Ensuring procps is installed"
+  ansible.builtin.package:
     name: "{{ procps_package }}"
     state: present
   when: >
@@ -8,8 +9,9 @@
     or ansible_distribution_major_version | int < 10
 
 # See: https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#letting-iptables-see-bridged-traffic
-- name: Let iptables see bridged traffic.
-  sysctl:
+-
+  name: "Letting iptables see bridged traffic"
+  ansible.posix.sysctl:
     name: "{{ item }}"
     value: '1'
     state: present

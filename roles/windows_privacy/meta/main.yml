@@ -1,29 +1,23 @@
 galaxy_info:
   role_name: windows_privacy
-  author: MarkProminic
-  description: Configure Windows privacy settings, disable telemetry and bloatware
-  company: STARTCloud
+  author: Mark Gilbert
+  description: Applies Windows privacy hardening by disabling telemetry, Cortana, bloatware, and related tracking features
+  company: STARTcloud
   issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
-  license: license (Apache)
-  min_ansible_version: '2.9'
+  license: Apache-2.0
+  min_ansible_version: '2.15'
   platforms:
     - name: Windows
       versions:
-        - '10'
-        - '11'
-        - '2019'
         - '2022'
-
-  galaxy_tags: 
+  galaxy_tags:
     - windows
     - privacy
     - telemetry
     - bloatware
-    - cortana
+    - debloat
 
 dependencies: []
 
 collections:
   - startcloud.startcloud_roles
-
-allow_duplicates: false

@@ -1,6 +1,6 @@
 ---
 -
-  name: Ensure MySQL users are present.
+  name: "Ensuring MySQL users are present"
   community.mysql.mysql_user:
     name: "{{ item.name }}"
     host: "{{ item.host | default('localhost') }}"

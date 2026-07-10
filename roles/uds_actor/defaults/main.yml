@@ -1,8 +1,5 @@
 ---
 run_tasks: true
-count_progress: true
-progress_units: 1
-progress_role_description: "Installing and Configuring UDS Actor"
 
 uds_actor_version: 3.6.0
 uds_actor_managed: false

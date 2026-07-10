@@ -1,14 +1,45 @@
 ---
 run_tasks: true
-packages:
-  - htop
-  - lynx
-  - lshw
-  - libxml2-utils
-  - tree
-  - python3-pexpect
-  - python3-pymongo
+
+# Nextcloud server release to download and install.
+nextcloud_version: "30.0.2"
+nextcloud_download_url: "https://download.nextcloud.com/server/releases/nextcloud-{{ nextcloud_version }}.zip"
+
+# Filesystem layout for the Nextcloud installation.
+nextcloud_webroot: "/var/www/nextcloud"
+nextcloud_data_dir: "/var/www/nextcloud/data"
+nextcloud_web_user: "www-data"
+nextcloud_web_group: "www-data"
+
+# Web server virtual host settings.
+nextcloud_server_name: "{{ settings.hostname }}.{{ settings.domain }}"
+nextcloud_php_fpm_socket: "/run/php/php-fpm.sock"
+
+# Single-node database connection used by the occ installer.
+nextcloud_db_type: "mysql"
+nextcloud_db_host: "localhost"
+nextcloud_db_name: "nextcloud"
+nextcloud_db_user: "nextcloud"
+nextcloud_db_password: "SomeNextcloudDBPassword"
+
+# Initial administrator account created by occ maintenance:install.
+nextcloud_admin_user: "admin"
+nextcloud_admin_password: "SomeNextcloudAdminPassword"
+
+# System packages required for a single-node Nextcloud install.
+nextcloud_packages:
+  - nginx
+  - mariadb-server
   - python3-pymysql
-  - psutils
-  - python3-psutil
-  - libxml2-utils
+  - unzip
+  - php-fpm
+  - php-gd
+  - php-mysql
+  - php-curl
+  - php-mbstring
+  - php-intl
+  - php-xml
+  - php-zip
+  - php-bcmath
+  - php-gmp
+  - php-imagick

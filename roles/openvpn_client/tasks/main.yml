@@ -1,27 +1,28 @@
+---
 -
   name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
     -
-      name: Ensure /etc/openvpn/client exists
+      name: "Ensuring /etc/openvpn/client Exists"
       ansible.builtin.file:
         path: /etc/openvpn/client
         state: directory
         owner: root
         group: "{{ openvpn_group }}"
         mode: "0750"
-    
+
     -
-      name: Place client.conf
+      name: "Placing client.conf"
       ansible.builtin.template:
         src: client.conf.j2
         dest: "{{ openvpn_configuration_directory }}/client.conf"
         owner: root
         group: "{{ openvpn_group }}"
         mode: "0640"
-    
+
     -
-      name: copy certificates and keys from the server to the client
+      name: "Copying Certificates and Keys from the Server to the Client"
       ansible.builtin.copy:
         src: /etc/openvpn/easy-rsa/pki/{{ item }}
         dest: /etc/openvpn/client/{{ item | basename }}
@@ -32,10 +33,10 @@
         - issued/client.crt
         - private/client.key
         - ta.key
-    
+
     -
       name: "Enabling OpenVPN"
       when: "ansible_os_family == 'Debian'"
-      service:
+      ansible.builtin.service:
         name: openvpn
         enabled: true

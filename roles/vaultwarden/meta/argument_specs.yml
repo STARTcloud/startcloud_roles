@@ -1,0 +1,51 @@
+---
+argument_specs:
+  main:
+    short_description: Deploy a single-node Vaultwarden container
+    description:
+      - Creates a data directory and runs the Vaultwarden (Bitwarden-compatible password manager) container via Docker, with a configurable published port, public domain, admin token, and signup policy.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      vaultwarden_image:
+        type: str
+        default: "vaultwarden/server:latest"
+        description: Vaultwarden container image and tag.
+      vaultwarden_container_name:
+        type: str
+        default: vaultwarden
+        description: Name of the Vaultwarden container.
+      vaultwarden_restart_policy:
+        type: str
+        default: unless-stopped
+        description: Docker restart policy for the container.
+      vaultwarden_data_dir:
+        type: str
+        default: /opt/vaultwarden/data
+        description: Host directory bind-mounted to /data inside the container (database, attachments, RSA keys).
+      vaultwarden_web_port:
+        type: int
+        default: 8080
+        description: Host port mapped to the Vaultwarden web/API listener (container port 80).
+      vaultwarden_domain:
+        type: str
+        default: "https://vault.example.com"
+        description: Public URL Vaultwarden is served from (used for attachments, WebAuthn, and invites).
+      vaultwarden_admin_token:
+        type: str
+        default: "insecure_admin_token_change_me"
+        description: Token protecting the /admin panel — override before any real deployment.
+      vaultwarden_signups_allowed:
+        type: bool
+        default: true
+        description: Whether new users may register through the web vault.
+      vaultwarden_websocket_enabled:
+        type: bool
+        default: true
+        description: Serve WebSocket notifications for live client synchronisation.
+      vaultwarden_extra_env:
+        type: dict
+        description: Additional environment variables merged into the container environment.

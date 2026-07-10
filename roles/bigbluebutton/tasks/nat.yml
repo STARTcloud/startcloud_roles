@@ -1,5 +1,5 @@
 ---
-  - name: Update Freeswitch STUN address with server IP address
+  - name: "Updating Freeswitch STUN address with server IP address"
     ansible.builtin.replace:
       path: /opt/freeswitch/etc/freeswitch/vars.xml
       regexp: 'stun:stun.freeswitch.org'
@@ -7,7 +7,7 @@
       backup: true
     tags:
       - bbb_configure_nat
-  - name: Configure Freeswitch SIP profiles
+  - name: "Configuring Freeswitch SIP profiles"
     ansible.builtin.replace:
       path: /opt/freeswitch/conf/sip_profiles/external.xml
       regexp: 'ext-rtp-ip\" value=\"\$\${local_ip_v4'
@@ -15,7 +15,7 @@
       backup: true
     tags:
       - bbb_configure_nat
-  - name: Configure Freeswitch SIP profiles
+  - name: "Configuring Freeswitch SIP profiles"
     ansible.builtin.replace:
       path: /opt/freeswitch/conf/sip_profiles/external.xml
       regexp: 'ext-sip-ip\" value=\"\$\${local_ip_v4'
@@ -23,7 +23,7 @@
       backup: true
     tags:
       - bbb_configure_nat
-  - name: Configure Freeswitch SIP profiles
+  - name: "Configuring Freeswitch SIP profiles"
     ansible.builtin.replace:
       path: /opt/freeswitch/conf/sip_profiles/external.xml
       regexp: '<param name=\"ws-binding\".*'
@@ -31,7 +31,7 @@
       backup: true
     tags:
       - bbb_configure_nat
-  - name: Update nginx SIP configuration
+  - name: "Updating nginx SIP configuration"
     ansible.builtin.replace:
       path: /etc/bigbluebutton/nginx/sip.nginx
       regexp: '{{ internal_ip }}:'
@@ -39,14 +39,14 @@
       backup: true
     tags:
       - bbb_configure_nat
-  - name: Create dummy nic for FreeSWITCH
+  - name: "Creating dummy nic for FreeSWITCH"
     ansible.builtin.template:
       src: templates/dmmy_nic.j2
       dest: /lib/systemd/system/dummy-nic.service
       backup: true
     tags:
       - bbb-create_dummy_nic
-  - name: Reload dummy nic
+  - name: "Reloading dummy nic"
     ansible.builtin.systemd:
       state: restarted
       daemon_reload: true

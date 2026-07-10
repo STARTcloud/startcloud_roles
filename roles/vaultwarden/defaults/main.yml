@@ -1,14 +1,29 @@
 ---
 run_tasks: true
-packages:
-  - htop
-  - lynx
-  - lshw
-  - libxml2-utils
-  - tree
-  - python3-pexpect
-  - python3-pymongo
-  - python3-pymysql
-  - psutils
-  - python3-psutil
-  - libxml2-utils
+
+# Container image and runtime
+vaultwarden_image: "vaultwarden/server:latest"
+vaultwarden_container_name: vaultwarden
+vaultwarden_restart_policy: unless-stopped
+
+# Host directory bind-mounted to /data inside the container
+# (holds the SQLite database, attachments, and RSA keys)
+vaultwarden_data_dir: /opt/vaultwarden/data
+
+# Published port (host side; the container listens on 80)
+vaultwarden_web_port: 8080
+
+# Public URL Vaultwarden is served from (used for attachments, WebAuthn, invites)
+vaultwarden_domain: "https://vault.example.com"
+
+# Token protecting the /admin panel — override before any real deployment
+vaultwarden_admin_token: "insecure_admin_token_change_me"
+
+# Whether new users may register through the web vault
+vaultwarden_signups_allowed: true
+
+# Serve WebSocket notifications for live client synchronisation
+vaultwarden_websocket_enabled: true
+
+# Extra environment variables merged into the container environment
+vaultwarden_extra_env: {}

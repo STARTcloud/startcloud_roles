@@ -1,48 +1,24 @@
 ---
-dependencies: []
-
 galaxy_info:
   role_name: ruby
-  author: geerlingguy
-  description: Ruby installation for Linux.
-  company: "Midwestern Mac, LLC"
-  license: "license (BSD, MIT)"
-  min_ansible_version: "2.10"
+  author: Mark Gilbert
+  description: Installs Ruby via system packages or from source, along with Bundler and configured gems.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
   platforms:
-    - name: GenericUNIX
-      versions:
-        - all
-    - name: Fedora
-      versions:
-        - all
-    - name: opensuse
-      versions:
-        - all
-    - name: GenericBSD
-      versions:
-        - all
-    - name: FreeBSD
-      versions:
-        - all
-    - name: Ubuntu
-      versions:
-        - lucid
-        - trusty
-        - precise
-        - bionic
-    - name: SLES
-      versions:
-        - all
-    - name: GenericLinux
-      versions:
-        - all
     - name: Debian
-      versions:
-        - all
+      versions: ['bookworm', 'trixie']
+    - name: Ubuntu
+      versions: ['jammy', 'noble']
+    - name: EL
+      versions: ['8', '9']
   galaxy_tags:
-    - development
-    - web
     - ruby
-    - rails
+    - development
     - gem
     - bundler
+dependencies: []
+collections:
+  - startcloud.startcloud_roles

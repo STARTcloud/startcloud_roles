@@ -1,6 +1,6 @@
 ---
 -
-  name: Enable nginx repo.
+  name: "Enabling nginx repo"
   ansible.builtin.template:
     src: nginx.repo.j2
     dest: /etc/yum.repos.d/nginx.repo
@@ -10,7 +10,7 @@
   when: nginx_yum_repo_enabled | bool
 
 -
-  name: Ensure nginx is installed.
+  name: "Ensuring nginx is installed"
   ansible.builtin.package:
     name: "{{ nginx_package_name }}"
     state: present

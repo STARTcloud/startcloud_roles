@@ -1,22 +1,5 @@
 ---
 -
-  name: "Managing progress for {{ ansible_role_name }}"
-  when: count_progress | default(false)
-  run_once: true
-  block:
-    - name: "Incrementing global progress step counter for {{ ansible_role_name }}"
-      ansible.builtin.set_fact:
-        global_current_progress_step: "{{ global_current_progress_step | default(0) | int + 1 }}"
-
-    - name: "Including progress reporting task for {{ ansible_role_name }}"
-      ansible.builtin.include_role:
-        name: startcloud.startcloud_roles.progress
-      vars:
-        _progress_role_is_setup_run: false
-        current_progress_step: "{{ global_current_progress_step | default(0) }}"
-        progress_description: "{{ progress_role_description | default('Processing ' + ansible_role_name) }}"
-
--
   name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
@@ -25,7 +8,7 @@
       ansible.builtin.include_vars: "{{ ansible_os_family | lower }}.yml"
 
     -
-      name: "Include overrides specific to Fedora"
+      name: "Including overrides specific to Fedora"
       ansible.builtin.include_vars: Fedora.yml
       when:
         - ansible_os_family == 'RedHat'
@@ -50,10 +33,10 @@
         owner: root
         group: root
         mode: "0644"
-      notify: Reload nfs
+      notify: Reloading NFS
 
     -
-      name: "Ensuring nfs is running"
+      name: "Ensuring NFS is running"
       ansible.builtin.service:
         name: "{{ nfs_server_daemon }}"
         state: "started"

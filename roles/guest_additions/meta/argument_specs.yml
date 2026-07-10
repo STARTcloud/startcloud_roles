@@ -1,0 +1,15 @@
+---
+argument_specs:
+  main:
+    short_description: Installs VirtualBox Guest Additions and VMware Tools in Linux guests.
+    description:
+      - Installs VirtualBox Guest Additions and VMware Tools in Linux guest virtual machines to enable host-guest integration such as shared folders.
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      vmware_install_open_vm_tools:
+        type: bool
+        default: false
+        description: When true, installs the distribution open-vm-tools package via apt instead of running the bundled VMware Tools ISO installer.

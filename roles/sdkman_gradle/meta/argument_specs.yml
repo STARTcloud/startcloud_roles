@@ -1,0 +1,20 @@
+---
+argument_specs:
+  main:
+    short_description: Gradle installation via SDKMAN
+    description:
+      - Installs the requested Gradle version through SDKMAN, sets it as default, and exposes it on PATH (and via GRADLE_HOME on Windows).
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      gradle_version:
+        type: str
+        default: 5.4.1
+        description: Gradle version to install via SDKMAN.
+      sdkman_update_alternatives:
+        type: list
+        elements: dict
+        description: update-alternatives entries (candidate, name, link) to register the SDKMAN binary system-wide on Linux.

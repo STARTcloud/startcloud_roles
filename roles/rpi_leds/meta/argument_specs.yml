@@ -1,0 +1,13 @@
+---
+argument_specs:
+  main:
+    short_description: Enable the Raspberry Pi DS1307 real-time clock module
+    description:
+      - Adds the rtc-ds1307 kernel module to /etc/modules so the DS1307 real-time clock is loaded on the next reboot.
+      - Applies only to Raspberry Pi (arm64/armhf) hosts in the Debian OS family.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.

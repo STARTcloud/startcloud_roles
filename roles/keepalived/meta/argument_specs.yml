@@ -1,0 +1,31 @@
+---
+argument_specs:
+  main:
+    short_description: Configure keepalived VRRP failover
+    description:
+      - Installs keepalived and renders a VRRP instance that advertises a virtual IP address and tracks the local HAProxy process for high-availability failover.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      startcloud_keepalived_state:
+        type: str
+        default: master
+        description: Initial VRRP state for this node (master or backup).
+      startcloud_keepalived_virtual_router_id:
+        type: int
+        default: 60
+        description: VRRP virtual router ID shared by all nodes in the same group.
+      startcloud_keepalived_auth_pass:
+        type: bool
+        default: true
+        description: Authentication password value written into the VRRP instance authentication block.
+      startcloud_keepalived_virtual_ipaddress:
+        type: str
+        description: Virtual IP address advertised by the VRRP instance.
+      startcloud_keepalived_priority:
+        type: int
+        default: 101
+        description: VRRP priority for this node; the highest priority becomes master.

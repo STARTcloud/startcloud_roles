@@ -4,7 +4,7 @@
   block:
     -
       name: "Creating STARTcloud Directories"
-      ansible.builtin.win_file:
+      ansible.windows.win_file:
         path: "{{ item }}"
         state: directory
       with_items:
@@ -14,25 +14,25 @@
 
     -
       name: "Finding Public Desktop Shortcuts"
-      ansible.builtin.win_find:
+      ansible.windows.win_find:
         paths: "C:\\Users\\Public\\Desktop"
         patterns: "*.lnk"
       register: desktop_shortcuts
-      ignore_errors: yes
+      ignore_errors: true
 
     -
       name: "Removing Public Desktop Shortcuts"
-      ansible.builtin.win_file:
+      ansible.windows.win_file:
         path: "{{ item.path }}"
         state: absent
       loop: "{{ desktop_shortcuts.files }}"
       when: desktop_shortcuts.files is defined
-      ignore_errors: yes
+      ignore_errors: true
 
     -
       name: "Creating Chromium Intial Preferences"
       when: chocolatey_packages is defined and 'chromium' in chocolatey_packages
-      ansible.builtin.win_template:
+      ansible.windows.win_template:
         src: initial_preferences.json.j2
         dest: C:\Program Files\Chromium\Application\initial_preferences.json
         newline_sequence: '\n'
@@ -62,7 +62,7 @@
         type: dword
 
     -
-      name: "Adjust Theme Settings SystemUsesLightTheme"
+      name: "Adjusting Theme Settings SystemUsesLightTheme"
       ansible.windows.win_regedit:
         path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize
         name: SystemUsesLightTheme
@@ -77,7 +77,7 @@
         data: 0
         type: dword
         state: present
-      ignore_errors: yes
+      ignore_errors: true
 
     -
       name: "Adjusting Theme Settings ShowTaskViewButton"
@@ -87,7 +87,7 @@
         data: 0
         type: dword
         state: present
-      ignore_errors: yes
+      ignore_errors: true
 
     -
       name: "Adjusting Theme Settings TaskbarDa"
@@ -97,7 +97,7 @@
         data: 0
         type: dword
         state: present
-      ignore_errors: yes
+      ignore_errors: true
 
     -
       name: "Adjusting Theme Settings TaskbarAl"
@@ -107,7 +107,7 @@
         data: 0
         type: dword
         state: present
-      ignore_errors: yes
+      ignore_errors: true
 
     -
       name: "Adjusting Theme Settings SearchboxTaskbarMode"
@@ -117,7 +117,7 @@
         data: 0
         type: dword
         state: present
-      ignore_errors: yes
+      ignore_errors: true
 
 -
   name: "Adjusting Default User Settings"
@@ -190,7 +190,7 @@
     - img0_3840x2160.jpg
     - img0_768x1366.jpg
     - img0_1200x1920.jpg
-    - img0_1600x2560.jpg 
+    - img0_1600x2560.jpg
     - img0_2560x1600.jpg
     - img0_768x1024.jpg
 
@@ -273,174 +273,174 @@
   name: "Configuring Local Group Policy Settings"
   block:
     -
-      name: "Start Menu - Remove Music icon from Start Menu"
+      name: "Start Menu - Removing Music icon from Start Menu"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Start\AllowPinnedFolderMusic
         name: value
         data: 0
         type: dword
         state: present
-      ignore_errors: yes
+      ignore_errors: true
 
     -
-      name: "Start Menu - Remove Pictures icon from Start Menu"
+      name: "Start Menu - Removing Pictures icon from Start Menu"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Start\AllowPinnedFolderPictures
         name: value
         data: 0
         type: dword
         state: present
-      ignore_errors: yes
+      ignore_errors: true
 
     -
-      name: "Start Menu - Remove Videos link from Start Menu"
+      name: "Start Menu - Removing Videos link from Start Menu"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Start\AllowPinnedFolderVideos
         name: value
         data: 0
         type: dword
         state: present
-      ignore_errors: yes
+      ignore_errors: true
 
     -
-      name: "Start Menu - Remove Games link from Start Menu"
+      name: "Start Menu - Removing Games link from Start Menu"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer
         name: NoStartMenuMyGames
         data: 1
         type: dword
         state: present
-      ignore_errors: yes
+      ignore_errors: true
 
     -
-      name: "Start Menu - Remove Search link from Start Menu"
+      name: "Start Menu - Removing Search link from Start Menu"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer
         name: NoSearchFilesInStartMenu
         data: 1
         type: dword
         state: present
-      ignore_errors: yes
+      ignore_errors: true
 
     -
-      name: "Start Menu - Enable Run as Different User command"
+      name: "Start Menu - Enabling Run as Different User command"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer
         name: ShowRunasDifferentuserinStart
         data: 1
         type: dword
         state: present
-      ignore_errors: yes
+      ignore_errors: true
 
     -
-      name: "Taskbar - Remove People Bar from taskbar"
+      name: "Taskbar - Removing People Bar from taskbar"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer
         name: HidePeopleBar
         data: 1
         type: dword
         state: present
-      ignore_errors: yes
+      ignore_errors: true
 
     -
-      name: "Taskbar - Hide Task View Button"
+      name: "Taskbar - Hiding Task View Button"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer
         name: HideTaskViewButton
         data: 1
         type: dword
         state: present
-      ignore_errors: yes
+      ignore_errors: true
 
     -
-      name: "Taskbar - Remove Meet Now icon"
+      name: "Taskbar - Removing Meet Now icon"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer
         name: HideSCAMeetNow
         data: 1
         type: dword
         state: present
-      ignore_errors: yes
+      ignore_errors: true
 
     -
-      name: "Taskbar - Disable Show Windows Store apps on taskbar"
+      name: "Taskbar - Disabling Show Windows Store apps on taskbar"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer
         name: NoPinningStoreToTaskbar
         data: 1
         type: dword
         state: present
-      ignore_errors: yes
+      ignore_errors: true
 
     -
-      name: "Search - Disable Search the Internet"
+      name: "Search - Disabling Search the Internet"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search
         name: ConnectedSearchUseWeb
         data: 0
         type: dword
         state: present
-      ignore_errors: yes
+      ignore_errors: true
 
     -
-      name: "Search - Do not search Internet"
+      name: "Search - Not searching Internet"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search
         name: DisableWebSearch
         data: 1
         type: dword
         state: present
-      ignore_errors: yes
+      ignore_errors: true
 
     -
-      name: "Search - Do not search communications"
+      name: "Search - Not searching communications"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search
         name: ConnectedSearchUseWebOverMeteredConnections
         data: 0
         type: dword
         state: present
-      ignore_errors: yes
+      ignore_errors: true
 
     -
-      name: "Search - Remove Search Computer Link"
+      name: "Search - Removing Search Computer Link"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer
         name: NoSearchComputerLinkInStartMenu
         data: 1
         type: dword
         state: present
-      ignore_errors: yes
+      ignore_errors: true
 
     -
-      name: "Search - Remove See more results / Search Everywhere link"
+      name: "Search - Removing See more results / Search Everywhere link"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer
         name: NoSearchInternetInStartMenu
         data: 1
         type: dword
         state: present
-      ignore_errors: yes
+      ignore_errors: true
 
     -
-      name: "Search - Configure search on taskbar (hide)"
+      name: "Search - Configuring search on taskbar (hide)"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search
         name: SearchboxTaskbarMode
         data: 0
         type: dword
         state: present
-      ignore_errors: yes
+      ignore_errors: true
 
     -
-      name: "Privacy - Turn off user tracking"
+      name: "Privacy - Turning off user tracking"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search
         name: AllowSearchToUseLocation
         data: 0
         type: dword
         state: present
-      ignore_errors: yes
+      ignore_errors: true
 
     -
       name: "Display - Start screen to appear on display user is using"
@@ -450,4 +450,4 @@
         data: 1
         type: dword
         state: present
-      ignore_errors: yes
+      ignore_errors: true

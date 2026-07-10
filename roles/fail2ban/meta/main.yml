@@ -1,21 +1,21 @@
 galaxy_info:
   role_name: fail2ban
-  author: MarkProminic
-  description: Installs Fail2ban on Linux
-  company: STARTCloud
-  issue_tracker_url: https://github.com/PhoneSwitchboard/switchboard_roles/issues
-  license: license (Apache)
-  min_ansible_version: '2.9'
+  author: Mark Gilbert
+  description: Installs the Fail2ban intrusion-prevention service and its jail directories on Debian-family systems.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
   platforms:
     - name: Debian
-      versions:
-        - 'bookworm'
-
-  galaxy_tags: []
-
+      versions: ['bookworm', 'trixie']
+    - name: Ubuntu
+      versions: ['jammy', 'noble']
+  galaxy_tags:
+    - fail2ban
+    - security
+    - firewall
+    - intrusion
 dependencies: []
-
 collections:
   - startcloud.startcloud_roles
-
-allow_duplicates: false

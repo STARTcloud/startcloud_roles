@@ -105,4 +105,4 @@
     src: /boot/efi/EFI/debian/grubx64.efi
     dest: /boot/efi/EFI/BOOT/BOOTX64.EFI
     remote_src: true
-    mode: "644"
+    mode: "0644"

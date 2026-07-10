@@ -1,14 +1,27 @@
 ---
 run_tasks: true
-packages:
-  - htop
-  - lynx
-  - lshw
-  - libxml2-utils
-  - tree
-  - python3-pexpect
-  - python3-pymongo
-  - python3-pymysql
-  - psutils
-  - python3-psutil
-  - libxml2-utils
+
+# Docker network shared by the web client and the WebSocket proxy so the
+# client can reach the proxy by container name.
+mumble_web_network: mumble-web
+
+# Restart policy applied to both containers.
+mumble_web_restart_policy: unless-stopped
+
+# mumble-web HTML5 client container (nginx-served static build).
+mumble_web_image: "rankenstein/mumble-web:latest"
+mumble_web_container_name: mumble-web
+mumble_web_http_port: 8080
+
+# mumble-web-proxy: bridges browser WebSocket/WebRTC to a Mumble (murmur) server.
+mumble_web_proxy_image: "rankenstein/mumble-web-proxy:latest"
+mumble_web_proxy_container_name: mumble-web-proxy
+mumble_web_proxy_ws_port: 64737
+
+# Upstream Mumble/murmur server the proxy connects to.
+mumble_web_server_host: "127.0.0.1"
+mumble_web_server_port: 64738
+
+# UDP port range published for WebRTC (ICE) voice traffic.
+mumble_web_ice_port_min: 20000
+mumble_web_ice_port_max: 20010

@@ -1,0 +1,28 @@
+---
+argument_specs:
+  main:
+    short_description: Configures the Windows WinRM listener for Ansible.
+    description:
+      - Downloads and runs the Ansible WinRM configuration script, then optionally enables basic authentication and unencrypted connections on the WinRM service.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      winrm_config_script_url:
+        type: str
+        default: "https://raw.githubusercontent.com/ansible/ansible-documentation/devel/examples/scripts/ConfigureRemotingForAnsible.ps1"
+        description: URL of the PowerShell script used to configure WinRM for Ansible.
+      winrm_allow_basic_auth:
+        type: bool
+        default: true
+        description: When true, enables basic authentication on the WinRM service.
+      winrm_allow_unencrypted:
+        type: bool
+        default: true
+        description: When true, allows unencrypted connections to the WinRM service.
+      winrm_temp_dir:
+        type: str
+        default: "C:\\temp"
+        description: Temporary directory on the target used to download the configuration script.

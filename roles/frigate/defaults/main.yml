@@ -1,14 +1,29 @@
 ---
 run_tasks: true
-packages:
-  - htop
-  - lynx
-  - lshw
-  - libxml2-utils
-  - tree
-  - python3-pexpect
-  - python3-pymongo
-  - python3-pymysql
-  - psutils
-  - python3-psutil
-  - libxml2-utils
+
+# Container image and runtime
+frigate_image: "ghcr.io/blakeblackshear/frigate:stable"
+frigate_container_name: frigate
+frigate_restart_policy: unless-stopped
+frigate_shm_size: "256mb"
+
+# Host directories (bind-mounted into the container)
+frigate_config_dir: /opt/frigate/config
+frigate_media_dir: /opt/frigate/media
+
+# Published ports (host side; container side is fixed by Frigate)
+frigate_web_port: 5000
+frigate_rtsp_port: 8554
+frigate_webrtc_port: 8555
+
+# Optional hardware-acceleration devices passed through to the container,
+# e.g. ["/dev/bus/usb", "/dev/dri/renderD128", "/dev/apex_0"]
+frigate_devices: []
+
+# MQTT integration (optional)
+frigate_mqtt_enabled: false
+frigate_mqtt_host: ""
+frigate_mqtt_port: 1883
+
+# Cameras. Each item: {name, path, width(optional), height(optional), roles(optional)}
+frigate_cameras: []

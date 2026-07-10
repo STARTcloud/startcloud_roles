@@ -1,25 +1,27 @@
 ---
-# handlers file for ansible-telegraf
-
-- name: "Restart Telegraf"
-  service:
+-
+  name: "Restarting Telegraf"
+  ansible.builtin.service:
     name: telegraf
     state: restarted
     enabled: true
   when: not telegraf_agent_docker
   become: true
 
-- name: "Restart Telegraf container"
-  docker_container:
+-
+  name: "Restarting Telegraf Container"
+  community.docker.docker_container:
     name: "{{ telegraf_agent_docker_name }}"
-    restart: True
+    restart: true
   when: telegraf_agent_docker
 
-- name: "Restart Windows Telegraf"
-  win_service:
+-
+  name: "Restarting Windows Telegraf"
+  ansible.windows.win_service:
     name: Telegraf
     start_mode: auto
     state: restarted
 
-- name: "Restart MacOS Telegraf"
-  shell: brew services restart telegraf
+-
+  name: "Restarting MacOS Telegraf"
+  ansible.builtin.shell: brew services restart telegraf

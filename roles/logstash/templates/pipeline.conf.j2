@@ -1,0 +1,13 @@
+# {{ ansible_managed }}
+input {
+  beats {
+    port => {{ logstash_beats_port }}
+  }
+}
+
+output {
+  elasticsearch {
+    hosts => {{ logstash_elasticsearch_hosts | to_json }}
+    index => "logstash-%{+YYYY.MM.dd}"
+  }
+}

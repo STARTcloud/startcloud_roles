@@ -5,25 +5,25 @@
   block:
     -
       name: "Allowing access to 3389 for XRDP"
-      ufw:
+      community.general.ufw:
         rule: allow
         port: 3389
         proto: tcp
     -
       name: "Allowing access to SSH for X11"
-      ufw:
+      community.general.ufw:
         rule: allow
         port: 22
         proto: tcp
     -
       name: "Allowing access to 9090 for Cockpit"
-      ufw:
+      community.general.ufw:
         rule: allow
-        port: 8080
+        port: 9090
         proto: tcp
     -
       name: "Allowing access to 5900 for VNC"
-      ufw:
+      community.general.ufw:
         rule: allow
         port: 5900
         proto: tcp

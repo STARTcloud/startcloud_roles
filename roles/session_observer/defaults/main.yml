@@ -11,4 +11,3 @@ packages:
   - python3-pymysql
   - psutils
   - python3-psutil
-  - libxml2-utils

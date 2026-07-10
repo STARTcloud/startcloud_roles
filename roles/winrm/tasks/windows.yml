@@ -4,7 +4,7 @@
   block:
     -
       name: "Creating Temp Directory"
-      ansible.builtin.win_file:
+      ansible.windows.win_file:
         path: "{{ item }}"
         state: directory
       with_items:

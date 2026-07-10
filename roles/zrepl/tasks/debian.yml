@@ -23,7 +23,7 @@
   changed_when: false
 
 -
-  name: Gathering distribution information
+  name: "Gathering distribution information"
   ansible.builtin.command: lsb_release -i -s
   register: distro_result
   changed_when: false
@@ -50,7 +50,6 @@
   name: "Updating apt cache"
   ansible.builtin.apt:
     update_cache: true
-
 
 -
   name: "Installing Dependencies"

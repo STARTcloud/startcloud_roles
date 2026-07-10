@@ -8,9 +8,9 @@ Builds and installs [Drupal](https://drupal.org/), an open source content manage
 
 Drupal is a PHP-based application that is meant to run behind a typical LAMP/LEMP/LEPP/etc. stack, so you'll need at least the following:
 
-  - Apache or Nginx (Recommended: `startcloud.startcloud_roles.apache` or `startcloud.startcloud_roles.nginx`)
-  - MySQL or similar Database server (Recommended: `startcloud.startcloud_roles.mysql` or `startcloud.startcloud_roles.postgresql`)
-  - PHP (Recommended: `startcloud.startcloud_roles.php` along with other PHP-related roles like `php-mysql`).
+- Apache or Nginx (Recommended: `startcloud.startcloud_roles.apache` or `startcloud.startcloud_roles.nginx`)
+- MySQL or similar Database server (Recommended: `startcloud.startcloud_roles.mysql` or `startcloud.startcloud_roles.postgresql`)
+- PHP (Recommended: `startcloud.startcloud_roles.php` along with other PHP-related roles like `php-mysql`).
 
 Drush is not an absolute requirement, but it's handy to have, and also required if you use this role to Install a Drupal site (`drupal_install_site: true`). You can use `startcloud.startcloud_roles.drush` to install Drush.
 
@@ -31,11 +31,11 @@ Available variables are listed below, along with default values (see `defaults/m
 
 Set `drupal_deploy` to `true` and `drupal_build_composer*` to `false` if you would like to deploy Drupal to your server from an existing Git repository. The other options all apply to the Git checkout operation:
 
-  - `repo`: Git repository address
-  - `version`: can be a branch, tag, or commit hash
-  - `update`: whether the repository should be updated to the latest commit, if `version` is a branch
-  - `dir`: The directory into which the repository will be checked out
-  - `accept_hostkey`: Whether to automatically accept the Git server's hostkey on the first connection.
+- `repo`: Git repository address
+- `version`: can be a branch, tag, or commit hash
+- `update`: whether the repository should be updated to the latest commit, if `version` is a branch
+- `dir`: The directory into which the repository will be checked out
+- `accept_hostkey`: Whether to automatically accept the Git server's hostkey on the first connection.
 
 You can also control whether a `composer install` is run after the git clone is finished using the following variable:
 

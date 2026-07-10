@@ -24,7 +24,8 @@
 # Skipping Snapd removal (not applicable to Red Hat)
 
 
-- name: "Removing unwanted packages"
+-
+  name: "Removing unwanted packages"
   ansible.builtin.dnf:
     name: "{{ packages }}"
     state: absent
@@ -163,21 +164,21 @@
     autoremove: true
 
 -
-  name: "Register Stale Netplan Configs"
+  name: "Registering Stale Netplan Configs"
   ansible.builtin.find:
     paths: /etc/netplan
     patterns: "*.yaml"
   register: files_to_delete
 
 -
-  name: "Remove old YAML configs"
+  name: "Removing old YAML configs"
   ansible.builtin.file:
     path: "{{ item.path }}"
     state: absent
   with_items: "{{ files_to_delete.files }}"
 
 -
-  name: "Add enp0s6 for DHCP for BHYVE Zones"
+  name: "Adding enp0s6 for DHCP for BHYVE Zones"
   ansible.builtin.template:
     dest: /etc/netplan/50-cloud-init.yaml
     mode: a+x

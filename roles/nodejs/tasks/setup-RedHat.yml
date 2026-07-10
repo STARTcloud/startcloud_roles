@@ -1,12 +1,12 @@
 ---
 -
-  name: Import Nodesource RPM key.
+  name: "Importing NodeSource RPM key"
   ansible.builtin.rpm_key:
     key: https://rpm.nodesource.com/gpgkey/nodesource.gpg.key
     state: present
 
 -
-  name: Add Nodesource repositories for Node.js.
+  name: "Adding NodeSource repository for Node.js"
   ansible.builtin.yum:
     name: "https://rpm.nodesource.com/pub_{{ nodejs_version }}/nodistro/repo/nodesource-release-nodistro-1.noarch.rpm"
     state: present
@@ -14,14 +14,14 @@
   register: node_repo
 
 -
-  name: Update package cache if repo was added.
+  name: "Updating package cache if repository was added"
   ansible.builtin.yum:
     update_cache: true
   when: node_repo is changed
   tags: ['skip_ansible_lint']
 
 -
-  name: Ensure Node.js and npm are installed.
+  name: "Ensuring Node.js and npm are installed"
   ansible.builtin.yum:
     name: "nodejs-{{ nodejs_version | regex_replace('x', '') }}*"
     state: present

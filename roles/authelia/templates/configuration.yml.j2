@@ -1,0 +1,56 @@
+---
+# {{ ansible_managed }}
+# Authelia configuration rendered by the startcloud.startcloud_roles.authelia role.
+
+server:
+  address: "tcp://{{ authelia_listen_address }}:{{ authelia_listen_port }}"
+
+log:
+  level: "{{ authelia_log_level }}"
+
+identity_validation:
+  reset_password:
+    jwt_secret: "{{ authelia_jwt_secret }}"
+
+authentication_backend:
+  file:
+    path: "{{ authelia_config_dir }}/users_database.yml"
+    password:
+      algorithm: "argon2"
+      argon2:
+        variant: "argon2id"
+        iterations: 3
+        memory: 65536
+        parallelism: 4
+        key_length: 32
+        salt_length: 16
+
+access_control:
+  default_policy: "{{ authelia_default_policy }}"
+  rules:
+    - domain: "{{ authelia_domain }}"
+      policy: "one_factor"
+
+session:
+  secret: "{{ authelia_session_secret }}"
+  cookies:
+    - name: "authelia_session"
+      domain: "{{ authelia_domain }}"
+      authelia_url: "https://auth.{{ authelia_domain }}"
+      default_redirection_url: "{{ authelia_default_redirection_url }}"
+      expiration: "1h"
+      inactivity: "5m"
+
+regulation:
+  max_retries: 3
+  find_time: "2m"
+  ban_time: "5m"
+
+storage:
+  encryption_key: "{{ authelia_storage_encryption_key }}"
+  local:
+    path: "{{ authelia_data_dir }}/db.sqlite3"
+
+notifier:
+  filesystem:
+    filename: "{{ authelia_data_dir }}/notification.txt"

@@ -1,0 +1,57 @@
+---
+argument_specs:
+  main:
+    short_description: Web-terminal console service
+    description:
+      - Installs the STARTcloud web-terminal from the STARTcloud APT repository (default) or builds it from the GitHub source via git clone and npm, renders its config with TLS/auth settings, and starts it under systemd or supervisord.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      web_terminal_path:
+        type: str
+        default: /opt/web-terminal
+        description: Installation/working directory for the web-terminal.
+      web_terminal_build_from_source:
+        type: bool
+        default: false
+        description: Build from source (git clone + npm) instead of installing the STARTcloud apt package.
+      web_terminal_apt_key_url:
+        type: str
+        default: "https://public.debian.packages.startcloud.com/debian/startcloud-archive-keyring.asc"
+        description: URL of the armored STARTcloud APT signing key.
+      web_terminal_apt_repo_url:
+        type: str
+        default: "https://public.debian.packages.startcloud.com/debian/"
+        description: Base URL of the STARTcloud APT repository.
+      web_terminal_package:
+        type: str
+        default: web-terminal
+        description: Package name of the web-terminal in the STARTcloud repository.
+      web_terminal_git_repo:
+        type: str
+        default: "https://github.com/STARTcloud/web-terminal.git"
+        description: Git repository cloned when building from source.
+      web_terminal_git_version:
+        type: str
+        default: main
+        description: Git branch, tag, or commit checked out when building from source.
+      web_terminal_jwt_secret:
+        type: str
+        description: JWT signing secret for the web-terminal authentication layer.
+      web_terminal_config_path:
+        type: str
+        default: /etc/web-terminal/config.yaml
+        description: Path of the rendered web-terminal configuration file.
+      web_terminal_users:
+        type: dict
+        description: Local basic-auth users mapping username to password; the default admin password is randomly generated.
+      startcloud_web_terminal_port_forwards:
+        type: list
+        elements: dict
+        description: Port-forward definitions (guest port + url label) the service listens on.
+      startcloud_web_terminal_proxy_url:
+        type: str
+        description: Fully qualified proxy URL for the web-terminal service.

@@ -1,0 +1,91 @@
+---
+argument_specs:
+  main:
+    short_description: Installs and configures the Elastic Winlogbeat log shipper on Windows.
+    description:
+      - Downloads, installs, and configures the Elastic Winlogbeat Windows log shipper as a service.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      winlogbeat_download_url_base:
+        type: str
+        default: 'https://artifacts.elastic.co/downloads/beats/winlogbeat'
+        description: Base URL from which the Winlogbeat archive is downloaded.
+      file_ext:
+        type: str
+        default: '.zip'
+        description: File extension appended to the download filename.
+      winlogbeat_download_file:
+        type: str
+        default: 'winlogbeat-6.3.0-windows-x86_64'
+        description: Name of the Winlogbeat release archive to download and extract.
+      winlogbeat_install_location:
+        type: str
+        default: 'C:/Program Files/Winlogbeat'
+        description: Directory on the Windows host where Winlogbeat is installed.
+      winlogbeat_event_logs:
+        type: list
+        elements: dict
+        description: Windows event log channels Winlogbeat collects.
+      winlogbeat_tags:
+        type: list
+        elements: str
+        description: Tags added to every event shipped by Winlogbeat.
+      winlogbeat_fields:
+        type: dict
+        description: Custom fields added to every event shipped by Winlogbeat.
+      winlogbeat_fields_under_root:
+        type: bool
+        description: When true, custom fields are stored at the root of the event.
+      winlogbeat_output_elasticsearch_hosts:
+        type: list
+        elements: str
+        description: Elasticsearch hosts Winlogbeat ships events to.
+      winlogbeat_output_logstash_hosts:
+        type: list
+        elements: str
+        description: Logstash hosts Winlogbeat ships events to.
+      winlogbeat_enable_logging:
+        type: bool
+        default: false
+        description: Enables Winlogbeat's own file logging.
+      winlogbeat_log_level:
+        type: str
+        default: warning
+        description: Log verbosity level for Winlogbeat's own logging.
+      winlogbeat_log_dir:
+        type: str
+        default: "{{ winlogbeat_install_location }}/{{ winlogbeat_download_file }}/logs"
+        description: Directory where Winlogbeat writes its own log files.
+      winlogbeat_log_filename:
+        type: str
+        default: mybeat.log
+        description: Filename for Winlogbeat's own log output.
+      winlogbeat_ssl_certificate_authorities:
+        type: list
+        elements: str
+        description: Certificate authority files used to verify output TLS connections.
+      winlogbeat_ssl_verification_mode:
+        type: str
+        description: TLS verification mode for output connections (none or full).
+      winlogbeat_ssl_renegotiation:
+        type: str
+        description: TLS renegotiation policy (never, once, or freely).
+      winlogbeat_ssl_supported_protocols:
+        type: list
+        elements: str
+        description: TLS protocol versions permitted for output connections.
+      winlogbeat_ssl_cipher_suites:
+        type: list
+        elements: str
+        description: TLS cipher suites permitted for output connections.
+      winlogbeat_ssl_curve_types:
+        type: list
+        elements: str
+        description: Elliptic curve types for ECDHE-based cipher suites.
+      winlogbeat_ssl_enabled:
+        type: bool
+        description: Forces TLS on or off for output connections.

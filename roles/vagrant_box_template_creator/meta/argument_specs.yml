@@ -1,0 +1,32 @@
+---
+argument_specs:
+  main:
+    short_description: Packer VM template orchestration
+    description:
+      - Loads template definitions and, for each selected template, runs Packer to build the base VM, package it per provider, publish it, and clean up.
+    author: Mark Gilbert
+    options:
+      build:
+        type: bool
+        default: true
+        description: Run the Packer build stage for each template.
+      package:
+        type: bool
+        default: true
+        description: Run the per-provider packaging stage for each template.
+      publish:
+        type: bool
+        default: true
+        description: Run the per-provider publishing stage for each template.
+      default_var_files:
+        type: list
+        elements: str
+        description: Packer var-files applied to every build/package/publish invocation.
+      run_cleanup:
+        type: bool
+        default: true
+        description: Run the cleanup stage after processing each template.
+      template_filter:
+        type: str
+        default: ""
+        description: Build only the named template; empty builds all defined templates.

@@ -1,0 +1,66 @@
+---
+argument_specs:
+  main:
+    short_description: Installs and configures Apache Tomcat.
+    description:
+      - Installs Apache Tomcat and its admin packages on Debian-family systems.
+      - Creates the tomcat service account, deploys the manager/admin UI
+        credentials, and templates the server, context, and users configuration.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      tomcat_version:
+        type: int
+        default: 9
+        description: Major Apache Tomcat version to install and manage.
+      tomcat_user:
+        type: str
+        default: tomcat
+        description: System user that owns and runs the Tomcat service.
+      tomcat_group:
+        type: str
+        default: tomcat
+        description: System group for the Tomcat service account.
+      tomcat_home_dir:
+        type: str
+        default: /usr/share/tomcat
+        description: Home directory assigned to the Tomcat service user.
+      tomcat_archive_url:
+        type: str
+        default: https://archive.apache.org/dist/tomcat/tomcat-{{ tomcat_version }}/v{{ tomcat_version }}/bin/apache-tomcat-{{ tomcat_version }}.tar.gz
+        description: Upstream URL of the Apache Tomcat binary archive.
+      tomcat_archive_dest:
+        type: str
+        default: /tmp/apache-tomcat-{{ tomcat_version }}.tar.gz
+        description: Local destination path for the downloaded Tomcat archive.
+      ui_manager_user:
+        type: str
+        default: manager
+        description: Username granted access to the Tomcat manager UI section.
+      ui_manager_pass:
+        type: str
+        default: Str0ngManagerP@ssw3rd
+        description: Password for the Tomcat manager UI user.
+      ui_admin_username:
+        type: str
+        default: admin
+        description: Username granted access to both the manager and admin UI sections.
+      ui_admin_pass:
+        type: str
+        default: Str0ngAdminP@ssw3rd
+        description: Password for the Tomcat admin UI user.
+      jks_cert:
+        type: str
+        default: keystore.jks
+        description: Filename of the Java keystore used for TLS.
+      startcloud_tomcat_port_forwards:
+        type: list
+        elements: dict
+        description: Guest port-forward definitions used to configure the Tomcat connectors.
+      startcloud_tomcat_proxy_url:
+        type: str
+        default: "{{ startcloud_tomcat_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"
+        description: Fully qualified proxy URL advertised for the Tomcat instance.

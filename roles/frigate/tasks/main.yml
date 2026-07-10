@@ -4,34 +4,39 @@
   when: run_tasks
   block:
     -
-      name: "Setting up Debian Installations"
-      when: "ansible_os_family == 'Debian'"
-      block:
-        -
-          name: "Gathering DEB architecture"
-          ansible.builtin.command: dpkg --print-architecture
-          register: deb_architecture
-          changed_when: false
-    
-        -
-          name: "Printing DEB architecture"
-          ansible.builtin.debug:
-            msg: "deb_architecture.stdout: {{ deb_architecture.stdout }}"
-    
-        -
-          name: "Ensuring apt cache is updated"
-          ansible.builtin.apt:
-            cache_valid_time: 3600
-            update_cache: true
-    
-        -
-          name: "Upgrading all apt packages"
-          ansible.builtin.apt:
-            upgrade: dist
-            update_cache: true
-    
-        -
-          name: "Adding Additional Dependencies {{ packages }}"
-          ansible.builtin.apt:
-            name: "{{ packages }}"
-            state: present
+      name: "Creating Frigate configuration and media directories"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "{{ frigate_config_dir }}"
+        - "{{ frigate_media_dir }}"
+
+    -
+      name: "Templating Frigate configuration"
+      ansible.builtin.template:
+        src: frigate-config.yml.j2
+        dest: "{{ frigate_config_dir }}/config.yml"
+        mode: "0644"
+
+    -
+      name: "Deploying Frigate container"
+      community.docker.docker_container:
+        name: "{{ frigate_container_name }}"
+        image: "{{ frigate_image }}"
+        restart_policy: "{{ frigate_restart_policy }}"
+        shm_size: "{{ frigate_shm_size }}"
+        devices: "{{ frigate_devices }}"
+        volumes:
+          - "{{ frigate_config_dir }}/config.yml:/config/config.yml:ro"
+          - "{{ frigate_media_dir }}:/media/frigate"
+          - "/etc/localtime:/etc/localtime:ro"
+        tmpfs:
+          - "/tmp/cache"
+        published_ports:
+          - "{{ frigate_web_port }}:5000"
+          - "{{ frigate_rtsp_port }}:8554"
+          - "{{ frigate_webrtc_port }}:8555/tcp"
+          - "{{ frigate_webrtc_port }}:8555/udp"
+        state: started

@@ -1,0 +1,20 @@
+---
+argument_specs:
+  main:
+    short_description: Configure Windows for Sysprep generalization
+    description:
+      - Prepares a Windows guest for Sysprep by staging AutoUnattend answer files and post-provisioning scripts into the packer directory.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      prepare_template:
+        type: bool
+        default: false
+        description: When true, stage the AutoUnattend.xml answer file and provisioning scripts into the packer directory.
+      prepare_sysprep:
+        type: bool
+        default: false
+        description: When true, write the sysprep.bat that generalizes, seals, and shuts down the guest.

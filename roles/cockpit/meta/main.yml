@@ -1,21 +1,24 @@
 galaxy_info:
   role_name: cockpit
-  author: MarkProminic
-  description: STARTCloud Install and Configure Cockpit
-  company: STARTCloud
+  author: Mark Gilbert
+  description: Installs and enables the Cockpit web-based server management console on Debian, Ubuntu, and EL systems.
+  company: STARTcloud
   issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
-  license: license (Apache)
-  min_ansible_version: '2.9'
+  license: Apache-2.0
+  min_ansible_version: '2.15'
   platforms:
     - name: Debian
-      versions:
-        - 'bookworm'
-
-  galaxy_tags: []
-
+      versions: ['bookworm', 'trixie']
+    - name: Ubuntu
+      versions: ['jammy', 'noble']
+    - name: EL
+      versions: ['8', '9']
+  galaxy_tags:
+    - cockpit
+    - monitoring
+    - management
+    - web
+    - admin
 dependencies: []
-
 collections:
   - startcloud.startcloud_roles
-
-allow_duplicates: false

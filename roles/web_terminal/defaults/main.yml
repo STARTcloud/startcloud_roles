@@ -1,11 +1,25 @@
 ---
 run_tasks: true
 web_terminal_path: "/opt/web-terminal"
+
+# Install mode: false = STARTcloud apt package (production default),
+# true = git clone + npm build (dev environments).
 web_terminal_build_from_source: false
+
+# STARTcloud APT repository the web-terminal package is installed from
+# (matches roles/dependencies/vars/debian.yml).
+web_terminal_apt_key_url: "https://public.debian.packages.startcloud.com/debian/startcloud-archive-keyring.asc"
+web_terminal_apt_repo_url: "https://public.debian.packages.startcloud.com/debian/"
+web_terminal_package: web-terminal
+
+# Source build settings.
+web_terminal_git_repo: "https://github.com/STARTcloud/web-terminal.git"
+web_terminal_git_version: main
+
 web_terminal_jwt_secret: "{{ lookup('password', '/dev/null length=64 chars=ascii_letters,digits') }}"
 web_terminal_config_path: "/etc/web-terminal/config.yaml"
 web_terminal_users:
-  admin: "y3I@kGkn4%pi74zqi8"
+  admin: "{{ lookup('password', '/dev/null length=20 chars=ascii_letters,digits') }}"
 
 startcloud_web_terminal_port_forwards:
   -

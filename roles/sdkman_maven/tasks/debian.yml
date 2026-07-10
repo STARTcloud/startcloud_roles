@@ -1,3 +1,4 @@
+---
 -
   name: "Installing Maven to ~/.sdkman/candidates/maven/current/bin/mvn for {{ service_user }}"
   ansible.builtin.shell: "{{ item }}"

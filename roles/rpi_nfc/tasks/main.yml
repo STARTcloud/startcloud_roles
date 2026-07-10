@@ -32,12 +32,12 @@
     
     -
       name: "Making nfc-daemon"
-      make:
+      community.general.make:
         chdir: /src/nfc-daemon
     
     - 
       name: "Installing nfc-daemon"
-      make:
+      community.general.make:
         chdir: /src/nfc-daemon
         target: install
       become: true

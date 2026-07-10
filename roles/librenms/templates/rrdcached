@@ -1,12 +1,12 @@
 DAEMON=/usr/bin/rrdcached
-DAEMON_USER=librenms
-DAEMON_GROUP=librenms
+DAEMON_USER={{ librenms_user }}
+DAEMON_GROUP={{ librenms_group }}
 WRITE_THREADS=4
 WRITE_TIMEOUT=1800
 WRITE_JITTER=1800
-BASE_PATH=/opt/librenms/rrd/
+BASE_PATH={{ librenms_install_dir }}/rrd/
 JOURNAL_PATH=/var/lib/rrdcached/journal/
 PIDFILE=/run/rrdcached.pid
 SOCKFILE=/run/rrdcached.sock
-SOCKGROUP=librenms
+SOCKGROUP={{ librenms_group }}
 BASE_OPTIONS="-B -F -R"

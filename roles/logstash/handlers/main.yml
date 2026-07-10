@@ -1,3 +1,7 @@
 ---
-- name: restart winlogbeat 
-  win_service: name=winlogbeat state=restarted
+-
+  name: "Restarting Logstash"
+  ansible.builtin.systemd:
+    name: "{{ logstash_service_name }}"
+    state: restarted
+    daemon_reload: true

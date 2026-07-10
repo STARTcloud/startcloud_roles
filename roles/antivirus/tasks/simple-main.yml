@@ -7,7 +7,7 @@
       - clamav
 
 -
-  name: 'Running Freshclam'
+  name: "Running Freshclam"
   ansible.builtin.shell: freshclam
   when: ansible_os_family == 'Debian'
 
@@ -24,7 +24,7 @@
       dest: "/usr/local/bin/clamscan-cron.sh"
 
 -
-  name: "Ensure a job that Scans Home at two and five"
+  name: "Ensuring a job that Scans Home at two and five"
   ansible.builtin.cron:
     name: "Scan Dirs"
     minute: "0"
@@ -38,4 +38,3 @@
     name: postfix
     state: stopped
     enabled: false
-

@@ -1,0 +1,18 @@
+---
+argument_specs:
+  main:
+    short_description: Install and configure the Monit process monitor
+    description:
+      - Installs the Monit process supervision monitor, starts its service, adds an nginx process check, and enables the Monit web interface on Debian-family systems.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      packages:
+        type: list
+        elements: str
+        default:
+          - monit
+        description: List of apt packages to install for Monit monitoring.

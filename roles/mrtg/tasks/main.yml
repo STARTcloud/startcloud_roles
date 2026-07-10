@@ -1,3 +1,4 @@
+---
 -
   name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
@@ -7,30 +8,52 @@
       when: "ansible_os_family == 'Debian'"
       block:
         -
-          name: "Gathering DEB architecture"
-          ansible.builtin.command: dpkg --print-architecture
-          register: deb_architecture
-          changed_when: false
-    
-        -
-          name: "Printing DEB architecture"
-          ansible.builtin.debug:
-            msg: "deb_architecture.stdout: {{ deb_architecture.stdout }}"
-    
-        -
           name: "Ensuring apt cache is updated"
           ansible.builtin.apt:
             cache_valid_time: 3600
             update_cache: true
-    
+
         -
-          name: "Upgrading all apt packages"
+          name: "Installing MRTG and SNMP packages"
           ansible.builtin.apt:
-            upgrade: dist
-            update_cache: true
-    
-        -
-          name: "Adding Additional Dependencies {{ packages }}"
-          ansible.builtin.apt:
-            name: "{{ packages }}"
+            name: "{{ mrtg_packages }}"
             state: present
+
+        -
+          name: "Ensuring the SNMP daemon is enabled and running"
+          ansible.builtin.service:
+            name: snmpd
+            state: started
+            enabled: true
+
+        -
+          name: "Creating the MRTG working directory"
+          ansible.builtin.file:
+            path: "{{ mrtg_working_directory }}"
+            state: directory
+            owner: root
+            group: root
+            mode: "0755"
+
+        -
+          name: "Rendering the MRTG configuration file"
+          ansible.builtin.template:
+            src: mrtg.cfg.j2
+            dest: "{{ mrtg_config_file }}"
+            owner: root
+            group: root
+            mode: "0644"
+          notify: "Regenerating the MRTG index page"
+
+        -
+          name: "Generating the MRTG index page"
+          ansible.builtin.command:
+            cmd: "indexmaker --output={{ mrtg_working_directory }}/index.html {{ mrtg_config_file }}"
+            creates: "{{ mrtg_working_directory }}/index.html"
+
+        -
+          name: "Installing the MRTG cron job"
+          ansible.builtin.cron:
+            name: "mrtg"
+            minute: "{{ mrtg_run_interval }}"
+            job: "env LANG=C /usr/bin/mrtg {{ mrtg_config_file }} --logging /var/log/mrtg.log"

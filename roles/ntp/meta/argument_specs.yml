@@ -1,0 +1,51 @@
+---
+argument_specs:
+  main:
+    short_description: Configure NTP time synchronization and system timezone
+    description:
+      - Installs and configures an NTP implementation (traditional ntpd, chrony, or systemd-timesyncd depending on the platform).
+      - Renders the daemon configuration from the role's upstream server list and sets the system timezone.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      ntp_enabled:
+        type: bool
+        default: true
+        description: Whether the NTP daemon is started and enabled (false stops and disables it).
+      ntp_timezone:
+        type: str
+        default: America/Chicago
+        description: System timezone to set on the host.
+      ntp_manage_config:
+        type: bool
+        default: false
+        description: Whether the role renders and manages the NTP daemon configuration file.
+      ntp_area:
+        type: str
+        default: ""
+        description: NTP pool area code used to select regional pool servers.
+      ntp_servers:
+        type: list
+        elements: str
+        default:
+          - "ntp1.prominic.net iburst"
+          - "ntp2.prominic.net iburst"
+        description: Upstream NTP servers written into the daemon configuration.
+      ntp_restrict:
+        type: list
+        elements: str
+        default:
+          - "127.0.0.1"
+          - "::1"
+        description: Restrict entries rendered into the traditional ntp.conf.
+      ntp_cron_handler_enabled:
+        type: bool
+        default: false
+        description: Whether the cron service is restarted after the timezone changes.
+      ntp_tinker_panic:
+        type: bool
+        default: false
+        description: When true, adds "tinker panic 0" to ntp.conf so the clock always steps (useful for paused VMs).

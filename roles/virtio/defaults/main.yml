@@ -1,8 +1,5 @@
 ---
 run_tasks: true
-count_progress: true
-progress_units: 1
-progress_role_description: "Installing VirtIO Drivers and QEMU Guest Agent"
 
 # Filenames on the virtio-win media. The virtio-win ISO is attached as a CD-ROM
 # during the build via additional_iso_files in proxmox-build-ansible.json, so the

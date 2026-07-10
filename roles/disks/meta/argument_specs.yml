@@ -1,0 +1,24 @@
+---
+argument_specs:
+  main:
+    short_description: Root disk expansion and additional disk configuration
+    description:
+      - Expands the root partition/filesystem (encrypted or plain) and creates/mounts additional disks. Dispatches to OS-specific tasks for Debian, OmniOS/illumos, and Windows.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      show_help:
+        type: bool
+        default: true
+        description: Whether to display help/informational output.
+      vm_encrypted:
+        type: bool
+        default: false
+        description: Whether the root disk uses LUKS encryption (selects the encrypted expansion path).
+      root_unlock_key:
+        type: str
+        default: pass123
+        description: LUKS passphrase used to resize the encrypted root volume (override in production).

@@ -1,20 +1,26 @@
 ---
-dependencies: []
-
 galaxy_info:
   role_name: mysql
-  author: geerlingguy
-  description: MySQL server for RHEL/CentOS and Debian/Ubuntu.
-  company: "Midwestern Mac, LLC"
-  license: "license (BSD, MIT)"
-  min_ansible_version: "2.10"
+  author: Mark Gilbert
+  description: Installs and configures a MySQL or MariaDB server, including databases, users, and replication.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
   platforms:
-    - name: Ubuntu
     - name: Debian
+      versions: ['bookworm', 'trixie']
+    - name: Ubuntu
+      versions: ['jammy', 'noble']
+    - name: EL
+      versions: ['8', '9']
     - name: ArchLinux
   galaxy_tags:
     - database
     - mysql
     - mariadb
-    - db
     - sql
+    - db
+dependencies: []
+collections:
+  - startcloud.startcloud_roles

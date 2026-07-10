@@ -1,0 +1,19 @@
+---
+argument_specs:
+  main:
+    short_description: Installs and configures the Squid caching web proxy.
+    description:
+      - Installs the Squid package and renders its configuration from a template.
+      - Validates the configuration with squid -k parse and restarts the service.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      packages:
+        type: list
+        elements: str
+        default:
+          - squid
+        description: Packages to install for the Squid proxy.

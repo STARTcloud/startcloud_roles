@@ -1,0 +1,114 @@
+---
+argument_specs:
+  main:
+    short_description: Installs and configures a single-node InfluxDB 2.x server.
+    description:
+      - Adds the InfluxData package repository, installs the influxdb2 server and the
+        influx CLI, writes the InfluxDB configuration, manages the systemd service, and
+        optionally performs the initial org/bucket/admin onboarding.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      influxdb_version:
+        type: str
+        default: "latest"
+        description: InfluxDB package version to install, or 'latest' to install the newest available.
+      influxdb_channel:
+        type: str
+        default: "stable"
+        description: InfluxData repository release channel used for the APT and YUM repositories.
+      influxdb_package:
+        type: str
+        default: "influxdb2"
+        description: Name of the InfluxDB server package to install.
+      influxdb_cli_package:
+        type: str
+        default: "influxdb2-cli"
+        description: Name of the Influx CLI package to install.
+      influxdb_package_state:
+        type: str
+        default: "present"
+        description: Desired state of the InfluxDB packages (present, absent, or latest).
+      influxdb_http_bind_address:
+        type: str
+        default: "0.0.0.0"
+        description: Address the InfluxDB HTTP API binds to.
+      influxdb_http_port:
+        type: int
+        default: 8086
+        description: TCP port the InfluxDB HTTP API listens on.
+      influxdb_config_dir:
+        type: str
+        default: "/etc/influxdb"
+        description: Directory holding the InfluxDB configuration file.
+      influxdb_data_dir:
+        type: str
+        default: "/var/lib/influxdb"
+        description: Directory holding the InfluxDB bolt store and engine data.
+      influxdb_bolt_path:
+        type: str
+        default: "/var/lib/influxdb/influxd.bolt"
+        description: Path to the InfluxDB bolt metadata database file.
+      influxdb_engine_path:
+        type: str
+        default: "/var/lib/influxdb/engine"
+        description: Path to the InfluxDB time-series storage engine directory.
+      influxdb_service_name:
+        type: str
+        default: "influxdb"
+        description: Name of the systemd service managed by the role.
+      influxdb_service_state:
+        type: str
+        default: "started"
+        description: Desired running state of the InfluxDB service.
+      influxdb_service_enabled:
+        type: bool
+        default: true
+        description: Whether the InfluxDB service is enabled to start at boot.
+      influxdb_apt_key_url:
+        type: str
+        default: "https://repos.influxdata.com/influxdata-archive_compat.key"
+        description: URL of the InfluxData APT signing key.
+      influxdb_apt_keyring_path:
+        type: str
+        default: "/etc/apt/keyrings/influxdata-archive_compat.gpg"
+        description: Filesystem path where the InfluxData APT signing key is stored.
+      influxdb_apt_repo:
+        type: str
+        default: "deb [signed-by=/etc/apt/keyrings/influxdata-archive_compat.gpg] https://repos.influxdata.com/debian stable main"
+        description: Full APT repository line for the InfluxData repository.
+      influxdb_yum_baseurl:
+        type: str
+        default: "https://repos.influxdata.com/stable/$basearch/main"
+        description: Base URL of the InfluxData YUM/DNF repository on Enterprise Linux.
+      influxdb_yum_gpgkey:
+        type: str
+        default: "https://repos.influxdata.com/influxdata-archive_compat.key"
+        description: URL of the InfluxData YUM/DNF GPG signing key.
+      influxdb_setup:
+        type: bool
+        default: false
+        description: Whether to run the initial InfluxDB onboarding (org, bucket, and admin user).
+      influxdb_org:
+        type: str
+        default: "startcloud"
+        description: Organization name created during initial onboarding.
+      influxdb_bucket:
+        type: str
+        default: "default"
+        description: Initial bucket name created during onboarding.
+      influxdb_username:
+        type: str
+        default: "admin"
+        description: Admin username created during initial onboarding.
+      influxdb_password:
+        type: str
+        default: "changeme"
+        description: Admin password set during initial onboarding.
+      influxdb_retention:
+        type: str
+        default: "0"
+        description: Default bucket retention period for onboarding ('0' means infinite).

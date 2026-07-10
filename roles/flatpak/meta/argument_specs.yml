@@ -1,0 +1,23 @@
+---
+argument_specs:
+  main:
+    short_description: Install Flatpak and configure remotes
+    description:
+      - Installs the Flatpak package on Debian-family systems and registers the
+        configured Flatpak remotes system-wide.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      packages:
+        type: list
+        elements: str
+        default:
+          - flatpak
+        description: Packages required to support Flatpak on the target host.
+      repos:
+        type: list
+        elements: dict
+        description: Flatpak remotes to register, each with a name and flatpakrepo url.

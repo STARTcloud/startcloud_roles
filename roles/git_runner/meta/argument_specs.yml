@@ -1,0 +1,66 @@
+---
+argument_specs:
+  main:
+    short_description: GitHub Actions self-hosted runner
+    description:
+      - Downloads the GitHub Actions runner, registers it with an org or repo (JIT/ephemeral or persistent), and installs it as a systemd service via svc.sh.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      git_runner_user:
+        type: str
+        description: System user that owns and runs the runner.
+      git_runner_home:
+        type: str
+        description: Home directory of the runner user.
+      git_runner_dir:
+        type: str
+        description: Directory the actions-runner is installed into.
+      git_runner_work_folder:
+        type: str
+        default: "_work"
+        description: Runner work folder name.
+      git_runner_github_token:
+        type: str
+        description: GitHub fine-grained PAT used to register/deregister the runner.
+      git_runner_org:
+        type: str
+        default: ""
+        description: GitHub organization to register an org-level runner with.
+      git_runner_repo:
+        type: str
+        default: ""
+        description: GitHub owner/repo to register a repo-level runner with (instead of org).
+      git_runner_name:
+        type: str
+        description: Runner display name.
+      git_runner_labels:
+        type: list
+        elements: str
+        description: Labels applied to the runner (used for job routing).
+      git_runner_group_id:
+        type: int
+        default: 1
+        description: Runner group ID.
+      git_runner_ephemeral:
+        type: bool
+        default: false
+        description: Register a JIT/ephemeral one-job runner instead of a persistent runner.
+      git_runner_version:
+        type: str
+        default: latest
+        description: Runner version to install ('latest' or a specific version).
+      git_runner_service_name:
+        type: str
+        default: github-actions-runner
+        description: Base name for the runner systemd service.
+      git_runner_use_environment_file:
+        type: bool
+        default: true
+        description: Render an environment file and wire it into the runner service.
+      git_runner_environment_file_path:
+        type: str
+        description: Path of the runner environment file.

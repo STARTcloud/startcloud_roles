@@ -1,28 +1,23 @@
 ---
-dependencies: []
-
 galaxy_info:
-  role_name: php-versions
-  author: geerlingguy
-  description: Allows different PHP versions to be installed.
-  company: "Midwestern Mac, LLC"
-  license: "MIT"
-  issue_tracker_url: https://github.com/geerlingguy/ansible-role-php-versions/issues
-  min_ansible_version: 2.10
+  role_name: php_versions
+  author: Mark Gilbert
+  description: Installs and switches between PHP versions using Ondrej Sury (Debian/Ubuntu) or Remi (EL) repositories.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
   platforms:
     - name: Debian
-      versions:
-        - all
+      versions: ['bookworm', 'trixie']
     - name: Ubuntu
-      versions:
-        - trusty
-        - xenial
-        - bionic
-        - jammy
+      versions: ['jammy', 'noble']
+    - name: EL
+      versions: ['8', '9']
   galaxy_tags:
     - php
     - web
-    - drupal
-    - vm
-    - magento
-    - wordpress
+    - versions
+dependencies: []
+collections:
+  - startcloud.startcloud_roles

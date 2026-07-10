@@ -1,6 +1,6 @@
 ---
 -
-  name: Zip Support Bundle
+  name: "Zipping Support Bundle"
   community.general.archive:
     mode: '0777'
     path: "/vagrant/support-bundle"

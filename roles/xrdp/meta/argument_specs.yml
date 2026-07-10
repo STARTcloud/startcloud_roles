@@ -1,0 +1,21 @@
+---
+argument_specs:
+  main:
+    short_description: Install and configure the xRDP remote desktop server
+    description:
+      - Installs xRDP via the c-nergy xrdp-installer script and applies a custom STARTcloud login theme.
+      - Enables the xrdp services and sets the system default to the graphical target.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      cnergy_download_url:
+        type: str
+        default: https://www.c-nergy.be/downloads/xRDP/
+        description: Base URL from which the c-nergy xRDP installer archive is downloaded.
+      cnergy_script:
+        type: str
+        default: xrdp-installer-1.5
+        description: Basename of the c-nergy xRDP installer archive and shell script.

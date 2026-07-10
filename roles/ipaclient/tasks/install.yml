@@ -1,55 +1,55 @@
 ---
 # tasks file for ipaclient
 
-- name: Install - Ensure that IPA client packages are installed
+- name: "Install - Ensuring that IPA client packages are installed"
   ansible.builtin.package:
     name: "{{ ipaclient_packages }}"
     state: present
   when: ipaclient_install_packages | bool
 
-- name: Install - Set ipaclient_servers
+- name: "Install - Setting ipaclient_servers"
   ansible.builtin.set_fact:
     ipaclient_servers: "{{ groups['ipaservers'] | list }}"
   when: groups.ipaservers is defined and ipaclient_servers is not defined
 
-- name: Install - Set ipaclient_servers from cluster inventory
+- name: "Install - Setting ipaclient_servers from cluster inventory"
   ansible.builtin.set_fact:
     ipaclient_servers: "{{ groups['ipaserver'] | list }}"
   when: ipaclient_no_dns_lookup | bool and groups.ipaserver is defined and
         ipaclient_servers is not defined
 
-- name: Install - Check that either password or keytab is set
+- name: "Install - Checking that either password or keytab is set"
   ansible.builtin.fail:
     msg: "ipaadmin_password and ipaadmin_keytab cannot be used together"
   when: ipaadmin_keytab is defined and ipaadmin_password is defined
 
-- name: Install - Set default principal if no keytab is given
+- name: "Install - Setting default principal if no keytab is given"
   ansible.builtin.set_fact:
     ipaadmin_principal: admin
   when: ipaadmin_principal is undefined and ipaclient_keytab is undefined
 
-- name: Install - DNS resolver configuration
+- name: "Install - Configuring DNS resolver"
   when: ipaclient_configure_dns_resolver | bool
         and not ipaclient_on_master | bool
   block:
 
-  - name: Install - Fail on missing ipaclient_domain and ipaserver_domain
+  - name: "Install - Failing on missing ipaclient_domain and ipaserver_domain"
     ansible.builtin.fail:
       msg: "ipaclient_domain or ipaserver_domain is required for ipaclient_configure_dns_resolver"
     when: ipaserver_domain is not defined and ipaclient_domain is not defined
 
-  - name: Install - Fail on missing ipaclient_servers
+  - name: "Install - Failing on missing ipaclient_servers"
     ansible.builtin.fail:
       msg: "ipaclient_dns_servers is required for ipaclient_configure_dns_resolver"
     when: ipaclient_dns_servers is not defined
 
-  - name: Install - Configure DNS resolver
+  - name: "Install - Configuring DNS resolver"
     ipaclient_configure_dns_resolver:
       nameservers: "{{ ipaclient_dns_servers }}"
       searchdomains: "{{ ipaserver_domain | default(ipaclient_domain) }}"
       state: present
 
-- name: Install - IPA client test
+- name: "Install - Testing IPA client"
   ipaclient_test:
     ### basic ###
     domain: "{{ ipaserver_domain | default(ipaclient_domain) | default(omit) }}"
@@ -74,17 +74,17 @@
                             | default(ipasssd_enable_dns_updates) }}"
   register: result_ipaclient_test
 
-- name: Install - Client deployment
+- name: "Install - Deploying client"
   when: not ansible_check_mode and
         not (result_ipaclient_test.client_already_configured and
             not ipaclient_allow_repair | bool and not ipaclient_force_join | bool)
   block:
-  - name: Install - Cleanup leftover ccache
+  - name: "Install - Cleaning up leftover ccache"
     ansible.builtin.file:
       path: "/etc/ipa/.dns_ccache"
       state: absent
 
-  - name: Install - Configure NTP
+  - name: "Install - Configuring NTP"
     ipaclient_setup_ntp:
       ### basic ###
       ntp_servers: "{{ result_ipaclient_test.ntp_servers | default(omit) }}"
@@ -96,17 +96,17 @@
       servers: "{{ result_ipaclient_test.servers }}"
       domain: "{{ result_ipaclient_test.domain }}"
 
-  - name: Install - Make sure One-Time Password is enabled if it's already defined
+  - name: "Install - Making sure One-Time Password is enabled if it's already defined"
     ansible.builtin.set_fact:
       ipaclient_use_otp: "yes"
     when: ipaclient_otp is defined
 
-  - name: Install - Disable One-Time Password for on_master
+  - name: "Install - Disabling One-Time Password for on_master"
     ansible.builtin.set_fact:
       ipaclient_use_otp: "no"
     when: ipaclient_use_otp | bool and ipaclient_on_master | bool
 
-  - name: Install - Test if IPA client has working krb5.keytab
+  - name: "Install - Testing if IPA client has working krb5.keytab"
     ipaclient_test_keytab:
       servers: "{{ result_ipaclient_test.servers }}"
       domain: "{{ result_ipaclient_test.domain }}"
@@ -116,8 +116,7 @@
       kinit_attempts: "{{ ipaclient_kinit_attempts | default(omit) }}"
     register: result_ipaclient_test_keytab
 
-  - name: Install - Disable One-Time Password for client with working
-          krb5.keytab
+  - name: "Install - Disabling One-Time Password for client with working krb5.keytab"
     ansible.builtin.set_fact:
       ipaclient_use_otp: "no"
     when: ipaclient_use_otp | bool and
@@ -131,15 +130,15 @@
   # to create a OneTime Password
   # If a keytab is specified in the hostent, then the hostent will be disabled
   # if ipaclient_use_otp is set.
-  - name: Install - Obtain OTP
+  - name: "Install - Obtaining OTP"
     when: ipaclient_use_otp | bool and ipaclient_otp is not defined
     block:
-    - name: Install - Keytab or password is required for getting otp
+    - name: "Install - Requiring keytab or password for getting otp"
       ansible.builtin.fail:
         msg: "Keytab or password is required for getting otp"
       when: ipaadmin_keytab is undefined and ipaadmin_password is undefined
 
-    - name: Install - Create temporary file for keytab
+    - name: "Install - Creating temporary file for keytab"
       ansible.builtin.tempfile:
         state: file
         prefix: ipaclient_temp_
@@ -148,15 +147,15 @@
       delegate_to: "{{ result_ipaclient_test.servers[0] }}"
       when: ipaadmin_keytab is defined
 
-    - name: Install - Copy keytab to server temporary file
+    - name: "Install - Copying keytab to server temporary file"
       ansible.builtin.copy:
         src: "{{ ipaadmin_keytab }}"
         dest: "{{ keytab_temp.path }}"
-        mode: 0600
+        mode: "0600"
       delegate_to: "{{ result_ipaclient_test.servers[0] }}"
       when: ipaadmin_keytab is defined
 
-    - name: Install - Get One-Time Password for client enrollment
+    - name: "Install - Getting One-Time Password for client enrollment"
       no_log: true
       ipaclient_get_otp:
         ipaadmin_principal: "{{ ipaadmin_principal | default(omit) }}"
@@ -166,35 +165,35 @@
       register: result_ipaclient_get_otp
       delegate_to: "{{ result_ipaclient_test.servers[0] }}"
 
-    - name: Install - Store the previously obtained OTP
+    - name: "Install - Storing the previously obtained OTP"
       no_log: true
       ansible.builtin.set_fact:
         ipaadmin_orig_password: "{{ ipaadmin_password | default(omit) }}"
         ipaadmin_password: "{{ result_ipaclient_get_otp.host.randompassword
                                if result_ipaclient_get_otp.host is defined }}"
     rescue:
-    - name: Install - Report error for OTP generation
+    - name: "Install - Reporting error for OTP generation"
       ansible.builtin.debug:
         msg: "{{ result_ipaclient_get_otp.msg }}"
       when: result_ipaclient_get_otp is failed
       failed_when: true
 
     always:
-    - name: Install - Remove keytab temporary file
+    - name: "Install - Removing keytab temporary file"
       ansible.builtin.file:
         path: "{{ keytab_temp.path }}"
         state: absent
       delegate_to: "{{ result_ipaclient_test.servers[0] }}"
       when: keytab_temp.path is defined
 
-  - name: Store predefined OTP in admin_password
+  - name: "Storing predefined OTP in admin_password"
     no_log: true
     ansible.builtin.set_fact:
       ipaadmin_orig_password: "{{ ipaadmin_password | default(omit) }}"
       ipaadmin_password: "{{ ipaclient_otp }}"
     when: ipaclient_otp is defined
 
-  - name: Install - Check keytab, principal and keytab
+  - name: "Install - Checking keytab, principal and keytab"
     when: not ipaclient_on_master | bool
     block:
     # This block is executed only when
@@ -205,12 +204,12 @@
     #       (result_ipaclient_join.already_joined is defined and
     #        result_ipaclient_join.already_joined)))
 
-    - name: Install - Check if principal and keytab are set
+    - name: "Install - Checking if principal and keytab are set"
       ansible.builtin.fail:
         msg: "Admin principal and client keytab cannot be used together"
       when: ipaadmin_principal is defined and ipaclient_keytab is defined
 
-    - name: Install - Check if one of password or keytabs are set
+    - name: "Install - Checking if one of password or keytabs are set"
       ansible.builtin.fail:
         msg: "At least one of password or keytabs must be specified"
       when: not result_ipaclient_test_keytab.krb5_keytab_ok
@@ -218,7 +217,7 @@
             and ipaadmin_keytab is undefined
             and ipaclient_keytab is undefined
 
-  - name: "Install - From host keytab, purge {{ result_ipaclient_test.realm }}"
+  - name: "Install - From host keytab, purging {{ result_ipaclient_test.realm }}"
     ansible.builtin.command: >
       /usr/sbin/ipa-rmkeytab
       -k /etc/krb5.keytab
@@ -235,12 +234,12 @@
                  result_ipa_rmkeytab.rc != 7
     when: (ipaclient_use_otp | bool or ipaclient_force_join | bool) and not ipaclient_on_master | bool
 
-  - name: Install - Backup and set hostname
+  - name: "Install - Backing up and setting hostname"
     ipaclient_set_hostname:
       hostname: "{{ result_ipaclient_test.hostname }}"
     when: not ipaclient_on_master | bool
 
-  - name: Install - Create temporary krb5 configuration
+  - name: "Install - Creating temporary krb5 configuration"
     ipaclient_temp_krb5:
       servers: "{{ result_ipaclient_test.servers }}"
       domain: "{{ result_ipaclient_test.domain }}"
@@ -249,7 +248,7 @@
       kdc: "{{ result_ipaclient_test.kdc }}"
     register: result_ipaclient_temp_krb5
 
-  - name: Install - Join IPA
+  - name: "Install - Joining IPA"
     ipaclient_join:
       servers: "{{ result_ipaclient_test.servers }}"
       realm: "{{ result_ipaclient_test.realm }}"
@@ -269,7 +268,7 @@
           (not result_ipaclient_test_keytab.krb5_keytab_ok or
               ipaclient_force_join)
 
-  - name: Install - Allow repair checks
+  - name: "Install - Allowing repair checks"
     when: not ipaclient_on_master | bool and
           not result_ipaclient_join.changed and
           not ipaclient_allow_repair | bool and
@@ -277,23 +276,23 @@
               (result_ipaclient_join.already_joined is defined and
                   result_ipaclient_join.already_joined))
     block:
-    - name: The krb5 configuration is not correct
+    - name: "Failing when the krb5 configuration is not correct"
       ansible.builtin.fail:
         msg: >
           The krb5 configuration is not correct, please enable allow_repair
           to fix this.
       when: not result_ipaclient_test_keytab.krb5_conf_ok
-    - name: IPA test failed
+    - name: "Failing when IPA test failed"
       ansible.builtin.fail:
         msg: "The IPA test failed, please enable allow_repair to fix this."
       when: not result_ipaclient_test_keytab.ping_test_ok
-    - name: Fail due to missing ca.crt file
+    - name: "Failing due to missing ca.crt file"
       ansible.builtin.fail:
         msg: >
           The ca.crt file is missing, please enable allow_repair to fix this.
       when: not result_ipaclient_test_keytab.ca_crt_exists
 
-  - name: Install - Configuration
+  - name: "Install - Configuring"
     when: not (not ipaclient_on_master | bool and
           not result_ipaclient_join.changed and
           not ipaclient_allow_repair | bool
@@ -301,7 +300,7 @@
               or (result_ipaclient_join.already_joined is defined
               and result_ipaclient_join.already_joined)))
     block:
-    - name: Install - Configure IPA default.conf
+    - name: "Install - Configuring IPA default.conf"
       ipaclient_ipa_conf:
         servers: "{{ result_ipaclient_test.servers }}"
         domain: "{{ result_ipaclient_test.domain }}"
@@ -310,7 +309,7 @@
         basedn: "{{ result_ipaclient_test.basedn }}"
       when: not ipaclient_on_master | bool
 
-    - name: Install - Configure SSSD
+    - name: "Install - Configuring SSSD"
       ipaclient_setup_sssd:
         servers: "{{ result_ipaclient_test.servers }}"
         domain: "{{ result_ipaclient_test.domain }}"
@@ -332,7 +331,7 @@
           "{{ ipassd_no_krb5_offline_passwords
               | default(ipasssd_no_krb5_offline_passwords) }}"
 
-    - name: Install - IPA API calls for remaining enrollment parts
+    - name: "Install - Making IPA API calls for remaining enrollment parts"
       ipaclient_api:
         servers: "{{ result_ipaclient_test.servers }}"
         realm: "{{ result_ipaclient_test.realm }}"
@@ -341,7 +340,7 @@
         krb_name: "{{ result_ipaclient_temp_krb5.krb_name }}"
       register: result_ipaclient_api
 
-    - name: Install - Fix IPA ca
+    - name: "Install - Fixing IPA ca"
       ipaclient_fix_ca:
         servers: "{{ result_ipaclient_test.servers }}"
         realm: "{{ result_ipaclient_test.realm }}"
@@ -352,7 +351,7 @@
             result_ipaclient_test_keytab.krb5_keytab_ok and
             not result_ipaclient_test_keytab.ca_crt_exists
 
-    - name: Install - Create IPA NSS database
+    - name: "Install - Creating IPA NSS database"
       ipaclient_setup_nss:
         servers: "{{ result_ipaclient_test.servers }}"
         domain: "{{ result_ipaclient_test.domain }}"
@@ -387,7 +386,7 @@
         selinux_works: "{{ result_ipaclient_test.selinux_works }}"
         krb_name: "{{ result_ipaclient_temp_krb5.krb_name }}"
 
-    - name: Install - Configure SSH and SSHD
+    - name: "Install - Configuring SSH and SSHD"
       ipaclient_setup_ssh:
         servers: "{{ result_ipaclient_test.servers }}"
         sssd: "{{ result_ipaclient_test.sssd }}"
@@ -395,31 +394,31 @@
         ssh_trust_dns: "{{ ipaclient_ssh_trust_dns }}"
         no_sshd: "{{ ipaclient_no_sshd }}"
 
-    - name: Install - Configure automount
+    - name: "Install - Configuring automount"
       ipaclient_setup_automount:
         servers: "{{ result_ipaclient_test.servers }}"
         sssd: "{{ result_ipaclient_test.sssd }}"
         automount_location: "{{ ipaclient_automount_location | default(omit) }}"
 
-    - name: Install - Configure firefox
+    - name: "Install - Configuring firefox"
       ipaclient_setup_firefox:
         firefox_dir: "{{ ipaclient_firefox_dir | default(omit) }}"
         domain: "{{ result_ipaclient_test.domain }}"
       when: ipaclient_configure_firefox | bool
 
-    - name: Install - Configure NIS
+    - name: "Install - Configuring NIS"
       ipaclient_setup_nis:
         domain: "{{ result_ipaclient_test.domain }}"
         nisdomain: "{{ ipaclient_nisdomain | default(omit) }}"
       when: not ipaclient_no_nisdomain | bool
 
-    - name: Remove temporary krb5.conf
+    - name: "Removing temporary krb5.conf"
       ansible.builtin.file:
         path: "{{ result_ipaclient_temp_krb5.krb_name }}"
         state: absent
       when: result_ipaclient_temp_krb5.krb_name is defined
 
-    - name: Install - Configure krb5 for IPA realm
+    - name: "Install - Configuring krb5 for IPA realm"
       ipaclient_setup_krb5:
         realm: "{{ result_ipaclient_test.realm }}"
         domain: "{{ result_ipaclient_test.domain }}"
@@ -433,7 +432,7 @@
         # on_master: "{{ ipaclient_on_master }}"
       when: not ipaclient_on_master | bool
 
-    - name: Install - Configure certmonger
+    - name: "Install - Configuring certmonger"
       ipaclient_setup_certmonger:
         realm: "{{ result_ipaclient_test.realm }}"
         hostname: "{{ result_ipaclient_test.hostname }}"
@@ -443,24 +442,24 @@
       when: not ipaclient_on_master | bool
 
   always:
-  - name: Install - Restore original admin password if overwritten by OTP
+  - name: "Install - Restoring original admin password if overwritten by OTP"
     no_log: true
     ansible.builtin.set_fact:
         ipaadmin_password: "{{ ipaadmin_orig_password }}"
     when: ipaclient_use_otp | bool and ipaadmin_orig_password is defined
 
-  - name: Cleanup leftover ccache
+  - name: "Cleaning up leftover ccache"
     ansible.builtin.file:
       path: "/etc/ipa/.dns_ccache"
       state: absent
 
-  - name: Remove temporary krb5.conf
+  - name: "Removing temporary krb5.conf"
     ansible.builtin.file:
       path: "{{ result_ipaclient_temp_krb5.krb_name }}"
       state: absent
     when: result_ipaclient_temp_krb5.krb_name is defined
 
-  - name: Remove temporary krb5.conf backup
+  - name: "Removing temporary krb5.conf backup"
     ansible.builtin.file:
       path: "{{ result_ipaclient_temp_krb5.krb_name }}.ipabkp"
       state: absent

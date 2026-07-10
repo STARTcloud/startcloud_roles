@@ -1,27 +1,25 @@
 ---
-dependencies: []
-
 galaxy_info:
   role_name: swap
-  author: geerlingguy
-  description: Swap file and swap management for Linux.
-  issue_tracker_url: https://github.com/geerlingguy/ansible-role-swap/issues
-  company: "Midwestern Mac, LLC"
-  license: "license (BSD, MIT)"
-  min_ansible_version: "2.10"
+  author: Mark Gilbert
+  description: Creates and manages a Linux swap file, its fstab entry, and swappiness.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
   platforms:
     - name: Debian
-      versions:
-        - all
+      versions: ['bookworm', 'trixie']
     - name: Ubuntu
-      versions:
-        - all
+      versions: ['jammy', 'noble']
+    - name: EL
+      versions: ['8', '9']
   galaxy_tags:
-    - system
-    - server
     - swap
     - swapfile
-    - pagefile
-    - performance
     - memory
-    - ram
+    - performance
+    - system
+dependencies: []
+collections:
+  - startcloud.startcloud_roles

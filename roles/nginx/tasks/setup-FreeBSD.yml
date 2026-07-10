@@ -1,19 +1,19 @@
 ---
 -
-  name: Update pkg cache.
+  name: "Updating pkg cache"
   ansible.builtin.command: pkg update -f
   environment:
     ASSUME_ALWAYS_YES: "yes"
   tags: ['skip_ansible_lint']
 
 -
-  name: Ensure nginx is installed.
+  name: "Ensuring nginx is installed"
   community.general.pkgng:
     name: "{{ nginx_package_name }}"
     state: present
 
 -
-  name: Create logs directory.
+  name: "Creating logs directory"
   ansible.builtin.file:
     path: /var/log/nginx
     state: directory

@@ -1,0 +1,15 @@
+---
+# {{ ansible_managed }}
+# Authelia file-based authentication backend users database.
+
+users:
+{% for user in authelia_users %}
+  {{ user.username }}:
+    displayname: "{{ user.displayname }}"
+    password: "{{ user.password }}"
+    email: "{{ user.email }}"
+    groups:
+{% for group in user.groups %}
+      - "{{ group }}"
+{% endfor %}
+{% endfor %}

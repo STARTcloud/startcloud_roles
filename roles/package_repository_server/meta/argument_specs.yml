@@ -1,0 +1,15 @@
+---
+argument_specs:
+  main:
+    short_description: Package repository server
+    description:
+      - Builds and serves OS package repositories — OmniOS IPS pkg server instances and a PGP-signed Debian APT repository. Additional structures (pkg_server, storage_disk) are supplied externally by the calling play.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      package_server_email:
+        type: str
+        description: Email address embedded in the generated PGP signing key.

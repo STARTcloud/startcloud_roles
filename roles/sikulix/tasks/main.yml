@@ -3,12 +3,12 @@
   name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    - 
-      apt: 
+    -
+      ansible.builtin.apt:
         name: "{{ packages }}"
       name: "Installing Required SikuliX Dependencies -- Takes about 5 Mins"
-      vars: 
-        packages: 
+      vars:
+        packages:
           - g++
           - autoconf
           - libglib2.0-dev
@@ -32,74 +32,74 @@
           - leptonica-progs
           - tesseract-ocr
           - dos2unix
-    - 
-      find: 
+    -
+      ansible.builtin.find:
         paths: /usr/lib/jni
         patterns: libopencv_java*.so
         recurse: true
       name: "Copying OpenCV Binaries to Java Working Directory"
       register: file_to_copy
-    - 
-      file: 
+    -
+      ansible.builtin.file:
         dest: /usr/lib/libopencv_java.so
         src: "{{ item.path }}"
         state: link
       name: "Adding OpenCV to Bin"
       with_items: "{{ file_to_copy.files }}"
-    - 
-      file: 
+    -
+      ansible.builtin.file:
         group: "{{ user }}"
         mode: "u=rwX,g=rX,o=rX"
         owner: "{{ user }}"
         path: /jars
         state: directory
       name: "Creating Directory for Sikulix Jars"
-    - 
-      file: 
+    -
+      ansible.builtin.file:
         group: "{{ user }}"
         mode: "u=rwX,g=rX,o=rX"
         owner: "{{ user }}"
         path: "/home/{{ user }}/.Sikulix/Extensions/"
         state: directory
       name: "Creating directory for Sikulix Extensions"
-    - 
-      file: 
+    -
+      ansible.builtin.file:
         group: "{{ user }}"
         mode: "u=rwX,g=rX,o=rX"
         owner: "{{ user }}"
         path: "/home/{{ user }}/.Sikulix/SikulixStore/"
         state: directory
       name: "Creating Directory for Sikulix Extensions"
-    - 
+    -
       delay: 5
-      get_url: 
+      ansible.builtin.get_url:
         dest: "/home/{{ user }}/.Sikulix/Extensions/jruby-complete-{{ jruby_version }}.jar"
         url: "https://repo1.maven.org/maven2/org/jruby/jruby-complete/{{ jruby_version }}/jruby-complete-{{ jruby_version }}.jar"
       name: "Downloading jruby sources for {{ user }}"
       register: jruby_source_vagrant
       retries: 5
       until: "jruby_source_vagrant is success"
-    - 
+    -
       delay: 5
-      get_url: 
+      ansible.builtin.get_url:
         dest: "/home/{{ user }}/.Sikulix/Extensions/jython-standalone-{{ jython_version }}.jar"
         url: "https://repo1.maven.org/maven2/org/python/jython-standalone/{{ jython_version }}/jython-standalone-{{ jython_version }}.jar"
       name: "Downloading jython sources for {{ user }}"
       register: jython_source_vagrant
       retries: 5
       until: "jython_source_vagrant is success"
-    - 
+    -
       delay: 5
-      get_url: 
+      ansible.builtin.get_url:
         dest: /jars/sikulixapi.jar
         url: "{{ sikulixapi_download_url }}{{ sikulixapi_jar }}"
       name: "Downloading SikulixJarAPI sources"
       register: SikulixJarAPI_source
       retries: 5
       until: "SikulixJarAPI_source is success"
-    - 
+    -
       delay: 5
-      get_url: 
+      ansible.builtin.get_url:
         dest: /jars/sikulix.jar
         url: "{{ sikulix_download_url }}{{ sikulix_jar }}"
       name: "Downloading SikulixJar sources"
@@ -110,7 +110,7 @@
     -
       become: true
       name: "Creating Menu Icons for All Users"
-      template:
+      ansible.builtin.template:
         src: "{{item.src}}"
         dest: "{{item.dest}}"
         mode: '0755'
@@ -119,7 +119,7 @@
     -
       become: true
       name: "Creating Menu Icons for All Users moving Image"
-      copy:
+      ansible.builtin.copy:
         src: "{{item.src}}"
         dest: "{{item.dest}}"
         mode: '0777'
@@ -128,7 +128,7 @@
     -
       become: true
       name: "Adding Scripts to Desktop"
-      copy:
+      ansible.builtin.copy:
         src: "{{item.src}}"
         dest: "{{item.dest}}"
         owner: "{{ user }}"
@@ -137,12 +137,12 @@
       with_items:
         - { src: /vagrant/scripts , dest: "/home/{{ user }}/Desktop" }
     -
-      command: "dbus-launch gio set {{ item }}  \"metadata::trusted\" true"
+      ansible.builtin.command: "dbus-launch gio set {{ item }}  \"metadata::trusted\" true"
       name: "Ensuring that Desktop Icons are Launchable"
       with_items:
         - /usr/share/applications/Sikulix.desktop
-    - 
-      file: 
+    -
+      ansible.builtin.file:
         group: "{{ user }}"
         mode: "u=wrX,g=rX,o=rX"
         owner: "{{ user }}"

@@ -1,0 +1,40 @@
+---
+argument_specs:
+  main:
+    short_description: Guest security lockdown
+    description:
+      - Disables unneeded/risky services, rotates the default user password, generates and installs an SSH key, and optionally scrubs sensitive files. Dispatches to Debian and Windows tasks.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      show_help:
+        type: bool
+        default: true
+        description: Whether to display help/informational output.
+      lockdown_user_private_key_path:
+        type: str
+        default: /home/startcloud/.ssh/id_ssh_rsa
+        description: Path of the generated SSH private key.
+      lockdown_use_settings_password:
+        type: bool
+        default: false
+        description: Use the Vagrant/settings password instead of lockdown_new_password.
+      lockdown_new_password:
+        type: str
+        default: "STARTcloud24@!"
+        description: New password for the default user (override in production).
+      lockdown:
+        type: list
+        elements: str
+        description: Services to stop and disable.
+      lockdown_file_cleanups_list:
+        type: list
+        elements: str
+        description: Files/paths to remove during cleanup (other roles may append).
+      lockdown_cleanup_debug_files:
+        type: bool
+        default: false
+        description: Gate for the sensitive-file cleanup step.

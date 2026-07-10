@@ -1,0 +1,40 @@
+---
+argument_specs:
+  main:
+    short_description: BoxVault installation
+    description:
+      - Installs BoxVault from the STARTcloud APT repository (default) or builds it from the GitHub source via git clone and npm (backend + frontend).
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      boxvault_build_from_source:
+        type: bool
+        default: false
+        description: Build from source (git clone + npm) instead of installing the STARTcloud apt package.
+      boxvault_apt_key_url:
+        type: str
+        default: "https://public.debian.packages.startcloud.com/debian/startcloud-archive-keyring.asc"
+        description: URL of the armored STARTcloud APT signing key.
+      boxvault_apt_repo_url:
+        type: str
+        default: "https://public.debian.packages.startcloud.com/debian/"
+        description: Base URL of the STARTcloud APT repository.
+      boxvault_package:
+        type: str
+        default: boxvault
+        description: Package name of the BoxVault frontend.
+      boxvault_path:
+        type: str
+        default: /opt/boxvault
+        description: Installation directory used when building from source.
+      boxvault_git_repo:
+        type: str
+        default: "https://github.com/Makr91/BoxVault.git"
+        description: Git repository cloned when building from source.
+      boxvault_git_version:
+        type: str
+        default: main
+        description: Git branch, tag, or commit checked out when building from source.

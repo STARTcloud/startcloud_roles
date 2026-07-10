@@ -1,33 +1,25 @@
 ---
-dependencies: []
-
 galaxy_info:
   role_name: kubernetes
-  author: geerlingguy
-  description: Kubernetes for Linux.
-  company: "Midwestern Mac, LLC"
-  license: "license (BSD, MIT)"
-  min_ansible_version: 2.10
+  author: Mark Gilbert
+  description: Installs and configures a Kubernetes cluster (control plane or node) on Linux using kubeadm.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
   platforms:
     - name: Debian
-      versions:
-        - stretch
-        - buster
-        - bullseye
+      versions: ['bookworm', 'trixie']
     - name: Ubuntu
-      versions:
-        - xenial
-        - bionic
-        - focal
-        - jammy
+      versions: ['jammy', 'noble']
+    - name: EL
+      versions: ['8', '9']
   galaxy_tags:
-    - system
-    - containers
-    - docker
-    - rkt
-    - orchestration
     - kubernetes
     - k8s
-    - paas
-    - saas
-    - hosting
+    - orchestration
+    - containers
+    - cluster
+dependencies: []
+collections:
+  - startcloud.startcloud_roles

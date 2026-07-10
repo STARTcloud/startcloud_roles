@@ -1,0 +1,36 @@
+---
+argument_specs:
+  main:
+    short_description: Fail2ban installation
+    description:
+      - Installs the Fail2ban package, creates its configuration and jail.d directories, and starts and enables the service on Debian-family systems.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      fail2ban_loglevel:
+        type: str
+        default: INFO
+        description: Log verbosity level for the Fail2ban service.
+      fail2ban_logtarget:
+        type: str
+        default: /var/log/fail2ban.log
+        description: Path Fail2ban writes its log to.
+      fail2ban_socket:
+        type: str
+        default: /var/run/fail2ban/fail2ban.sock
+        description: Unix socket path used by the Fail2ban server.
+      fail2ban_pidfile:
+        type: str
+        default: /var/run/fail2ban/fail2ban.pid
+        description: PID file path for the Fail2ban server.
+      fail2ban_dbfile:
+        type: str
+        default: /var/lib/fail2ban/fail2ban.sqlite3
+        description: SQLite database file used to persist ban state.
+      fail2ban_dbpurgeage:
+        type: str
+        default: 1d
+        description: Age after which old bans are purged from the database.

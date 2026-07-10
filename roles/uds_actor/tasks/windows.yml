@@ -38,6 +38,3 @@
     path: C:\temp\actor_installed
     state: present
     timeout: 1500
-
-
-

@@ -1,34 +1,25 @@
----
 galaxy_info:
   role_name: nfs
-  author: MarkProminic
-  description: Install and Configure NFS
-  company: STARTCloud
+  author: Mark Gilbert
+  description: Installs NFS utilities and renders /etc/exports to share filesystems over NFS.
+  company: STARTcloud
   issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
-  license: license (Apache)
-  min_ansible_version: '2.9'
+  license: Apache-2.0
+  min_ansible_version: '2.15'
   platforms:
-    - name: Fedora
-      versions:
-        - all
     - name: Debian
-      versions:
-        - all
+      versions: ['bookworm', 'trixie']
     - name: Ubuntu
-      versions:
-        - all
-
+      versions: ['jammy', 'noble']
+    - name: EL
+      versions: ['8', '9']
   galaxy_tags:
-    - system
     - nfs
     - filesystem
     - share
-    - nfsv4
-    - efs
+    - storage
 
 dependencies: []
 
 collections:
   - startcloud.startcloud_roles
-
-allow_duplicates: false

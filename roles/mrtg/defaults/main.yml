@@ -1,14 +1,14 @@
 ---
 run_tasks: true
-packages:
-  - htop
-  - lynx
-  - lshw
-  - libxml2-utils
-  - tree
-  - python3-pexpect
-  - python3-pymongo
-  - python3-pymysql
-  - psutils
-  - python3-psutil
-  - libxml2-utils
+
+mrtg_packages:
+  - mrtg
+  - snmp
+  - snmpd
+
+mrtg_config_file: /etc/mrtg.cfg
+mrtg_working_directory: /var/www/html/mrtg
+mrtg_snmp_community: public
+mrtg_snmp_target: localhost
+mrtg_refresh_interval: 300
+mrtg_run_interval: "*/5"

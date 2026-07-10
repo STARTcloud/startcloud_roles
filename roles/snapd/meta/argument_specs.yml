@@ -1,0 +1,44 @@
+---
+argument_specs:
+  main:
+    short_description: Disable and purge snapd on Debian-based systems
+    description:
+      - Stops and disables snapd services, purges snapd packages and files, and
+        blocks later reinstallation of snapd on Debian-based distributions.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      snapd_purge:
+        type: bool
+        default: true
+        description: When true, removes snapd packages and their related files and directories.
+      snapd_state:
+        type: str
+        default: stopped
+        description: Desired service state applied to each managed snapd service.
+      snapd_enabled:
+        type: bool
+        default: false
+        description: Whether the managed snapd services should be enabled at boot.
+      snapd_block_later_installation:
+        type: bool
+        default: true
+        description: When true, writes an APT preferences pin that blocks reinstallation of snapd packages.
+      snapd_services:
+        type: list
+        elements: str
+        default: ['snapd.service']
+        description: Additional snapd services to stop and disable, merged with the built-in defaults.
+      snapd_files:
+        type: list
+        elements: str
+        default: ['/etc/apt/apt.conf.d/20snapd.conf']
+        description: Additional snapd files and directories to remove, merged with the built-in defaults.
+      snapd_block_packages:
+        type: list
+        elements: str
+        default: []
+        description: Additional snapd packages to purge and pin against reinstallation, merged with the built-in defaults.

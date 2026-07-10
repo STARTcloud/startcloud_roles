@@ -33,13 +33,13 @@
         state: present
 
 -
-  name: Remove default Dante configuration
+  name: "Removing Default Dante Configuration"
   ansible.builtin.file:
     path: /etc/danted.conf
     state: absent
 
 -
-  name: Create new Dante configuration
+  name: "Creating New Dante Configuration"
   ansible.builtin.copy:
     dest: /etc/danted.conf
     content: |
@@ -62,7 +62,7 @@
       }
 
 -
-  name: Create a dedicated SOCKS user
+  name: "Creating a Dedicated SOCKS User"
   ansible.builtin.user:
     name: "{{ dante_user }}"
     shell: /bin/false
@@ -70,7 +70,7 @@
     password: "{{ 'dante_pass' | password_hash('sha512') }}"
 
 -
-  name: Restart Dante service
+  name: "Restarting Dante Service"
   ansible.builtin.systemd:
     name: danted
     state: restarted

@@ -5,27 +5,27 @@
 
 -
   name: "Updating yum cache"
-  become: yes
+  become: true
   ansible.builtin.yum:
     update_cache: true
 
 -
   name: "Upgrading all yum packages"
-  become: yes
+  become: true
   ansible.builtin.yum:
     name: '*'
     state: latest # noqa package-latest
 
 -
   name: "Installing EPEL repo"
-  become: yes
+  become: true
   ansible.builtin.yum:
     name: epel-release
     state: present
 
 -
   name: "Ensuring EPEL repo is enabled"
-  become: yes
+  become: true
   ansible.builtin.ini_file:
     path: /etc/yum.repos.d/epel.repo
     section: epel
@@ -34,7 +34,7 @@
 
 -
   name: "Installing utilities to enable package repositories"
-  become: yes
+  become: true
   ansible.builtin.package:
     name: yum-utils
     state: latest

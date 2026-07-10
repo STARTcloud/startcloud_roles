@@ -52,7 +52,7 @@
     key: "{{ lookup('file', '/home/startcloud/.ssh/id_ssh_rsa.pub') }}"
 
 -
-  name: Reset ssh connection to apply user changes.
+  name: "Resetting ssh connection to apply user changes"
   ansible.builtin.meta: reset_connection
 
 -

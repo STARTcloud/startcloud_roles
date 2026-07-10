@@ -1,14 +1,44 @@
 ---
 run_tasks: true
-packages:
-  - htop
-  - lynx
-  - lshw
-  - libxml2-utils
-  - tree
-  - python3-pexpect
-  - python3-pymongo
-  - python3-pymysql
-  - psutils
-  - python3-psutil
-  - libxml2-utils
+
+# Authelia release binary (pinned) — override the checksum to match the version.
+authelia_version: "4.38.17"
+authelia_arch: "amd64"
+authelia_checksum: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+authelia_binary_url: "https://github.com/authelia/authelia/releases/download/v{{ authelia_version }}/authelia-linux-{{ authelia_arch }}"
+authelia_binary_path: "/usr/local/bin/authelia"
+
+# System account that owns and runs the service.
+authelia_user: "authelia"
+authelia_group: "authelia"
+
+# On-disk layout.
+authelia_config_dir: "/etc/authelia"
+authelia_data_dir: "/var/lib/authelia"
+
+# Server listener and logging.
+authelia_listen_address: "0.0.0.0"
+authelia_listen_port: 9091
+authelia_log_level: "info"
+
+# Protected domain and post-authentication redirection target.
+authelia_domain: "example.com"
+authelia_default_redirection_url: "https://www.example.com"
+
+# Secrets — override every one of these before any real deployment.
+authelia_jwt_secret: "insecure_jwt_secret_change_me"
+authelia_session_secret: "insecure_session_secret_change_me"
+authelia_storage_encryption_key: "insecure_storage_encryption_key_change_me"
+
+# Default access-control policy applied to protected resources.
+authelia_default_policy: "one_factor"
+
+# File-based authentication backend user set rendered to users_database.yml.
+# Passwords are argon2id digests as produced by "authelia crypto hash generate argon2".
+authelia_users:
+  - username: "admin"
+    displayname: "Administrator"
+    password: "$argon2id$v=19$m=65536,t=3,p=4$BpLnfgDsc2WD8F2q$o/vzA4myCqZZ36bUGsDY//8mKUYNZZaR0t4MFFSs+iM"
+    email: "admin@example.com"
+    groups:
+      - "admins"

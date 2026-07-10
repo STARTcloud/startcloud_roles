@@ -1,41 +1,25 @@
 ---
-dependencies: []
-
 galaxy_info:
   role_name: supervisord
-  author: MarkProminic
-  description: Docker Entrypoint Docker Image Building.
-  company: "STARTcloud.com"
-  license: "license (BSD, MIT)"
-  min_ansible_version: "2.10"
+  author: Mark Gilbert
+  description: Installs and configures the Supervisord process control system.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
   platforms:
-    - name: Fedora
-      versions:
-        - all
     - name: Debian
-      versions:
-        - buster
-        - bullseye
-        - bookworm
+      versions: ['bookworm', 'trixie']
     - name: Ubuntu
-      versions:
-        - bionic
-        - focal
-        - jammy
-    - name: Alpine
-      version:
-        - all
-    - name: ArchLinux
-      versions:
-        - all
+      versions: ['jammy', 'noble']
+    - name: EL
+      versions: ['8', '9']
   galaxy_tags:
-    - web
+    - supervisor
+    - process
+    - service
+    - init
     - system
-    - containers
-    - docker
-    - orchestration
-    - compose
-    - server
-
+dependencies: []
 collections:
   - startcloud.startcloud_roles

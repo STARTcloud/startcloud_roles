@@ -1,0 +1,12 @@
+---
+argument_specs:
+  main:
+    short_description: Installs the Conky system monitor.
+    description:
+      - Installs the Conky system monitor via apt, enables it to autostart for all users, and deploys a system resource dashboard configuration on Debian-family systems.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.

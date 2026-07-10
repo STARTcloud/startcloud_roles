@@ -4,34 +4,29 @@
   when: run_tasks
   block:
     -
-      name: "Setting up Debian Installations"
-      when: "ansible_os_family == 'Debian'"
-      block:
-        -
-          name: "Gathering DEB architecture"
-          ansible.builtin.command: dpkg --print-architecture
-          register: deb_architecture
-          changed_when: false
-    
-        -
-          name: "Printing DEB architecture"
-          ansible.builtin.debug:
-            msg: "deb_architecture.stdout: {{ deb_architecture.stdout }}"
-    
-        -
-          name: "Ensuring apt cache is updated"
-          ansible.builtin.apt:
-            cache_valid_time: 3600
-            update_cache: true
-    
-        -
-          name: "Upgrading all apt packages"
-          ansible.builtin.apt:
-            upgrade: dist
-            update_cache: true
-    
-        -
-          name: "Adding Additional Dependencies {{ packages }}"
-          ansible.builtin.apt:
-            name: "{{ packages }}"
-            state: present
+      name: "Creating the Vaultwarden data directory"
+      ansible.builtin.file:
+        path: "{{ vaultwarden_data_dir }}"
+        state: directory
+        mode: "0750"
+
+    -
+      name: "Deploying the Vaultwarden container"
+      community.docker.docker_container:
+        name: "{{ vaultwarden_container_name }}"
+        image: "{{ vaultwarden_image }}"
+        restart_policy: "{{ vaultwarden_restart_policy }}"
+        env: >-
+          {{
+            {
+              'DOMAIN': vaultwarden_domain,
+              'ADMIN_TOKEN': vaultwarden_admin_token,
+              'SIGNUPS_ALLOWED': vaultwarden_signups_allowed | string | lower,
+              'WEBSOCKET_ENABLED': vaultwarden_websocket_enabled | string | lower
+            } | combine(vaultwarden_extra_env)
+          }}
+        volumes:
+          - "{{ vaultwarden_data_dir }}:/data"
+        published_ports:
+          - "{{ vaultwarden_web_port }}:80"
+        state: started

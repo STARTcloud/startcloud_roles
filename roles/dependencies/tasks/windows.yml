@@ -15,7 +15,7 @@
   name: "Installing Powershell 7"
   block:
     -
-      name: Check if PowerShell 7 is already installed
+      name: "Checking if PowerShell 7 is already installed"
       ansible.windows.win_shell: |
         $psVersion = (Get-Command pwsh -ErrorAction SilentlyContinue).Version.Major
         if ($psVersion -eq 7) {

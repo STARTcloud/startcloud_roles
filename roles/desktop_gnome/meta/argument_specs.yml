@@ -1,0 +1,19 @@
+---
+argument_specs:
+  main:
+    short_description: Install and configure the GNOME desktop
+    description:
+      - Installs the GNOME desktop environment on Debian and Ubuntu, removes bundled bloat, applies global dconf settings, optionally installs GNOME extensions, and optionally lays down polkit rules.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      desktop_update_polkit:
+        type: bool
+        description: When true, install the desktop polkit rules that permit common actions (wifi scan, colord, universal) for all users.
+      desktop_extensions_enabled:
+        type: bool
+        default: true
+        description: When true, clone, install, and enable the GNOME shell extensions (dash-to-panel, sound output chooser, clipboard indicator) on Debian.

@@ -1,0 +1,16 @@
+[Unit]
+Description=Authelia authentication and authorization server
+After=network.target
+
+[Service]
+Type=simple
+User={{ authelia_user }}
+Group={{ authelia_group }}
+WorkingDirectory={{ authelia_data_dir }}
+ExecStart={{ authelia_binary_path }} --config {{ authelia_config_dir }}/configuration.yml
+Restart=always
+RestartSec=10
+SyslogIdentifier=authelia
+
+[Install]
+WantedBy=multi-user.target

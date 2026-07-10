@@ -1,0 +1,22 @@
+galaxy_info:
+  role_name: sikulix
+  author: Mark Gilbert
+  description: Installs the SikuliX visual GUI automation tool with its OpenCV, JRuby, and Jython dependencies on Debian-based desktops.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
+  platforms:
+    - name: Debian
+      versions: ['bookworm', 'trixie']
+    - name: Ubuntu
+      versions: ['jammy', 'noble']
+  galaxy_tags:
+    - sikulix
+    - automation
+    - gui
+    - opencv
+    - testing
+dependencies: []
+collections:
+  - startcloud.startcloud_roles

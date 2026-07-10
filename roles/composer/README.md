@@ -6,8 +6,8 @@ Installs Composer, the PHP Dependency Manager, on any Linux or UNIX system.
 
 ## Requirements
 
-  - `php` (version 5.4+) should be installed and working (you can use the `geerlingguy.php` role to install).
-  - `git` should be installed and working (you can use the `geerlingguy.git` role to install).
+- `php` (version 5.4+) should be installed and working (you can use the `geerlingguy.php` role to install).
+- `git` should be installed and working (you can use the `geerlingguy.git` role to install).
 
 ## Role Variables
 

@@ -1,0 +1,32 @@
+---
+argument_specs:
+  main:
+    short_description: Baseline system dependencies
+    description:
+      - Installs baseline packages, extra packages, and (on Debian) extra repositories needed by other roles. Dispatches to OS-specific tasks for Debian, RedHat, FreeBSD and Windows.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      extra_packages:
+        type: list
+        elements: str
+        description: Additional packages installed on top of the OS baseline list.
+      packages:
+        type: list
+        elements: str
+        description: OS baseline package list (populated from the OS-specific vars files).
+      use_proxy:
+        type: bool
+        default: false
+        description: Render an apt/pkg proxy configuration using proxy_server/proxy_port.
+      manually_intall_updates:
+        type: bool
+        default: false
+        description: Reserved toggle for manual update installation (not currently consumed).
+      extra_repos:
+        type: list
+        elements: dict
+        description: Extra APT repositories to add (name, gpg_key_url, gpg_keyring_path, repo, needs_dearmor).

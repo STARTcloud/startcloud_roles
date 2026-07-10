@@ -1,0 +1,76 @@
+---
+argument_specs:
+  main:
+    short_description: Installs and configures a PostgreSQL database server.
+    description:
+      - Installs PostgreSQL server packages, initializes the database cluster,
+        applies global and host-based authentication configuration, and ensures
+        the requested databases and users exist.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      postgresql_enablerepo:
+        type: str
+        default: ""
+        description: RHEL/CentOS only — repository to enable when installing PostgreSQL packages.
+      postgresql_restarted_state:
+        type: str
+        default: "restarted"
+        description: Service state applied when configuration changes are made (restarted or reloaded).
+      postgresql_python_library:
+        type: str
+        default: python-psycopg2
+        description: Python library Ansible uses to communicate with PostgreSQL.
+      postgresql_user:
+        type: str
+        default: postgres
+        description: System user under which PostgreSQL runs.
+      postgresql_group:
+        type: str
+        default: postgres
+        description: System group under which PostgreSQL runs.
+      postgresql_auth_method:
+        type: str
+        default: "{{ ansible_fips | ternary('scram-sha-256', 'md5') }}"
+        description: Password authentication method used in the default host-based auth entries.
+      postgresql_unix_socket_directories:
+        type: list
+        elements: str
+        description: Directories where PostgreSQL's Unix domain socket is created.
+      postgresql_service_state:
+        type: str
+        default: started
+        description: Desired running state of the PostgreSQL service.
+      postgresql_service_enabled:
+        type: bool
+        default: true
+        description: Whether the PostgreSQL service is enabled to start at boot.
+      postgresql_global_config_options:
+        type: list
+        elements: dict
+        description: Global options written into postgresql.conf.
+      postgresql_hba_entries:
+        type: list
+        elements: dict
+        description: Host-based authentication entries rendered into pg_hba.conf.
+      postgresql_locales:
+        type: list
+        elements: str
+        description: Debian/Ubuntu only — locales to generate for PostgreSQL databases.
+      postgresql_databases:
+        type: list
+        elements: dict
+        default: []
+        description: Databases to ensure exist on the server.
+      postgresql_users:
+        type: list
+        elements: dict
+        default: []
+        description: Users to ensure exist on the server.
+      postgres_users_no_log:
+        type: bool
+        default: false
+        description: Whether to suppress output of user data when managing users.

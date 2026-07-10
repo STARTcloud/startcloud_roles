@@ -75,8 +75,8 @@
       ansible.builtin.file:
         path: "/tmp/haxe_temp"
         state: directory
-        recurse: yes
-        force: yes
+        recurse: true
+        force: true
     
     -
       name: "Cleaning destination directory"
@@ -112,8 +112,8 @@
       ansible.builtin.file:
         path: "/opt/haxe/haxe-{{ haxe_version }}"
         state: directory
-        recurse: yes
-        force: yes
+        recurse: true
+        force: true
     
     -
       name: "Cleaning destination directory"

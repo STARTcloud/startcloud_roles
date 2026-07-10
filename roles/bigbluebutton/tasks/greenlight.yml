@@ -2,7 +2,7 @@
 # We restrict access permissions on libdir because it usually hosts the
 # database directory that is usually controlled by a DB container, and cannot
 # be sufficiently protected on the host itself (see below)
-- name: Create protected greenlight libdir
+- name: "Creating protected greenlight libdir"
   ansible.builtin.file:
     path: "{{ bbb_greenlight_libdir }}"
     state: directory
@@ -23,7 +23,7 @@
 # itself, but are irrelevant for the bind mount of the subdir into the
 # container. As such, here we just ensure the dbdir is actually present,
 # but leave the eventual modes and ownership up to the container.
-- name: Create greenlight database directory
+- name: "Creating greenlight database directory"
   ansible.builtin.file:
     path: "{{ bbb_greenlight_dbdir }}"
     state: directory
@@ -31,7 +31,7 @@
   tags:
     - greenlight-config
 
-- name: Create additional greenlight directories
+- name: "Creating additional greenlight directories"
   ansible.builtin.file:
     path: "{{ __bbb_greenlight_directories }}"
     state: directory
@@ -47,7 +47,7 @@
   tags:
     - greenlight-config
 
-- name: Create greenlight logrotate configuration
+- name: "Creating greenlight logrotate configuration"
   ansible.builtin.template:
     src: templates/greenlight.logrotate.j2
     dest: /etc/logrotate.d/greenlight
@@ -57,23 +57,23 @@
   tags:
     - greenlight-config
 
-- name: Examine BBB configuration
+- name: "Examining BBB configuration"
   ansible.builtin.command: /usr/bin/bbb-conf --secret
   changed_when: false
   register: bbb_conf_secret
   tags:
     - greenlight-config
 
-- name: Extract BBB endpoint and secret
+- name: "Extracting BBB endpoint and secret"
   ansible.builtin.set_fact:
     bbb_greenlight_extracted_endpoint: "{{ bbb_conf_secret.stdout | regex_search('URL: (.*)', '\\1') | first }}"
     bbb_greenlight_extracted_secret: "{{ bbb_conf_secret.stdout | regex_search('Secret: (.*)', '\\1') | first }}"
   tags:
     - greenlight-config
 
-- name: Setup greenlight secret
+- name: "Setting up greenlight secret"
   block:
-    - name: Check if greenlight secret file exists
+    - name: "Checking if greenlight secret file exists"
       ansible.builtin.stat:
         path: "{{ bbb_greenlight_etcdir }}/.rails.secret"
       register: bbb_greenlight_rails_secret_file
@@ -82,13 +82,13 @@
         - greenlight-config
 
   rescue:
-    - name: Create new greenlight secret
+    - name: "Creating new greenlight secret"
       ansible.builtin.command: docker run --rm --entrypoint /bin/sh {{ bbb_greenlight_image }} -c "bundle exec rails secret"
       register: bbb_greenlight_rails_secret
       tags:
         - greenlight-config
 
-    - name: Persist new secret to file
+    - name: "Persisting new secret to file"
       ansible.builtin.copy:
         content: "{{ bbb_greenlight_rails_secret.stdout }}"
         dest: "{{ bbb_greenlight_etcdir }}/.rails.secret"
@@ -99,22 +99,22 @@
         - greenlight-config
 
   always:
-    - name: Read greenlight secret from file
+    - name: "Reading greenlight secret from file"
       ansible.builtin.command: cat "{{ bbb_greenlight_etcdir }}/.rails.secret"
       changed_when: false
       register: bbb_greenlight_rails_secret_content
       tags:
         - greenlight-config
 
-    - name: Transfer greenlight secret into proper variable
+    - name: "Transferring greenlight secret into proper variable"
       ansible.builtin.set_fact:
         bbb_greenlight_rails_secret: "{{ bbb_greenlight_rails_secret_content.stdout }}"
       tags:
         - greenlight-config
 
-- name: Setup database secret for greenlight
+- name: "Setting up database secret for greenlight"
   block:
-    - name: Check if greenlight database secret file exists
+    - name: "Checking if greenlight database secret file exists"
       ansible.builtin.stat:
         path: "{{ bbb_greenlight_etcdir }}/.db.secret"
       register: bbb_greenlight_db_secret_file
@@ -122,7 +122,7 @@
       tags:
         - greenlight-config
   rescue:
-    - name: Persist new database secret to file
+    - name: "Persisting new database secret to file"
       ansible.builtin.copy:
         content: "{{ lookup('password', '/dev/null length=15 chars=ascii_letters') }}"
         dest: "{{ bbb_greenlight_etcdir }}/.db.secret"
@@ -133,20 +133,20 @@
         - greenlight-config
 
   always:
-    - name: Read greenlight database secret from file
+    - name: "Reading greenlight database secret from file"
       ansible.builtin.command: cat "{{ bbb_greenlight_etcdir }}/.db.secret"
       changed_when: false
       register: bbb_greenlight_db_secret_content
       tags:
         - greenlight-config
 
-    - name: Transfer greenlight database secret into proper variable
+    - name: "Transferring greenlight database secret into proper variable"
       ansible.builtin.set_fact:
         bbb_greenlight_db_password: "{{ bbb_greenlight_db_secret_content.stdout }}"
       tags:
         - greenlight-config
 
-- name: Create greenlight docker-compose config
+- name: "Creating greenlight docker-compose config"
   ansible.builtin.template:
     src: templates/greenlight-docker-compose.yml.j2
     dest: "{{ bbb_greenlight_etcdir }}/docker-compose.yml"
@@ -160,7 +160,7 @@
   tags:
     - greenlight-config
 
-- name: Create greenlight NGINX config stub
+- name: "Creating greenlight NGINX config stub"
   ansible.builtin.template:
     src: templates/greenlight.nginx.j2
     dest: "/etc/bigbluebutton/nginx/greenlight.nginx"
@@ -172,7 +172,7 @@
   tags:
     - greenlight-config
 
-- name: Create greenlight systemd unit file
+- name: "Creating greenlight systemd unit file"
   ansible.builtin.template:
     src: templates/greenlight.service.j2
     dest: /etc/systemd/system/greenlight.service
@@ -182,7 +182,7 @@
   tags:
     - greenlight-service
 
-- name: Enable and start greenlight systemd service
+- name: "Enabling and starting greenlight systemd service"
   ansible.builtin.systemd:
     name: greenlight
     enabled: true

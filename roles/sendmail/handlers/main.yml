@@ -1,2 +1,11 @@
 ---
-# Mail Configuration Section
+-
+  name: "Rebuilding Sendmail Configuration"
+  ansible.builtin.command:
+    cmd: "make -C {{ sendmail_config_dir }}"
+  changed_when: true
+-
+  name: "Restarting Sendmail Service"
+  ansible.builtin.systemd_service:
+    name: "{{ sendmail_service_name }}"
+    state: restarted

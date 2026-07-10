@@ -1,39 +1,27 @@
----
-dependencies: []
-
 galaxy_info:
   role_name: apache
-  author: geerlingguy
-  description: Apache 2.x for Linux.
-  company: "Midwestern Mac, LLC"
-  license: "license (BSD, MIT)"
-  min_ansible_version: "2.10"
+  author: Mark Gilbert
+  description: Installs and configures Apache 2.x virtual hosts, mods, and SSL across Linux and Solaris.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
   platforms:
-    - name: Fedora
-      versions:
-        - all
-    - name: Amazon
-      versions:
-        - all
     - name: Debian
-      versions:
-        - all
+      versions: ['bookworm', 'trixie']
     - name: Ubuntu
-      versions:
-        - trusty
-        - xenial
-        - bionic
+      versions: ['jammy', 'noble']
+    - name: EL
+      versions: ['8', '9']
+    - name: SLES
+      versions: ['all']
     - name: Solaris
-      versions:
-        - "11.3"
+      versions: ['11.4']
   galaxy_tags:
     - web
     - apache
     - webserver
-    - html
     - httpd
-
-allow_duplicates: true
-
+dependencies: []
 collections:
   - startcloud.startcloud_roles

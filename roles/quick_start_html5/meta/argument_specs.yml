@@ -1,0 +1,27 @@
+---
+argument_specs:
+  main:
+    short_description: Host the STARTcloud HTML5 welcome page via a Python upload server.
+    description:
+      - Creates the web server directories, installs the Python uploadserver package, templates the welcome page and systemd service, starts the service, and assembles a support bundle.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      python_simple_web_server_path:
+        type: str
+        default: "{{ service_home_dir }}"
+        description: Base directory the Python web server serves from and where the images, ids, welcome page, and styles are placed.
+      startcloud_quick_start_port_forwards:
+        type: list
+        elements: dict
+        default:
+          - guest: 8000
+            url: "demo"
+        description: Port-forward definitions whose first entry supplies the guest port the server listens on and the sub-domain label for the proxy URL.
+      startcloud_quick_start_proxy_url:
+        type: str
+        default: "{{ startcloud_quick_start_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"
+        description: Fully qualified proxy URL advertised on the welcome page for reaching the quick-start server.

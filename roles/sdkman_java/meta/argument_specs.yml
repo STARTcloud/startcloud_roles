@@ -1,0 +1,24 @@
+---
+argument_specs:
+  main:
+    short_description: Java installation via SDKMAN
+    description:
+      - Installs the requested Java version through SDKMAN (or the latest Zulu 8 when LATEST) and exposes it on PATH, with JAVA_HOME set on Windows.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      java_version:
+        type: str
+        default: "LATEST"
+        description: SDKMAN Java identifier to install, or "LATEST" to resolve the newest Zulu 8 build.
+      java_jvm:
+        type: str
+        default: jre-8u251-linux-x64.tar.gz
+        description: Local JVM archive name (legacy hint used for offline installs).
+      sdkman_update_alternatives:
+        type: list
+        elements: dict
+        description: update-alternatives entries (candidate, name, link) registering the SDKMAN Java binaries system-wide on Linux.

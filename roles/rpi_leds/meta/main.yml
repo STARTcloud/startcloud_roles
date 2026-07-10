@@ -1,0 +1,22 @@
+galaxy_info:
+  role_name: rpi_leds
+  author: Mark Gilbert
+  description: Enables the DS1307 real-time clock kernel module on Raspberry Pi (ARM) Debian hosts.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
+  platforms:
+    - name: Debian
+      versions: ['bookworm', 'trixie']
+    - name: Ubuntu
+      versions: ['jammy', 'noble']
+  galaxy_tags:
+    - raspberrypi
+    - rtc
+    - gpio
+    - leds
+    - hardware
+dependencies: []
+collections:
+  - startcloud.startcloud_roles

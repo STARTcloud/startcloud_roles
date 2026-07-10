@@ -1,18 +1,18 @@
 ---
 -
-  name: "Set path {{ sdkman_profile }}"
+  name: "Setting profile path for {{ sdkman_profile }}"
   ansible.builtin.set_fact:
     sdkman_profile_path: '{{ service_home_dir }}/{{ sdkman_profile }}'
 
 -
-  name: "Detect settings in {{ sdkman_profile_path }}"
+  name: "Detecting SDKMAN settings in {{ sdkman_profile_path }}"
   ansible.builtin.command: "grep 'sdkman-init.sh' '{{ sdkman_profile_path }}'"
   changed_when: false
   failed_when: false
   register: sdkman_profile_result
 
 -
-  name: "Add SDKMAN_OFFLINE_MODE to {{ sdkman_profile_path }}"
+  name: "Adding SDKMAN_OFFLINE_MODE to {{ sdkman_profile_path }}"
   ansible.builtin.lineinfile:
     path: "{{ sdkman_profile_path }}"
     regexp: '^export SDKMAN_OFFLINE_MODE='

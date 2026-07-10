@@ -3,10 +3,27 @@
   name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    - 
-      apt: 
-        name: 
-          - sendmail
-          - nano
-      name: "Installing Sendmail"
+    -
+      name: "Installing Sendmail Packages"
+      ansible.builtin.apt:
+        name: "{{ sendmail_packages }}"
+        state: present
+        update_cache: true
       retries: 5
+    -
+      name: "Templating Sendmail Configuration"
+      ansible.builtin.template:
+        src: "sendmail.mc.j2"
+        dest: "{{ sendmail_config_dir }}/sendmail.mc"
+        owner: root
+        group: smmsp
+        mode: "0644"
+      notify:
+        - "Rebuilding Sendmail Configuration"
+        - "Restarting Sendmail Service"
+    -
+      name: "Enabling and Starting Sendmail Service"
+      ansible.builtin.systemd_service:
+        name: "{{ sendmail_service_name }}"
+        state: started
+        enabled: true

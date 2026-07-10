@@ -18,8 +18,13 @@
 
 -
   name: "Writing current variables to /vagrant/support-bundle/ansible-system-variables.json"
+  vars:
+    # Build the export via key-extract so the deprecated magic vars (play_hosts,
+    # role_names, removed in ansible-core 2.23) are filtered before access -> no
+    # deprecation warning, no data loss.
+    support_bundle_keys: "{{ vars.keys() | reject('in', ['play_hosts', 'role_names', 'groups', 'group_names', 'inventory_hostname', 'ansible_play_hosts', 'ansible_play_batch', 'hostvars', 'ansible_version']) | list }}"
   ansible.builtin.copy:
-    content: "{{ vars }}"
+    content: "{{ dict(support_bundle_keys | zip(support_bundle_keys | map('extract', vars))) | to_nice_json }}"
     dest: "/vagrant/support-bundle/ansible-system-variables.json"
     force: false
     mode: 'a+x'

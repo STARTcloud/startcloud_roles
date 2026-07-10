@@ -1,0 +1,89 @@
+---
+argument_specs:
+  main:
+    short_description: Certbot (Let's Encrypt) installation and certificate management
+    description:
+      - Installs Certbot via package, snap, or source; optionally creates certificates (standalone or webroot) and configures an auto-renewal cron job.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      certbot_auto_renew:
+        type: bool
+        default: true
+        description: Configure a cron job for automatic certificate renewal.
+      certbot_auto_renew_user:
+        type: str
+        description: User the renewal cron job runs as.
+      certbot_auto_renew_hour:
+        type: str
+        default: "3"
+        description: Hour the renewal cron job runs.
+      certbot_auto_renew_minute:
+        type: str
+        default: "30"
+        description: Minute the renewal cron job runs.
+      certbot_auto_renew_options:
+        type: str
+        default: "--quiet"
+        description: Extra options passed to the certbot renew command.
+      certbot_testmode:
+        type: bool
+        default: false
+        description: Use the Let's Encrypt staging environment (--test-cert).
+      certbot_hsts:
+        type: bool
+        default: false
+        description: Add the --hsts flag when creating certificates.
+      certbot_create_if_missing:
+        type: bool
+        default: false
+        description: Create certificates during the run if they don't already exist.
+      certbot_create_method:
+        type: str
+        default: standalone
+        description: Certificate creation method (standalone or webroot).
+      certbot_admin_email:
+        type: str
+        description: Admin email used for Let's Encrypt registration.
+      certbot_webroot:
+        type: str
+        default: /var/www/letsencrypt
+        description: Default webroot path for webroot-based challenges.
+      certbot_certs:
+        type: list
+        elements: dict
+        description: List of certificates to create (domains, email, webroot).
+      certbot_create_extra_args:
+        type: str
+        default: ""
+        description: Extra arguments appended to the certbot create command.
+      certbot_create_command:
+        type: str
+        description: The fully assembled certbot certonly command (templated).
+      certbot_create_standalone_stop_services:
+        type: list
+        elements: str
+        description: Services stopped/started around standalone cert creation via renewal hooks.
+      certbot_install_method:
+        type: str
+        default: package
+        description: How Certbot is installed (package, snap, or source).
+      certbot_repo:
+        type: str
+        default: https://github.com/certbot/certbot.git
+        description: Git repository used for the source install method.
+      certbot_version:
+        type: str
+        default: master
+        description: Git ref checked out for the source install method.
+      certbot_keep_updated:
+        type: bool
+        default: true
+        description: Pull the latest source on each run (source install method).
+      certbot_dir:
+        type: str
+        default: /opt/certbot
+        description: Directory Certbot is cloned into for the source install method.

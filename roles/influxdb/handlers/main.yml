@@ -1,0 +1,6 @@
+---
+-
+  name: "Restarting InfluxDB"
+  ansible.builtin.systemd:
+    name: "{{ influxdb_service_name }}"
+    state: "restarted"

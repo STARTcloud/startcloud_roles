@@ -7,7 +7,7 @@
     mode: "0755"
 
 -
-  name: "Enable Auto Login configuration"
+  name: "Enabling Auto Login configuration"
   when: enable_auto_login
   ansible.builtin.lineinfile:
     create: true
@@ -81,4 +81,4 @@
     src: "{{ grub_efi_src }}"
     dest: /boot/efi/EFI/BOOT/BOOTX64.EFI
     remote_src: true
-    mode: "644"
+    mode: "0644"

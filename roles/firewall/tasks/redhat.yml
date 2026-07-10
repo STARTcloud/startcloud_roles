@@ -1,0 +1,39 @@
+---
+-
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    -
+      name: "Ensuring firewalld is running"
+      ansible.builtin.service:
+        name: firewalld
+        state: started
+        enabled: true
+    -
+      name: "Allowing access to 3389 for XRDP"
+      ansible.posix.firewalld:
+        port: "3389/tcp"
+        permanent: true
+        immediate: true
+        state: enabled
+    -
+      name: "Allowing access to SSH for X11"
+      ansible.posix.firewalld:
+        port: "22/tcp"
+        permanent: true
+        immediate: true
+        state: enabled
+    -
+      name: "Allowing access to 9090 for Cockpit"
+      ansible.posix.firewalld:
+        port: "9090/tcp"
+        permanent: true
+        immediate: true
+        state: enabled
+    -
+      name: "Allowing access to 5900 for VNC"
+      ansible.posix.firewalld:
+        port: "5900/tcp"
+        permanent: true
+        immediate: true
+        state: enabled

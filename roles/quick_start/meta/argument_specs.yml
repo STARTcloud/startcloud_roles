@@ -1,0 +1,52 @@
+---
+argument_specs:
+  main:
+    short_description: Python simple HTTP quick-start server
+    description:
+      - Provisions a Python simple HTTP/upload web server with a welcome landing page, gathers network details, and serves it via systemd (VM) or supervisord (container); also packages a support bundle.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      quick_start:
+        type: bool
+        default: false
+        description: Enables the quick-start web server tasks; when false only the always-run support-bundle task executes.
+      python_simple_web_server_path:
+        type: str
+        description: Filesystem path served by the Python web server (defaults to the service home directory).
+      index:
+        type: str
+        default: index.html.j2
+        description: Template used to render the landing page.
+      index_name:
+        type: str
+        default: welcome.html
+        description: Rendered filename of the landing page.
+      provisioner_name:
+        type: str
+        default: Ad-Hoc Playbook
+        description: Display name of the provisioner shown on the welcome page.
+      provisioner_version:
+        type: str
+        default: v0.0.0
+        description: Version string of the provisioner shown on the welcome page.
+      core_provisioner_version:
+        type: str
+        default: v0.0.0
+        description: Version string of the core provisioner shown on the welcome page.
+      domino_server_name:
+        type: str
+        description: Domino server hostname displayed on the welcome page.
+      domino_server_domain:
+        type: str
+        description: Domino server domain displayed on the welcome page.
+      startcloud_quick_start_port_forwards:
+        type: list
+        elements: dict
+        description: Port-forward definitions (guest port + url label) the server listens on.
+      startcloud_quick_start_proxy_url:
+        type: str
+        description: Fully qualified proxy URL for the quick-start service.

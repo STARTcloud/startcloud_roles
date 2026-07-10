@@ -1,0 +1,25 @@
+---
+argument_specs:
+  main:
+    short_description: Configure serial console access
+    description:
+      - Enables serial console access across Debian, EL, FreeBSD, and Windows hosts.
+      - Configures the serial getty, GRUB serial terminal, the FreeBSD loader, and Windows EMS.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      enable_auto_login:
+        type: bool
+        default: false
+        description: When true, configures root autologin on the ttyS0 serial getty.
+      grub_cmdline_linux:
+        type: str
+        default: ""
+        description: Value written to GRUB_CMDLINE_LINUX in /etc/default/grub.
+      grub_cmdline_linux_default:
+        type: str
+        default: "console=ttyS0,115200n8 console=tty1 quiet"
+        description: Value written to GRUB_CMDLINE_LINUX_DEFAULT in /etc/default/grub.

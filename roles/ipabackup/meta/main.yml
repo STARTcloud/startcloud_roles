@@ -1,21 +1,26 @@
----
-dependencies: []
-
 galaxy_info:
-  author: Thomas Woerner
-  description: A role to backup and restore an IPA server
-  company: Red Hat, Inc
-  license: GPLv3
-  min_ansible_version: "2.13"
+  role_name: ipabackup
+  author: Mark Gilbert
+  description: Backs up, restores, and transfers FreeIPA server backups between the server and the Ansible controller.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
   platforms:
-  - name: Fedora
-    versions:
-    - all
-  - name: EL
-    versions:
-    - "7"
-    - "8"
+    - name: Debian
+      versions: ['bookworm', 'trixie']
+    - name: Ubuntu
+      versions: ['jammy', 'noble']
+    - name: EL
+      versions: ['8', '9']
+    - name: Fedora
+      versions: ['all']
   galaxy_tags:
     - identity
     - ipa
     - freeipa
+    - backup
+    - restore
+dependencies: []
+collections:
+  - startcloud.startcloud_roles

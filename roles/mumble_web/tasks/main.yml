@@ -1,36 +1,42 @@
+---
 -
   name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
     -
-      name: "Setting up Debian Installations"
-      when: "ansible_os_family == 'Debian'"
-      block:
-        -
-          name: "Gathering DEB architecture"
-          ansible.builtin.command: dpkg --print-architecture
-          register: deb_architecture
-          changed_when: false
-    
-        -
-          name: "Printing DEB architecture"
-          ansible.builtin.debug:
-            msg: "deb_architecture.stdout: {{ deb_architecture.stdout }}"
-    
-        -
-          name: "Ensuring apt cache is updated"
-          ansible.builtin.apt:
-            cache_valid_time: 3600
-            update_cache: true
-    
-        -
-          name: "Upgrading all apt packages"
-          ansible.builtin.apt:
-            upgrade: dist
-            update_cache: true
-    
-        -
-          name: "Adding Additional Dependencies {{ packages }}"
-          ansible.builtin.apt:
-            name: "{{ packages }}"
-            state: present
+      name: "Creating mumble-web Docker network"
+      community.docker.docker_network:
+        name: "{{ mumble_web_network }}"
+        state: present
+
+    -
+      name: "Deploying mumble-web-proxy container"
+      community.docker.docker_container:
+        name: "{{ mumble_web_proxy_container_name }}"
+        image: "{{ mumble_web_proxy_image }}"
+        restart_policy: "{{ mumble_web_restart_policy }}"
+        networks:
+          - name: "{{ mumble_web_network }}"
+        command: >-
+          --listen-ws {{ mumble_web_proxy_ws_port }}
+          --server {{ mumble_web_server_host }}:{{ mumble_web_server_port }}
+          --ice-port-min {{ mumble_web_ice_port_min }}
+          --ice-port-max {{ mumble_web_ice_port_max }}
+        published_ports:
+          - "{{ mumble_web_proxy_ws_port }}:{{ mumble_web_proxy_ws_port }}"
+          - "{{ mumble_web_ice_port_min }}-{{ mumble_web_ice_port_max }}:{{ mumble_web_ice_port_min }}-{{ mumble_web_ice_port_max }}/udp"
+        state: started
+
+    -
+      name: "Deploying mumble-web client container"
+      community.docker.docker_container:
+        name: "{{ mumble_web_container_name }}"
+        image: "{{ mumble_web_image }}"
+        restart_policy: "{{ mumble_web_restart_policy }}"
+        networks:
+          - name: "{{ mumble_web_network }}"
+        env:
+          MUMBLE_SERVER: "{{ mumble_web_proxy_container_name }}:{{ mumble_web_proxy_ws_port }}"
+        published_ports:
+          - "{{ mumble_web_http_port }}:8080"
+        state: started

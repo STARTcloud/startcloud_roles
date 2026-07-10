@@ -1,0 +1,129 @@
+---
+argument_specs:
+  main:
+    short_description: Asterisk PBX build and installation
+    description:
+      - Compiles and installs Asterisk from source on Debian, creates the asterisk user/directories, installs systemd and default config, and wires up fail2ban protection.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      asterisk_static_http_port:
+        type: int
+        default: 8088
+        description: Port for Asterisk's built-in HTTP server (ARI, static content).
+      asterisk_static_https_port:
+        type: int
+        default: 8089
+        description: Port for Asterisk's built-in HTTPS server.
+      asterisk_config_dir:
+        type: str
+        default: /etc/asterisk
+        description: Asterisk configuration directory.
+      asterisk_lib_dir:
+        type: str
+        default: /var/lib/asterisk
+        description: Asterisk library/state directory.
+      asterisk_run_dir:
+        type: str
+        default: /var/run/asterisk
+        description: Asterisk runtime directory.
+      asterisk_spool_dir:
+        type: str
+        default: /var/spool/asterisk
+        description: Asterisk spool directory.
+      asterisk_monitor_dir:
+        type: str
+        default: /var/spool/asterisk/monitor
+        description: Directory for call monitor recordings.
+      asterisk_voicemail_dir:
+        type: str
+        default: /var/spool/asterisk/voicemail
+        description: Directory for voicemail storage.
+      asterisk_lib64_dir:
+        type: str
+        default: /usr/lib64/asterisk
+        description: 64-bit Asterisk module directory.
+      asterisk_user_lib_dir:
+        type: str
+        default: /usr/lib/asterisk
+        description: Asterisk module directory.
+      asterisk_custom_sounds_path:
+        type: str
+        default: /var/lib/asterisk/sounds/en/custom
+        description: Path for custom sound files.
+      asterisk_log_dir:
+        type: str
+        default: /var/log/asterisk
+        description: Asterisk log directory.
+      asterisk_bin_dir:
+        type: str
+        default: /usr/sbin
+        description: Directory containing the Asterisk binary.
+      asterisk_source_dir:
+        type: str
+        default: /usr/src/asterisk
+        description: Directory the Asterisk source tarball is extracted into.
+      asterisk_version:
+        type: str
+        default: asterisk-20.11.1.tar.gz
+        description: Asterisk source tarball filename to download and build.
+      asterisk_package:
+        type: str
+        description: Full download URL for the Asterisk source tarball.
+      asterisk_group:
+        type: str
+        default: asterisk
+        description: System group Asterisk runs as.
+      asterisk_user:
+        type: str
+        default: asterisk
+        description: System user Asterisk runs as.
+      asterisk_assets_user:
+        type: str
+        default: asterisk_assets
+        description: User owning Asterisk assets.
+      asterisk_user_pass:
+        type: str
+        default: asterisk
+        description: Password for the asterisk user (hashed at creation).
+      startcloud_asterisk_pjsip_udp_port:
+        type: int
+        default: 5060
+        description: PJSIP UDP signalling port.
+      startcloud_asterisk_pjsip_tcp_port:
+        type: int
+        default: 5062
+        description: PJSIP TCP signalling port.
+      startcloud_asterisk_pjsip_tls_port:
+        type: int
+        default: 5061
+        description: PJSIP TLS signalling port.
+      startcloud_asterisk_manager_port:
+        type: int
+        default: 5038
+        description: Asterisk Manager Interface (AMI) port.
+      startcloud_asterisk_rtp_start:
+        type: int
+        default: 10000
+        description: Start of the RTP media port range.
+      startcloud_asterisk_rtp_end:
+        type: int
+        default: 20000
+        description: End of the RTP media port range.
+      fail2ban_asterisk_ports:
+        type: str
+        description: Comma-separated ports fail2ban monitors for Asterisk.
+      fail2ban_asterisk_log_dir:
+        type: str
+        description: Security log path fail2ban watches for Asterisk.
+      fail2ban_asterisk_max_retries:
+        type: int
+        default: 10
+        description: Failed attempts before fail2ban bans a host.
+      fail2ban_asterisk_BAN_TIME:
+        type: str
+        default: 8h
+        description: Duration fail2ban bans an offending host.

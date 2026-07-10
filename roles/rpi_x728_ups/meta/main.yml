@@ -1,0 +1,24 @@
+galaxy_info:
+  role_name: rpi_x728_ups
+  author: Mark Gilbert
+  description: Installs Geekworm x728 UPS HAT power-management scripts and enables the RTC on Raspberry Pi (arm64/armhf Debian) hosts.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
+  platforms:
+    - name: Debian
+      versions: ['bookworm', 'trixie']
+    - name: Ubuntu
+      versions: ['jammy', 'noble']
+    - name: EL
+      versions: ['8', '9']
+  galaxy_tags:
+    - raspberrypi
+    - ups
+    - x728
+    - power
+    - hardware
+dependencies: []
+collections:
+  - startcloud.startcloud_roles

@@ -1,3 +1,10 @@
 DeployKey_rsa
 vault.yml
 vault-Docova.yml
+
+# General Ansible / Python artifacts (previously duplicated per-role)
+*.retry
+*.pyc
+__pycache__/
+.cache/
+*.log

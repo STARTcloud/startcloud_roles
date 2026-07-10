@@ -4,11 +4,11 @@
   when: run_tasks
   block:
     -
-      name: Include tasks
+      name: "Including RedHat setup tasks"
       ansible.builtin.include_tasks: setup-RedHat.yml
       when: ansible_os_family == 'RedHat'
-    
+
     -
-      name: Include tasks
+      name: "Including Debian setup tasks"
       ansible.builtin.include_tasks: setup-Debian.yml
       when: ansible_os_family == 'Debian'

@@ -1,12 +1,25 @@
 ---
-dependencies: []
-
 galaxy_info:
-  author: jshure
-  description: WinLogBeat install and configure
-  min_ansible_version: 2.0
+  role_name: logstash
+  author: Mark Gilbert
+  description: Installs and configures Elastic Logstash for single-node log ingestion and processing.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
   platforms:
-  - name: Windows
-    versions:
-      - all
-      - 2012R2
+    - name: Debian
+      versions: ['bookworm', 'trixie']
+    - name: Ubuntu
+      versions: ['jammy', 'noble']
+    - name: EL
+      versions: ['8', '9']
+  galaxy_tags:
+    - logstash
+    - elastic
+    - elasticsearch
+    - logging
+    - monitoring
+dependencies: []
+collections:
+  - startcloud.startcloud_roles

@@ -40,7 +40,7 @@
         extra_args: --user --break-system-packages # Installs the package for the current user and allows breaking system packages if necessary.
 
     -
-      name: "When Running in Container"
+      name: "Running in-container tasks"
       when: ansible_module_running_in_container
       block:
         -
@@ -57,7 +57,7 @@
             local_ip: "{{ address.stdout }}"
 
         -
-          name: Prints two lines of messages, but only if there is an environment value set
+          name: "Printing external IP address details"
           ansible.builtin.debug:
             msg:
               - "{{ address }}"
@@ -70,7 +70,7 @@
       become: true
       block:
         -
-          name: "Gather Networking Details"
+          name: "Gathering networking details"
           ansible.builtin.include_tasks: "gather.yml"
 
         -
@@ -79,14 +79,14 @@
             local_ip: "{{ first_adapter_details.ip }}"
 
     -
-      name: "Virtualbox Networking"
+      name: "Configuring Virtualbox networking"
       when:
         - not ansible_module_running_in_container
         - ansible_virtualization_type == "virtualbox"
       become: true
       block:
         -
-          name: "Gather Networking Details"
+          name: "Gathering networking details"
           ansible.builtin.include_tasks: "gather.yml"
 
         -
@@ -173,7 +173,7 @@
   when: true
   block:
     -
-      name: "Zip Support Bundle"
+      name: "Zipping support bundle"
       community.general.archive:
         mode: '0777'
         path: "/vagrant/support-bundle"

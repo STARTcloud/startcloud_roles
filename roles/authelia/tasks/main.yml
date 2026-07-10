@@ -8,30 +8,85 @@
       when: "ansible_os_family == 'Debian'"
       block:
         -
-          name: "Gathering DEB architecture"
-          ansible.builtin.command: dpkg --print-architecture
-          register: deb_architecture
-          changed_when: false
-    
+          name: "Creating the authelia system group"
+          ansible.builtin.group:
+            name: "{{ authelia_group }}"
+            system: true
+            state: "present"
+
         -
-          name: "Printing DEB architecture"
-          ansible.builtin.debug:
-            msg: "deb_architecture.stdout: {{ deb_architecture.stdout }}"
-    
+          name: "Creating the authelia system user"
+          ansible.builtin.user:
+            name: "{{ authelia_user }}"
+            group: "{{ authelia_group }}"
+            shell: "/usr/sbin/nologin"
+            home: "{{ authelia_data_dir }}"
+            system: true
+            create_home: false
+
         -
-          name: "Ensuring apt cache is updated"
-          ansible.builtin.apt:
-            cache_valid_time: 3600
-            update_cache: true
-    
+          name: "Creating the Authelia configuration directory"
+          ansible.builtin.file:
+            path: "{{ authelia_config_dir }}"
+            state: "directory"
+            owner: "{{ authelia_user }}"
+            group: "{{ authelia_group }}"
+            mode: "0750"
+
         -
-          name: "Upgrading all apt packages"
-          ansible.builtin.apt:
-            upgrade: dist
-            update_cache: true
-    
+          name: "Creating the Authelia data directory"
+          ansible.builtin.file:
+            path: "{{ authelia_data_dir }}"
+            state: "directory"
+            owner: "{{ authelia_user }}"
+            group: "{{ authelia_group }}"
+            mode: "0750"
+
         -
-          name: "Adding Additional Dependencies {{ packages }}"
-          ansible.builtin.apt:
-            name: "{{ packages }}"
-            state: present
+          name: "Downloading the Authelia release binary"
+          ansible.builtin.get_url:
+            url: "{{ authelia_binary_url }}"
+            dest: "{{ authelia_binary_path }}"
+            checksum: "{{ authelia_checksum }}"
+            owner: "root"
+            group: "root"
+            mode: "0755"
+          notify: "Restarting Authelia"
+
+        -
+          name: "Rendering the Authelia configuration file"
+          ansible.builtin.template:
+            src: "configuration.yml.j2"
+            dest: "{{ authelia_config_dir }}/configuration.yml"
+            owner: "{{ authelia_user }}"
+            group: "{{ authelia_group }}"
+            mode: "0640"
+          notify: "Restarting Authelia"
+
+        -
+          name: "Rendering the Authelia users database"
+          ansible.builtin.template:
+            src: "users_database.yml.j2"
+            dest: "{{ authelia_config_dir }}/users_database.yml"
+            owner: "{{ authelia_user }}"
+            group: "{{ authelia_group }}"
+            mode: "0640"
+          notify: "Restarting Authelia"
+
+        -
+          name: "Installing the Authelia systemd unit"
+          ansible.builtin.template:
+            src: "authelia.service.j2"
+            dest: "/etc/systemd/system/authelia.service"
+            owner: "root"
+            group: "root"
+            mode: "0644"
+          notify: "Restarting Authelia"
+
+        -
+          name: "Enabling and starting the Authelia service"
+          ansible.builtin.systemd:
+            name: "authelia"
+            state: "started"
+            enabled: true
+            daemon_reload: true

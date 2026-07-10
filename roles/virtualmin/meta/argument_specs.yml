@@ -1,0 +1,28 @@
+---
+argument_specs:
+  main:
+    short_description: Installs and configures Virtualmin.
+    description:
+      - Downloads and runs the official Virtualmin GPL install script, then applies
+        Webmin/Virtualmin hardening and installs multiple PHP versions from the Sury repo.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      mariadb_admin_pass:
+        type: str
+        default: SomeMariaDBeyPassword
+        description: Administrative password used for the MariaDB instance Virtualmin manages.
+      mariadb_admin_user:
+        type: str
+        default: root
+        description: Administrative user for the MariaDB instance Virtualmin manages.
+      startcloud_mariadb_port_forwards:
+        type: list
+        elements: dict
+        description: Guest-to-URL port-forward definitions for exposing the MariaDB service.
+      startcloud_mariadb_proxy_url:
+        type: str
+        description: Fully-qualified proxy URL for the MariaDB service, derived from the port-forward URL and host settings.

@@ -1,0 +1,60 @@
+---
+-
+  name: "Downloading OpenSearch GPG Key"
+  ansible.builtin.get_url:
+    url: "https://artifacts.opensearch.org/publickeys/opensearch.pgp"
+    dest: "/usr/share/keyrings/opensearch-keyring.gpg"
+    mode: '0644'
+
+-
+  name: "Adding OpenSearch APT Repository"
+  ansible.builtin.apt_repository:
+    repo: "deb [ signed-by=/usr/share/keyrings/opensearch-keyring.gpg ] https://artifacts.opensearch.org/releases/bundle/opensearch/{{ graylog_opensearch_version }}/apt stable main"
+    filename: "opensearch-{{ graylog_opensearch_version }}"
+    state: present
+
+-
+  name: "Installing OpenSearch"
+  ansible.builtin.apt:
+    name: opensearch
+    state: present
+    update_cache: true
+  environment:
+    OPENSEARCH_INITIAL_ADMIN_PASSWORD: "{{ graylog_opensearch_admin_password }}"
+
+-
+  name: "Ensuring OpenSearch JVM Options Directory Exists"
+  ansible.builtin.file:
+    path: /etc/opensearch/jvm.options.d
+    state: directory
+    owner: root
+    group: opensearch
+    mode: '0750'
+
+-
+  name: "Configuring OpenSearch JVM Heap"
+  ansible.builtin.template:
+    src: opensearch-heap.options.j2
+    dest: /etc/opensearch/jvm.options.d/heap.options
+    owner: root
+    group: opensearch
+    mode: '0640'
+  notify: Restarting OpenSearch
+
+-
+  name: "Rendering OpenSearch Configuration for Graylog"
+  ansible.builtin.template:
+    src: opensearch.yml.j2
+    dest: /etc/opensearch/opensearch.yml
+    owner: root
+    group: opensearch
+    mode: '0640'
+  notify: Restarting OpenSearch
+
+-
+  name: "Enabling and Starting OpenSearch"
+  ansible.builtin.systemd:
+    name: opensearch
+    enabled: true
+    state: started
+    daemon_reload: true

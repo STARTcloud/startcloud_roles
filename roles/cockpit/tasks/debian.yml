@@ -27,7 +27,7 @@
     update_cache: true
 
 -
-  name: "Adding Cockpit "
+  name: "Installing Cockpit"
   ansible.builtin.apt:
     name: "cockpit"
     state: present

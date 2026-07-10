@@ -1,0 +1,48 @@
+---
+-
+  name: "Installing Graylog Repository Package"
+  ansible.builtin.apt:
+    deb: "https://packages.graylog2.org/repo/packages/graylog-{{ graylog_version }}-repository_latest.deb"
+
+-
+  name: "Installing Graylog Server Package"
+  ansible.builtin.apt:
+    name: graylog-server
+    state: present
+    update_cache: true
+
+-
+  name: "Ensuring Graylog Configuration Directory Exists"
+  ansible.builtin.file:
+    path: /etc/graylog/server
+    state: directory
+    owner: root
+    group: graylog
+    mode: '0755'
+
+-
+  name: "Rendering Graylog Server Configuration"
+  ansible.builtin.template:
+    src: server.conf.j2
+    dest: /etc/graylog/server/server.conf
+    owner: root
+    group: graylog
+    mode: '0640'
+  notify: Restarting Graylog
+
+-
+  name: "Configuring Graylog Server Heap Size"
+  ansible.builtin.lineinfile:
+    path: /etc/default/graylog-server
+    regexp: '^GRAYLOG_SERVER_JAVA_OPTS='
+    line: 'GRAYLOG_SERVER_JAVA_OPTS="-Xms{{ graylog_heap_size }} -Xmx{{ graylog_heap_size }} -server -XX:+UseG1GC -XX:-OmitStackTraceInFastThrow"'
+    mode: '0644'
+  notify: Restarting Graylog
+
+-
+  name: "Enabling and Starting Graylog Server"
+  ansible.builtin.systemd:
+    name: graylog-server
+    enabled: true
+    state: started
+    daemon_reload: true

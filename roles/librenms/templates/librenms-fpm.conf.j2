@@ -1,0 +1,13 @@
+[{{ librenms_fpm_pool }}]
+user = {{ librenms_user }}
+group = {{ librenms_group }}
+listen = {{ librenms_fpm_socket }}
+listen.owner = www-data
+listen.group = www-data
+listen.mode = 0660
+pm = dynamic
+pm.max_children = 10
+pm.start_servers = 2
+pm.min_spare_servers = 1
+pm.max_spare_servers = 4
+pm.max_requests = 500

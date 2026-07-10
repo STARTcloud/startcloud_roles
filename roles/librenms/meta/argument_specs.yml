@@ -1,0 +1,77 @@
+---
+argument_specs:
+  main:
+    short_description: LibreNMS single-node installation
+    description:
+      - Installs LibreNMS and its dependencies (nginx, PHP-FPM, MariaDB, SNMP, RRDCached) on Debian-family systems.
+      - Clones LibreNMS to the install directory, installs its PHP dependencies with Composer, creates the database, and renders the web, PHP-FPM, cron, and logrotate configuration.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      librenms_git_repo:
+        type: str
+        default: "https://github.com/librenms/librenms.git"
+        description: Git repository cloned to provide the LibreNMS source tree.
+      librenms_git_version:
+        type: str
+        default: "24.11.0"
+        description: Git tag or branch of LibreNMS to check out.
+      librenms_install_dir:
+        type: str
+        default: "/opt/librenms"
+        description: Filesystem path LibreNMS is installed to.
+      librenms_user:
+        type: str
+        default: "librenms"
+        description: System user that owns the LibreNMS install and runs its services.
+      librenms_group:
+        type: str
+        default: "librenms"
+        description: System group that owns the LibreNMS install.
+      librenms_php_version:
+        type: str
+        default: "8.2"
+        description: PHP version whose packages, config paths, and FPM service are used.
+      librenms_php_timezone:
+        type: str
+        default: "Etc/UTC"
+        description: Timezone written into the CLI and FPM php.ini files.
+      librenms_server_name:
+        type: str
+        default: "librenms.local"
+        description: HTTP server name used for the nginx site and the LibreNMS base URL.
+      librenms_fpm_pool:
+        type: str
+        default: "librenms"
+        description: Name of the dedicated PHP-FPM pool created for LibreNMS.
+      librenms_fpm_socket:
+        type: str
+        default: "/run/php-fpm-librenms.sock"
+        description: Unix socket the LibreNMS PHP-FPM pool listens on.
+      librenms_mysql_database:
+        type: str
+        default: "librenms"
+        description: Name of the MariaDB database created for LibreNMS.
+      librenms_mysql_user:
+        type: str
+        default: "librenms"
+        description: MariaDB user granted access to the LibreNMS database.
+      librenms_mysql_password:
+        type: str
+        default: "librenms"
+        description: Password set for the LibreNMS MariaDB user.
+      librenms_mysql_root_password:
+        type: str
+        default: "librenms"
+        description: Root MariaDB password written to the root credentials file.
+      librenms_community_string:
+        type: str
+        default: "public"
+        description: SNMP community string configured in snmpd and LibreNMS.
+      librenms_packages:
+        type: list
+        elements: str
+        description: System packages installed to satisfy the LibreNMS runtime requirements.

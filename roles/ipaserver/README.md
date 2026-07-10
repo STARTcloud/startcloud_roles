@@ -8,17 +8,15 @@ This role allows to configure and IPA server.
 
 **Note**: The ansible playbooks and role require a configured ansible environment where the ansible nodes are reachable and are properly set up to have an IP address and a working package manager.
 
-
 Features
 --------
-* Server deployment
 
+* Server deployment
 
 Supported FreeIPA Versions
 --------------------------
 
 FreeIPA versions 4.5 and up are supported by the server role.
-
 
 Supported Distributions
 -----------------------
@@ -28,17 +26,17 @@ Supported Distributions
 * Fedora 26+
 * Ubuntu 16.04 and 18.04
 
-
 Requirements
 ------------
 
 **Controller**
+
 * Ansible version: 2.13+
 
 **Node**
+
 * Supported FreeIPA version (see above)
 * Supported distribution (needed for package installation only, see above)
-
 
 Limitations
 -----------
@@ -47,7 +45,6 @@ Limitations
 External signed CA is now supported. But the currently needed two step process is an issue for the processing in a simple playbook.
 
 Work is planned to have a new method to handle CSR for external signed CAs in a separate step before starting the server installation.
-
 
 Usage
 =====
@@ -185,7 +182,6 @@ ipaserver_random_serial_numbers=true
 
 By setting the variable in the inventory file, the same ipaserver deployment playbook, shown before, can be used.
 
-
 Example inventory file to remove a server from the domain:
 
 ```ini
@@ -227,17 +223,17 @@ ipaserver_ignore_last_of_role=true
 
 Be careful with enabling the `ipaserver_ignore_topology_disconnect` and especially `ipaserver_ignore_last_of_role`, the change can not be reverted easily.
 
-
 Playbooks
 =========
 
 The playbooks needed to deploy or undeploy a server are part of the repository in the playbooks folder. There are also playbooks to deploy and undeploy clusters.
+
 ```
 install-server.yml
 uninstall-server.yml
 ```
-Please remember to link or copy the playbooks to the base directory of ansible-freeipa if you want to use the roles within the source archive.
 
+Please remember to link or copy the playbooks to the base directory of ansible-freeipa if you want to use the roles within the source archive.
 
 How to setup a server
 ---------------------
@@ -245,8 +241,8 @@ How to setup a server
 ```bash
 ansible-playbook -v -i inventory/hosts install-server.yml
 ```
-This will deploy the server defined in the inventory file.
 
+This will deploy the server defined in the inventory file.
 
 Variables
 =========
@@ -376,7 +372,6 @@ Variable | Description | Required
 `ipaserver_ignore_last_of_role` | If enabled this enforces the removal of the server even if the server is the last with one that has a role. Be careful, this might not be revered easily. (bool) | false
 `ipaserver_remove_from_domain` | This enables the removal of the server from the domain additionally to the undeployment. (bool) | false
 `ipaserver_remove_on_server` | The value defines the server/replica in the domain that will to be used to remove the server/replica from the domain if `ipaserver_ignore_topology_disconnect` and `ipaserver_remove_from_domain` are enabled. Without the need to enable `ipaserver_ignore_topology_disconnect`, the value will be automatically detected using the replication agreements of the server/replica. (string) | false
-
 
 Authors
 =======

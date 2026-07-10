@@ -1,0 +1,18 @@
+{{ ansible_managed | comment }}
+# OpenSearch configuration for Graylog rendered by the
+# startcloud.startcloud_roles.graylog role.
+
+cluster.name: {{ graylog_opensearch_cluster_name }}
+node.name: {{ ansible_hostname }}
+path.data: /var/lib/opensearch
+path.logs: /var/log/opensearch
+
+network.host: {{ graylog_opensearch_network_host }}
+http.port: 9200
+discovery.type: single-node
+
+action.auto_create_index: false
+
+# Graylog manages its own indices and authenticates directly, so the
+# OpenSearch security plugin is disabled for this single-node backend.
+plugins.security.disabled: true

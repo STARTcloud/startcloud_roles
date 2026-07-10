@@ -1,5 +1,5 @@
 ---
-- name: Replication configuration | 1st Pt.
+- name: "Configuring replication | 1st Pt."
   mongodb_replication:
     build_indexes: "{{ item.build_indexes|default(omit) }}"
     login_host: "{{ mongodb_login_host|default('localhost') }}"
@@ -19,10 +19,11 @@
   register: mongodb_replica_init
   ignore_errors: true
 
-- include: auth_initialization.yml
+- name: "Including auth initialization on replication failure"
+  ansible.builtin.include_tasks: auth_initialization.yml
   when: mongodb_replica_init is failed
 
-- name: Replication configuration | 2nd Pt
+- name: "Configuring replication | 2nd Pt"
   mongodb_replication:
     build_indexes: "{{ item.build_indexes|default(omit) }}"
     login_host: "{{ mongodb_login_host|default('localhost') }}"

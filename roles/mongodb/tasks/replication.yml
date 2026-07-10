@@ -1,6 +1,6 @@
 ---
 
-- name: Replication configuration
+- name: "Configuring replication"
   mongodb_replication:
     build_indexes: "{{ item.build_indexes|default(omit) }}"
     login_host: "{{ mongodb_login_host|default('localhost') }}"
@@ -19,7 +19,7 @@
   with_items:
     - "{{ mongodb_replication_params|default([]) }}"
 
-- name: Replication configuration without auth on master
+- name: "Configuring replication without auth on master"
   mongodb_replication:
     build_indexes: "{{ item.build_indexes|default(omit) }}"
     login_host: "{{ mongodb_login_host|default('localhost') }}"
@@ -37,7 +37,7 @@
   with_items:
     - "{{ mongodb_replication_params|default([]) }}"
 
-- name: Replication configuration without auth on replicas and arbiters
+- name: "Configuring replication without auth on replicas and arbiters"
   mongodb_replication:
     build_indexes: "{{ item.build_indexes|default(omit) }}"
     login_host: "{{ mongodb_login_host|default('localhost') }}"

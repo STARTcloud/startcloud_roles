@@ -25,7 +25,7 @@
     -
       name: "Backing Up old libnssckbi.so for Firefox to Trust Prominic.Global"
       ansible.builtin.copy:
-        remote_src: True
+        remote_src: true
         src: /usr/lib/firefox/libnssckbi.so
         dest: /usr/lib/firefox/libnssckbi.so.bak
     

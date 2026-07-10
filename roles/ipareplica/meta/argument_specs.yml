@@ -1,0 +1,117 @@
+---
+argument_specs:
+  main:
+    short_description: Configure a FreeIPA replica
+    description:
+      - Deploys and enrolls a FreeIPA server as a replica of an existing IPA master, optionally setting up CA, KRA, DNS and AD trust.
+      - Supports removal (state absent) of a replica from the domain.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      ipareplica_no_host_dns:
+        type: bool
+        default: false
+        description: Do not use DNS for hostname lookup during installation.
+      ipareplica_skip_conncheck:
+        type: bool
+        default: false
+        description: Skip the connection check to the remote master.
+      ipareplica_hidden_replica:
+        type: bool
+        default: false
+        description: Install a hidden replica.
+      ipareplica_mem_check:
+        type: bool
+        default: true
+        description: Check for the minimum required memory before deployment.
+      ipareplica_setup_adtrust:
+        type: bool
+        default: false
+        description: Configure AD trust capability on the replica.
+      ipareplica_setup_ca:
+        type: bool
+        default: false
+        description: Configure a Dogtag CA on the replica.
+      ipareplica_setup_kra:
+        type: bool
+        default: false
+        description: Configure a Dogtag KRA on the replica.
+      ipareplica_setup_dns:
+        type: bool
+        default: false
+        description: Configure integrated BIND DNS with the replica zone.
+      ipareplica_no_pkinit:
+        type: bool
+        default: false
+        description: Disable the PKINIT setup steps.
+      ipareplica_no_ui_redirect:
+        type: bool
+        default: false
+        description: Do not automatically redirect to the Web UI.
+      ipaclient_mkhomedir:
+        type: bool
+        default: false
+        description: Configure PAM to create a user home directory if it does not exist.
+      ipaclient_force_join:
+        type: bool
+        default: false
+        description: Force client enrollment even if the host is already enrolled.
+      ipaclient_no_ntp:
+        type: bool
+        default: false
+        description: Do not configure or enable NTP during client enrollment.
+      ipaclient_ssh_trust_dns:
+        type: bool
+        default: false
+        description: Configure the OpenSSH client to trust DNS SSHFP records.
+      ipareplica_skip_schema_check:
+        type: bool
+        default: false
+        description: Skip the check for updated CA DS schema on the remote master.
+      ipareplica_allow_zone_overlap:
+        type: bool
+        default: false
+        description: Allow creation of a (reverse) zone even if it is already resolvable.
+      ipareplica_no_reverse:
+        type: bool
+        default: false
+        description: Do not create a reverse DNS zone.
+      ipareplica_auto_reverse:
+        type: bool
+        default: false
+        description: Try to resolve reverse records and reverse zones for server IP addresses.
+      ipareplica_no_forwarders:
+        type: bool
+        default: false
+        description: Do not add any DNS forwarders; use root DNS servers instead.
+      ipareplica_auto_forwarders:
+        type: bool
+        default: false
+        description: Add DNS forwarders from /etc/resolv.conf to the IPA DNS forwarders.
+      ipareplica_no_dnssec_validation:
+        type: bool
+        default: false
+        description: Disable DNSSEC validation on this server.
+      ipareplica_enable_compat:
+        type: bool
+        default: false
+        description: Enable Schema Compatibility plugin support for trusted domain users on old clients.
+      ipareplica_ignore_topology_disconnect:
+        type: bool
+        default: false
+        description: On removal, enforce removal even if it results in a topology disconnect.
+      ipareplica_ignore_last_of_role:
+        type: bool
+        default: false
+        description: On removal, enforce removal even if the replica is the last holding a role.
+      ipareplica_install_packages:
+        type: bool
+        default: true
+        description: Install the packages required for the replica deployment on the node.
+      ipareplica_setup_firewalld:
+        type: bool
+        default: true
+        description: Automatically open the needed services in the firewalld firewall.

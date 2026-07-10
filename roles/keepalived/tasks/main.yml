@@ -1,3 +1,4 @@
+---
 -
   name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
@@ -7,7 +8,7 @@
       ansible.builtin.apt:
         pkg:
           - keepalived
-    
+
     -
       name: "Executing shell command to sort network interfaces"
       when: networks[0] is defined
@@ -16,17 +17,18 @@
       args:
         executable: /bin/bash
       register: sorted_interfaces_output
+
     -
       name: "Parsing output to get interface names"
       ansible.builtin.set_fact:
         interfaces: "{{ sorted_interfaces_output.stdout_lines }}"
-    
+
     -
       name: "Setting first and second adapters"
       ansible.builtin.set_fact:
         first_adapter: "{{ interfaces[0] }}"
         second_adapter: "{{ interfaces[1] }}"
-    
+
     -
       name: "Gathering details of the first adapter"
       changed_when: false
@@ -34,17 +36,17 @@
       args:
         executable: /bin/bash
       register: first_ip
-    
+
     -
       name: "Configuring keepalived"
       become: true
       ansible.builtin.template:
         src: "{{ item.src }}"
         dest: "{{ item.dest }}"
-        mode: "644"
+        mode: "0644"
       loop:
         - { src: 'keepalived.conf.j2', dest: '/etc/keepalived/keepalived.conf'}
-    
+
     -
       name: "Enabling and Starting service keepalived"
       ansible.builtin.service:

@@ -1,6 +1,6 @@
 ---
-- name: Use different mongod.conf for auth initialization
-  template:
+- name: "Using different mongod.conf for auth initialization"
+  ansible.builtin.template:
     src: mongod_init.conf.j2
     dest: /etc/mongod.conf
     owner: root
@@ -10,10 +10,10 @@
     - mongodb restart
     - wait when mongodb is started on localhost
 
-- name: Flush all handlers at this point
-  meta: flush_handlers
+- name: "Flushing all handlers at this point"
+  ansible.builtin.meta: flush_handlers
 
-- name: create administrative user "{{ mongodb_user_admin_name }}"
+- name: 'Creating administrative user "{{ mongodb_user_admin_name }}"'
   mongodb_user:
     database: admin
     name: "{{ item.name }}"
@@ -30,7 +30,7 @@
       }
   no_log: true
 
-- name: create administrative user "{{ mongodb_root_admin_name }}"
+- name: 'Creating administrative user "{{ mongodb_root_admin_name }}"'
   mongodb_user:
     database: admin
     name: "{{ item.name }}"
@@ -47,7 +47,7 @@
       }
   no_log: true
 
-- name: create backup user "{{ mongodb_root_backup_name }}"
+- name: 'Creating backup user "{{ mongodb_root_backup_name }}"'
   mongodb_user:
     database: admin
     name: "{{ item.name }}"
@@ -64,8 +64,8 @@
       }
   no_log: true
 
-- name: Move back mongod.conf
-  template:
+- name: "Moving back mongod.conf"
+  ansible.builtin.template:
     src: mongod.conf.j2
     dest: /etc/mongod.conf
     owner: root
@@ -75,5 +75,5 @@
     - mongodb restart
     - wait when mongodb is started
 
-- name: Flush all handlers at this point
-  meta: flush_handlers
+- name: "Flushing all handlers at this point"
+  ansible.builtin.meta: flush_handlers

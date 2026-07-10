@@ -1,5 +1,5 @@
 -
-  name: Enabling HAProxy Statitics Port
+  name: "Enabling HAProxy Statitics Port"
   firewalld:
     port: 444/tcp
     permanent: true

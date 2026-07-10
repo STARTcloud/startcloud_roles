@@ -4,7 +4,7 @@
   ansible.builtin.include_vars: "{{ ansible_os_family | lower }}.yml"
 
 -
-  name: "Create APT proxy configuration: 10proxy.conf"
+  name: "Creating APT proxy configuration: 10proxy.conf"
   ansible.builtin.template:
     src: 10proxy.conf.j2
     dest: /etc/apt/apt.conf.d/10proxy.conf

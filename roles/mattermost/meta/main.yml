@@ -1,18 +1,26 @@
 galaxy_info:
   role_name: mattermost
-  author: William Wu
-  description: Setup Mattermost platform
-  company: PyLabs
-  license: MIT
-  min_ansible_version: 2.11
+  author: Mark Gilbert
+  description: Installs a single-node Mattermost team server backed by MySQL, fronted by nginx, and managed as a systemd service on Debian-family systems.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
   platforms:
-  - name: Debian
-    versions:
-    - Buster
-    - 10
+    - name: Debian
+      versions: ['bookworm', 'trixie']
+    - name: Ubuntu
+      versions: ['jammy', 'noble']
+    - name: EL
+      versions: ['8', '9']
   galaxy_tags:
-    - debian
     - mattermost
+    - chat
+    - collaboration
+    - nginx
+    - mysql
 dependencies:
   - pylabs.percona # for ngram support
   - pylabs.letsencrypt_auth
+collections:
+  - startcloud.startcloud_roles

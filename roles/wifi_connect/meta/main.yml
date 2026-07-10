@@ -1,0 +1,22 @@
+---
+galaxy_info:
+  role_name: wifi_connect
+  author: Mark Gilbert
+  description: Installs balena wifi-connect on Debian-based ARM devices, deploys its systemd service and start script, and switches netplan to the NetworkManager renderer.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: Apache-2.0
+  min_ansible_version: '2.15'
+  platforms:
+    - name: Debian
+      versions: ['bookworm', 'trixie']
+    - name: Ubuntu
+      versions: ['jammy', 'noble']
+  galaxy_tags:
+    - networking
+    - wifi
+    - wireless
+    - networkmanager
+dependencies: []
+collections:
+  - startcloud.startcloud_roles

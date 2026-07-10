@@ -19,7 +19,8 @@
         state: directory
         mode: "0755"
 
-    - name: "Checking if we need to move files"
+    -
+      name: "Checking if we need to move files"
       ansible.builtin.command: "ls /etc/update-motd.d/ --ignore=99-footer --ignore=20-update --ignore=backups"
       register: move_output
       changed_when: false
@@ -33,7 +34,7 @@
       changed_when: 'move_output.stdout != ""'
 
 -
-  name: "Restore default motd configuration from backups folder"
+  name: "Restoring default motd configuration from backups folder"
   ansible.builtin.shell: "mv /etc/update-motd.d/backups/* /etc/update-motd.d/"
   when: "motd_restore_default_config and not motd_remove_default_config"
   changed_when: true
@@ -43,7 +44,7 @@
   ansible.builtin.copy:
     dest: /etc/update-motd.d/99-footer
     group: root
-    mode: 493
+    mode: "0755"
     owner: root
     src: 99-footer
   tags:
@@ -159,7 +160,8 @@
     - common
   when: "tail_supported.stat.exists | bool"
 
-- name: "Adding motd"
+-
+  name: "Adding motd"
   ansible.builtin.template:
     dest: /etc/motd
     src: etc/motd.j2

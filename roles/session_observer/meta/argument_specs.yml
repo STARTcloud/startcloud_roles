@@ -1,0 +1,16 @@
+---
+argument_specs:
+  main:
+    short_description: Base package preparation for a session observer
+    description:
+      - Updates apt and installs base utility and Python packages (psutil, pymongo, pymysql, pexpect) intended for a session/system-monitoring daemon. The observer daemon itself is not yet implemented.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      packages:
+        type: list
+        elements: str
+        description: List of apt packages installed on Debian hosts.

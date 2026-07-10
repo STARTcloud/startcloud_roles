@@ -1,0 +1,39 @@
+---
+argument_specs:
+  main:
+    short_description: Debian .deb package builder
+    description:
+      - Compiles a small binary and assembles it into a Debian .deb package (a demonstration/proof-of-concept packager).
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      package_arch:
+        type: list
+        elements: str
+        description: Architectures to build the package for.
+      package_name:
+        type: str
+        default: startcloud
+        description: Name of the package (and compiled binary).
+      package_version:
+        type: str
+        default: 0.0.1
+        description: Package version.
+      package_maintainer_email:
+        type: str
+        description: Maintainer email written to the DEBIAN/control file.
+      package_dependencies:
+        type: list
+        elements: str
+        description: Package dependencies written to the DEBIAN/control file.
+      package_maintainer_address:
+        type: str
+        default: "https://www.startcloud.com"
+        description: Homepage written to the DEBIAN/control file.
+      package_description:
+        type: str
+        default: "Package to Manage and Monitor STARTcloud instances"
+        description: Description written to the DEBIAN/control file.

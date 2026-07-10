@@ -1,0 +1,12 @@
+---
+argument_specs:
+  main:
+    short_description: ZFS boot-time pool unlock service
+    description:
+      - Installs a systemd oneshot service and helper script that import and unlock an encrypted ZFS user_data pool at boot, loading the encryption key from a key partition before zfs-mount.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.

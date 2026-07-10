@@ -1,0 +1,4 @@
+---
+# Strictest built-in ansible-lint profile — enforces fqcn, yaml formatting,
+# name casing, changed_when, risky-file-permissions, meta completeness, etc.
+profile: production

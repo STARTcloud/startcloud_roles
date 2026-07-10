@@ -1,20 +1,16 @@
 galaxy_info:
   role_name: virtio
-  author: MarkProminic
-  description: Install VirtIO paravirtualized drivers and the QEMU Guest Agent
-  company: STARTCloud
+  author: Mark Gilbert
+  description: Installs VirtIO paravirtualized drivers and the QEMU Guest Agent on Windows guests from the attached virtio-win media.
+  company: STARTcloud
   issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
-  license: license (Apache)
-  min_ansible_version: '2.9'
+  license: Apache-2.0
+  min_ansible_version: '2.15'
   platforms:
     - name: Windows
       versions:
-        - '10'
-        - '11'
         - '2019'
         - '2022'
-        - '2025'
-
   galaxy_tags:
     - windows
     - virtio
@@ -26,5 +22,3 @@ dependencies: []
 
 collections:
   - startcloud.startcloud_roles
-
-allow_duplicates: false

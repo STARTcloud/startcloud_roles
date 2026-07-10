@@ -12,7 +12,7 @@
 
     -
       name: "Writing vault password to file"
-      when: github_deploy_key is not defined or github_deploy_key!= ""
+      when: github_deploy_key is not defined or github_deploy_key != ""
       ansible.builtin.copy:
         content: "{{ git_vault_password }}"
         dest: "{{ git_dest }}/{{ github_repo }}-vault-password"
@@ -20,7 +20,7 @@
 
     -
       name: "Placing Vault File"
-      when: github_deploy_key is not defined or github_deploy_key!= ""
+      when: github_deploy_key is not defined or github_deploy_key != ""
       ansible.builtin.copy:
         mode: '0755'
         decrypt: false
@@ -30,7 +30,7 @@
 
     -
       name: "Decrypting github_token from variable"
-      when: github_deploy_key is not defined or github_deploy_key!= ""
+      when: github_deploy_key is not defined or github_deploy_key != ""
       ansible.builtin.command: "ansible-vault view --vault-password-file {{ git_dest }}/{{ github_repo }}-vault-password {{ git_dest }}/{{ github_token_file }}"
       register: decrypted_vault_output
       changed_when: false
@@ -38,7 +38,7 @@
 
     -
       name: "Cloning Git repository"
-      when: github_deploy_key is not defined or github_deploy_key!= ""
+      when: github_deploy_key is not defined or github_deploy_key != ""
       ansible.builtin.git:
         repo: "https://{{ decrypted_vault_output.stdout | regex_replace('^github_token:\\s*', '') }}@github.com/{{ github_org }}/{{ github_repo }}.git"
         dest: "{{ git_dest }}/{{ github_repo }}"
@@ -49,7 +49,7 @@
 
     -
       name: "Placing Deploy Key"
-      when: github_deploy_key is defined and github_deploy_key!= ""
+      when: github_deploy_key is defined and github_deploy_key != ""
       ansible.builtin.copy:
         mode: '0400'
         decrypt: false
@@ -59,7 +59,7 @@
 
     -
       name: "Cloning the Git Repository"
-      when: github_deploy_key is defined and github_deploy_key!= ""
+      when: github_deploy_key is defined and github_deploy_key != ""
       ansible.builtin.git:
         repo: "git@github.com:{{ github_org }}/{{ github_repo }}.git"
         dest: "{{ git_dest }}/{{ github_repo }}"
@@ -71,9 +71,9 @@
 
     -
       name: "Removing Deploy Key"
-      when: github_deploy_key is defined and github_deploy_key!= ""
+      when: github_deploy_key is defined and github_deploy_key != ""
       become: true
-      ansible.builtin.file: 
+      ansible.builtin.file:
         path: "{{ git_dest }}/../{{ github_deploy_key }}"
         state: absent
 
@@ -117,7 +117,7 @@
       when: roles_folder.matched > 0
       block:
         -
-          name: "Setting roles_to_run if not defined"
+          name: "Setting roles_to_run from found roles"
           ansible.builtin.set_fact:
             roles_to_run: "{{ found_roles.files | map(attribute='path') | map('basename') }}"
 

@@ -1,34 +1,26 @@
 ---
 galaxy_info:
   role_name: motd
-  author: MarkProminic
-  description: Packer/Ad-Hoc MOTD configurations
-  company: STARTCloud
+  author: Mark Gilbert
+  description: Renders a branded message-of-the-day, update-motd.d scripts and an on-demand sysinfo command for Linux and FreeBSD logins.
+  company: STARTcloud
   issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
-  license: license (Apache)
-  min_ansible_version: '2.9'
+  license: Apache-2.0
+  min_ansible_version: '2.15'
   platforms:
-    - name: Fedora
-      versions:
-        - all
     - name: Debian
-      versions:
-        - all
+      versions: ['bookworm', 'trixie']
     - name: Ubuntu
-      versions:
-        - all
+      versions: ['jammy', 'noble']
     - name: FreeBSD
-      versions:
-        - '14.0'
-
-  galaxy_tags: []
-
-# No meta-level dependency on serial — it was vestigial, and pulling it in
-# transitively is undesirable on OPNsense where the serial role should not run.
-# Debian playbooks already list serial explicitly in their roles: order.
+      versions: ['14.0']
+  galaxy_tags:
+    - motd
+    - banner
+    - ssh
+    - branding
+    - login
 dependencies: []
 
 collections:
   - startcloud.startcloud_roles
-
-allow_duplicates: false

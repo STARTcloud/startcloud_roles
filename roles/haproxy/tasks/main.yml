@@ -1,24 +1,5 @@
 ---
 -
-  name: "Managing progress for {{ ansible_role_name }} (Step 1 of 1)"
-  when: count_progress | default(false)
-  run_once: true
-  block:
-    -
-      name: "Incrementing global progress step counter for {{ ansible_role_name }} (Step 1)"
-      ansible.builtin.set_fact:
-        global_current_progress_step: "{{ global_current_progress_step | default(0) | int + 1 }}"
-
-    -
-      name: "Including progress reporting task for {{ ansible_role_name }} (Step 1)"
-      ansible.builtin.include_role:
-        name: startcloud.startcloud_roles.progress
-      vars:
-        _progress_role_is_setup_run: false
-        current_progress_step: "{{ global_current_progress_step | default(0) }}"
-        progress_description: "{{ progress_role_description | default('Processing ' + ansible_role_name + ' - Step 1') }}"
-
--
   name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
@@ -27,9 +8,9 @@
       ansible.builtin.apt:
         pkg:
           - haproxy
-    
+
     -
-      name: "Creating template and certifcate directories"
+      name: "Creating template and certificate directories"
       ansible.builtin.file:
         mode: '0755'
         path: "{{ item }}"
@@ -37,7 +18,7 @@
       with_items:
         - "/etc/haproxy/errors/tpl"
         - "/etc/haproxy/errors/html"
-    
+
     -
       name: "Configuring haproxy"
       become: true
@@ -65,8 +46,7 @@
         - { src: 'html/502.html.j2', dest: '/etc/haproxy/errors/html/502.html', owner: 'haproxy' }
         - { src: 'html/503.html.j2', dest: '/etc/haproxy/errors/html/503.html', owner: 'haproxy' }
         - { src: 'html/504.html.j2', dest: '/etc/haproxy/errors/html/504.html', owner: 'haproxy' }
-    
-    
+
     -
       name: "Copying haproxy supervisord configuration file"
       when: ansible_module_running_in_container
@@ -76,7 +56,7 @@
         owner: root
         group: root
         mode: '0644'
-    
+
     -
       name: "Copying System Information Dump On Start Script"
       when: ansible_module_running_in_container
@@ -86,7 +66,7 @@
         owner: root
         group: root
         mode: 'a+x'
-    
+
     -
       name: "Starting service haproxy"
       when: not ansible_module_running_in_container
@@ -95,7 +75,7 @@
         name: haproxy
         state: restarted
       tags: haproxy
-    
+
     #-
     #  name: "Restart supervisord to apply configuration"
     #  when: ansible_module_running_in_container

@@ -1,0 +1,59 @@
+---
+argument_specs:
+  main:
+    short_description: Install and configure Composer, the PHP dependency manager.
+    description:
+      - Downloads and installs Composer into a globally-accessible location.
+      - Optionally keeps it updated, installs global packages, adds vendor bin
+        directories to the system PATH, and configures a GitHub OAuth token.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      composer_path:
+        type: str
+        default: /usr/local/bin/composer
+        description: Filesystem path where the composer binary is installed.
+      composer_keep_updated:
+        type: bool
+        default: false
+        description: When true, run composer self-update to the latest release on every run.
+      composer_version:
+        type: str
+        default: ''
+        description: Pin Composer to a specific release; empty installs the latest for the branch.
+      composer_version_branch:
+        type: str
+        default: '--2'
+        description: Major branch flag passed to the installer and self-update (e.g. --2).
+      composer_home_path:
+        type: str
+        default: '~/.composer'
+        description: COMPOSER_HOME directory where global packages are installed.
+      composer_home_owner:
+        type: str
+        default: root
+        description: Owner of the composer home directory and generated files.
+      composer_home_group:
+        type: str
+        default: root
+        description: Group of the composer home directory and generated files.
+      composer_global_packages:
+        type: list
+        elements: dict
+        default: []
+        description: Packages to install globally, each a dict with name and optional release.
+      composer_add_to_path:
+        type: bool
+        default: true
+        description: When true, add the global vendor bin directory to the system PATH.
+      composer_add_project_to_path:
+        type: bool
+        default: false
+        description: When true, add a project vendor bin directory to the system PATH.
+      composer_github_oauth_token:
+        type: str
+        default: ''
+        description: GitHub OAuth token written to auth.json to avoid API rate limits.

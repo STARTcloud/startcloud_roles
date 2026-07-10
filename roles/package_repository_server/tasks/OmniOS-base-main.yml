@@ -71,7 +71,7 @@
   ansible.builtin.command: "pfexec svccfg -s pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive | replace('.','') }} setprop pkg/port = {{ pkg_server.port }}"
 
 -
-  name: "Enabling and start pkg server"
+  name: "Enabling and starting pkg server"
   become: true
   ansible.builtin.service: 
     name: "pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive | replace('.','') }}"

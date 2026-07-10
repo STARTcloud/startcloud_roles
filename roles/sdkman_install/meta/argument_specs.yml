@@ -1,0 +1,93 @@
+---
+argument_specs:
+  main:
+    short_description: SDKMAN installation and configuration
+    description:
+      - Installs SDKMAN for the service user, writes its config, self-updates it, and installs/uninstalls the requested SDK candidates across Linux and Windows.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      sdkman_tmp_dir:
+        type: str
+        default: /tmp
+        description: Directory to download the SDKMAN initialization script into.
+      sdkman_validate_ssl:
+        type: bool
+        default: true
+        description: Validate SSL certificates when downloading the init script.
+      sdkman_update:
+        type: bool
+        default: true
+        description: Run `sdk selfupdate` after installation.
+      sdkman_auto_answer:
+        type: bool
+        default: true
+        description: Make SDKMAN non-interactive (auto-answer prompts).
+      sdkman_selfupdate_enable:
+        type: bool
+        default: true
+        description: Enable SDKMAN automatic self-updates.
+      sdkman_insecure_ssl:
+        type: bool
+        default: false
+        description: Allow insecure SSL within SDKMAN operations.
+      sdkman_disable_gvm_alias:
+        type: bool
+        default: false
+        description: Disable legacy GVM alias generation.
+      sdkman_curl_connect_timeout:
+        type: int
+        default: 7
+        description: curl connect timeout (seconds) used by SDKMAN.
+      sdkman_curl_max_time:
+        type: int
+        default: 10
+        description: curl maximum time (seconds) used by SDKMAN.
+      sdkman_beta_channel:
+        type: bool
+        default: false
+        description: Subscribe SDKMAN to the beta channel.
+      sdkman_debug_mode:
+        type: bool
+        default: false
+        description: Enable verbose SDKMAN debugging.
+      sdkman_colour_enable:
+        type: bool
+        default: true
+        description: Enable coloured SDKMAN output.
+      sdkman_install_packages:
+        type: list
+        elements: dict
+        default: []
+        description: SDK candidates to install (candidate, optional version, optional localpath).
+      sdkman_uninstall_packages:
+        type: list
+        elements: dict
+        default: []
+        description: SDK candidates to uninstall (candidate, version).
+      sdkman_defaults:
+        type: dict
+        default: {}
+        description: Default candidate versions to select.
+      sdkman_flush_caches_before:
+        type: list
+        elements: str
+        default: []
+        description: SDKMAN caches to flush before installing packages.
+      sdkman_flush_caches_after:
+        type: list
+        elements: str
+        default: []
+        description: SDKMAN caches to flush after installing packages.
+      sdkman_offline_mode:
+        type: bool
+        default: false
+        description: Put SDKMAN into offline mode.
+      sdkman_update_alternatives:
+        type: list
+        elements: dict
+        default: []
+        description: update-alternatives entries linking SDKMAN binaries system-wide on Linux.

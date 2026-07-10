@@ -1,0 +1,41 @@
+---
+argument_specs:
+  main:
+    short_description: Post-boot network configuration
+    description:
+      - Orders network interfaces, writes adapter artifacts, configures DNS entries and NAT-to-static conversion across providers (bhyve, docker, utm, virtualbox) and OS families.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      show_help:
+        type: bool
+        default: true
+        description: Whether to display help/debug output during the run.
+      use_proxy:
+        type: bool
+        default: false
+        description: Whether to route package/network operations through an HTTP proxy.
+      proxy_port:
+        type: int
+        default: 3128
+        description: Port of the HTTP proxy when use_proxy is true.
+      proxy_server:
+        type: str
+        default: squid.mydomain.com
+        description: Hostname of the HTTP proxy when use_proxy is true.
+      convert_nat_dhcp_to_static:
+        type: bool
+        default: true
+        description: Convert the NAT DHCP-assigned address into a static configuration.
+      etc_hosts_entries:
+        type: list
+        elements: raw
+        default: []
+        description: Additional entries to append to /etc/hosts.
+      dns_entries_list:
+        type: list
+        elements: str
+        description: Service subdomain labels to register as DNS entries.

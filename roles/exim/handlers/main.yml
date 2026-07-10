@@ -1,6 +1,6 @@
 ---
 -
-  name: Restart exim
+  name: "Restarting exim"
   ansible.builtin.service:
     name: "{{ exim_daemon }}"
     state: "restarted"

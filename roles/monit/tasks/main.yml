@@ -1,3 +1,4 @@
+---
 -
   name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
@@ -11,39 +12,39 @@
           ansible.builtin.command: dpkg --print-architecture
           register: deb_architecture
           changed_when: false
-    
+
         -
           name: "Printing DEB architecture"
           ansible.builtin.debug:
             msg: "deb_architecture.stdout: {{ deb_architecture.stdout }}"
-    
+
         -
           name: "Ensuring apt cache is updated"
           ansible.builtin.apt:
             cache_valid_time: 3600
             update_cache: true
-    
+
         -
           name: "Upgrading all apt packages"
           ansible.builtin.apt:
             upgrade: dist
             update_cache: true
-    
+
         -
           name: "Adding Additional Dependencies {{ packages }}"
           ansible.builtin.apt:
             name: "{{ packages }}"
             state: present
-    
+
     -
       name: "Starting monit service"
-      systemd:
+      ansible.builtin.systemd:
         name: monit.service
         state: started
-    
+
     -
       name: "Adding nginx monitoring"
-      blockinfile:
+      ansible.builtin.blockinfile:
         path: /etc/monit/monitrc
         marker_begin: "nginx BEGIN"
         marker_end: "nginx END"
@@ -62,25 +63,25 @@
           check file nginx_rc with path /etc/init.d/nginx
             group nginx
             include /etc/monit/templates/rootbin
-    
+
     -
       name: "Configuring Monit web interface"
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: /etc/monit/monitrc
         regexp: '^# set httpd port 2812'
         line: 'set httpd port 2812 and'
         state: present
-    
+
     -
       name: "Allowing admin access to Monit web interface"
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: /etc/monit/monitrc
         regexp: '^# allow admin:monit'
         line: 'allow admin:monit'
         state: present
-    
+
     -
       name: "Restarting monit service"
-      systemd:
+      ansible.builtin.systemd:
         name: monit.service
         state: restarted

@@ -1,0 +1,43 @@
+---
+argument_specs:
+  main:
+    short_description: Installs and configures the openfortivpn client.
+    description:
+      - Installs the openfortivpn package and renders a Fortinet SSL VPN client configuration.
+      - Optionally deploys, enables and starts a systemd service that maintains the VPN connection.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      openfortivpn_packages:
+        type: list
+        elements: str
+        default:
+          - openfortivpn
+        description: Packages installed to provide the openfortivpn client.
+      openfortivpn_enable_service:
+        type: bool
+        default: false
+        description: When true, deploys, enables and starts a systemd service that runs openfortivpn against the rendered configuration.
+      openfortivpn_host:
+        type: str
+        default: ""
+        description: Hostname or address of the Fortinet SSL VPN gateway.
+      openfortivpn_port:
+        type: int
+        default: 443
+        description: TCP port of the Fortinet SSL VPN gateway.
+      openfortivpn_user:
+        type: str
+        default: ""
+        description: Username used to authenticate to the VPN gateway.
+      openfortivpn_password:
+        type: str
+        default: ""
+        description: Password used to authenticate to the VPN gateway.
+      openfortivpn_trusted_cert:
+        type: str
+        default: ""
+        description: SHA256 digest of the gateway certificate that openfortivpn should trust.

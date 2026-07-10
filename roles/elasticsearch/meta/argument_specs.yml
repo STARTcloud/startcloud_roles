@@ -1,0 +1,53 @@
+---
+argument_specs:
+  main:
+    short_description: Install and configure Elasticsearch
+    description:
+      - Installs Elasticsearch from the official Elastic repositories on Debian and RHEL based systems.
+      - Renders the node configuration and JVM heap options, then starts and waits for the service.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      elasticsearch_version:
+        type: str
+        default: '7.x'
+        description: Major version branch of Elasticsearch to install and repository to enable.
+      elasticsearch_package:
+        type: str
+        default: elasticsearch
+        description: Name of the Elasticsearch package to install.
+      elasticsearch_package_state:
+        type: str
+        default: present
+        description: Desired package state; set to latest to upgrade or change versions.
+      elasticsearch_service_state:
+        type: str
+        default: started
+        description: Desired state of the elasticsearch service.
+      elasticsearch_service_enabled:
+        type: bool
+        default: true
+        description: Whether the elasticsearch service is enabled at boot.
+      elasticsearch_network_host:
+        type: str
+        default: localhost
+        description: Network host the node binds to for incoming connections.
+      elasticsearch_http_port:
+        type: int
+        default: 9200
+        description: Port Elasticsearch listens on for HTTP connections.
+      elasticsearch_heap_size_min:
+        type: str
+        default: 1g
+        description: Minimum JVM heap size (-Xms).
+      elasticsearch_heap_size_max:
+        type: str
+        default: 2g
+        description: Maximum JVM heap size (-Xmx).
+      elasticsearch_extra_options:
+        type: str
+        default: ''
+        description: Arbitrary extra configuration appended verbatim to elasticsearch.yml.

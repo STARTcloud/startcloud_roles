@@ -1,26 +1,30 @@
 ---
 # Publish tasks
-
-- name: Set provider list
-  set_fact:
+-
+  name: "Setting provider list"
+  ansible.builtin.set_fact:
     providers_to_process: "{{ template_providers }}"
 
-- name: Report publishing status
-  debug:
+-
+  name: "Reporting publishing status"
+  ansible.builtin.debug:
     msg: "Publishing {{ template_def.name }} for providers: {{ providers_to_process | join(', ') }}"
 
-- name: Publish for each provider
+-
+  name: "Publishing for each provider"
   block:
-    - name: Check if provider publish.json exists
-      stat:
+    -
+      name: "Checking if provider publish.json exists"
+      ansible.builtin.stat:
         path: "providers/{{ item }}/publish.json"
       register: publish_file_stat
       loop: "{{ providers_to_process }}"
       loop_control:
         label: "{{ item }}"
 
-    - name: Publish for provider
-      command: >
+    -
+      name: "Publishing for provider"
+      ansible.builtin.command: >
         packer build
         {% for var_file in default_var_files %}
         -var-file='{{ var_file }}'
@@ -35,8 +39,9 @@
         label: "{{ item.item }}"
       when: item.stat.exists
 
-    - name: Report missing publish.json
-      debug:
+    -
+      name: "Reporting missing publish.json"
+      ansible.builtin.debug:
         msg: "Publish configuration not found for provider: {{ item.item }}"
       loop: "{{ publish_file_stat.results }}"
       loop_control:
@@ -44,6 +49,7 @@
       when: not item.stat.exists
 
   rescue:
-    - name: Report publishing error
-      debug:
+    -
+      name: "Reporting publishing error"
+      ansible.builtin.debug:
         msg: "Error publishing {{ template_def.name }}. Check output for details."

@@ -1,0 +1,16 @@
+divert(-1)dnl
+include(`/usr/share/sendmail/cf/m4/cf.m4')dnl
+VERSIONID(`STARTcloud sendmail configuration')dnl
+OSTYPE(`debian')dnl
+DOMAIN(`debian-mta')dnl
+{% if sendmail_smart_host %}
+define(`SMART_HOST', `{{ sendmail_smart_host }}')dnl
+{% endif %}
+{% if sendmail_listen_localhost_only %}
+DAEMON_OPTIONS(`Family=inet, Name=MTA-v4, Port=smtp, Addr=127.0.0.1')dnl
+{% else %}
+DAEMON_OPTIONS(`Family=inet, Name=MTA-v4, Port=smtp')dnl
+{% endif %}
+FEATURE(`no_default_msa')dnl
+MAILER(`local')dnl
+MAILER(`smtp')dnl

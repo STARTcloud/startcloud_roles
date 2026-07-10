@@ -1,0 +1,31 @@
+---
+argument_specs:
+  main:
+    short_description: Install VirtIO drivers and the QEMU Guest Agent on Windows.
+    description:
+      - Installs the VirtIO paravirtualized drivers and the QEMU Guest Agent on a
+        Windows guest, reading the MSIs from the attached virtio-win CD-ROM and
+        falling back to downloading and mounting the virtio-win ISO when no media
+        is present.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      virtio_gt_msi:
+        type: str
+        default: "virtio-win-gt-x64.msi"
+        description: Filename of the VirtIO guest-tools MSI on the virtio-win media.
+      qemu_ga_msi:
+        type: str
+        default: "guest-agent\\qemu-ga-x86_64.msi"
+        description: Path to the QEMU Guest Agent MSI on the virtio-win media.
+      qemu_ga_service_name:
+        type: str
+        default: "QEMU-GA"
+        description: Windows service name registered by the QEMU Guest Agent MSI.
+      virtio_iso_url:
+        type: str
+        default: "https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.271-1/virtio-win-0.1.271.iso"
+        description: Fallback URL to download and mount the virtio-win ISO when no CD-ROM media is found.

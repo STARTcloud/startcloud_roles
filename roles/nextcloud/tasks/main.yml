@@ -1,3 +1,4 @@
+---
 -
   name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
@@ -7,30 +8,106 @@
       when: "ansible_os_family == 'Debian'"
       block:
         -
-          name: "Gathering DEB architecture"
-          ansible.builtin.command: dpkg --print-architecture
-          register: deb_architecture
-          changed_when: false
-    
-        -
-          name: "Printing DEB architecture"
-          ansible.builtin.debug:
-            msg: "deb_architecture.stdout: {{ deb_architecture.stdout }}"
-    
-        -
           name: "Ensuring apt cache is updated"
           ansible.builtin.apt:
             cache_valid_time: 3600
             update_cache: true
-    
+
         -
-          name: "Upgrading all apt packages"
+          name: "Installing Nextcloud System Packages"
           ansible.builtin.apt:
-            upgrade: dist
-            update_cache: true
-    
-        -
-          name: "Adding Additional Dependencies {{ packages }}"
-          ansible.builtin.apt:
-            name: "{{ packages }}"
+            name: "{{ nextcloud_packages }}"
             state: present
+
+        -
+          name: "Creating Nextcloud Webroot Directory"
+          ansible.builtin.file:
+            path: "{{ nextcloud_webroot }}"
+            state: directory
+            owner: "{{ nextcloud_web_user }}"
+            group: "{{ nextcloud_web_group }}"
+            mode: "0755"
+
+        -
+          name: "Downloading and Extracting Nextcloud Release"
+          ansible.builtin.unarchive:
+            src: "{{ nextcloud_download_url }}"
+            dest: "/var/www"
+            remote_src: true
+            owner: "{{ nextcloud_web_user }}"
+            group: "{{ nextcloud_web_group }}"
+            creates: "{{ nextcloud_webroot }}/occ"
+
+        -
+          name: "Creating Nextcloud Data Directory"
+          ansible.builtin.file:
+            path: "{{ nextcloud_data_dir }}"
+            state: directory
+            owner: "{{ nextcloud_web_user }}"
+            group: "{{ nextcloud_web_group }}"
+            mode: "0750"
+
+        -
+          name: "Creating Nextcloud Database"
+          ansible.builtin.command: >
+            mysql -uroot -e
+            "CREATE DATABASE IF NOT EXISTS {{ nextcloud_db_name }}
+            CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci"
+          register: nextcloud_db_created
+          changed_when: "'Query OK' in nextcloud_db_created.stderr or nextcloud_db_created.rc == 0"
+
+        -
+          name: "Creating Nextcloud Database User and Grants"
+          ansible.builtin.command: 'mysql -uroot -e "{{ item }}"'
+          loop:
+            - "CREATE USER IF NOT EXISTS '{{ nextcloud_db_user }}'@'{{ nextcloud_db_host }}' IDENTIFIED BY '{{ nextcloud_db_password }}'"
+            - "GRANT ALL PRIVILEGES ON {{ nextcloud_db_name }}.* TO '{{ nextcloud_db_user }}'@'{{ nextcloud_db_host }}'"
+            - "FLUSH PRIVILEGES"
+          changed_when: true
+
+        -
+          name: "Running Nextcloud occ maintenance:install"
+          become: true
+          become_user: "{{ nextcloud_web_user }}"
+          ansible.builtin.command: >
+            php occ maintenance:install
+            --database "{{ nextcloud_db_type }}"
+            --database-host "{{ nextcloud_db_host }}"
+            --database-name "{{ nextcloud_db_name }}"
+            --database-user "{{ nextcloud_db_user }}"
+            --database-pass "{{ nextcloud_db_password }}"
+            --admin-user "{{ nextcloud_admin_user }}"
+            --admin-pass "{{ nextcloud_admin_password }}"
+            --data-dir "{{ nextcloud_data_dir }}"
+          args:
+            chdir: "{{ nextcloud_webroot }}"
+            creates: "{{ nextcloud_webroot }}/config/config.php"
+
+        -
+          name: "Configuring Nextcloud Trusted Domain"
+          become: true
+          become_user: "{{ nextcloud_web_user }}"
+          ansible.builtin.command: >
+            php occ config:system:set trusted_domains 1
+            --value="{{ nextcloud_server_name }}"
+          args:
+            chdir: "{{ nextcloud_webroot }}"
+          changed_when: true
+
+        -
+          name: "Installing Nextcloud nginx Virtual Host"
+          notify: "Restarting nginx"
+          ansible.builtin.template:
+            src: "nginx.conf.j2"
+            dest: "/etc/nginx/sites-available/nextcloud.conf"
+            owner: root
+            group: root
+            mode: "0644"
+
+        -
+          name: "Enabling Nextcloud nginx Virtual Host"
+          notify: "Restarting nginx"
+          ansible.builtin.file:
+            src: "/etc/nginx/sites-available/nextcloud.conf"
+            dest: "/etc/nginx/sites-enabled/nextcloud.conf"
+            state: link
