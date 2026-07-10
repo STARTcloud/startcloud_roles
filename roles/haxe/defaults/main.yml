@@ -31,11 +31,11 @@ additional_haxe_libraries:
 
 # Example usage:
 additional_haxe_libraries_dev:
-  - library: 'mxhx-feathersui'
-    repo: 'https://github.com/mxhx-dev/mxhx-feathersui.git'
+  - library: "mxhx-feathersui"
+    repo: "https://github.com/mxhx-dev/mxhx-feathersui.git"
     branch: ""
-  - library: 'mxhx-component'
-    repo: 'https://github.com/mxhx-dev/mxhx-component.git'
+  - library: "mxhx-component"
+    repo: "https://github.com/mxhx-dev/mxhx-component.git"
     branch: ""
 #  - library: 'mxhx-runtime-component'
 #    repo: 'https://github.com/mxhx-dev/mxhx-runtime-component.git'

@@ -5,7 +5,7 @@
     dest: /etc/mongod.conf
     owner: root
     group: root
-    mode: 0644
+    mode: "0644"
   notify:
     - mongodb restart
     - wait when mongodb is started on localhost
@@ -14,54 +14,42 @@
   ansible.builtin.meta: flush_handlers
 
 - name: 'Creating administrative user "{{ mongodb_user_admin_name }}"'
-  mongodb_user:
+  community.mongodb.mongodb_user:
     database: admin
     name: "{{ item.name }}"
     password: "{{ item.password }}"
     update_password: "{{ mongodb_user_update_password }}"
     roles: "{{ item.roles }}"
-    login_host: "{{ mongodb_net_bindip.split(',') | map('replace', '0.0.0.0', '127.0.0.1') | list  | first }}"
+    login_host: "{{ mongodb_net_bindip.split(',') | map('replace', '0.0.0.0', '127.0.0.1') | list | first }}"
     login_port: "{{ mongodb_net_port | int }}"
   with_items:
-    - {
-      name: "{{ mongodb_user_admin_name }}",
-      password: "{{ mongodb_user_admin_password }}",
-      roles: "userAdminAnyDatabase"
-      }
+    - { name: "{{ mongodb_user_admin_name }}", password: "{{ mongodb_user_admin_password }}", roles: "userAdminAnyDatabase" }
   no_log: true
 
 - name: 'Creating administrative user "{{ mongodb_root_admin_name }}"'
-  mongodb_user:
+  community.mongodb.mongodb_user:
     database: admin
     name: "{{ item.name }}"
     password: "{{ item.password }}"
     update_password: "{{ mongodb_user_update_password }}"
     roles: "{{ item.roles }}"
-    login_host: "{{ mongodb_net_bindip.split(',') | map('replace', '0.0.0.0', '127.0.0.1') | list  | first }}"
+    login_host: "{{ mongodb_net_bindip.split(',') | map('replace', '0.0.0.0', '127.0.0.1') | list | first }}"
     login_port: "{{ mongodb_net_port | int }}"
   with_items:
-    - {
-      name: "{{ mongodb_root_admin_name }}",
-      password: "{{ mongodb_root_admin_password }}",
-      roles: "root"
-      }
+    - { name: "{{ mongodb_root_admin_name }}", password: "{{ mongodb_root_admin_password }}", roles: "root" }
   no_log: true
 
 - name: 'Creating backup user "{{ mongodb_root_backup_name }}"'
-  mongodb_user:
+  community.mongodb.mongodb_user:
     database: admin
     name: "{{ item.name }}"
     password: "{{ item.password }}"
     update_password: "{{ mongodb_user_update_password }}"
     roles: "{{ item.roles }}"
-    login_host: "{{ mongodb_net_bindip.split(',') | map('replace', '0.0.0.0', '127.0.0.1') | list  | first }}"
+    login_host: "{{ mongodb_net_bindip.split(',') | map('replace', '0.0.0.0', '127.0.0.1') | list | first }}"
     login_port: "{{ mongodb_net_port | int }}"
   with_items:
-    - {
-      name: "{{ mongodb_root_backup_name }}",
-      password: "{{ mongodb_root_backup_password }}",
-      roles: "backup,clusterMonitor"
-      }
+    - { name: "{{ mongodb_root_backup_name }}", password: "{{ mongodb_root_backup_password }}", roles: "backup,clusterMonitor" }
   no_log: true
 
 - name: "Moving back mongod.conf"
@@ -70,7 +58,7 @@
     dest: /etc/mongod.conf
     owner: root
     group: root
-    mode: 0644
+    mode: "0644"
   notify:
     - mongodb restart
     - wait when mongodb is started

@@ -16,11 +16,11 @@ argument_specs:
         description: Filesystem path of the swap file to create and manage.
       swap_file_size_mb:
         type: str
-        default: '512'
+        default: "512"
         description: Size of the swap file in mebibytes.
       swap_swappiness:
         type: str
-        default: '60'
+        default: "60"
         description: Value written to the vm.swappiness kernel parameter.
       swap_file_state:
         type: str

@@ -1,6 +1,5 @@
 ---
--
-  name: "Installing NFS utilities"
+- name: "Installing NFS utilities"
   ansible.builtin.apt:
     name:
       - nfs-common

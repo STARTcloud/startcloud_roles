@@ -13,7 +13,7 @@ argument_specs:
         description: Master gate — when false the role loads its vars but runs no tasks.
       elasticsearch_version:
         type: str
-        default: '7.x'
+        default: "7.x"
         description: Major version branch of Elasticsearch to install and repository to enable.
       elasticsearch_package:
         type: str
@@ -49,5 +49,5 @@ argument_specs:
         description: Maximum JVM heap size (-Xmx).
       elasticsearch_extra_options:
         type: str
-        default: ''
+        default: ""
         description: Arbitrary extra configuration appended verbatim to elasticsearch.yml.

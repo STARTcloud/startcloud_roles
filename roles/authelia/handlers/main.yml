@@ -1,6 +1,5 @@
 ---
--
-  name: "Restarting Authelia"
+- name: "Restarting Authelia"
   ansible.builtin.systemd:
     name: "authelia"
     state: "restarted"

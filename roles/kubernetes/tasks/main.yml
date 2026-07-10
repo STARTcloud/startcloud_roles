@@ -1,74 +1,61 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Including OS-specific variables"
+    - name: "Including OS-specific variables"
       ansible.builtin.include_vars: "{{ ansible_os_family }}.yml"
 
-    -
-      name: "Including RedHat setup tasks"
+    - name: "Including RedHat setup tasks"
       ansible.builtin.include_tasks: setup-RedHat.yml
       when: ansible_os_family == 'RedHat'
 
-    -
-      name: "Including Debian setup tasks"
+    - name: "Including Debian setup tasks"
       ansible.builtin.include_tasks: setup-Debian.yml
       when: ansible_os_family == 'Debian'
 
-    -
-      name: "Ensuring dependencies are installed"
+    - name: "Ensuring dependencies are installed"
       ansible.builtin.package:
         name: curl
         state: present
 
-    -
-      name: "Installing Kubernetes packages"
+    - name: "Installing Kubernetes packages"
       ansible.builtin.package:
         name: "{{ item.name | default(item) }}"
         state: "{{ item.state | default('present') }}"
       notify: Restarting kubelet
       with_items: "{{ kubernetes_packages }}"
 
-    -
-      name: "Including sysctl setup tasks"
+    - name: "Including sysctl setup tasks"
       ansible.builtin.include_tasks: sysctl-setup.yml
 
-    -
-      name: "Including deprecated kubelet setup tasks"
-      ansible.builtin.include_tasks: kubelet-setup.yml  # deprecated
+    - name: "Including deprecated kubelet setup tasks"
+      ansible.builtin.include_tasks: kubelet-setup.yml # deprecated
       when: kubernetes_kubelet_extra_args | length > 0
 
-    -
-      name: "Ensuring kubelet is started and enabled at boot"
+    - name: "Ensuring kubelet is started and enabled at boot"
       ansible.builtin.service:
         name: kubelet
         state: started
         enabled: true
 
-    -
-      name: "Checking if Kubernetes has already been initialized"
+    - name: "Checking if Kubernetes has already been initialized"
       ansible.builtin.stat:
         path: /etc/kubernetes/admin.conf
       register: kubernetes_init_stat
 
     # Set up control plane.
-    -
-      name: "Including control plane setup tasks"
+    - name: "Including control plane setup tasks"
       ansible.builtin.include_tasks: control-plane-setup.yml
       when: kubernetes_role == 'control_plane'
 
     # Set up nodes.
-    -
-      name: "Getting the kubeadm join command from the Kubernetes control plane"
+    - name: "Getting the kubeadm join command from the Kubernetes control plane"
       ansible.builtin.command: kubeadm token create --print-join-command
       changed_when: false
       when: kubernetes_role == 'control_plane'
       register: kubernetes_join_command_result
 
-    -
-      name: "Setting the kubeadm join command globally"
+    - name: "Setting the kubeadm join command globally"
       ansible.builtin.set_fact:
         kubernetes_join_command: >
           {{ kubernetes_join_command_result.stdout }}
@@ -78,7 +65,6 @@
       delegate_facts: true
       with_items: "{{ groups['all'] }}"
 
-    -
-      name: "Including node setup tasks"
+    - name: "Including node setup tasks"
       ansible.builtin.include_tasks: node-setup.yml
       when: kubernetes_role == 'node'

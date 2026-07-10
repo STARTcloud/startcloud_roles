@@ -1,13 +1,11 @@
---- 
--
-  name: "Stopping pkg server"
+---
+- name: "Stopping pkg server"
   become: true
   ansible.builtin.service:
     name: "pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive }}"
     state: started
 
--
-  name: "Installing Development Tools"
+- name: "Installing Development Tools"
   become: true
   community.general.pkg5:
     name:
@@ -25,49 +23,41 @@
       - SUNWcs
       - ooce/runtime/expect
 
--
-  name: "Creating Public Repo Build directories"
+- name: "Creating Public Repo Build directories"
   become: true
   ansible.builtin.file:
-    mode: '0755'
+    mode: "0755"
     path: "{{ item }}"
     state: directory
     owner: "{{ ansible_user_id }}"
   with_items:
     - "/{{ storage_disk.path }}/src"
 
-- 
-  name: "Installing pip pexpect"
+- name: "Installing pip pexpect"
   ansible.builtin.pip:
     name: pexpect
 
--
-  name: "Setting package service to read only, preventing package updates over the web"
+- name: "Setting package service to read only, preventing package updates over the web"
   become: true
   ansible.builtin.command: "pfexec svccfg -s pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive }} setprop pkg/readonly = false"
 
--
-  name: "Setting Package Service port {{ pkg_server.port }}"
+- name: "Setting Package Service port {{ pkg_server.port }}"
   become: true
   ansible.builtin.command: "pfexec svccfg -s pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive }} setprop pkg/address = 127.0.0.1"
 
--
-  name: "Setting Package Service as Supplemental"
+- name: "Setting Package Service as Supplemental"
   become: true
   ansible.builtin.command: "pkgrepo set -s /{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg -p {{ pkg_server.archive }}  repository/collection_type=supplemental"
 
--
-  name: "Setting Package Description"
+- name: "Setting Package Description"
   become: true
   ansible.builtin.command: "pkgrepo set -s /{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg -p {{ pkg_server.archive }}  repository/description='{{ pkg_server.description }}'"
 
--
-  name: "Setting Package Service Repo Name"
+- name: "Setting Package Service Repo Name"
   become: true
   ansible.builtin.command: "pkgrepo set -s /{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg -p {{ pkg_server.archive }}  repository/name='{{ pkg_server.name }}'"
 
-- 
-  name: "Downloading packages from source"
+- name: "Downloading packages from source"
   ansible.builtin.git:
     repo: "{{ pkg_server.repo_url }}"
     dest: "/{{ storage_disk.path }}/src"
@@ -75,19 +65,17 @@
     update: true
     force: true
 
--
-  name: "Setting Scripts to be executable"
+- name: "Setting Scripts to be executable"
   become: true
   ansible.builtin.file:
-    mode: '+x'
+    mode: "+x"
     path: "{{ item }}"
     owner: "{{ ansible_user_id }}"
   with_items:
     - "/{{ storage_disk.path }}/src/build/buildctl"
     - "/{{ storage_disk.path }}/src/lib/build.sh"
 
--
-  name: "Setting pkg5srv as user and group for pkg service"
+- name: "Setting pkg5srv as user and group for pkg service"
   become: true
   ansible.builtin.file:
     state: directory
@@ -96,42 +84,37 @@
     group: "pkg5srv"
     recurse: true
 
--
-  name: "Stopping pkg server"
+- name: "Stopping pkg server"
   become: true
-  ansible.builtin.service: 
+  ansible.builtin.service:
     name: "pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive }}"
     state: stopped
     enabled: false
 
--
-  name: "Starting pkg server"
+- name: "Starting pkg server"
   become: true
-  ansible.builtin.service: 
+  ansible.builtin.service:
     name: "pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive }}"
     state: started
     enabled: true
 
--
-  name: "Configuring PGKSRVR Variable"
+- name: "Configuring PGKSRVR Variable"
   become: true
   ansible.builtin.lineinfile:
     path: "/{{ storage_disk.path }}/src/lib/site.sh"
-    regexp: '^(.*)PKGSRVR=(.*)$' 
-    line: 'PKGSRVR=http://localhost:{{ pkg_server.port }}/'
+    regexp: "^(.*)PKGSRVR=(.*)$"
+    line: "PKGSRVR=http://localhost:{{ pkg_server.port }}/"
     backrefs: true
 
--
-  name: "Configuring IPS_REPO Variable"
+- name: "Configuring IPS_REPO Variable"
   become: true
   ansible.builtin.lineinfile:
     path: "/{{ storage_disk.path }}/src/lib/site.sh"
-    regexp: '^(.*)IPS_REPO=(.*)$' 
-    line: 'IPS_REPO=http://localhost:{{ pkg_server.port }}/'
+    regexp: "^(.*)IPS_REPO=(.*)$"
+    line: "IPS_REPO=http://localhost:{{ pkg_server.port }}/"
     backrefs: true
 
--
-  name: "Checking if the Public Repo has been built"
+- name: "Checking if the Public Repo has been built"
   register: repo_built
   ansible.builtin.stat:
     path: "/{{ storage_disk.path }}/src/completed"
@@ -144,30 +127,26 @@
 #  args:
 #    chdir: "/{{ storage_disk.path }}/src/build"
 
-- 
-  name: "Expecting input for rebuild"
-#  when: repo_built.stat.exists
+- name: "Expecting input for rebuild"
+  #  when: repo_built.stat.exists
   ansible.builtin.expect:
     command: "./buildctl build all"
     chdir: "/{{ storage_disk.path }}/src/build"
     echo: true
-    timeout: null
+    timeout:
     responses:
-      'Built package cache will be cleared, continue\?': 'y'
+      "Built package cache will be cleared, continue\\?": "y"
 
--
-  name: "Setting package service to read only, preventing package updates over the web"
+- name: "Setting package service to read only, preventing package updates over the web"
   become: true
   ansible.builtin.command: "pfexec svccfg -s pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive }} setprop pkg/readonly = true"
 
--
-  name: "Setting Package Service port {{ pkg_server.port }}"
+- name: "Setting Package Service port {{ pkg_server.port }}"
   become: true
   ansible.builtin.command: "pfexec svccfg -s pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive }} delprop pkg/address"
 
--
-  name: "Starting pkg server"
+- name: "Starting pkg server"
   become: true
-  ansible.builtin.service: 
+  ansible.builtin.service:
     name: "pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive }}"
     state: restarted

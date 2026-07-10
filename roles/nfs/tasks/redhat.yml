@@ -1,12 +1,10 @@
 ---
--
-  name: "Installing NFS utilities"
+- name: "Installing NFS utilities"
   ansible.builtin.package:
     name: nfs-utils
     state: present
 
--
-  name: "Ensuring rpcbind is running as configured"
+- name: "Ensuring rpcbind is running as configured"
   ansible.builtin.service:
     name: rpcbind
     state: "{{ nfs_rpcbind_state }}"

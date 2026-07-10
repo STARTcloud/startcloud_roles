@@ -3,7 +3,8 @@ argument_specs:
   main:
     short_description: TLS certificate provisioning
     description:
-      - Imports a supplied certificate, generates a self-signed CA and server certificate, or obtains Let's Encrypt certificates, then exports PFX/PEM/JKS bundles and trusts the CA. Supports Debian/Ubuntu and Windows.
+      - Imports a supplied certificate, generates a self-signed CA and server certificate, or obtains Let's Encrypt certificates, then exports PFX/PEM/JKS bundles and trusts the CA. Supports Debian/Ubuntu
+        and Windows.
     author: Mark Gilbert
     options:
       run_tasks:

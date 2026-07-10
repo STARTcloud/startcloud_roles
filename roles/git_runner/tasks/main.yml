@@ -1,64 +1,54 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Validating required variables"
+    - name: "Validating required variables"
       ansible.builtin.assert:
         that:
           - git_runner_github_token != ''
           - git_runner_org != '' or git_runner_repo != ''
         fail_msg: "git_runner_github_token and either git_runner_org or git_runner_repo must be set"
 
-    -
-      name: "Determining GitHub API endpoint"
+    - name: "Determining GitHub API endpoint"
       ansible.builtin.set_fact:
         _git_runner_api_base: "{{ 'repos/' + git_runner_repo if git_runner_repo != '' else 'orgs/' + git_runner_org }}"
 
-    -
-      name: "Getting latest runner version"
+    - name: "Getting latest runner version"
       when: git_runner_version == "latest"
       block:
-        -
-          name: "Fetching latest runner release info"
+        - name: "Fetching latest runner release info"
           ansible.builtin.uri:
             url: "https://api.github.com/repos/actions/runner/releases/latest"
             method: GET
             return_content: true
           register: _git_runner_latest_release
 
-        -
-          name: "Extracting version number"
+        - name: "Extracting version number"
           ansible.builtin.set_fact:
             _git_runner_version: "{{ _git_runner_latest_release.json.tag_name | regex_replace('^v', '') }}"
 
-    -
-      name: "Using specified runner version"
+    - name: "Using specified runner version"
       when: git_runner_version != "latest"
       ansible.builtin.set_fact:
         _git_runner_version: "{{ git_runner_version }}"
 
-    -
-      name: "Creating runner directory"
+    - name: "Creating runner directory"
       ansible.builtin.file:
         path: "{{ git_runner_dir }}"
         state: directory
         owner: "{{ git_runner_user }}"
         group: "{{ git_runner_user }}"
-        mode: '0755'
+        mode: "0755"
 
-    -
-      name: "Downloading GitHub Actions runner"
+    - name: "Downloading GitHub Actions runner"
       ansible.builtin.get_url:
         url: "https://github.com/actions/runner/releases/download/v{{ _git_runner_version }}/actions-runner-linux-x64-{{ _git_runner_version }}.tar.gz"
         dest: "{{ git_runner_dir }}/actions-runner.tar.gz"
         owner: "{{ git_runner_user }}"
         group: "{{ git_runner_user }}"
-        mode: '0644'
+        mode: "0644"
 
-    -
-      name: "Extracting runner archive"
+    - name: "Extracting runner archive"
       ansible.builtin.unarchive:
         src: "{{ git_runner_dir }}/actions-runner.tar.gz"
         dest: "{{ git_runner_dir }}"
@@ -66,8 +56,7 @@
         owner: "{{ git_runner_user }}"
         group: "{{ git_runner_user }}"
 
-    -
-      name: "Generating JIT configuration from GitHub API (Ephemeral)"
+    - name: "Generating JIT configuration from GitHub API (Ephemeral)"
       when: git_runner_ephemeral
       ansible.builtin.uri:
         url: "https://api.github.com/{{ _git_runner_api_base }}/actions/runners/generate-jitconfig"
@@ -86,8 +75,7 @@
         return_content: true
       register: _git_runner_jit_config
 
-    -
-      name: "Generating registration token from GitHub API (Persistent)"
+    - name: "Generating registration token from GitHub API (Persistent)"
       when: not git_runner_ephemeral
       ansible.builtin.uri:
         url: "https://api.github.com/{{ _git_runner_api_base }}/actions/runners/registration-token"
@@ -100,8 +88,7 @@
         return_content: true
       register: _git_runner_registration_token
 
-    -
-      name: "Listing existing runners to check for name conflicts"
+    - name: "Listing existing runners to check for name conflicts"
       when: not git_runner_ephemeral
       ansible.builtin.uri:
         url: "https://api.github.com/{{ _git_runner_api_base }}/actions/runners"
@@ -115,8 +102,7 @@
       register: _git_runner_list
       failed_when: false
 
-    -
-      name: "Finding runner ID for existing runner with same name"
+    - name: "Finding runner ID for existing runner with same name"
       when:
         - not git_runner_ephemeral
         - _git_runner_list is defined
@@ -126,8 +112,7 @@
         _existing_runner_id: "{{ (_git_runner_list.json.runners | selectattr('name', 'equalto', git_runner_name) | list | first).id | default('') }}"
       failed_when: false
 
-    -
-      name: "Force deleting existing runner from GitHub (rebuild scenario)"
+    - name: "Force deleting existing runner from GitHub (rebuild scenario)"
       when:
         - not git_runner_ephemeral
         - _existing_runner_id is defined
@@ -143,15 +128,13 @@
       register: _git_runner_delete
       failed_when: false
 
-    -
-      name: "Checking if local runner configuration exists"
+    - name: "Checking if local runner configuration exists"
       when: not git_runner_ephemeral
       ansible.builtin.stat:
         path: "{{ git_runner_dir }}/.runner"
       register: _git_runner_local_config
 
-    -
-      name: "Generating removal token from GitHub API"
+    - name: "Generating removal token from GitHub API"
       when:
         - not git_runner_ephemeral
         - _git_runner_local_config.stat.exists
@@ -167,8 +150,7 @@
       register: _git_runner_removal_token
       failed_when: false
 
-    -
-      name: "Removing local runner configuration"
+    - name: "Removing local runner configuration"
       when:
         - not git_runner_ephemeral
         - _git_runner_local_config.stat.exists
@@ -184,8 +166,7 @@
       register: _git_runner_local_remove
       failed_when: false
 
-    -
-      name: "Configuring persistent runner"
+    - name: "Configuring persistent runner"
       when: not git_runner_ephemeral
       become: true
       become_user: "{{ git_runner_user }}"
@@ -199,8 +180,7 @@
       args:
         executable: /bin/bash
 
-    -
-      name: "Installing systemd service using svc.sh"
+    - name: "Installing systemd service using svc.sh"
       become: true
       ansible.builtin.shell: |
         cd {{ git_runner_dir }}
@@ -209,18 +189,16 @@
         executable: /bin/bash
         creates: "/etc/systemd/system/actions.runner.*.service"
 
-    -
-      name: "Creating environment file for runner"
+    - name: "Creating environment file for runner"
       when: git_runner_use_environment_file
       ansible.builtin.template:
         src: environment.j2
         dest: "{{ git_runner_environment_file_path }}"
         owner: "{{ git_runner_user }}"
         group: "{{ git_runner_user }}"
-        mode: '0644'
+        mode: "0644"
 
-    -
-      name: "Finding the GitHub Actions runner service file created by svc.sh"
+    - name: "Finding the GitHub Actions runner service file created by svc.sh"
       when: git_runner_use_environment_file
       ansible.builtin.find:
         paths: /etc/systemd/system
@@ -228,34 +206,30 @@
         file_type: file
       register: _git_runner_service_search
 
-    -
-      name: "Setting service file path variable"
+    - name: "Setting service file path variable"
       when:
         - git_runner_use_environment_file
         - _git_runner_service_search.matched > 0
       ansible.builtin.set_fact:
         _git_runner_service_file: "{{ _git_runner_service_search.files[0].path }}"
 
-    -
-      name: "Adding EnvironmentFile directive to systemd service"
+    - name: "Adding EnvironmentFile directive to systemd service"
       when: git_runner_use_environment_file
       ansible.builtin.lineinfile:
         path: "{{ _git_runner_service_file }}"
         line: "EnvironmentFile={{ git_runner_environment_file_path }}"
-        insertafter: '^\[Service\]'
+        insertafter: "^\\[Service\\]"
         state: present
       register: _git_runner_service_modified
 
-    -
-      name: "Reloading systemd daemon if service file was modified"
+    - name: "Reloading systemd daemon if service file was modified"
       when:
         - git_runner_use_environment_file
         - _git_runner_service_modified.changed
       ansible.builtin.systemd:
         daemon_reload: true
 
-    -
-      name: "Ensuring runner service is started"
+    - name: "Ensuring runner service is started"
       when: git_runner_use_environment_file
       ansible.builtin.systemd:
         name: "{{ _git_runner_service_file | basename }}"

@@ -3,8 +3,7 @@ argument_specs:
   main:
     short_description: Installs and configures Virtualmin.
     description:
-      - Downloads and runs the official Virtualmin GPL install script, then applies
-        Webmin/Virtualmin hardening and installs multiple PHP versions from the Sury repo.
+      - Downloads and runs the official Virtualmin GPL install script, then applies Webmin/Virtualmin hardening and installs multiple PHP versions from the Sury repo.
     author: Mark Gilbert
     options:
       run_tasks:

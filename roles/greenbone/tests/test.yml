@@ -1,6 +1,5 @@
 ---
--
-  name: "Testing the greenbone role"
+- name: "Testing the greenbone role"
   hosts: localhost
   remote_user: root
   roles:

@@ -1,6 +1,5 @@
 ---
--
-  name: "Ensuring Freshclam service is available"
+- name: "Ensuring Freshclam service is available"
   ansible.builtin.template:
     src: clamd-freshclam.service.j2
     dest: /lib/systemd/system/clamd-freshclam.service

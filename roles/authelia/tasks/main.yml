@@ -1,21 +1,17 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Setting up Debian Installations"
+    - name: "Setting up Debian Installations"
       when: "ansible_os_family == 'Debian'"
       block:
-        -
-          name: "Creating the authelia system group"
+        - name: "Creating the authelia system group"
           ansible.builtin.group:
             name: "{{ authelia_group }}"
             system: true
             state: "present"
 
-        -
-          name: "Creating the authelia system user"
+        - name: "Creating the authelia system user"
           ansible.builtin.user:
             name: "{{ authelia_user }}"
             group: "{{ authelia_group }}"
@@ -24,8 +20,7 @@
             system: true
             create_home: false
 
-        -
-          name: "Creating the Authelia configuration directory"
+        - name: "Creating the Authelia configuration directory"
           ansible.builtin.file:
             path: "{{ authelia_config_dir }}"
             state: "directory"
@@ -33,8 +28,7 @@
             group: "{{ authelia_group }}"
             mode: "0750"
 
-        -
-          name: "Creating the Authelia data directory"
+        - name: "Creating the Authelia data directory"
           ansible.builtin.file:
             path: "{{ authelia_data_dir }}"
             state: "directory"
@@ -42,8 +36,7 @@
             group: "{{ authelia_group }}"
             mode: "0750"
 
-        -
-          name: "Downloading the Authelia release binary"
+        - name: "Downloading the Authelia release binary"
           ansible.builtin.get_url:
             url: "{{ authelia_binary_url }}"
             dest: "{{ authelia_binary_path }}"
@@ -53,8 +46,7 @@
             mode: "0755"
           notify: "Restarting Authelia"
 
-        -
-          name: "Rendering the Authelia configuration file"
+        - name: "Rendering the Authelia configuration file"
           ansible.builtin.template:
             src: "configuration.yml.j2"
             dest: "{{ authelia_config_dir }}/configuration.yml"
@@ -63,8 +55,7 @@
             mode: "0640"
           notify: "Restarting Authelia"
 
-        -
-          name: "Rendering the Authelia users database"
+        - name: "Rendering the Authelia users database"
           ansible.builtin.template:
             src: "users_database.yml.j2"
             dest: "{{ authelia_config_dir }}/users_database.yml"
@@ -73,8 +64,7 @@
             mode: "0640"
           notify: "Restarting Authelia"
 
-        -
-          name: "Installing the Authelia systemd unit"
+        - name: "Installing the Authelia systemd unit"
           ansible.builtin.template:
             src: "authelia.service.j2"
             dest: "/etc/systemd/system/authelia.service"
@@ -83,8 +73,7 @@
             mode: "0644"
           notify: "Restarting Authelia"
 
-        -
-          name: "Enabling and starting the Authelia service"
+        - name: "Enabling and starting the Authelia service"
           ansible.builtin.systemd:
             name: "authelia"
             state: "started"

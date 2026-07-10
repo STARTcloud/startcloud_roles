@@ -71,7 +71,7 @@
   register: gmp_file
 
 - name: "Ensuring gmp.h is symlinked into a location accessible to gcc."
-  ansible.builtin.file:  # noqa 208
+  ansible.builtin.file: # noqa 208
     src: "{{ php_source_install_gmp_path }}"
     dest: /usr/include/gmp.h
     state: link
@@ -96,7 +96,7 @@
   ansible.builtin.file:
     path: "{{ php_source_install_path }}"
     state: directory
-    mode: 0755
+    mode: "0755"
   when: php_installed.rc != 0
 
 - name: "Building configure script."
@@ -121,14 +121,14 @@
   when: php_installed.rc != 0
 
 - name: "Ensuring php executable is symlinked into a standard path."
-  ansible.builtin.file:  # noqa 208
+  ansible.builtin.file: # noqa 208
     src: "{{ php_source_install_path }}/bin/php"
     dest: /usr/bin/php
     state: link
 
 # PHP FPM configuration.
 - name: "Ensuring php-fpm executable is symlinked into a standard path."
-  ansible.builtin.file:  # noqa 208
+  ansible.builtin.file: # noqa 208
     src: "{{ php_source_install_path }}/sbin/php-fpm"
     dest: "/usr/sbin/{{ php_fpm_daemon }}"
     state: link
@@ -138,7 +138,7 @@
   ansible.builtin.template:
     src: fpm-init.j2
     dest: "/etc/init.d/{{ php_fpm_daemon }}"
-    mode: 0755
+    mode: "0755"
   when: "'--enable-fpm' in php_source_configure_command"
   notify: restart php-fpm
 
@@ -146,13 +146,13 @@
   ansible.builtin.file:
     path: "{{ php_fpm_conf_path }}"
     state: directory
-    mode: 0755
+    mode: "0755"
   when: "'--enable-fpm' in php_source_configure_command"
 
 - name: "Ensuring php-fpm config file is installed."
   ansible.builtin.template:
     src: php-fpm.conf.j2
     dest: "{{ php_fpm_conf_path }}/php-fpm.conf"
-    mode: 0644
+    mode: "0644"
   when: "'--enable-fpm' in php_source_configure_command"
   notify: restart php-fpm

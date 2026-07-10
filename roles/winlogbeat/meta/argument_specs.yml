@@ -12,19 +12,19 @@ argument_specs:
         description: Master gate — when false the role loads its vars but runs no tasks.
       winlogbeat_download_url_base:
         type: str
-        default: 'https://artifacts.elastic.co/downloads/beats/winlogbeat'
+        default: "https://artifacts.elastic.co/downloads/beats/winlogbeat"
         description: Base URL from which the Winlogbeat archive is downloaded.
       file_ext:
         type: str
-        default: '.zip'
+        default: ".zip"
         description: File extension appended to the download filename.
       winlogbeat_download_file:
         type: str
-        default: 'winlogbeat-6.3.0-windows-x86_64'
+        default: "winlogbeat-6.3.0-windows-x86_64"
         description: Name of the Winlogbeat release archive to download and extract.
       winlogbeat_install_location:
         type: str
-        default: 'C:/Program Files/Winlogbeat'
+        default: "C:/Program Files/Winlogbeat"
         description: Directory on the Windows host where Winlogbeat is installed.
       winlogbeat_event_logs:
         type: list

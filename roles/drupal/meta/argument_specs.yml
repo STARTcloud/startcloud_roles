@@ -3,8 +3,7 @@ argument_specs:
   main:
     short_description: Deploy, build, and install Drupal.
     description:
-      - Deploys Drupal from a Git repository, builds it from a Drush make file or a
-        Composer file/project, and optionally installs the site with Drush.
+      - Deploys Drupal from a Git repository, builds it from a Drush make file or a Composer file/project, and optionally installs the site with Drush.
     author: Mark Gilbert
     options:
       run_tasks:

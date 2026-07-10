@@ -1,21 +1,17 @@
 ---
--
-  name: "Loading vendor-specific variables"
+- name: "Loading vendor-specific variables"
   ansible.builtin.include_vars: "{{ vendor }}.yml"
   when: vendor is defined
   ignore_errors: true
 
--
-  name: "Ensuring Packer Installations Directory exists"
+- name: "Ensuring Packer Installations Directory exists"
   ansible.windows.win_file:
     path: C:\Windows\Temp\packer
     state: directory
 
--
-  name: "Installing Powershell 7"
+- name: "Installing Powershell 7"
   block:
-    -
-      name: "Checking if PowerShell 7 is already installed"
+    - name: "Checking if PowerShell 7 is already installed"
       ansible.windows.win_shell: |
         $psVersion = (Get-Command pwsh -ErrorAction SilentlyContinue).Version.Major
         if ($psVersion -eq 7) {
@@ -24,37 +20,31 @@
       register: ps7_check
       changed_when: false
 
-    -
-      name: "Debugging PS7 Check Result"
+    - name: "Debugging PS7 Check Result"
       ansible.builtin.debug:
         var: ps7_check
 
-    -
-      name: "Downloading Powershell 7 Installation Script"
+    - name: "Downloading Powershell 7 Installation Script"
       when: ps7_check != "7"
       ansible.windows.win_get_url:
         url: "https://aka.ms/install-powershell.ps1"
         dest: C:\temp\install-powershell.ps1
 
-    -
-      name: "Executing Powershell 7 Installation Script"
+    - name: "Executing Powershell 7 Installation Script"
       when: ps7_check != "7"
       ansible.windows.win_powershell:
         script: iex "C:\temp\install-powershell.ps1"
       ignore_errors: true
 
--
-  name: "Windows Updates (initial - fully patch the OS before installing software)"
+- name: "Windows Updates (initial - fully patch the OS before installing software)"
   when: install_windows_updates | default(true)
   block:
-    -
-      name: "Ensuring Windows Update is not paused"
+    - name: "Ensuring Windows Update is not paused"
       ansible.windows.win_shell: |
         Set-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings' -Name 'PauseUpdatesExpiryTime' -Value ((Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"))
       ignore_errors: true
 
-    -
-      name: "Resetting Windows Update components (clears stuck/looping update state)"
+    - name: "Resetting Windows Update components (clears stuck/looping update state)"
       ansible.windows.win_shell: |
         Stop-Service -Name BITS,wuauserv,CryptSvc,WaaSMedicSvc -Force -ErrorAction SilentlyContinue
         Remove-Item -Path C:\Windows\System32\catroot2 -Recurse -Force -ErrorAction SilentlyContinue
@@ -64,10 +54,9 @@
         UsoClient RefreshSettings
       ignore_errors: true
 
-    -
-      name: "Searching for available updates (visibility)"
+    - name: "Searching for available updates (visibility)"
       ansible.windows.win_updates:
-        category_names: '*'
+        category_names: "*"
         reject_list: "{{ windows_update_reject_list | default(['Windows Security platform']) }}"
         skip_optional: false
         state: searched
@@ -75,140 +64,116 @@
       register: wu_search
       ignore_errors: true
 
-    -
-      name: "Updates available before patching"
+    - name: "Updates available before patching"
       ansible.builtin.debug:
         var: wu_search.updates
 
-    -
-      name: "Installing all applicable updates (initial)"
+    - name: "Installing all applicable updates (initial)"
       ansible.builtin.include_tasks: update_pass.yml
       loop: "{{ range(1, (windows_update_passes | default(3)) + 1) | list }}"
       loop_control:
         loop_var: pass_number
 
--
-  name: "Installing Chocolatey"
+- name: "Installing Chocolatey"
   block:
-    -
-      name: "Downloading Chocolatey Installation Script"
+    - name: "Downloading Chocolatey Installation Script"
       ansible.windows.win_get_url:
         url: "https://community.chocolatey.org/install.ps1"
         dest: C:\temp\choco_install.ps1
 
-    -
-      name: "Executing Chocolatey Installation Script"
+    - name: "Executing Chocolatey Installation Script"
       ansible.windows.win_powershell:
         script: iex "C:\temp\choco_install.ps1"
 
--
-  name: "Configuring Vendor-Specific Chocolatey Repositories"
+- name: "Configuring Vendor-Specific Chocolatey Repositories"
   when: chocolatey_repos is defined and vendor is defined
   block:
-    -
-      name: "Removing default chocolatey source to reconfigure with priority"
+    - name: "Removing default chocolatey source to reconfigure with priority"
       ansible.windows.win_powershell:
         script: choco source remove -n="chocolatey"
       ignore_errors: true
 
-    -
-      name: "Adding vendor-specific Chocolatey repositories with priority"
+    - name: "Adding vendor-specific Chocolatey repositories with priority"
       ansible.windows.win_powershell:
         script: choco source add -n="{{ item.name }}" -s="{{ item.url }}" --priority="{{ item.priority }}"
       loop: "{{ chocolatey_repos }}"
       loop_control:
         label: "{{ item.name }} (Priority: {{ item.priority }})"
 
--
-  name: "Installing Base Chocolatey Packages"
+- name: "Installing Base Chocolatey Packages"
   when: chocolatey_base_packages is defined
   block:
-    -
-      name: "Installing base Chocolatey packages"
+    - name: "Installing base Chocolatey packages"
       chocolatey.chocolatey.win_chocolatey:
         name: "{{ item }}"
         state: present
       loop: "{{ chocolatey_base_packages | default([]) }}"
 
--
-  name: "Installing Internal Chocolatey Packages"
+- name: "Installing Internal Chocolatey Packages"
   when: template_type | default('customer') == 'internal'
   block:
-    -
-      name: "Installing internal Chocolatey packages"
+    - name: "Installing internal Chocolatey packages"
       chocolatey.chocolatey.win_chocolatey:
         name: "{{ item }}"
         state: present
       loop: "{{ chocolatey_internal_packages | default([]) }}"
 
--
-  name: "Installing Customer Chocolatey Packages"
+- name: "Installing Customer Chocolatey Packages"
   when: template_type | default('customer') == 'customer'
   block:
-    -
-      name: "Installing customer Chocolatey packages"
+    - name: "Installing customer Chocolatey packages"
       chocolatey.chocolatey.win_chocolatey:
         name: "{{ item }}"
         state: present
       loop: "{{ chocolatey_customer_packages | default([]) }}"
 
--
-  name: "Installing Vendor-Specific Chocolatey Packages"
+- name: "Installing Vendor-Specific Chocolatey Packages"
   when: chocolatey_packages is defined and vendor is defined
   block:
-    -
-      name: "Installing vendor-specific Chocolatey packages for {{ vendor }}"
+    - name: "Installing vendor-specific Chocolatey packages for {{ vendor }}"
       chocolatey.chocolatey.win_chocolatey:
         name: "{{ item }}"
         state: present
       loop: "{{ chocolatey_packages | default([]) }}"
 
--
-  name: "Installing Cygwin with cyg-get"
+- name: "Installing Cygwin with cyg-get"
   block:
-    -
-      name: "Adding Cygwin to System PATH"
+    - name: "Adding Cygwin to System PATH"
       ansible.windows.win_path:
         elements:
           - C:\tools\cygwin\bin
         scope: machine
         state: present
 
-    -
-      name: "Installing Cygwin packages"
+    - name: "Installing Cygwin packages"
       ansible.windows.win_powershell:
         script: cyg-get cygrunsrv nano diffutils lynx make openssh perl psmisc rsync vim wget curl
 
--
-  name: "Configuring Vendor-Specific WSUS Server"
+- name: "Configuring Vendor-Specific WSUS Server"
   when: wsus_server is defined and vendor is defined and not (use_microsoft_update | default(false))
   block:
-    -
-      name: "Configuring WSUS server for {{ vendor }}"
+    - name: "Configuring WSUS server for {{ vendor }}"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate
         name: WUServer
         data: "{{ wsus_server }}"
         type: string
 
-    -
-      name: "Configuring WSUS status server for {{ vendor }}"
+    - name: "Configuring WSUS status server for {{ vendor }}"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate
         name: WUStatusServer
         data: "{{ wsus_server }}"
         type: string
 
-    -
-      name: "Enabling use of WSUS server"
+    - name: "Enabling use of WSUS server"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU
         name: UseWUServer
         data: 1
         type: dword
 
-    -
-      name: "Configuring WSUS target group"
+    - name: "Configuring WSUS target group"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate
         name: TargetGroup
@@ -216,8 +181,7 @@
         type: string
       when: wsus_target_group is defined
 
-    -
-      name: "Enabling WSUS target group assignment"
+    - name: "Enabling WSUS target group assignment"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate
         name: TargetGroupEnabled
@@ -225,21 +189,18 @@
         type: dword
       when: wsus_target_group is defined
 
--
-  name: "Windows Updates (final - catch anything new after software install)"
+- name: "Windows Updates (final - catch anything new after software install)"
   when: install_windows_updates | default(true)
   block:
-    -
-      name: "Installing all applicable updates (final)"
+    - name: "Installing all applicable updates (final)"
       ansible.builtin.include_tasks: update_pass.yml
       loop: "{{ range(1, (windows_update_final_passes | default(2)) + 1) | list }}"
       loop_control:
         loop_var: pass_number
 
-    -
-      name: "Confirming remaining updates (excluding rejected)"
+    - name: "Confirming remaining updates (excluding rejected)"
       ansible.windows.win_updates:
-        category_names: '*'
+        category_names: "*"
         reject_list: "{{ windows_update_reject_list | default(['Windows Security platform']) }}"
         skip_optional: false
         state: searched
@@ -247,23 +208,19 @@
       register: wu_final
       ignore_errors: true
 
-    -
-      name: "Updates still pending after final pass (should be empty aside from rejected)"
+    - name: "Updates still pending after final pass (should be empty aside from rejected)"
       ansible.builtin.debug:
         var: wu_final.updates
 
--
-  name: "Package Maintenance"
+- name: "Package Maintenance"
   block:
-    -
-      name: "Upgrading all Chocolatey packages"
+    - name: "Upgrading all Chocolatey packages"
       chocolatey.chocolatey.win_chocolatey:
         name: all
         state: latest
       when: upgrade_packages | default(true)
 
-    -
-      name: "Removing Firefox Desktop Icon for All Users"
+    - name: "Removing Firefox Desktop Icon for All Users"
       ansible.windows.win_file:
         path: C:\Users\Public\Desktop\Firefox.lnk
         state: absent

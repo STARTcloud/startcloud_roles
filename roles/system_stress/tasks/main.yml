@@ -1,10 +1,8 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Ensuring apt cache is updated"
+    - name: "Ensuring apt cache is updated"
       ansible.builtin.apt:
         cache_valid_time: 3600
         update_cache: true
@@ -18,8 +16,7 @@
     #  with_items:
     #    - "curl -s https://packagecloud.io/install/repositories/akopytov/sysbench/script.deb.sh | sudo bash"
 
-    -
-      name: "Adding Additional Dependencies {{ stress_packages }}"
+    - name: "Adding Additional Dependencies {{ stress_packages }}"
       ansible.builtin.apt:
         name: "{{ stress_packages }}"
         state: present

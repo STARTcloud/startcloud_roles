@@ -1,6 +1,5 @@
 ---
--
-  name: "Creating Tomcat directories"
+- name: "Creating Tomcat directories"
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
@@ -41,13 +40,11 @@
 #  environment:
 #    PATH: "{{ ansible_env.PATH }}:{{ service_home_dir }}/.sdkman/candidates/java/current/bin"
 
--
-  name: "Adding group for user {{ tomcat_user }}"
+- name: "Adding group for user {{ tomcat_user }}"
   ansible.builtin.group:
     name: "{{ tomcat_group }}"
 
--
-  name: "Adding user: {{ tomcat_user }}"
+- name: "Adding user: {{ tomcat_user }}"
   ansible.builtin.user:
     name: "{{ tomcat_user }}"
     group: "{{ tomcat_group }}"
@@ -55,28 +52,23 @@
     createhome: true
     system: true
 
--
-  name: "Example Pre Roles Ad-Hoc Task"
+- name: "Example Pre Roles Ad-Hoc Task"
   ansible.builtin.debug:
     var: tomcat_version
 
--
-  name: "Adding Debian 11 Repos"
+- name: "Adding Debian 11 Repos"
   when: tomcat_version is version('10', '<')
   block:
-    -
-      name: "Adding Debian Bullseye repository"
+    - name: "Adding Debian Bullseye repository"
       ansible.builtin.apt_repository:
         repo: "deb http://deb.debian.org/debian/ bullseye main"
         state: present
 
-    -
-      name: "Updating apt cache"
+    - name: "Updating apt cache"
       ansible.builtin.apt:
         update_cache: true
 
--
-  name: "Installing Tomcat {{ tomcat_version }}"
+- name: "Installing Tomcat {{ tomcat_version }}"
   ansible.builtin.apt:
     name:
       - "tomcat{{ tomcat_version }}"
@@ -85,39 +77,33 @@
       - "tomcat{{ tomcat_version }}-user"
     state: present
 
--
-  name: "Removing Debian 11 Repos"
+- name: "Removing Debian 11 Repos"
   when: tomcat_version is version('10', '<')
   block:
-    -
-      name: "Removing Debian Bullseye repository"
+    - name: "Removing Debian Bullseye repository"
       ansible.builtin.apt_repository:
         repo: "deb http://deb.debian.org/debian/ bullseye main"
         state: absent
 
-    -
-      name: "Updating apt cache"
+    - name: "Updating apt cache"
       ansible.builtin.apt:
         update_cache: true
 
--
-  name: "Starting and Enabling Tomcat {{ tomcat_version }}"
+- name: "Starting and Enabling Tomcat {{ tomcat_version }}"
   ansible.builtin.service:
     daemon_reload: true
     name: "tomcat{{ tomcat_version }}"
     state: started
     enabled: true
 
--
-  name: "Setting UI access credentials"
+- name: "Setting UI access credentials"
   ansible.builtin.template:
     mode: "0755"
     src: "tomcat-users.xml.j2"
     dest: "/etc/tomcat{{ tomcat_version }}/tomcat-users.xml"
   notify: "Restart tomcat"
 
--
-  name: "Allowing access to Manager and Host Manager apps from any IP"
+- name: "Allowing access to Manager and Host Manager apps from any IP"
   ansible.builtin.template:
     mode: "0755"
     src: "context.xml.j2"
@@ -126,13 +112,11 @@
     - "/etc/tomcat{{ tomcat_version }}/context.xml"
   notify: "Restart tomcat"
 
--
-  name: "Waiting for Tomcat to finish starting for the first time"
+- name: "Waiting for Tomcat to finish starting for the first time"
   ansible.builtin.wait_for:
     path: "/etc/tomcat{{ tomcat_version }}/server.xml"
 
--
-  name: "Grabbing External IP address"
+- name: "Grabbing External IP address"
   ansible.builtin.shell: |
     set -o pipefail
     ip addr show public_adapter | awk '/inet / {print $2}' | cut -d'/' -f1
@@ -141,8 +125,7 @@
   register: netoutput
   changed_when: false
 
--
-  name: "Configuring Tomcat {{ tomcat_version }}"
+- name: "Configuring Tomcat {{ tomcat_version }}"
   ansible.builtin.template:
     mode: "0755"
     src: "server.xml.j2"
@@ -151,8 +134,7 @@
     - "/etc/tomcat{{ tomcat_version }}/server.xml"
   notify: "Restart tomcat"
 
--
-  name: "Starting and Enabling Tomcat {{ tomcat_version }}"
+- name: "Starting and Enabling Tomcat {{ tomcat_version }}"
   ansible.builtin.service:
     daemon_reload: true
     name: "tomcat{{ tomcat_version }}"

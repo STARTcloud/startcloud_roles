@@ -1,7 +1,7 @@
 ---
 run_tasks: true
 
-prometheus_version: '2.53.1'
+prometheus_version: "2.53.1"
 
 prometheus_user: prometheus
 prometheus_group: prometheus
@@ -10,11 +10,11 @@ prometheus_install_dir: /usr/local/bin
 prometheus_config_dir: /etc/prometheus
 prometheus_data_dir: /var/lib/prometheus
 
-prometheus_listen_address: '0.0.0.0:9090'
-prometheus_storage_retention: '15d'
+prometheus_listen_address: "0.0.0.0:9090"
+prometheus_storage_retention: "15d"
 
-prometheus_scrape_interval: '15s'
-prometheus_evaluation_interval: '15s'
+prometheus_scrape_interval: "15s"
+prometheus_evaluation_interval: "15s"
 
 prometheus_arch_map:
   x86_64: amd64

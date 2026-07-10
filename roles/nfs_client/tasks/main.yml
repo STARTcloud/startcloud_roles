@@ -1,24 +1,20 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Including OS-specific tasks"
+    - name: "Including OS-specific tasks"
       ansible.builtin.include_tasks: "{{ ansible_os_family | lower }}.yml"
 
-    -
-      name: "Creating NFS mount points"
+    - name: "Creating NFS mount points"
       become: true
       ansible.builtin.file:
         path: "{{ item.path }}"
         state: directory
       loop: "{{ nfs_client_mounts }}"
 
-    -
-      name: "Mounting NFS shares"
+    - name: "Mounting NFS shares"
       become: true
-      ansible.builtin.mount:
+      ansible.posix.mount:
         path: "{{ item.path }}"
         src: "{{ item.src }}"
         fstype: "{{ item.fstype | default('nfs') }}"

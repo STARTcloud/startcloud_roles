@@ -22,7 +22,6 @@ web_terminal_users:
   admin: "{{ lookup('password', '/dev/null length=20 chars=ascii_letters,digits') }}"
 
 startcloud_web_terminal_port_forwards:
-  -
-    guest: 8090
+  - guest: 8090
     url: "web-terminal"
 startcloud_web_terminal_proxy_url: "{{ startcloud_web_terminal_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"

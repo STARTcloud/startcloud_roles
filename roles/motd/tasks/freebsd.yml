@@ -5,15 +5,13 @@
 # editing (OPNsense owns its console banner), and the sshd_config PrintMotd
 # tweak (OPNsense manages sshd via config.xml, not /etc/ssh/sshd_config).
 
--
-  name: "Loading vendor-specific variables"
+- name: "Loading vendor-specific variables"
   ansible.builtin.include_vars: "{{ vendor }}.yml"
   when: vendor is defined
   failed_when: false
 
--
-  name: "Writing static /etc/motd"
+- name: "Writing static /etc/motd"
   ansible.builtin.template:
     src: etc/motd.freebsd.j2
     dest: /etc/motd
-    mode: '0644'
+    mode: "0644"

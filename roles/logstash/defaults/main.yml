@@ -1,7 +1,7 @@
 ---
 run_tasks: true
 
-logstash_version: '8.x'
+logstash_version: "8.x"
 logstash_apt_key_url: "https://artifacts.elastic.co/GPG-KEY-elasticsearch"
 logstash_apt_keyring: "/usr/share/keyrings/elasticsearch-keyring.asc"
 logstash_apt_repo: "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.asc] https://artifacts.elastic.co/packages/8.x/apt stable main"

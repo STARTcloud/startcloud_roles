@@ -4,8 +4,7 @@ argument_specs:
     short_description: Installs and configures Apache Tomcat.
     description:
       - Installs Apache Tomcat and its admin packages on Debian-family systems.
-      - Creates the tomcat service account, deploys the manager/admin UI
-        credentials, and templates the server, context, and users configuration.
+      - Creates the tomcat service account, deploys the manager/admin UI credentials, and templates the server, context, and users configuration.
     author: Mark Gilbert
     options:
       run_tasks:

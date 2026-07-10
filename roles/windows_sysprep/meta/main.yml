@@ -1,3 +1,4 @@
+---
 galaxy_info:
   role_name: windows_sysprep
   author: Mark Gilbert
@@ -5,12 +6,12 @@ galaxy_info:
   company: STARTcloud
   issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
   license: Apache-2.0
-  min_ansible_version: '2.15'
+  min_ansible_version: "2.15"
   platforms:
     - name: Windows
       versions:
-        - '2022'
-        - '2025'
+        - "2022"
+        - "2025"
   galaxy_tags:
     - windows
     - sysprep
@@ -18,6 +19,5 @@ galaxy_info:
     - packer
 
 dependencies: []
-
 collections:
   - startcloud.startcloud_roles

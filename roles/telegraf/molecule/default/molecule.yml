@@ -20,14 +20,14 @@ platforms:
       INFLUXDB_DB: telegraf
   - name: telegraf-centos
     image: milcom/centos7-systemd
-    privileged: True
+    privileged: true
     groups:
       - telegraf
     networks:
       - name: telegraf
   - name: telegraf-debian
     image: minimum2scp/systemd-stretch
-    privileged: True
+    privileged: true
     command: /sbin/init
     groups:
       - telegraf
@@ -36,7 +36,7 @@ platforms:
       - name: telegraf
   - name: telegraf-ubuntu
     image: solita/ubuntu-systemd:bionic
-    privileged: True
+    privileged: true
     command: /sbin/init
     groups:
       - telegraf
@@ -45,7 +45,7 @@ platforms:
       - name: telegraf
   - name: telegraf-opensuse
     image: wdijkerman/molecule-systemd-leap
-    privileged: True
+    privileged: true
     command: /sbin/init
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro

@@ -1,87 +1,76 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Installing VoIPmonitor Runtime Dependencies"
+    - name: "Installing VoIPmonitor Runtime Dependencies"
       ansible.builtin.apt:
         name: "{{ voipmonitor_dependencies }}"
         state: present
         update_cache: true
         cache_valid_time: 3600
 
-    -
-      name: "Creating VoIPmonitor Source Directory"
+    - name: "Creating VoIPmonitor Source Directory"
       ansible.builtin.file:
         path: "{{ voipmonitor_src_dir }}"
         state: directory
         owner: root
         group: root
-        mode: '0755'
+        mode: "0755"
 
-    -
-      name: "Downloading VoIPmonitor Sniffer Archive"
+    - name: "Downloading VoIPmonitor Sniffer Archive"
       ansible.builtin.get_url:
         url: "{{ voipmonitor_sniffer_url }}"
         dest: "{{ voipmonitor_src_dir }}/voipmonitor-sniffer.tar.gz"
-        mode: '0644'
+        mode: "0644"
 
-    -
-      name: "Extracting VoIPmonitor Sniffer Archive"
+    - name: "Extracting VoIPmonitor Sniffer Archive"
       ansible.builtin.unarchive:
         src: "{{ voipmonitor_src_dir }}/voipmonitor-sniffer.tar.gz"
         dest: "{{ voipmonitor_src_dir }}"
         remote_src: true
         creates: "{{ voipmonitor_binary_path }}"
 
-    -
-      name: "Locating Extracted VoIPmonitor Sniffer Directory"
+    - name: "Locating Extracted VoIPmonitor Sniffer Directory"
       ansible.builtin.find:
         paths: "{{ voipmonitor_src_dir }}"
         patterns: "voipmonitor-*"
         file_type: directory
       register: voipmonitor_extracted_dir
 
-    -
-      name: "Running VoIPmonitor Install Script"
+    - name: "Running VoIPmonitor Install Script"
       ansible.builtin.command: "./install-script.sh --no-user-input"
       args:
         chdir: "{{ (voipmonitor_extracted_dir.files | first).path }}"
         creates: "{{ voipmonitor_binary_path }}"
       when: voipmonitor_extracted_dir.files | length > 0
 
-    -
-      name: "Creating VoIPmonitor Spool Directory"
+    - name: "Creating VoIPmonitor Spool Directory"
       ansible.builtin.file:
         path: "{{ voipmonitor_spool_dir }}"
         state: directory
         owner: root
         group: root
-        mode: '0755'
+        mode: "0755"
 
-    -
-      name: "Deploying VoIPmonitor Configuration"
+    - name: "Deploying VoIPmonitor Configuration"
       ansible.builtin.template:
         src: "voipmonitor.conf.j2"
         dest: "{{ voipmonitor_config_path }}"
         owner: root
         group: root
-        mode: '0644'
+        mode: "0644"
       notify: "Restarting VoIPmonitor Sniffer"
 
-    -
-      name: "Installing VoIPmonitor Systemd Unit"
+    - name: "Installing VoIPmonitor Systemd Unit"
       ansible.builtin.template:
         src: "voipmonitor.service.j2"
         dest: "/etc/systemd/system/voipmonitor.service"
         owner: root
         group: root
-        mode: '0644'
+        mode: "0644"
       notify: "Restarting VoIPmonitor Sniffer"
 
-    -
-      name: "Enabling and Starting VoIPmonitor Sniffer"
+    - name: "Enabling and Starting VoIPmonitor Sniffer"
       ansible.builtin.systemd:
         name: "voipmonitor"
         enabled: true

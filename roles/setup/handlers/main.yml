@@ -1,6 +1,5 @@
 ---
--
-  name: "Reloading systemd"
+- name: "Reloading systemd"
   ansible.builtin.systemd:
     daemon_reload: true
   when: ansible_service_mgr == "systemd"

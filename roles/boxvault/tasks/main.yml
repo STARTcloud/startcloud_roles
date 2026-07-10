@@ -1,52 +1,43 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Installing BoxVault from the STARTcloud APT repository"
+    - name: "Installing BoxVault from the STARTcloud APT repository"
       when: "ansible_os_family == 'Debian' and not boxvault_build_from_source"
       block:
-        -
-          name: "Creating keyrings directory for repository GPG keys"
+        - name: "Creating keyrings directory for repository GPG keys"
           ansible.builtin.file:
             path: /etc/apt/keyrings
             state: directory
-            mode: '0755'
+            mode: "0755"
 
-        -
-          name: "Downloading armored STARTcloud GPG key"
+        - name: "Downloading armored STARTcloud GPG key"
           ansible.builtin.get_url:
             url: "{{ boxvault_apt_key_url }}"
             dest: /tmp/startcloud-archive-keyring.asc
-            mode: '0644'
+            mode: "0644"
 
-        -
-          name: "Dearmoring STARTcloud GPG key"
+        - name: "Dearmoring STARTcloud GPG key"
           ansible.builtin.command:
             cmd: "gpg --dearmor -o /etc/apt/keyrings/startcloud-archive-keyring.gpg /tmp/startcloud-archive-keyring.asc"
             creates: /etc/apt/keyrings/startcloud-archive-keyring.gpg
 
-        -
-          name: "Adding STARTcloud APT repository"
+        - name: "Adding STARTcloud APT repository"
           ansible.builtin.apt_repository:
             repo: "deb [signed-by=/etc/apt/keyrings/startcloud-archive-keyring.gpg] {{ boxvault_apt_repo_url }} {{ ansible_distribution_release }} main"
             state: present
             filename: startcloud
 
-        -
-          name: "Installing BoxVault"
+        - name: "Installing BoxVault"
           ansible.builtin.apt:
             name: "{{ boxvault_package }}"
             state: present
             update_cache: true
 
-    -
-      name: "Building BoxVault from source"
+    - name: "Building BoxVault from source"
       when: "ansible_os_family == 'Debian' and boxvault_build_from_source"
       block:
-        -
-          name: "Installing Node.js, npm, and git"
+        - name: "Installing Node.js, npm, and git"
           ansible.builtin.apt:
             name:
               - nodejs
@@ -55,17 +46,15 @@
             state: present
             update_cache: true
 
-        -
-          name: "Creating BoxVault installation directory"
+        - name: "Creating BoxVault installation directory"
           ansible.builtin.file:
             path: "{{ boxvault_path }}"
             state: directory
-            mode: '0755'
+            mode: "0755"
             owner: "{{ service_user }}"
             group: "{{ service_group }}"
 
-        -
-          name: "Cloning BoxVault repository"
+        - name: "Cloning BoxVault repository"
           become: true
           become_user: "{{ service_user }}"
           ansible.builtin.git:
@@ -74,22 +63,19 @@
             version: "{{ boxvault_git_version }}"
             force: true
 
-        -
-          name: "Installing backend npm packages"
+        - name: "Installing backend npm packages"
           become: true
           become_user: "{{ service_user }}"
           community.general.npm:
             path: "{{ boxvault_path }}/backend"
 
-        -
-          name: "Installing frontend npm packages"
+        - name: "Installing frontend npm packages"
           become: true
           become_user: "{{ service_user }}"
           community.general.npm:
             path: "{{ boxvault_path }}/frontend"
 
-        -
-          name: "Building BoxVault frontend"
+        - name: "Building BoxVault frontend"
           become: true
           become_user: "{{ service_user }}"
           ansible.builtin.command: npm run build

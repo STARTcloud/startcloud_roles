@@ -1,13 +1,11 @@
 ---
--
-  name: "Restarting clamav daemon"
+- name: "Restarting clamav daemon"
   ansible.builtin.service:
     name: "{{ clamav_daemon }}"
     state: restarted
   when: clamav_daemon_state != 'stopped'
 
--
-  name: "Reloading systemd"
+- name: "Reloading systemd"
   ansible.builtin.systemd:
     state: stopped
     daemon_reload: true

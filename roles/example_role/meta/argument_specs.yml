@@ -3,7 +3,8 @@ argument_specs:
   main:
     short_description: Reference/example role
     description:
-      - A reference role that demonstrates STARTcloud conventions — it stands up a Python simple HTTP server, renders a welcome page, and assembles a support bundle. Intended as an example/template, not for production.
+      - A reference role that demonstrates STARTcloud conventions — it stands up a Python simple HTTP server, renders a welcome page, and assembles a support bundle. Intended as an example/template, not
+        for production.
     author: Mark Gilbert
     options:
       run_tasks:

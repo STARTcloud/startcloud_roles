@@ -1,9 +1,7 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-
     - name: "Adjusting Theme Settings"
       block:
         - name: "Adjusting Theme Settings AppsUseLightTheme"
@@ -70,61 +68,53 @@
 #   ansible.builtin.debug:
 #     msg: '{{ exe_file_version.file_version }}'
 
--
-  name: Get product id and product key
+- name: Get product id and product key
   ansible.windows.win_product_facts:
 
--
-  name: Install all security, critical, and rollup updates without a scheduled task
+- name: Install all security, critical, and rollup updates without a scheduled task
   ansible.windows.win_updates:
     category_names:
       - SecurityUpdates
       - CriticalUpdates
       - UpdateRollups
 
--
-  name: Ensure that Google Chrome Update is Set to manual
+- name: Ensure that Google Chrome Update is Set to manual
   ansible.windows.win_service:
     name: gupdate
     start_mode: manual
 
--
-  name: Ensure that Telegraf is Set to Automatic and Started
+- name: Ensure that Telegraf is Set to Automatic and Started
   ansible.windows.win_service:
     name: telegraf
     start_mode: delayed
     state: started
 
 - name: Remove Cisco Static Route
-  community.windows.win_route:
+  ansible.windows.win_route:
     destination: 10.242.2.0/23
     state: absent
 
--
-  name: Get disk facts
+- name: Get disk facts
   ansible.windows.win_disk_facts:
 
--
-  name: Output first disk size
+- name: Output first disk size
   ansible.builtin.debug:
     var: ansible_facts.disks[0].size
 
--
-  name: Convert first system disk into various formats
+- name: Convert first system disk into various formats
   ansible.builtin.debug:
-    msg: '{{ disksize_gib }} vs {{ disksize_gib_human }}'
+    msg: "{{ disksize_gib }} vs {{ disksize_gib_human }}"
   vars:
     # Get first system disk
     disk: '{{ ansible_facts.disks | selectattr("system_disk") | first }}'
     # Show disk size in Gibibytes
-    disksize_gib_human: '{{ disk.size | filesizeformat(true) }}'
-    disksize_gib: '{{ (disk.size / 1024 | pow(3)) | round | int }} GiB'
+    disksize_gib_human: "{{ disk.size | filesizeformat(true) }}"
+    disksize_gib: "{{ (disk.size / 1024 | pow(3)) | round | int }} GiB"
 
 - name: Get disk facts
   ansible.windows.win_command: wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
   register: usage
 
--
-  name: Debug
+- name: Debug
   ansible.builtin.debug:
     msg: "{{ usage.stdout }}"

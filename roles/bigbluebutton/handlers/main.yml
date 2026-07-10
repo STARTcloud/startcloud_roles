@@ -1,12 +1,10 @@
 ---
--
-  name: "Restarting NGINX"
+- name: "Restarting NGINX"
   ansible.builtin.service:
     name: nginx
     state: restarted
 
--
-  name: "Restarting greenlight"
+- name: "Restarting greenlight"
   ansible.builtin.systemd:
     name: greenlight
     state: restarted

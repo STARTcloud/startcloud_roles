@@ -1,17 +1,14 @@
 ---
--
-  name: "Setting SDKMAN user/group variables"
+- name: "Setting SDKMAN user/group variables"
   ansible.builtin.set_fact:
-    sdk_service_user: '{{ service_user }}'
-    sdk_service_group: '{{ service_group }}'
+    sdk_service_user: "{{ service_user }}"
+    sdk_service_group: "{{ service_group }}"
 
--
-  name: "Setting SDKMAN_DIR environment variable"
+- name: "Setting SDKMAN_DIR environment variable"
   ansible.builtin.set_fact:
-    sdkman_dir: '{{ service_home_dir }}/.sdkman'
+    sdkman_dir: "{{ service_home_dir }}/.sdkman"
 
--
-  name: "Extracting Java SDK version from SDKMAN: {{ java_version }}"
+- name: "Extracting Java SDK version from SDKMAN: {{ java_version }}"
   ansible.builtin.shell: |
     set -o pipefail
     source {{ service_home_dir }}/.sdkman/bin/sdkman-init.sh
@@ -24,8 +21,7 @@
   changed_when: false
   when: "java_version  == 'LATEST'"
 
--
-  name: "Setting Java SDK version from SDKMAN: {{ java_version }}"
+- name: "Setting Java SDK version from SDKMAN: {{ java_version }}"
   ansible.builtin.shell: "echo {{ java_version }}"
   become_user: "{{ sdk_service_user }}"
   changed_when: false
@@ -34,13 +30,11 @@
   register: selected_java_version
   when: "java_version != 'LATEST'"
 
--
-  name: "Setting unified Java version variable"
+- name: "Setting unified Java version variable"
   ansible.builtin.set_fact:
     java_version_to_install: "{{ computed_java_version.stdout if (java_version == 'LATEST') else selected_java_version.stdout }}"
 
--
-  name: "Installing Java via SDKMAN: {{ java_version }}"
+- name: "Installing Java via SDKMAN: {{ java_version }}"
   become_user: "{{ sdk_service_user }}"
   ansible.builtin.shell: . {{ sdkman_dir }}/bin/sdkman-init.sh && sdk install java {{ java_version_to_install }} {{ item.localpath | default('') }}
   args:
@@ -52,20 +46,18 @@
     sdk_install.rc != 0 and
     'is already installed.' not in sdk_install.stdout
 
--
-  name: "Adding Java to /etc/profile.d/java.sh for {{ service_user }}"
+- name: "Adding Java to /etc/profile.d/java.sh for {{ service_user }}"
   ansible.builtin.lineinfile:
-    mode: '0755'
+    mode: "0755"
     path: "{{ item.dir }}"
     regexp: "^PATH=\"$PATH:{{ service_home_dir }}/.sdkman/candidates/java/current/bin\""
     insertbefore: EOF
     create: true
-    line: 'PATH=$PATH:{{ service_home_dir }}/.sdkman/candidates/java/current/bin'
+    line: "PATH=$PATH:{{ service_home_dir }}/.sdkman/candidates/java/current/bin"
   with_items:
     - { user: "{{ service_user }}", dir: "/etc/profile.d/java.sh" }
 
--
-  name: "Updating Java Alternatives"
+- name: "Updating Java Alternatives"
   community.general.alternatives:
     name: "{{ item.name }}"
     path: "{{ sdkman_dir }}/candidates/{{ item.candidate }}/current/bin/{{ item.name }}"

@@ -1,39 +1,33 @@
 ---
--
-  name: "Including OS-specific vars"
+- name: "Including OS-specific vars"
   ansible.builtin.include_vars: "{{ ansible_os_family | lower }}.yml"
 
--
-  name: "Updating apt cache"
+- name: "Updating apt cache"
   ansible.builtin.apt:
     cache_valid_time: 3600
     update_cache: true
 
--
-  name: "Upgrading all apt packages"
+- name: "Upgrading all apt packages"
   ansible.builtin.apt:
     force_apt_get: true
     upgrade: dist
 
--
-  name: "Removing Unneeded Dev Packages, Docs and Man Pages"
-  ansible.builtin.shell: "{{ item }}"  # noqa: command-instead-of-shell
+- name: "Removing Unneeded Dev Packages, Docs and Man Pages"
+  ansible.builtin.shell: "{{ item }}" # noqa: command-instead-of-shell
   loop:
     - "dpkg --list | awk '{ print $2 }' | grep linux-source | xargs apt-get -y purge"
     - "dpkg --list | awk '{ print $2 }' | grep -- '-doc$' | xargs apt-get -y purge"
   changed_when: true
   failed_when: false
 
--
-  name: "Removing LXD Snap"
+- name: "Removing LXD Snap"
   community.general.snap:
     name:
       - lxd
     state: absent
   failed_when: false
 
--
-  name: "Removing core18 and core20 Snap"
+- name: "Removing core18 and core20 Snap"
   community.general.snap:
     name:
       - core18
@@ -41,16 +35,14 @@
     state: absent
   failed_when: false
 
--
-  name: "Removing Snapd"
+- name: "Removing Snapd"
   community.general.snap:
     name:
       - snapd
     state: absent
   failed_when: false
 
--
-  name: "Removing unwanted packages"
+- name: "Removing unwanted packages"
   ansible.builtin.apt:
     name:
       - snapd
@@ -66,17 +58,15 @@
       - ubuntu-serverguide
     state: absent
 
--
-  name: "Using Deborphan to clean up packages"
-  ansible.builtin.shell: "{{ item }}"  # noqa: command-instead-of-shell
+- name: "Using Deborphan to clean up packages"
+  ansible.builtin.shell: "{{ item }}" # noqa: command-instead-of-shell
   loop:
     - "deborphan --find-config | xargs apt-get -y purge"
     - "deborphan | xargs apt-get -y purge"
   changed_when: true
   failed_when: false
 
--
-  name: "Cleaning up udev rules"
+- name: "Cleaning up udev rules"
   ansible.builtin.file:
     path: "{{ item }}"
     state: absent
@@ -84,8 +74,7 @@
     - /dev/.udev/
     - /lib/udev/rules.d/75-persistent-net-generator.rules
 
--
-  name: "Cleaning leftover DHCP Leases"
+- name: "Cleaning leftover DHCP Leases"
   ansible.builtin.file:
     path: "{{ item }}"
     state: absent
@@ -93,16 +82,14 @@
     - /var/lib/dhcp3/*
     - /var/lib/dhcp/*
 
--
-  name: "Removing Machine ID file"
+- name: "Removing Machine ID file"
   ansible.builtin.file:
     path: "{{ item }}"
     state: absent
   loop:
     - /etc/machine-id
 
--
-  name: "Creating empty Machine ID file"
+- name: "Creating empty Machine ID file"
   ansible.builtin.copy:
     content: ""
     dest: "{{ item }}"
@@ -111,64 +98,55 @@
   loop:
     - /etc/machine-id
 
--
-  name: "Deregistering the Machine ID"
+- name: "Deregistering the Machine ID"
   ansible.builtin.file:
     path: /var/lib/dbus/machine-id
     state: absent
 
--
-  name: "Linking Machine ID file"
+- name: "Linking Machine ID file"
   ansible.builtin.file:
     src: /etc/machine-id
     dest: /var/lib/dbus/machine-id
     state: link
 
--
-  name: "Finding Apt cache directories"
+- name: "Finding Apt cache directories"
   ansible.builtin.find:
     file_type: directory
     paths: /var/lib/apt
   register: apt_cache_files_to_delete
 
--
-  name: "Removing Apt cache directories"
+- name: "Removing Apt cache directories"
   ansible.builtin.file:
     path: "{{ item.path }}"
     state: absent
   loop: "{{ apt_cache_files_to_delete.files }}"
 
--
-  name: "Finding var cache directories"
+- name: "Finding var cache directories"
   ansible.builtin.find:
     file_type: directory
     paths: /var/cache
   register: var_cache_files_to_delete
 
--
-  name: "Removing var cache directories"
+- name: "Removing var cache directories"
   ansible.builtin.file:
     path: "{{ item.path }}"
     state: absent
   loop: "{{ var_cache_files_to_delete.files }}"
 
--
-  name: "Finding /var/log files.old or .log via regex"
+- name: "Finding /var/log files.old or .log via regex"
   ansible.builtin.find:
     paths: /var/log
     patterns: "^.*?\\.(?:old|log\\.gz)$"
     use_regex: true
   register: log_files_to_delete
 
--
-  name: "Removing old log files"
+- name: "Removing old log files"
   ansible.builtin.file:
     path: "{{ item.path }}"
     state: absent
   loop: "{{ log_files_to_delete.files }}"
 
--
-  name: "Removing specific log files"
+- name: "Removing specific log files"
   ansible.builtin.file:
     path: "{{ item }}"
     state: absent
@@ -177,8 +155,7 @@
     - /var/log/wtmp
     - /var/log/btmp
 
--
-  name: "Truncating Audit Logs"
+- name: "Truncating Audit Logs"
   ansible.builtin.copy:
     content: ""
     dest: "{{ item }}"
@@ -189,22 +166,19 @@
     - /var/log/wtmp
     - /var/log/btmp
 
--
-  name: "Clearing the History File"
+- name: "Clearing the History File"
   ansible.builtin.command: "unset HISTFILE"
   changed_when: false
   failed_when: false
 
--
-  name: "Finding all log files to truncate"
+- name: "Finding all log files to truncate"
   ansible.builtin.find:
     paths: /var/log
     file_type: file
     recurse: true
   register: all_log_files
 
--
-  name: "Truncating all log files"
+- name: "Truncating all log files"
   ansible.builtin.copy:
     content: ""
     dest: "{{ item.path }}"
@@ -214,8 +188,7 @@
   loop: "{{ all_log_files.files }}"
   failed_when: false
 
--
-  name: "Removing Caches, Logs, Docs, Man Pages, History, Tmp"
+- name: "Removing Caches, Logs, Docs, Man Pages, History, Tmp"
   ansible.builtin.file:
     path: "{{ item }}"
     state: absent
@@ -226,8 +199,7 @@
     - /usr/share/man/*
     - /tmp/*
 
--
-  name: "Recreating Doc and Man directories"
+- name: "Recreating Doc and Man directories"
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
@@ -236,8 +208,7 @@
     - /usr/share/doc/
     - /usr/share/man/
 
--
-  name: "Recreating TMP"
+- name: "Recreating TMP"
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
@@ -245,41 +216,35 @@
   loop:
     - /tmp/
 
--
-  name: "Removing useless packages from the cache"
+- name: "Removing useless packages from the cache"
   ansible.builtin.apt:
     autoclean: true
 
--
-  name: "Registering Stale Netplan Configs"
+- name: "Registering Stale Netplan Configs"
   ansible.builtin.find:
     paths: /etc/netplan
     patterns: "*.yaml"
   register: netplan_files_to_delete
 
--
-  name: "Removing old YAML configs"
+- name: "Removing old YAML configs"
   ansible.builtin.file:
     path: "{{ item.path }}"
     state: absent
   loop: "{{ netplan_files_to_delete.files }}"
 
--
-  name: "Adding enp0s6 for DHCP for BHYVE Zones"
+- name: "Adding enp0s6 for DHCP for BHYVE Zones"
   ansible.builtin.template:
     dest: /etc/netplan/50-cloud-init.yaml
     mode: "0755"
     src: dhcp-all.debian.yaml.j2
 
--
-  name: "Purging and Autoremoving packages"
+- name: "Purging and Autoremoving packages"
   ansible.builtin.apt:
     autoremove: true
     purge: true
 
--
-  name: "Running Final Cleanup Commands"
-  ansible.builtin.shell: "{{ item }}"  # noqa: command-instead-of-shell
+- name: "Running Final Cleanup Commands"
+  ansible.builtin.shell: "{{ item }}" # noqa: command-instead-of-shell
   loop:
     - "sudo apt-get --purge autoremove"
     - "rm /var/lib/dbus/machine-id"
@@ -291,8 +256,7 @@
   changed_when: true
   failed_when: false
 
--
-  name: "Removing old directories and files"
+- name: "Removing old directories and files"
   ansible.builtin.file:
     path: "{{ item }}"
     state: absent

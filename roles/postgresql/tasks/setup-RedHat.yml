@@ -1,7 +1,6 @@
 ---
--
-  name: "Ensuring PostgreSQL packages are installed"
-  ansible.builtin.yum:
+- name: "Ensuring PostgreSQL packages are installed"
+  ansible.builtin.dnf:
     name: "{{ postgresql_packages }}"
     state: present
     enablerepo: "{{ postgresql_enablerepo | default(omit, true) }}"
@@ -10,9 +9,8 @@
     # and affects system behavior in multiple ways.
     exclude: python-unversioned-command
 
--
-  name: "Ensuring PostgreSQL Python libraries are installed"
-  ansible.builtin.yum:
+- name: "Ensuring PostgreSQL Python libraries are installed"
+  ansible.builtin.dnf:
     name: "{{ postgresql_python_library }}"
     state: present
     enablerepo: "{{ postgresql_enablerepo | default(omit, true) }}"

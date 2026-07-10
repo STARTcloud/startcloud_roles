@@ -1,6 +1,5 @@
 ---
--
-  name: "Setting Up VNC as a systemd Service"
+- name: "Setting Up VNC as a systemd Service"
   ansible.builtin.template:
     src: vncserver@.service
     dest: /lib/systemd/system/
@@ -10,13 +9,11 @@
     # https://github.com/ansible/ansible/issues/19243#issuecomment-266508074
     # validate: /usr/bin/systemd-analyze verify %s
 
--
-  name: "Reloading systemd Daemon"
+- name: "Reloading systemd Daemon"
   ansible.builtin.systemd:
     daemon_reload: true
 
--
-  name: "Enabling VNC systemd Service"
+- name: "Enabling VNC systemd Service"
   ansible.builtin.systemd:
     name: "vncserver@1.service"
     enabled: true

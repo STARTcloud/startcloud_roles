@@ -1,11 +1,9 @@
 ---
--
-  name: "MacOS | Setting package name"
+- name: "MacOS | Setting package name"
   ansible.builtin.set_fact:
     telegraf_agent_package: telegraf
 
--
-  name: "MacOS | Installing Telegraf package"
+- name: "MacOS | Installing Telegraf package"
   ansible.builtin.package:
     name: "{{ telegraf_agent_package }}"
     state: "{{ telegraf_agent_package_state }}"

@@ -1,18 +1,15 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Adding Elastic APT Signing Key"
+    - name: "Adding Elastic APT Signing Key"
       ansible.builtin.get_url:
         url: "{{ logstash_apt_key_url }}"
         dest: "{{ logstash_apt_keyring }}"
         mode: "0644"
       when: ansible_os_family == "Debian"
 
-    -
-      name: "Adding Elastic APT Repository"
+    - name: "Adding Elastic APT Repository"
       ansible.builtin.apt_repository:
         repo: "{{ logstash_apt_repo }}"
         filename: "elastic-{{ logstash_version }}"
@@ -20,8 +17,7 @@
         update_cache: true
       when: ansible_os_family == "Debian"
 
-    -
-      name: "Adding Elastic YUM Repository"
+    - name: "Adding Elastic YUM Repository"
       ansible.builtin.yum_repository:
         name: "elastic-{{ logstash_version }}"
         description: "Elastic repository for {{ logstash_version }} packages"
@@ -31,14 +27,12 @@
         enabled: true
       when: ansible_os_family == "RedHat"
 
-    -
-      name: "Installing Logstash"
+    - name: "Installing Logstash"
       ansible.builtin.package:
         name: logstash
         state: present
 
-    -
-      name: "Configuring Logstash"
+    - name: "Configuring Logstash"
       ansible.builtin.template:
         src: "logstash.yml.j2"
         dest: "{{ logstash_config_dir }}/logstash.yml"
@@ -47,8 +41,7 @@
         mode: "0640"
       notify: "Restarting Logstash"
 
-    -
-      name: "Deploying Logstash Pipeline Configuration"
+    - name: "Deploying Logstash Pipeline Configuration"
       ansible.builtin.template:
         src: "pipeline.conf.j2"
         dest: "{{ logstash_pipeline_dir }}/main.conf"
@@ -57,8 +50,7 @@
         mode: "0640"
       notify: "Restarting Logstash"
 
-    -
-      name: "Enabling and Starting Logstash Service"
+    - name: "Enabling and Starting Logstash Service"
       ansible.builtin.systemd:
         name: "{{ logstash_service_name }}"
         enabled: "{{ logstash_service_enabled }}"

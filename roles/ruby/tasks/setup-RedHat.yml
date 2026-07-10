@@ -1,6 +1,5 @@
 ---
--
-  name: "Installing ruby, rubygems, and development tools"
-  ansible.builtin.yum:
+- name: "Installing ruby, rubygems, and development tools"
+  ansible.builtin.dnf:
     name: "{{ ruby_packages }}"
     state: present

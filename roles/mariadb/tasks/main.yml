@@ -1,24 +1,20 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Installing MariaDB"
+    - name: "Installing MariaDB"
       ansible.builtin.apt:
         name:
           - mariadb-server
 
-    -
-      name: "Starting MariaDB"
+    - name: "Starting MariaDB"
       ansible.builtin.systemd:
         name: mariadb
         state: started
 
-    -
-      name: "Setting the password for {{ mariadb_admin_user }}"
+    - name: "Setting the password for {{ mariadb_admin_user }}"
       become: true
-      community.mysql.mysql_user:
+      ansible.mysql.mysql_user:
         user: "{{ mariadb_admin_user }}"
         password: "{{ mariadb_admin_pass }}"
         host: localhost
@@ -27,24 +23,22 @@
         - set_password_result.failed
         - "'ERROR' in set_password_result.msg"
 
-    -
-      name: "Securing MariaDB"
+    - name: "Securing MariaDB"
       become: true
       ansible.builtin.expect:
         command: mysql_secure_installation
         responses:
-          'Enter current password for root \(enter for none\): ': ''
-          'Switch to unix_socket authentication \[Y\/n\] ': 'n'
-          'Change the root password\? \[Y\/n\] ': 'y'
-          'New password:': "{{ mariadb_admin_pass }}"
-          'Re-enter new password:': "{{ mariadb_admin_pass }}"
-          'Remove anonymous users\? \[Y\/n\]': 'y'
-          'Disallow root login remotely\? \[Y\/n\]': 'n'
-          'Remove test database and access to it\? \[Y\/n\]': 'y'
-          'Reload privilege tables now\? \[Y\/n\]': 'y'
+          "Enter current password for root \\(enter for none\\): ": ""
+          "Switch to unix_socket authentication \\[Y\\/n\\] ": "n"
+          "Change the root password\\? \\[Y\\/n\\] ": "y"
+          "New password:": "{{ mariadb_admin_pass }}"
+          "Re-enter new password:": "{{ mariadb_admin_pass }}"
+          "Remove anonymous users\\? \\[Y\\/n\\]": "y"
+          "Disallow root login remotely\\? \\[Y\\/n\\]": "n"
+          "Remove test database and access to it\\? \\[Y\\/n\\]": "y"
+          "Reload privilege tables now\\? \\[Y\\/n\\]": "y"
 
-    -
-      name: "Configuring MariaDB to bind to all ports"
+    - name: "Configuring MariaDB to bind to all ports"
       ansible.builtin.lineinfile:
         mode: "0755"
         path: "{{ item.dir }}"
@@ -54,8 +48,7 @@
       with_items:
         - { dir: "/etc/mysql/mariadb.conf.d/50-server.cnf" }
 
-    -
-      name: "Restarting MariaDB"
+    - name: "Restarting MariaDB"
       ansible.builtin.systemd:
         name: mariadb
         state: restarted

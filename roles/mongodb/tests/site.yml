@@ -1,9 +1,8 @@
 # test.yml
 ---
-
 - hosts: localhost
-  become: no
-  gather_facts: no
+  become: false
+  gather_facts: false
   tasks:
     - name: Copy environmnet file
       copy:
@@ -27,7 +26,7 @@
           - name: MongoDBTestingNet
             aliases:
               - proxy
-        networks_cli_compatible: yes
+        networks_cli_compatible: true
     - name: Run MongoDB cluster in Docker
       docker_container:
         name: "{{ item }}"
@@ -52,14 +51,14 @@
           - name: MongoDBTestingNet
             aliases:
               - "{{ item }}"
-        networks_cli_compatible: yes
+        networks_cli_compatible: true
       with_items:
         - mongo1
         - mongo2
         - mongo3
 
 - hosts: mongo
-  become: no
+  become: false
   gather_facts: true
   tasks:
     - name: Set proxy for apt
@@ -76,14 +75,14 @@
       when: ansible_os_family == "RedHat"
 
 - hosts: mongo
-  become: no
-  gather_facts: no
+  become: false
+  gather_facts: false
   tasks:
     - name: gather tasks from all hosts
       setup:
 
 - hosts: "{{ target | default('mongo') }}"
-  become: no
+  become: false
   gather_facts: true
   roles:
     - role: greendayonfire.mongodb

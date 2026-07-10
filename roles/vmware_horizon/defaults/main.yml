@@ -16,7 +16,7 @@ horizon_view_depenencies:
   - libpangocairo-1.0-0:armhf
   - libgdk-pixbuf2.0-0:armhf
   - libgtk-3-0:armhf
-  - libxss1:armhf  
+  - libxss1:armhf
   - libatkmm-1.6-1v5:armhf
   - libcairomm-1.0-1v5:armhf
   - libxkbfile1:armhf

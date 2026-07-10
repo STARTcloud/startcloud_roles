@@ -1,3 +1,4 @@
+---
 name: CentOS
 
 on:
@@ -13,14 +14,14 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        molecule_distro: 
+        molecule_distro:
           - centos7
           - centos8
         mongodb_version:
-          - '4.4'
-          - '4.2'
-          - '4.0'
-          - '3.6'
+          - "4.4"
+          - "4.2"
+          - "4.0"
+          - "3.6"
     env:
       MONGODB_VERSION: ${{ matrix.mongodb_version }}
       MOLECULE_DISTRO: ${{ matrix.molecule_distro }}
@@ -32,20 +33,20 @@ jobs:
       - name: Run default test
         run: export "PATH=/home/runner/.local/bin:$PATH" && molecule test
         env:
-          PY_COLORS: '1'
-          ANSIBLE_FORCE_COLOR: '1'
+          PY_COLORS: "1"
+          ANSIBLE_FORCE_COLOR: "1"
       - name: Run default test with enabled authentication
         run: export "PATH=/home/runner/.local/bin:$PATH" && AUTH_STATE=enabled molecule test
         env:
-          PY_COLORS: '1'
-          ANSIBLE_FORCE_COLOR: '1'
+          PY_COLORS: "1"
+          ANSIBLE_FORCE_COLOR: "1"
       - name: Run cluster test
         run: export "PATH=/home/runner/.local/bin:$PATH" && molecule test -s cluster
         env:
-          PY_COLORS: '1'
-          ANSIBLE_FORCE_COLOR: '1'
+          PY_COLORS: "1"
+          ANSIBLE_FORCE_COLOR: "1"
       - name: Run cluster test with enabled authentication
         run: export "PATH=/home/runner/.local/bin:$PATH" && AUTH_STATE=enabled molecule test -s cluster
         env:
-          PY_COLORS: '1'
-          ANSIBLE_FORCE_COLOR: '1'
+          PY_COLORS: "1"
+          ANSIBLE_FORCE_COLOR: "1"

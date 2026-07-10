@@ -1,9 +1,7 @@
 ---
--
-  name: "Ensuring STARTcloud Theme files are present"
+- name: "Ensuring STARTcloud Theme files are present"
   block:
-    -
-      name: "Creating STARTcloud Directories"
+    - name: "Creating STARTcloud Directories"
       ansible.windows.win_file:
         path: "{{ item }}"
         state: directory
@@ -12,16 +10,14 @@
         - C:\opt\STARTcloud
         - C:\opt\STARTcloud\backgrounds
 
-    -
-      name: "Finding Public Desktop Shortcuts"
+    - name: "Finding Public Desktop Shortcuts"
       ansible.windows.win_find:
         paths: "C:\\Users\\Public\\Desktop"
         patterns: "*.lnk"
       register: desktop_shortcuts
       ignore_errors: true
 
-    -
-      name: "Removing Public Desktop Shortcuts"
+    - name: "Removing Public Desktop Shortcuts"
       ansible.windows.win_file:
         path: "{{ item.path }}"
         state: absent
@@ -29,48 +25,41 @@
       when: desktop_shortcuts.files is defined
       ignore_errors: true
 
-    -
-      name: "Creating Chromium Intial Preferences"
+    - name: "Creating Chromium Intial Preferences"
       when: chocolatey_packages is defined and 'chromium' in chocolatey_packages
       ansible.windows.win_template:
         src: initial_preferences.json.j2
         dest: C:\Program Files\Chromium\Application\initial_preferences.json
-        newline_sequence: '\n'
+        newline_sequence: "\\n"
         backup: true
 
-    -
-      name: "Adding Background Image"
+    - name: "Adding Background Image"
       ansible.windows.win_copy:
         src: startcloud-desktop.jpg
         dest: C:\opt\STARTcloud\backgrounds\startcloud-desktop.jpg
 
-    -
-      name: "Adding Background Image"
+    - name: "Adding Background Image"
       ansible.windows.win_copy:
         src: startcloud.png
         dest: C:\opt\STARTcloud\backgrounds\startcloud.png
 
--
-  name: "Adjusting Theme Settings"
+- name: "Adjusting Theme Settings"
   block:
-    -
-      name: "Adjusting Theme Settings AppsUseLightTheme"
+    - name: "Adjusting Theme Settings AppsUseLightTheme"
       ansible.windows.win_regedit:
         path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize
         name: AppsUseLightTheme
         data: 0
         type: dword
 
-    -
-      name: "Adjusting Theme Settings SystemUsesLightTheme"
+    - name: "Adjusting Theme Settings SystemUsesLightTheme"
       ansible.windows.win_regedit:
         path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize
         name: SystemUsesLightTheme
         data: 0
         type: dword
 
-    -
-      name: "Adjusting Theme Settings TaskbarMn"
+    - name: "Adjusting Theme Settings TaskbarMn"
       ansible.windows.win_regedit:
         path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced
         name: TaskbarMn
@@ -79,8 +68,7 @@
         state: present
       ignore_errors: true
 
-    -
-      name: "Adjusting Theme Settings ShowTaskViewButton"
+    - name: "Adjusting Theme Settings ShowTaskViewButton"
       ansible.windows.win_regedit:
         path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced
         name: ShowTaskViewButton
@@ -89,8 +77,7 @@
         state: present
       ignore_errors: true
 
-    -
-      name: "Adjusting Theme Settings TaskbarDa"
+    - name: "Adjusting Theme Settings TaskbarDa"
       ansible.windows.win_regedit:
         path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced
         name: TaskbarDa
@@ -99,8 +86,7 @@
         state: present
       ignore_errors: true
 
-    -
-      name: "Adjusting Theme Settings TaskbarAl"
+    - name: "Adjusting Theme Settings TaskbarAl"
       ansible.windows.win_regedit:
         path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced
         name: TaskbarAl
@@ -109,8 +95,7 @@
         state: present
       ignore_errors: true
 
-    -
-      name: "Adjusting Theme Settings SearchboxTaskbarMode"
+    - name: "Adjusting Theme Settings SearchboxTaskbarMode"
       ansible.windows.win_regedit:
         path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Search
         name: SearchboxTaskbarMode
@@ -119,8 +104,7 @@
         state: present
       ignore_errors: true
 
--
-  name: "Adjusting Default User Settings"
+- name: "Adjusting Default User Settings"
   ansible.windows.win_shell: |
     try {
         REG LOAD HKLM\Default C:\Users\Default\NTUSER.DAT
@@ -162,8 +146,7 @@
     }
     exit 0
 
--
-  name: "Adjusting Default User Settings"
+- name: "Adjusting Default User Settings"
   ansible.windows.win_shell: |
     takeown /f C:\Windows\Web\Screen\img100.jpg
     takeown /f C:\Windows\Web\4K\Wallpaper\Windows\*.*
@@ -172,14 +155,12 @@
     Remove-Item C:\Windows\Web\Screen\img100.jpg
     Remove-Item C:\Windows\Web\4K\Wallpaper\Windows\*.*
 
--
-  name: "Adding Background Image"
+- name: "Adding Background Image"
   ansible.windows.win_copy:
     src: startcloud-desktop.jpg
     dest: C:\Windows\Web\Screen\img100.jpg
 
--
-  name: "Adding Background Image"
+- name: "Adding Background Image"
   ansible.windows.win_copy:
     src: "4k/{{ item }}"
     dest: "C:\\Windows\\Web\\4K\\Wallpaper\\Windows\\{{ item }}"
@@ -194,11 +175,9 @@
     - img0_2560x1600.jpg
     - img0_768x1024.jpg
 
--
-  name: "Enforcing STARTcloud branded backgrounds for all users (desktop, lock screen, login) - survives sysprep"
+- name: "Enforcing STARTcloud branded backgrounds for all users (desktop, lock screen, login) - survives sysprep"
   block:
-    -
-      name: "Setting enforced desktop wallpaper for all users (PersonalizationCSP)"
+    - name: "Setting enforced desktop wallpaper for all users (PersonalizationCSP)"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP
         name: DesktopImagePath
@@ -206,8 +185,7 @@
         type: string
         state: present
 
-    -
-      name: "Setting enforced desktop wallpaper URL for all users (PersonalizationCSP)"
+    - name: "Setting enforced desktop wallpaper URL for all users (PersonalizationCSP)"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP
         name: DesktopImageUrl
@@ -215,8 +193,7 @@
         type: string
         state: present
 
-    -
-      name: "Marking desktop wallpaper as configured (PersonalizationCSP)"
+    - name: "Marking desktop wallpaper as configured (PersonalizationCSP)"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP
         name: DesktopImageStatus
@@ -224,8 +201,7 @@
         type: dword
         state: present
 
-    -
-      name: "Setting enforced lock screen and login background for all users (PersonalizationCSP)"
+    - name: "Setting enforced lock screen and login background for all users (PersonalizationCSP)"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP
         name: LockScreenImagePath
@@ -233,8 +209,7 @@
         type: string
         state: present
 
-    -
-      name: "Setting enforced lock screen and login background URL for all users (PersonalizationCSP)"
+    - name: "Setting enforced lock screen and login background URL for all users (PersonalizationCSP)"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP
         name: LockScreenImageUrl
@@ -242,8 +217,7 @@
         type: string
         state: present
 
-    -
-      name: "Marking lock screen background as configured (PersonalizationCSP)"
+    - name: "Marking lock screen background as configured (PersonalizationCSP)"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP
         name: LockScreenImageStatus
@@ -251,8 +225,7 @@
         type: dword
         state: present
 
-    -
-      name: "Forcing lock screen image via Personalization policy (belt-and-suspenders)"
+    - name: "Forcing lock screen image via Personalization policy (belt-and-suspenders)"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization
         name: LockScreenImage
@@ -260,8 +233,7 @@
         type: string
         state: present
 
-    -
-      name: "Disabling logon screen acrylic blur so the branded image shows sharp"
+    - name: "Disabling logon screen acrylic blur so the branded image shows sharp"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\System
         name: DisableAcrylicBackgroundOnLogon
@@ -269,11 +241,9 @@
         type: dword
         state: present
 
--
-  name: "Configuring Local Group Policy Settings"
+- name: "Configuring Local Group Policy Settings"
   block:
-    -
-      name: "Start Menu - Removing Music icon from Start Menu"
+    - name: "Start Menu - Removing Music icon from Start Menu"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Start\AllowPinnedFolderMusic
         name: value
@@ -282,8 +252,7 @@
         state: present
       ignore_errors: true
 
-    -
-      name: "Start Menu - Removing Pictures icon from Start Menu"
+    - name: "Start Menu - Removing Pictures icon from Start Menu"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Start\AllowPinnedFolderPictures
         name: value
@@ -292,8 +261,7 @@
         state: present
       ignore_errors: true
 
-    -
-      name: "Start Menu - Removing Videos link from Start Menu"
+    - name: "Start Menu - Removing Videos link from Start Menu"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Start\AllowPinnedFolderVideos
         name: value
@@ -302,8 +270,7 @@
         state: present
       ignore_errors: true
 
-    -
-      name: "Start Menu - Removing Games link from Start Menu"
+    - name: "Start Menu - Removing Games link from Start Menu"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer
         name: NoStartMenuMyGames
@@ -312,8 +279,7 @@
         state: present
       ignore_errors: true
 
-    -
-      name: "Start Menu - Removing Search link from Start Menu"
+    - name: "Start Menu - Removing Search link from Start Menu"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer
         name: NoSearchFilesInStartMenu
@@ -322,8 +288,7 @@
         state: present
       ignore_errors: true
 
-    -
-      name: "Start Menu - Enabling Run as Different User command"
+    - name: "Start Menu - Enabling Run as Different User command"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer
         name: ShowRunasDifferentuserinStart
@@ -332,8 +297,7 @@
         state: present
       ignore_errors: true
 
-    -
-      name: "Taskbar - Removing People Bar from taskbar"
+    - name: "Taskbar - Removing People Bar from taskbar"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer
         name: HidePeopleBar
@@ -342,8 +306,7 @@
         state: present
       ignore_errors: true
 
-    -
-      name: "Taskbar - Hiding Task View Button"
+    - name: "Taskbar - Hiding Task View Button"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer
         name: HideTaskViewButton
@@ -352,8 +315,7 @@
         state: present
       ignore_errors: true
 
-    -
-      name: "Taskbar - Removing Meet Now icon"
+    - name: "Taskbar - Removing Meet Now icon"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer
         name: HideSCAMeetNow
@@ -362,8 +324,7 @@
         state: present
       ignore_errors: true
 
-    -
-      name: "Taskbar - Disabling Show Windows Store apps on taskbar"
+    - name: "Taskbar - Disabling Show Windows Store apps on taskbar"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer
         name: NoPinningStoreToTaskbar
@@ -372,8 +333,7 @@
         state: present
       ignore_errors: true
 
-    -
-      name: "Search - Disabling Search the Internet"
+    - name: "Search - Disabling Search the Internet"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search
         name: ConnectedSearchUseWeb
@@ -382,8 +342,7 @@
         state: present
       ignore_errors: true
 
-    -
-      name: "Search - Not searching Internet"
+    - name: "Search - Not searching Internet"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search
         name: DisableWebSearch
@@ -392,8 +351,7 @@
         state: present
       ignore_errors: true
 
-    -
-      name: "Search - Not searching communications"
+    - name: "Search - Not searching communications"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search
         name: ConnectedSearchUseWebOverMeteredConnections
@@ -402,8 +360,7 @@
         state: present
       ignore_errors: true
 
-    -
-      name: "Search - Removing Search Computer Link"
+    - name: "Search - Removing Search Computer Link"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer
         name: NoSearchComputerLinkInStartMenu
@@ -412,8 +369,7 @@
         state: present
       ignore_errors: true
 
-    -
-      name: "Search - Removing See more results / Search Everywhere link"
+    - name: "Search - Removing See more results / Search Everywhere link"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer
         name: NoSearchInternetInStartMenu
@@ -422,8 +378,7 @@
         state: present
       ignore_errors: true
 
-    -
-      name: "Search - Configuring search on taskbar (hide)"
+    - name: "Search - Configuring search on taskbar (hide)"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search
         name: SearchboxTaskbarMode
@@ -432,8 +387,7 @@
         state: present
       ignore_errors: true
 
-    -
-      name: "Privacy - Turning off user tracking"
+    - name: "Privacy - Turning off user tracking"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search
         name: AllowSearchToUseLocation
@@ -442,8 +396,7 @@
         state: present
       ignore_errors: true
 
-    -
-      name: "Display - Start screen to appear on display user is using"
+    - name: "Display - Start screen to appear on display user is using"
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer
         name: MonitorOverride

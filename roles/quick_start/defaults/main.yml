@@ -10,7 +10,6 @@ core_provisioner_version: v0.0.0
 domino_server_name: "{{ settings.hostname }}"
 domino_server_domain: "{{ settings.domain }}"
 startcloud_quick_start_port_forwards:
-  -
-    guest: 8000
+  - guest: 8000
     url: "demo"
 startcloud_quick_start_proxy_url: "{{ startcloud_quick_start_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"

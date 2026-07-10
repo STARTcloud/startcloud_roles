@@ -9,10 +9,10 @@ run_tasks: true
 clamav_daemon_localsocket: /var/run/clamav/clamd.ctl
 
 clamav_daemon_configuration_changes:
-  - regexp: '^.*Example$'
+  - regexp: "^.*Example$"
     state: absent
-  - regexp: '^.*LocalSocket .*$'
-    line: 'LocalSocket {{ clamav_daemon_localsocket }}'
+  - regexp: "^.*LocalSocket .*$"
+    line: "LocalSocket {{ clamav_daemon_localsocket }}"
 
 # clamav_daemon: 'clamav-daemon'
 clamav_daemon_state: started

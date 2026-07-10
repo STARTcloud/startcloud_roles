@@ -1,7 +1,6 @@
 ---
 # tasks file for ipabackup
--
-  name: "Creating backup"
+- name: "Creating backup"
   ansible.builtin.shell: >
     ipa-backup
     {{ "--gpg" if ipabackup_gpg | bool else "" }}
@@ -13,12 +12,10 @@
     {{ "--log-file=" + ipabackup_log_file if ipabackup_log_file is defined else "" }}
   register: result_ipabackup
 
--
-  name: "Handling backup"
+- name: "Handling backup"
   when: ipabackup_to_controller
   block:
-    -
-      name: "Getting ipabackup_item from stderr or stdout output"
+    - name: "Getting ipabackup_item from stderr or stdout output"
       ansible.builtin.set_fact:
         ipabackup_item: "{{ item | regex_search('\n.*/([^\n]+)','\\1') | first }}"
       when: item.find("Backed up to "+ipabackup_dir+"/") > 0
@@ -28,18 +25,15 @@
       loop_control:
         label: ""
 
-    -
-      name: "Failing on missing ipabackup_item"
+    - name: "Failing on missing ipabackup_item"
       ansible.builtin.fail:
         msg: "Failed to get ipabackup_item"
       when: ipabackup_item is not defined
 
-    -
-      name: "Copying backup to controller"
+    - name: "Copying backup to controller"
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/copy_backup_from_server.yml"
       when: state|default("present") == "present"
 
-    -
-      name: "Removing backup on server"
+    - name: "Removing backup on server"
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/remove_backup_from_server.yml"
       when: not ipabackup_keep_on_server

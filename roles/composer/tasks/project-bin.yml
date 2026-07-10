@@ -1,7 +1,6 @@
 ---
--
-    name: "Adding composer_project_path Bin Directory to Global $PATH"
-    ansible.builtin.template:
-        src: composer-project.sh.j2
-        dest: /etc/profile.d/composer-project.sh
-        mode: "0644"
+- name: "Adding composer_project_path Bin Directory to Global $PATH"
+  ansible.builtin.template:
+    src: composer-project.sh.j2
+    dest: /etc/profile.d/composer-project.sh
+    mode: "0644"
