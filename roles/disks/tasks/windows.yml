@@ -1,18 +1,16 @@
 ---
--
-  name: "Expanding System Disk (C:)"
+- name: "Expanding System Disk (C:)"
   block:
-    -
-      name: "Extending the System Drive to maximum capacity"
+    - name: "Extending the System Drive to maximum capacity"
       ansible.windows.win_powershell:
         script: |
           # Get the system drive (typically C:)
           $systemDrive = $env:SystemDrive.TrimEnd(':')
-          
+
           # Check if the partition can be extended
           try {
             $size = Get-PartitionSupportedSize -DriveLetter $systemDrive -ErrorAction Stop
-            
+
             if ($size.SizeMax -gt (Get-Partition -DriveLetter $systemDrive).Size) {
               # Extend the partition to maximum supported size
               Resize-Partition -DriveLetter $systemDrive -Size $size.SizeMax
@@ -28,37 +26,33 @@
             $message = "Unable to extend system drive"
             $errorMsg = $_.Exception.Message
           }
-          
+
           # Return structured output
-          $result = @{ 
+          $result = @{
             changed = $changed
             message = $message
             error = $errorMsg
           }
-          
+
           return $result
       register: extend_system_drive
       changed_when: extend_system_drive.result.changed | default(false)
       failed_when: extend_system_drive.result.error is defined and extend_system_drive.result.error != null
--
-  name: "Configuring Additional Disks"
+- name: "Configuring Additional Disks"
   when:
     - disks.additional_disks is defined
     - disks.additional_disks is not none
     - disks.additional_disks | length > 0
   block:
-    -
-      name: "Gathering Windows disk information"
+    - name: "Gathering Windows disk information"
       community.windows.win_disk_facts:
       register: windows_disk_facts
 
-    -
-      name: "Debugging: Windows disk facts structure"
+    - name: "Debugging: Windows disk facts structure"
       ansible.builtin.debug:
         var: windows_disk_facts
 
-    -
-      name: "Identifying available uninitialized disks"
+    - name: "Identifying available uninitialized disks"
       ansible.builtin.set_fact:
         available_uninitialized_disks: >-
           {{
@@ -69,14 +63,12 @@
             list
           }}
 
-    -
-      name: "Debugging: Available uninitialized disks"
+    - name: "Debugging: Available uninitialized disks"
       ansible.builtin.debug:
         var: available_uninitialized_disks
 
-    -
-      name: "Initializing additional disks"
-      when: 
+    - name: "Initializing additional disks"
+      when:
         - available_uninitialized_disks | length > 0
         - index < available_uninitialized_disks | length
       community.windows.win_initialize_disk:
@@ -86,9 +78,8 @@
       loop_control:
         index_var: index
 
-    -
-      name: "Creating partitions on additional disks"
-      when: 
+    - name: "Creating partitions on additional disks"
+      when:
         - available_uninitialized_disks | length > 0
         - index < available_uninitialized_disks | length
       community.windows.win_partition:
@@ -101,9 +92,8 @@
         index_var: index
       register: created_partitions
 
-    -
-      name: "Formatting additional disk partitions"
-      when: 
+    - name: "Formatting additional disk partitions"
+      when:
         - available_uninitialized_disks | length > 0
         - index < available_uninitialized_disks | length
         - created_partitions is defined
@@ -118,8 +108,7 @@
       loop_control:
         index_var: index
 
-    -
-      name: "Displaying configured additional disks summary"
+    - name: "Displaying configured additional disks summary"
       ansible.builtin.debug:
         msg: >-
           Configured disk {{ index + 1 }}:

@@ -41,7 +41,7 @@
 
     - name: Add Ondrej Sury's repo for PHP 8 (Ubuntu).
       apt_repository:
-        repo: 'ppa:ondrej/php'
+        repo: "ppa:ondrej/php"
       when: ansible_distribution == 'Ubuntu'
 
     - name: Add Ondrej Sury's apt key (Debian).

@@ -3,9 +3,7 @@ argument_specs:
   main:
     short_description: Install and configure PHP with FPM, OpCache, and APCu
     description:
-      - Installs PHP and common extensions from OS packages (or from source),
-        then renders a managed php.ini plus OpCache, APCu, and PHP-FPM
-        configuration on Debian/Ubuntu and RHEL-based systems.
+      - Installs PHP and common extensions from OS packages (or from source), then renders a managed php.ini plus OpCache, APCu, and PHP-FPM configuration on Debian/Ubuntu and RHEL-based systems.
     author: Mark Gilbert
     options:
       run_tasks:
@@ -250,7 +248,7 @@ argument_specs:
         description: Handler used to store session data.
       php_session_save_path:
         type: str
-        default: ''
+        default: ""
         description: Path where session data is stored (empty uses the PHP default).
       php_error_reporting:
         type: str

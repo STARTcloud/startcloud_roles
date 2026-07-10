@@ -1,22 +1,18 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Including OS-specific tasks"
+    - name: "Including OS-specific tasks"
       ansible.builtin.include_tasks: "{{ ansible_os_family | lower }}.yml"
 
-    -
-      name: "Enabling Cockpit"
+    - name: "Enabling Cockpit"
       when: cockpit_enabled
       ansible.builtin.systemd:
         name: cockpit.socket
         enabled: true
         state: started
 
-    -
-      name: "Clearing Cockpit MOTD files"
+    - name: "Clearing Cockpit MOTD files"
       when: not cockpit_motd
       ansible.builtin.copy:
         content: ""

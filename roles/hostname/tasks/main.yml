@@ -1,23 +1,19 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Setting hostname"
+    - name: "Setting hostname"
       when: not ansible_os_family == 'Windows'
       ansible.builtin.hostname:
         name: "{{ settings.hostname }}.{{ settings.domain }}"
 
-    -
-      name: "Setting hostname (Windows)"
+    - name: "Setting hostname (Windows)"
       when: ansible_os_family == 'Windows'
       ansible.windows.win_hostname:
         name: "{{ settings.hostname }}"
       register: win_hostname_result
 
-    -
-      name: "Rebooting Windows to apply the hostname change"
+    - name: "Rebooting Windows to apply the hostname change"
       # win_hostname only stages the rename; Windows needs a reboot for the new
       # computer name to take effect. Skip when running ansible-local; on remote
       # (WinRM) hosts reboot here so the new name is live for the rest of the play.
@@ -27,28 +23,24 @@
         - ansible_connection != 'local'
       ansible.windows.win_reboot:
 
-    -
-      name: "Configuring /etc/hosts for non-Windows guests"
+    - name: "Configuring /etc/hosts for non-Windows guests"
       when: not ansible_os_family == 'Windows'
       block:
-        -
-          name: "Gathering facts on current container (Linux only; FreeBSD doesn't have the docker collection's container detection)"
+        - name: "Gathering facts on current container (Linux only; FreeBSD doesn't have the docker collection's container detection)"
           community.docker.current_container_facts:
           when: ansible_system == 'Linux'
 
-        -
-          name: "Printing information on current container when running in a container"
+        - name: "Printing information on current container when running in a container"
           ansible.builtin.debug:
             msg: "Container ID is {{ ansible_module_container_id }}"
           when: ansible_module_running_in_container | default(false)
 
-        -
-          name: "Setting /etc/hosts"
+        - name: "Setting /etc/hosts"
           when: not (ansible_module_running_in_container | default(false))
           ansible.builtin.replace:
             path: "/etc/hosts"
             regexp: "{{ item.regex }}"
             replace: "{{ item.replace }}"
           with_items:
-            - { regex: "(^127.0.0.1)(.*)$", replace: '127.0.0.1   localhost {{ settings.hostname }}.{{ settings.domain }} {{ settings.hostname }}'}
-            - { regex: "(^127.0.1.1)(.*)$", replace: '127.0.1.1   localhost {{ settings.hostname }}.{{ settings.domain }} {{ settings.hostname }}'}
+            - { regex: "(^127.0.0.1)(.*)$", replace: "127.0.0.1   localhost {{ settings.hostname }}.{{ settings.domain }} {{ settings.hostname }}" }
+            - { regex: "(^127.0.1.1)(.*)$", replace: "127.0.1.1   localhost {{ settings.hostname }}.{{ settings.domain }} {{ settings.hostname }}" }

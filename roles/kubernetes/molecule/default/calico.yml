@@ -5,15 +5,15 @@
 
   vars:
     kubernetes_pod_network:
-      cni: 'calico'
-      cidr: '192.168.0.0/16'
+      cni: "calico"
+      cidr: "192.168.0.0/16"
 
     # Allow swap in test environments (hard to control in some envs).
     kubernetes_config_kubelet_configuration:
       cgroupDriver: "systemd"
       failSwapOn: false
       cgroupsPerQOS: true
-      enforceNodeAllocatable: ['pods']
+      enforceNodeAllocatable: ["pods"]
     containerd_config_cgroup_driver_systemd: true
 
   pre_tasks:

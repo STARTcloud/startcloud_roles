@@ -1,11 +1,9 @@
 ---
--
-  name: "Reloading systemd Daemon"
+- name: "Reloading systemd Daemon"
   ansible.builtin.systemd_service:
     daemon_reload: true
 
--
-  name: "Restarting openfortivpn"
+- name: "Restarting openfortivpn"
   ansible.builtin.systemd_service:
     name: "openfortivpn.service"
     state: restarted

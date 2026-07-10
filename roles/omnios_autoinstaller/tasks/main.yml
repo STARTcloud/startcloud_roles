@@ -1,90 +1,75 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Installing Kayak and TFTP"
-      pkg5:
+    - name: "Installing Kayak and TFTP"
+      community.general.pkg5:
         name:
           - kayak
           - kayak-kernel
           - tftp
           - isc-dhcp
 
-    -
-      name: "Checking if Image Has Been Downloaded"
+    - name: "Checking if Image Has Been Downloaded"
       register: file_exists
       ansible.builtin.stat:
         path: "/var/kayak/kayak/{{ omnios_source_file }}"
         checksum_algorithm: sha256
 
-    -
-      name: "Downloading PXE Boot Installer Image"
+    - name: "Downloading PXE Boot Installer Image"
       ansible.builtin.get_url:
         dest: "/var/kayak/kayak/{{ omnios_source_file }}"
         mode: "0644"
         url: "{{ omnios_source_url }}"
       when: not file_exists.stat.exists
 
-    -
-      name: "Enabling and Starting Kayak"
+    - name: "Enabling and Starting Kayak"
       ansible.builtin.service:
         name: kayak
         state: started
 
-    -
-      name: "Enabling and Starting TFTP"
+    - name: "Enabling and Starting TFTP"
       ansible.builtin.service:
         name: tftp/udp6
         state: started
 
-    -
-      name: "Converting Mac Address to Extended Format"
+    - name: "Converting Mac Address to Extended Format"
       ansible.builtin.set_fact:
         modified_macaddr: "{{ '{}{}:{}{}:{}{}:{}{}:{}{}:{}{}'.format(*pxe_client_mac) }}"
 
-    -
+    - name: "Setting DHCP Settings"
       become: true
-      name: "Setting DHCP Settings"
       ansible.builtin.template:
         dest: "{{ item.dest }}"
         mode: "0755"
         src: "{{ item.src }}"
       with_items:
-        -
-          dest: /etc/dhcpd.conf
+        - dest: /etc/dhcpd.conf
           src: dhcpd.conf
 
-    -
-      name: "Enabling and Starting DHCP"
+    - name: "Enabling and Starting DHCP"
       ansible.builtin.service:
         name: "dhcp:ipv4"
         state: started
 
-    -
+    - name: "Setting Boot Configurations for Kayak and TFTP"
       become: true
-      name: "Setting Boot Configurations for Kayak and TFTP"
       ansible.builtin.template:
         dest: "{{ item.dest }}"
         mode: "0755"
         src: "{{ item.src }}"
       with_items:
-        -
-          dest: /tftpboot/boot/loader.conf.local
+        - dest: /tftpboot/boot/loader.conf.local
           src: loader.conf.local
-        -
-          dest: /tftpboot/boot/grub/menu.lst
+        - dest: /tftpboot/boot/grub/menu.lst
           src: menu.lst
 
-    -
-      name: "Creating the XML Storage Directory"
+    - name: "Creating the XML Storage Directory"
       ansible.builtin.file:
         path: /var/kayak/kayak/xml
         state: directory
 
-    -
-      name: "Creating the Promimic Script Directories"
+    - name: "Creating the Promimic Script Directories"
       ansible.builtin.file:
         path: "{{ item }}"
         state: directory
@@ -92,46 +77,39 @@
         - /opt/promimic
         - /opt/promimic/scripts
 
-    -
+    - name: "Setting Up XML2AI"
       become: true
-      name: "Setting Up XML2AI"
       ansible.builtin.template:
         dest: "{{ item.dest }}"
         mode: a+x
         src: "{{ item.src }}"
       with_items:
-        -
-          dest: /opt/promimic/scripts/xml2ai
+        - dest: /opt/promimic/scripts/xml2ai
           src: xml2ai
 
-    -
+    - name: "Generating the XML from {{ pxe_profile }}hosttemplate.xml"
       become: true
-      name: "Generating the XML from {{ pxe_profile }}hosttemplate.xml"
       ansible.builtin.template:
         dest: "{{ item.dest }}"
         mode: "0644"
         src: "{{ item.src }}"
       with_items:
-        -
-          dest: "/var/kayak/kayak/xml/{{ pxe_client_hostname }}.xml"
+        - dest: "/var/kayak/kayak/xml/{{ pxe_client_hostname }}.xml"
           src: "{{ pxe_profile }}hosttemplate.xml"
 
-    -
+    - name: "Placing /var/kayak/kayak/xml/machineschema.dtd"
       become: true
-      name: "Placing /var/kayak/kayak/xml/machineschema.dtd"
       ansible.builtin.template:
         dest: "{{ item.dest }}"
         mode: "0644"
         src: "{{ item.src }}"
       with_items:
-        -
-          dest: "/var/kayak/kayak/xml/machineschema.dtd"
+        - dest: "/var/kayak/kayak/xml/machineschema.dtd"
           src: "machineschema.dtd"
 
-    -
-      name: "Adding Path to System Profile"
+    - name: "Adding Path to System Profile"
       ansible.builtin.lineinfile:
-        mode: '0644'
+        mode: "0644"
         path: "/etc/profile"
         line: "PATH=$PATH:"
         insertbefore: EOF
@@ -139,8 +117,7 @@
         - "PATH=$PATH:{{ profile_path }}"
         - "export PATH"
 
-    -
+    - name: "Generating Kayak Configurations with XML2AI with {{ pxe_client_hostname }}.xml"
       become: true
-      name: "Generating Kayak Configurations with XML2AI with {{ pxe_client_hostname }}.xml"
       ansible.builtin.shell:
         cmd: "pfexec python3 {{ pxe_script_generator }} < /var/kayak/kayak/xml/{{ pxe_client_hostname }}.xml"

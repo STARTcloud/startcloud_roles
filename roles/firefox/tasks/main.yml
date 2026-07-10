@@ -1,95 +1,81 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Gathering DEB architecture"
+    - name: "Gathering DEB architecture"
       ansible.builtin.command: dpkg --print-architecture
       register: deb_architecture
       changed_when: false
 
-    -
-      name: "Ensuring apt cache is updated."
+    - name: "Ensuring apt cache is updated."
       ansible.builtin.apt:
         cache_valid_time: 3600
         update_cache: true
-    
-    -
-      name: "Adding firefox apt repository key"
+
+    - name: "Adding firefox apt repository key"
       ansible.builtin.get_url:
         url: "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x9BDB3D89CE49EC21"
         dest: /etc/apt/trusted.gpg.d/mozilla.asc
-        mode: '0644'
+        mode: "0644"
         force: true
-    
-    - 
-      name: "Setting up Firefox PPA repo as we hates snaps"
+
+    - name: "Setting up Firefox PPA repo as we hates snaps"
       ansible.builtin.apt_repository:
         repo: "deb [arch={{ deb_architecture.stdout }} signed-by=/etc/apt/trusted.gpg.d/mozilla.asc] http://ppa.launchpad.net/mozillateam/ppa/ubuntu {{ ansible_distribution_release }} main"
         state: present
-    
-    -
-      name: "Adding Firefox Apt preferences"
+
+    - name: "Adding Firefox Apt preferences"
       ansible.builtin.template:
         src: "templates/mozilla-firefox.j2"
         dest: "/etc/apt/preferences.d/mozilla-firefox"
         owner: "root"
         group: "root"
         mode: "0644"
-    
-    -
-      name: "Using the PPA on every Update"
+
+    - name: "Using the PPA on every Update"
       ansible.builtin.template:
         src: "templates/unattended-upgrades-firefox.j2"
         dest: "/etc/apt/apt.conf.d/51unattended-upgrades-firefox"
         owner: "root"
         group: "root"
         mode: "0644"
-    
-    -
-      name: "Installing Firefox"
+
+    - name: "Installing Firefox"
       ansible.builtin.apt:
         name:
           - firefox
         state: present
-    
-    -
-      name: "Pinning firefox"
+
+    - name: "Pinning firefox"
       ansible.builtin.dpkg_selections:
         name: firefox
         selection: hold
-    
-    -
-      name: "Creating Firefox Policies Directory"
+
+    - name: "Creating Firefox Policies Directory"
       ansible.builtin.file:
-        mode: '0755'
+        mode: "0755"
         path: "{{ item }}"
         state: directory
       with_items:
         - "/etc/firefox/policies"
-    
-    -
-      name: "Setting Default Firefox Preferences"
+
+    - name: "Setting Default Firefox Preferences"
       ansible.builtin.template:
         src: "templates/policies.json.j2"
         dest: "/etc/firefox/policies/policies.json"
         owner: "root"
         group: "root"
         mode: "0644"
-    
-    -
-      name: "Setting Default Homepage Firefox Preferences"
+
+    - name: "Setting Default Homepage Firefox Preferences"
       ansible.builtin.template:
         src: "templates/syspref.js.j2"
         dest: "/etc/firefox/syspref.js"
         owner: "root"
         group: "root"
         mode: "0644"
-    
-    -
-      name: "Removing Older Packages"
+
+    - name: "Removing Older Packages"
       ansible.builtin.apt:
         autoremove: true
         purge: true
-    

@@ -1,6 +1,5 @@
 ---
--
-  name: "Configuring Apache"
+- name: "Configuring Apache"
   ansible.builtin.lineinfile:
     dest: "{{ apache_server_root }}/conf/{{ apache_daemon }}.conf"
     regexp: "{{ item.regexp }}"
@@ -10,16 +9,14 @@
   with_items: "{{ apache_ports_configuration_items }}"
   notify: Restarting apache
 
--
-  name: "Checking whether certificates defined in vhosts exist"
+- name: "Checking whether certificates defined in vhosts exist"
   ansible.builtin.stat:
     path: "{{ item.certificate_file }}"
   register: apache_ssl_certificates
   with_items: "{{ apache_vhosts_ssl }}"
   no_log: "{{ apache_ssl_no_log }}"
 
--
-  name: "Enabling Apache mods"
+- name: "Enabling Apache mods"
   ansible.builtin.copy:
     dest: "{{ apache_server_root }}/conf.modules.d/99-ansible-{{ item }}.conf"
     content: |
@@ -28,16 +25,14 @@
   with_items: "{{ apache_mods_enabled }}"
   notify: Restarting apache
 
--
-  name: "Disabling Apache mods"
+- name: "Disabling Apache mods"
   ansible.builtin.file:
     path: "{{ apache_server_root }}/conf.modules.d/99-ansible-{{ item }}.conf"
     state: absent
   with_items: "{{ apache_mods_disabled }}"
   notify: Restarting apache
 
--
-  name: "Adding apache vhosts configuration"
+- name: "Adding apache vhosts configuration"
   ansible.builtin.template:
     src: "{{ apache_vhosts_template }}"
     dest: "{{ apache_conf_path }}/{{ apache_vhosts_filename }}"
@@ -47,15 +42,13 @@
   notify: Restarting apache
   when: apache_create_vhosts | bool
 
--
-  name: "Checking if localhost cert exists (RHEL 8 and later)"
+- name: "Checking if localhost cert exists (RHEL 8 and later)"
   ansible.builtin.stat:
     path: /etc/pki/tls/certs/localhost.crt
   register: localhost_cert
   when: ansible_distribution_major_version | int >= 8
 
--
-  name: "Ensuring httpd certs are installed (RHEL 8 and later)"
+- name: "Ensuring httpd certs are installed (RHEL 8 and later)"
   ansible.builtin.command: /usr/libexec/httpd-ssl-gencerts
   changed_when: false
   when:

@@ -1,52 +1,43 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Checking for existing chocolatey install"
+    - name: "Checking for existing chocolatey install"
       ansible.windows.win_stat:
         path: "{{ chocolatey_path }}/choco.exe"
       register: chocolatey_exe
 
-    -
-      name: "Checking Chocolatey"
+    - name: "Checking Chocolatey"
       ansible.builtin.debug:
         var: chocolatey_exe
         verbosity: 2
 
-    -
-      name: "Installing latest Chocolatey"
-      ansible.builtin.raw: "$env:chocolateyUseWindowsCompression='{{ chocolatey_windows_compression }}'; \
-      [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; \
-      iex ((New-Object System.Net.WebClient).DownloadString('{{ chocolatey_installer }}'))"
+    - name: "Installing latest Chocolatey"
+      ansible.builtin.raw: "$env:chocolateyUseWindowsCompression='{{ chocolatey_windows_compression }}'; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; iex ((New-Object
+        System.Net.WebClient).DownloadString('{{ chocolatey_installer }}'))"
       register: chocolatey_install_result
       when:
         - chocolatey_exe.stat.exists is defined
         - not chocolatey_exe.stat.exists
         - chocolatey_version == "latest"
 
-    -
-      name: "Installing specific Chocolatey"
-      ansible.builtin.raw: "$env:chocolateyUseWindowsCompression='{{ chocolatey_windows_compression }}'; \
-      $env:chocolateyVersion = '{{ chocolatey_version }}'; \
-      iex ((New-Object System.Net.WebClient).DownloadString('{{ chocolatey_installer }}'))"
+    - name: "Installing specific Chocolatey"
+      ansible.builtin.raw: "$env:chocolateyUseWindowsCompression='{{ chocolatey_windows_compression }}'; $env:chocolateyVersion = '{{ chocolatey_version }}'; iex ((New-Object System.Net.WebClient).DownloadString('{{
+        chocolatey_installer }}'))"
       register: chocolatey_install_result
       when:
         - chocolatey_exe.stat.exists is defined
         - not chocolatey_exe.stat.exists
         - chocolatey_version != "latest"
 
-    -
-      name: "Checking Chocolatey Results"
+    - name: "Checking Chocolatey Results"
       ansible.builtin.debug:
         var: chocolatey_install_result
         verbosity: 3
 
-    -
-      name: "Adding chocolatey to PATH"
+    - name: "Adding chocolatey to PATH"
       ansible.windows.win_path:
         name: PATH
-        elements: '%ALLUSERSPROFILE%\chocolatey\bin'
+        elements: "%ALLUSERSPROFILE%\\chocolatey\\bin"
         scope: machine
         state: present

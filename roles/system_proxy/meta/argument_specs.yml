@@ -3,9 +3,7 @@ argument_specs:
   main:
     short_description: Configure system-wide proxy settings
     description:
-      - Configures system-wide HTTP/HTTPS proxy environment variables and
-        package-manager proxy settings (APT, yum, WinHTTP) on Debian, RedHat,
-        and Windows guests.
+      - Configures system-wide HTTP/HTTPS proxy environment variables and package-manager proxy settings (APT, yum, WinHTTP) on Debian, RedHat, and Windows guests.
     author: Mark Gilbert
     options:
       run_tasks:

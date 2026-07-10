@@ -1,20 +1,16 @@
 ---
 # Package tasks
--
-  name: "Setting provider list"
+- name: "Setting provider list"
   ansible.builtin.set_fact:
     providers_to_process: "{{ template_providers }}"
 
--
-  name: "Reporting packaging status"
+- name: "Reporting packaging status"
   ansible.builtin.debug:
     msg: "Packaging {{ template_def.name }} for providers: {{ providers_to_process | join(', ') }}"
 
--
-  name: "Packaging for each provider"
+- name: "Packaging for each provider"
   block:
-    -
-      name: "Checking if provider package.json exists"
+    - name: "Checking if provider package.json exists"
       ansible.builtin.stat:
         path: "providers/{{ item }}/package.json"
       register: package_file_stat
@@ -22,8 +18,7 @@
       loop_control:
         label: "{{ item }}"
 
-    -
-      name: "Packaging for provider"
+    - name: "Packaging for provider"
       ansible.builtin.command: >
         packer build
         {% for var_file in default_var_files %}
@@ -39,8 +34,7 @@
         label: "{{ item.item }}"
       when: item.stat.exists
 
-    -
-      name: "Reporting missing package.json"
+    - name: "Reporting missing package.json"
       ansible.builtin.debug:
         msg: "Package configuration not found for provider: {{ item.item }}"
       loop: "{{ package_file_stat.results }}"
@@ -49,7 +43,6 @@
       when: not item.stat.exists
 
   rescue:
-    -
-      name: "Reporting packaging error"
+    - name: "Reporting packaging error"
       ansible.builtin.debug:
         msg: "Error packaging {{ template_def.name }}. Check output for details."

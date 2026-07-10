@@ -3,12 +3,12 @@ run_tasks: true
 
 # Prerequisite packages installed before MongoDB, OpenSearch and Graylog.
 graylog_packages:
-    - apt-transport-https
-    - ca-certificates
-    - gnupg
-    - pwgen
-    - uuid-runtime
-    - openjdk-17-jre-headless
+  - apt-transport-https
+  - ca-certificates
+  - gnupg
+  - pwgen
+  - uuid-runtime
+  - openjdk-17-jre-headless
 
 # Graylog server
 graylog_version: "6.1"

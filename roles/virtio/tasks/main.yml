@@ -1,13 +1,10 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Installing VirtIO drivers and QEMU Guest Agent from the attached virtio-win media"
+    - name: "Installing VirtIO drivers and QEMU Guest Agent from the attached virtio-win media"
       block:
-        -
-          name: "Locating the VirtIO media, or downloading and mounting the ISO if no CD-ROM is attached"
+        - name: "Locating the VirtIO media, or downloading and mounting the ISO if no CD-ROM is attached"
           ansible.windows.win_powershell:
             parameters:
               IsoUrl: "{{ virtio_iso_url | default('') }}"
@@ -39,8 +36,7 @@
               $Ansible.Result = @{ drive = "$($letter):"; mounted = $true; iso = $iso }
           register: virtio_media
 
-        -
-          name: "Installing VirtIO drivers (all components)"
+        - name: "Installing VirtIO drivers (all components)"
           ansible.windows.win_package:
             path: "{{ virtio_media.result.drive }}\\{{ virtio_gt_msi }}"
             arguments: "/qn /norestart ADDLOCAL=ALL"
@@ -52,14 +48,12 @@
           poll: 0
           register: virtio_gt_install
 
-        -
-          name: "Waiting for WinRM to recover (the NetKVM network driver install briefly resets the NIC)"
+        - name: "Waiting for WinRM to recover (the NetKVM network driver install briefly resets the NIC)"
           ansible.builtin.wait_for_connection:
             delay: 15
             timeout: 600
 
-        -
-          name: "Confirming the VirtIO driver install finished"
+        - name: "Confirming the VirtIO driver install finished"
           ansible.builtin.async_status:
             jid: "{{ virtio_gt_install.ansible_job_id }}"
           register: virtio_gt_status
@@ -67,8 +61,7 @@
           retries: 30
           delay: 20
 
-        -
-          name: "Installing QEMU Guest Agent"
+        - name: "Installing QEMU Guest Agent"
           ansible.windows.win_package:
             path: "{{ virtio_media.result.drive }}\\{{ qemu_ga_msi }}"
             arguments: "/qn /norestart"
@@ -77,15 +70,13 @@
               - 0
               - 3010
 
-        -
-          name: "Ensuring QEMU Guest Agent service is automatic and running"
+        - name: "Ensuring QEMU Guest Agent service is automatic and running"
           ansible.windows.win_service:
             name: "{{ qemu_ga_service_name }}"
             start_mode: auto
             state: started
 
-        -
-          name: "Dismounting and removing the downloaded VirtIO ISO (fallback path only)"
+        - name: "Dismounting and removing the downloaded VirtIO ISO (fallback path only)"
           when: virtio_media.result.mounted | default(false)
           ansible.windows.win_powershell:
             parameters:

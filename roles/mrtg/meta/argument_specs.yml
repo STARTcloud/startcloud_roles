@@ -3,8 +3,7 @@ argument_specs:
   main:
     short_description: Installs and configures MRTG.
     description:
-      - Installs MRTG and SNMP, renders an MRTG configuration file, generates the
-        HTML index, and schedules MRTG to poll SNMP traffic statistics on a single node.
+      - Installs MRTG and SNMP, renders an MRTG configuration file, generates the HTML index, and schedules MRTG to poll SNMP traffic statistics on a single node.
     author: Mark Gilbert
     options:
       run_tasks:

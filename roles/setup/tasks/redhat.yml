@@ -1,11 +1,9 @@
 ---
--
-  name: "Setting timezone to {{ timezone }}"
+- name: "Setting timezone to {{ timezone }}"
   community.general.timezone:
     name: "{{ timezone }}"
 
--
-  name: "Creating Directories"
+- name: "Creating Directories"
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
@@ -16,41 +14,37 @@
     - "/vagrant/support-bundle"
     - "/tmp"
 
--
-  name: "Writing current variables to /vagrant/support-bundle/ansible-system-variables.json"
+- name: "Writing current variables to /vagrant/support-bundle/ansible-system-variables.json"
   vars:
     # Build the export via key-extract so the deprecated magic vars (play_hosts,
     # role_names, removed in ansible-core 2.23) are filtered before access -> no
     # deprecation warning, no data loss.
-    support_bundle_keys: "{{ vars.keys() | reject('in', ['play_hosts', 'role_names', 'groups', 'group_names', 'inventory_hostname', 'ansible_play_hosts', 'ansible_play_batch', 'hostvars', 'ansible_version']) | list }}"
+    support_bundle_keys: "{{ vars.keys() | reject('in', ['play_hosts', 'role_names', 'groups', 'group_names', 'inventory_hostname', 'ansible_play_hosts', 'ansible_play_batch', 'hostvars', 'ansible_version'])
+      | list }}"
   ansible.builtin.copy:
     content: "{{ dict(support_bundle_keys | zip(support_bundle_keys | map('extract', vars))) | to_nice_json }}"
     dest: "/vagrant/support-bundle/ansible-system-variables.json"
     force: false
-    mode: 'a+x'
+    mode: "a+x"
 
--
-  name: "Printing out version used for {{ provisioner_name }}"
+- name: "Printing out version used for {{ provisioner_name }}"
   ansible.builtin.debug:
     msg: "This Ansible Playbook was Generated with {{ provisioner_name }} v{{ provisioner_version }}"
 
--
-  name: "Printing out core_provisioner version used"
+- name: "Printing out core_provisioner version used"
   ansible.builtin.debug:
     msg: "This Ansible Playbook was Generated with core_provisioner v{{ core_provisioner_version }}"
 
--
-  name: "Writing current variables to json in /vagrant/support-bundle/"
+- name: "Writing current variables to json in /vagrant/support-bundle/"
   ansible.builtin.copy:
     content: "{{ provisioner_version }}"
     dest: "/vagrant/support-bundle/{{ provisioner_name }}-version.json"
     force: false
-    mode: 'a+x'
+    mode: "a+x"
 
--
-  name: "Writing current variables to /vagrant/support-bundle/core_provisioner-version.json"
+- name: "Writing current variables to /vagrant/support-bundle/core_provisioner-version.json"
   ansible.builtin.copy:
     content: "{{ core_provisioner_version }}"
     dest: "/vagrant/support-bundle/core_provisioner-version.json"
     force: false
-    mode: 'a+x'
+    mode: "a+x"

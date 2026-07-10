@@ -1,56 +1,47 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Gathering DEB architecture"
+    - name: "Gathering DEB architecture"
       ansible.builtin.command: dpkg --print-architecture
       register: deb_architecture
       changed_when: false
 
-    -
-      name: "Downloading Wifi-Connect installer raspbian-install.sh"
+    - name: "Downloading Wifi-Connect installer raspbian-install.sh"
       when: ansible_os_family == 'Debian' and (deb_architecture.stdout == 'arm64' or deb_architecture.stdout == 'armhf')
       ansible.builtin.get_url:
         url: https://github.com/balena-io/wifi-connect/raw/master/scripts/raspbian-install.sh
         dest: /tmp/raspbian-install.sh
-        mode: '+x'
+        mode: "+x"
       register: wificonnect
-    
-    - 
-      name: "Installing Wifi-Connect"
+
+    - name: "Installing Wifi-Connect"
       ansible.builtin.shell: /tmp/raspbian-install.sh
       when: ansible_os_family == 'Debian' and (deb_architecture.stdout == 'arm64' or deb_architecture.stdout == 'armhf')
       args:
         executable: /bin/bash
-    
-    - 
-      name: "Adding Wifi-Connect Service Configurations"
+
+    - name: "Adding Wifi-Connect Service Configurations"
       when: ansible_os_family == 'Debian' and (deb_architecture.stdout == 'arm64' or deb_architecture.stdout == 'armhf')
       ansible.builtin.template:
         mode: a+x
         dest: "{{ item.dest }}"
         src: "{{ item.src }}"
       with_items:
-        -
-          src: wifi-connect.service.j2
+        - src: wifi-connect.service.j2
           dest: "/etc/systemd/system/wifi-connect.service"
-        -
-          src: start.sh.j2
+        - src: start.sh.j2
           dest: "/usr/local/sbin/start-wifi-connect.sh"
-    
-    - 
-      name: "Disabling Wifi-Connect service"
+
+    - name: "Disabling Wifi-Connect service"
       when: ansible_os_family == 'Debian' and (deb_architecture.stdout == 'arm64' or deb_architecture.stdout == 'armhf')
       ansible.builtin.service:
         name: wifi-connect
         enabled: false
         state: stopped
         daemon_reload: true
-    
-    - 
-      name: "Setting Netplan to use NetworkManager for WifiConnect"
+
+    - name: "Setting Netplan to use NetworkManager for WifiConnect"
       when: ansible_os_family == 'Debian' and (deb_architecture.stdout == 'arm64' or deb_architecture.stdout == 'armhf')
       ansible.builtin.template:
         src: "50-cloud-init.yaml.j2"

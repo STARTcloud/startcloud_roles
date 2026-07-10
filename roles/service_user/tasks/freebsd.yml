@@ -1,16 +1,13 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Creating the group {{ service_group }}"
+    - name: "Creating the group {{ service_group }}"
       ansible.builtin.group:
         name: "{{ service_group }}"
         state: present
 
-    -
-      name: "Creating user {{ service_user }}"
+    - name: "Creating user {{ service_user }}"
       ansible.builtin.user:
         name: "{{ service_user }}"
         shell: /bin/sh
@@ -20,37 +17,33 @@
         append: true
         create_home: true
 
-    -
-      name: "Adding user to sudoers: {{ service_user }}"
+    - name: "Adding user to sudoers: {{ service_user }}"
       ansible.builtin.lineinfile:
         path: "/usr/local/etc/sudoers.d/{{ service_user }}"
         line: "{{ service_user }} ALL=(ALL:ALL) NOPASSWD:ALL"
-        mode: '0440'
+        mode: "0440"
         create: true
         validate: "/usr/local/sbin/visudo -cf %s"
 
-    -
-      name: "Creating Installation Directories"
+    - name: "Creating Installation Directories"
       ansible.builtin.file:
         path: "{{ item }}"
         state: directory
         owner: "{{ service_user }}"
-        mode: '0755'
+        mode: "0755"
       with_items:
         - "{{ service_home_dir }}/.ansible/tmp"
 
-    -
-      name: "Ensuring .ssh directory exists for {{ service_user }}"
+    - name: "Ensuring .ssh directory exists for {{ service_user }}"
       when: (service_user_ssh_key | default('')) | length > 0
       ansible.builtin.file:
         path: "{{ service_home_dir }}/.ssh"
         state: directory
         owner: "{{ service_user }}"
         group: "{{ service_group }}"
-        mode: '0700'
+        mode: "0700"
 
-    -
-      name: "Installing authorized_key for {{ service_user }}"
+    - name: "Installing authorized_key for {{ service_user }}"
       when: (service_user_ssh_key | default('')) | length > 0
       ansible.posix.authorized_key:
         user: "{{ service_user }}"

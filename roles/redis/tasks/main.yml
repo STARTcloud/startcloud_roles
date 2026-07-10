@@ -1,28 +1,24 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Installing Redis"
+    - name: "Installing Redis"
       ansible.builtin.apt:
         name: "{{ redis_package }}"
         state: present
         update_cache: true
         cache_valid_time: 3600
 
-    -
-      name: "Deploying Redis Configuration"
+    - name: "Deploying Redis Configuration"
       ansible.builtin.template:
         src: "redis.conf.j2"
         dest: "{{ redis_config_file }}"
         owner: redis
         group: redis
-        mode: '0640'
+        mode: "0640"
       notify: "Restarting Redis"
 
-    -
-      name: "Enabling and Starting Redis Service"
+    - name: "Enabling and Starting Redis Service"
       ansible.builtin.systemd:
         name: "{{ redis_service }}"
         state: started

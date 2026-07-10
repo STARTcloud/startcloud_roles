@@ -1,16 +1,13 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Uninstalling smartcard client"
+    - name: "Uninstalling smartcard client"
       ansible.builtin.fail:
         msg: "Uninstalling smartcard for IPA is not supported"
       when: state | default('present') == 'absent'
 
-    -
-      name: "Importing variables specific to distribution"
+    - name: "Importing variables specific to distribution"
       ansible.builtin.include_vars: "{{ item }}"
       with_first_found:
         - "vars/{{ ansible_facts['distribution'] }}-{{ ansible_facts['distribution_version'] }}.yml"
@@ -25,124 +22,96 @@
         # If neither distro nor family is supported, try a default configuration.
         - "vars/default.yml"
 
-    -
-      name: "Configuring client"
+    - name: "Configuring client"
       block:
-        -
-          name: "Using \"ipasmartcard_server_ca_certs\""
+        - name: "Using \"ipasmartcard_server_ca_certs\""
           ansible.builtin.set_fact:
             ipasmartcard_client_ca_certs: "{{ ipasmartcard_server_ca_certs }}"
-          when: ipasmartcard_client_ca_certs is not defined and
-                ipasmartcard_server_ca_certs is defined
+          when: ipasmartcard_client_ca_certs is not defined and ipasmartcard_server_ca_certs is defined
 
-        -
-          name: "Failing on empty \"ipasmartcard_client_ca_certs\""
+        - name: "Failing on empty \"ipasmartcard_client_ca_certs\""
           ansible.builtin.fail:
             msg: "No CA certs given in 'ipasmartcard_client_ca_certs'"
-          when: ipasmartcard_client_ca_certs is not defined or
-                ipasmartcard_client_ca_certs | length < 1
+          when: ipasmartcard_client_ca_certs is not defined or ipasmartcard_client_ca_certs | length < 1
 
-        -
-          name: "Validating CA certs \"{{ ipasmartcard_client_ca_certs }}\""
+        - name: "Validating CA certs \"{{ ipasmartcard_client_ca_certs }}\""
           ipasmartcard_client_validate_ca_certs:
             ca_cert_files: "{{ ipasmartcard_client_ca_certs }}"
           register: result_validate_ca_certs
 
-        -
-          name: "Ensuring needed packages are installed"
+        - name: "Ensuring needed packages are installed"
           ansible.builtin.package:
             name: "{{ ipasmartcard_client_packages }}"
             state: present
 
-        -
-          name: "Ensuring pam_pkcs11 is missing"
+        - name: "Ensuring pam_pkcs11 is missing"
           ansible.builtin.package:
             name: "{{ ipasmartcard_client_remove_pam_pkcs11_packages }}"
             state: absent
 
-        -
-          name: "Setting default principal if not given"
+        - name: "Setting default principal if not given"
           ansible.builtin.set_fact:
             ipaadmin_principal: admin
           when: ipaadmin_principal is undefined
 
-        -
-          name: "Authenticating using kinit with password for \"{{ ipaadmin_principal }}\""
+        - name: "Authenticating using kinit with password for \"{{ ipaadmin_principal }}\""
           ansible.builtin.command: kinit "{{ ipaadmin_principal }}"
           args:
             stdin: "{{ ipaadmin_password }}"
           when: ipaadmin_password is defined
 
-        -
-          name: "Authenticating using kinit with keytab for \"{{ ipaadmin_principal }}\""
+        - name: "Authenticating using kinit with keytab for \"{{ ipaadmin_principal }}\""
           ansible.builtin.command: kinit -kt "{{ ipaadmin_keytab }}" "{{ ipaadmin_principal }}"
           when: ipaadmin_keytab is defined
 
-        -
-          name: "Enabling and starting smartcard daemon"
+        - name: "Enabling and starting smartcard daemon"
           ansible.builtin.service:
             name: pcscd
             enabled: true
             state: started
 
-        -
-          name: "Getting VARS from IPA"
+        - name: "Getting VARS from IPA"
           ipasmartcard_client_get_vars:
           register: ipasmartcard_client_vars
 
-        -
-          name: "Adding pkcs11 module to systemwide db"
-          ansible.builtin.script: ipasmartcard_client_add_pkcs11_module_to_systemwide_db.sh
-                                  "{{ ipasmartcard_client_vars.NSS_DB_DIR }}"
+        - name: "Adding pkcs11 module to systemwide db"
+          ansible.builtin.script: ipasmartcard_client_add_pkcs11_module_to_systemwide_db.sh "{{ ipasmartcard_client_vars.NSS_DB_DIR }}"
 
-        -
-          name: "Preparing for authselect"
+        - name: "Preparing for authselect"
           when: ipasmartcard_client_vars.USE_AUTHSELECT
           block:
-            -
-              name: "Ensuring /etc/sssd/pki exists"
+            - name: "Ensuring /etc/sssd/pki exists"
               ansible.builtin.file:
                 path: /etc/sssd/pki
                 state: directory
                 mode: "0711"
 
-            -
-              name: "Ensuring /etc/sssd/pki/sssd_auth_ca_db.pem is absent"
+            - name: "Ensuring /etc/sssd/pki/sssd_auth_ca_db.pem is absent"
               ansible.builtin.file:
                 path: /etc/sssd/pki/sssd_auth_ca_db.pem
                 state: absent
 
-        -
-          name: "Uploading smartcard CA certificates to systemwide db"
-          ansible.builtin.script: ipasmartcard_client_add_ca_to_systemwide_db.sh
-                                  "{{ item }}"
-                                  "{{ ipasmartcard_client_vars.NSS_DB_DIR }}"
+        - name: "Uploading smartcard CA certificates to systemwide db"
+          ansible.builtin.script: ipasmartcard_client_add_ca_to_systemwide_db.sh "{{ item }}" "{{ ipasmartcard_client_vars.NSS_DB_DIR }}"
           with_items: "{{ result_validate_ca_certs.ca_cert_files }}"
 
-        -
-          name: "Adding CA certs to /etc/sssd/pki/sssd_auth_ca_db.pem"
-          ansible.builtin.script: ipasmartcard_client_add_ca_to_sssd_auth_ca_db.sh
-                                  "{{ item }}"
-                                  /etc/sssd/pki/sssd_auth_ca_db.pem
+        - name: "Adding CA certs to /etc/sssd/pki/sssd_auth_ca_db.pem"
+          ansible.builtin.script: ipasmartcard_client_add_ca_to_sssd_auth_ca_db.sh "{{ item }}" /etc/sssd/pki/sssd_auth_ca_db.pem
           with_items: "{{ result_validate_ca_certs.ca_cert_files }}"
           when: ipasmartcard_client_vars.USE_AUTHSELECT
 
-        -
-          name: "Updating ipa CA certificate store"
+        - name: "Updating ipa CA certificate store"
           ansible.builtin.command: ipa-certupdate
 
-        -
-          name: "Using authselect to enable Smart Card authentication"
+        - name: "Using authselect to enable Smart Card authentication"
           ansible.builtin.command: authselect enable-feature with-smartcard
           when: ipasmartcard_client_vars.USE_AUTHSELECT
 
-        -
-          name: "Using authconfig to enable Smart Card authentication"
+        - name: "Using authconfig to enable Smart Card authentication"
           ansible.builtin.command: authconfig --enablesssd --enablesssdauth --enablesmartcard --smartcardmodule=sssd --smartcardaction=1 --updateall
           when: not ipasmartcard_client_vars.USE_AUTHSELECT
 
-        -
-          name: "Storing NSS OCSP upgrade state"
+        - name: "Storing NSS OCSP upgrade state"
           ansible.builtin.command: "{{ ipasmartcard_client_vars.python_interpreter }}"
           args:
             stdin: |
@@ -153,13 +122,11 @@
               c.write()
           when: ipasmartcard_client_vars.USE_AUTHSELECT
 
-        -
-          name: "Restarting sssd"
+        - name: "Restarting sssd"
           ansible.builtin.service:
             name: sssd
             state: restarted
 
       always:
-        -
-          name: "Destroying Kerberos tickets"
+        - name: "Destroying Kerberos tickets"
           ansible.builtin.command: kdestroy -A

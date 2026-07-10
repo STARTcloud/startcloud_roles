@@ -1,12 +1,10 @@
 ---
 # Cleanup tasks
--
-  name: "Reporting cleanup status"
+- name: "Reporting cleanup status"
   ansible.builtin.debug:
     msg: "Running cleanup for {{ template_def.name }}"
 
--
-  name: "Running cleanup"
+- name: "Running cleanup"
   ansible.builtin.command: >
     packer build
     {% for var_file in default_var_files %}
@@ -18,8 +16,7 @@
   failed_when: cleanup_result.rc != 0
   changed_when: cleanup_result.rc == 0
 
--
-  name: "Reporting cleanup completed"
+- name: "Reporting cleanup completed"
   ansible.builtin.debug:
     msg: "Cleanup for {{ template_def.name }} completed successfully"
   when: cleanup_result.rc == 0

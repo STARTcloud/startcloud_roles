@@ -1,34 +1,27 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Including OS-specific variables"
+    - name: "Including OS-specific variables"
       ansible.builtin.import_tasks: include-vars.yml
 
-    -
-      name: "Setting up RedHat"
+    - name: "Setting up RedHat"
       ansible.builtin.import_tasks: setup-RedHat.yml
       when: ansible_os_family == 'RedHat'
 
-    -
-      name: "Installing Certbot with package"
+    - name: "Installing Certbot with package"
       ansible.builtin.import_tasks: install-with-package.yml
       when: certbot_install_method == 'package'
 
-    -
-      name: "Installing Certbot with snap"
+    - name: "Installing Certbot with snap"
       ansible.builtin.import_tasks: install-with-snap.yml
       when: certbot_install_method == 'snap'
 
-    -
-      name: "Installing Certbot from source"
+    - name: "Installing Certbot from source"
       ansible.builtin.import_tasks: install-from-source.yml
       when: certbot_install_method == 'source'
 
-    -
-      name: "Creating standalone certificates"
+    - name: "Creating standalone certificates"
       ansible.builtin.include_tasks: create-cert-standalone.yml
       with_items: "{{ certbot_certs }}"
       when:
@@ -37,8 +30,7 @@
       loop_control:
         loop_var: cert_item
 
-    -
-      name: "Creating webroot certificates"
+    - name: "Creating webroot certificates"
       ansible.builtin.include_tasks: create-cert-webroot.yml
       with_items: "{{ certbot_certs }}"
       when:
@@ -47,7 +39,6 @@
       loop_control:
         loop_var: cert_item
 
-    -
-      name: "Configuring renewal cron job"
+    - name: "Configuring renewal cron job"
       ansible.builtin.import_tasks: renew-cron.yml
       when: certbot_auto_renew

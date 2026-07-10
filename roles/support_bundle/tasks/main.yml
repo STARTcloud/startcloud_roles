@@ -1,32 +1,27 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Creating Support Bundle Directory"
+    - name: "Creating Support Bundle Directory"
       ansible.builtin.file:
         path: "/vagrant/support-bundle"
         state: directory
-        mode: '0777'
+        mode: "0777"
 
-    -
-      name: "Zipping Ansible Playbook Into Support Bundle"
+    - name: "Zipping Ansible Playbook Into Support Bundle"
       community.general.archive:
-        mode: '0777'
+        mode: "0777"
         path: "/vagrant/ansible"
         dest: "/vagrant/support-bundle/ansible-roles.zip"
         format: zip
 
-    -
-      name: "Checking if /vagrant/installers directory exists"
+    - name: "Checking if /vagrant/installers directory exists"
       ansible.builtin.stat:
         path: /vagrant/installers
       register: installers_dir_stat
       when: not ansible_module_running_in_container
 
-    -
-      name: "Checking if /vagrant/installers directory is empty"
+    - name: "Checking if /vagrant/installers directory is empty"
       ansible.builtin.find:
         paths: /vagrant/installers
         file_type: any
@@ -36,8 +31,7 @@
         - installers_dir_stat.stat.exists
         - installers_dir_stat.stat.isdir
 
-    -
-      name: "Recording Installers"
+    - name: "Recording Installers"
       when:
         - not ansible_module_running_in_container
         - installers_dir_stat.stat.exists
@@ -48,8 +42,7 @@
       changed_when: false
       ignore_errors: true
 
-    -
-      name: "Writing included installers to /vagrant/support-bundle/installers.json"
+    - name: "Writing included installers to /vagrant/support-bundle/installers.json"
       when:
         - not ansible_module_running_in_container
         - installers_dir_stat.stat.exists
@@ -60,37 +53,33 @@
         content: "{{ installers.stdout_lines }}"
         dest: "/vagrant/support-bundle/installers.json"
         force: false
-        mode: 'a+x'
+        mode: "a+x"
       ignore_errors: true
 
-    -
-      name: "Checking if Domino has been autoconfigured"
+    - name: "Checking if Domino has been autoconfigured"
       register: autoconfigure
       ansible.builtin.stat:
         path: "{{ domino_home_dir }}/IBM_TECHNICAL_SUPPORT/autoconfigure.log"
         checksum_algorithm: sha256
       ignore_errors: true
 
-    -
-      name: "Including Domino One Touch autoconfigure to /vagrant/support-bundle/autoconfigure.log"
+    - name: "Including Domino One Touch autoconfigure to /vagrant/support-bundle/autoconfigure.log"
       become: true
       when: domino_home_dir is defined and autoconfigure.stat.exists
       ansible.builtin.copy:
         src: "{{ domino_home_dir }}/IBM_TECHNICAL_SUPPORT/autoconfigure.log"
         dest: "/vagrant/support-bundle/autoconfigure.log"
         force: false
-        mode: 'a+x'
+        mode: "a+x"
         remote_src: true
       ignore_errors: true
 
-    -
-      name: "Checking if /vagrant/completed directory exists"
+    - name: "Checking if /vagrant/completed directory exists"
       ansible.builtin.stat:
         path: /vagrant/completed
       register: completed_dir_stat
 
-    -
-      name: "Checking if /vagrant/completed directory is empty"
+    - name: "Checking if /vagrant/completed directory is empty"
       ansible.builtin.find:
         paths: /vagrant/completed
         file_type: any
@@ -99,8 +88,7 @@
         - completed_dir_stat.stat.exists
         - completed_dir_stat.stat.isdir
 
-    -
-      name: "Recording Completed Roles"
+    - name: "Recording Completed Roles"
       when:
         - completed_dir_stat.stat.exists
         - completed_dir_stat.stat.isdir
@@ -110,8 +98,7 @@
       changed_when: false
       ignore_errors: true
 
-    -
-      name: "Writing current completed roles to /vagrant/support-bundle/completed.json"
+    - name: "Writing current completed roles to /vagrant/support-bundle/completed.json"
       when:
         - completed_dir_stat.stat.exists
         - completed_dir_stat.stat.isdir
@@ -121,13 +108,12 @@
         content: "{{ completed.stdout_lines }}"
         dest: "/vagrant/support-bundle/completed.json"
         force: false
-        mode: 'a+x'
+        mode: "a+x"
       ignore_errors: true
 
-    -
-      name: "Zipping Support Bundle"
+    - name: "Zipping Support Bundle"
       community.general.archive:
-        mode: '0777'
+        mode: "0777"
         path: "/vagrant/support-bundle"
         dest: "/vagrant/support-bundle.zip"
         format: zip

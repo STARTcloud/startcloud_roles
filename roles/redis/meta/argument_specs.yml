@@ -1,9 +1,9 @@
+---
 argument_specs:
   main:
     short_description: Install and configure a single-node Redis server
     description:
-      - Installs the Redis in-memory data store and deploys a managed
-        configuration file, then enables and starts the service.
+      - Installs the Redis in-memory data store and deploys a managed configuration file, then enables and starts the service.
     author: Mark Gilbert
     options:
       run_tasks:
@@ -44,5 +44,5 @@ argument_specs:
         description: Eviction policy applied when the memory limit is reached.
       redis_requirepass:
         type: str
-        default: ''
+        default: ""
         description: Password clients must authenticate with; empty disables auth.

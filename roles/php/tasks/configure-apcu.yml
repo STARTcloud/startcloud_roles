@@ -2,7 +2,7 @@
 - name: "Checking for existing APCu config files."
   ansible.builtin.find:
     paths: "{{ item }}"
-    contains: 'extension(\s+)?=(\s+)?apc[u]?\.so'
+    contains: "extension(\\s+)?=(\\s+)?apc[u]?\\.so"
   register: php_installed_apc_confs
   with_items: "{{ php_extension_conf_paths }}"
 
@@ -23,7 +23,7 @@
     owner: root
     group: root
     force: true
-    mode: 0644
+    mode: "0644"
   with_items: "{{ php_extension_conf_paths }}"
   when: php_enable_apc
   notify: restart webserver

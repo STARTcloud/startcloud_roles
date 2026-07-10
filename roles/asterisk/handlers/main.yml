@@ -1,7 +1,6 @@
 ---
 # handlers file for asterisk
--
-  name: "Restarting asterisk"
+- name: "Restarting asterisk"
   ansible.builtin.service:
     name: asterisk
     state: restarted

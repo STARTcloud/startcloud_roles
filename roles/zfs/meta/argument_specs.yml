@@ -3,8 +3,7 @@ argument_specs:
   main:
     short_description: Installs ZFS and configures zfs-auto-snapshot
     description:
-      - Installs the OpenZFS userland packages and zfs-auto-snapshot, then lays
-        down the cron jobs that drive scheduled snapshots.
+      - Installs the OpenZFS userland packages and zfs-auto-snapshot, then lays down the cron jobs that drive scheduled snapshots.
     author: Mark Gilbert
     options:
       run_tasks:

@@ -1,6 +1,5 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
     #-
@@ -15,18 +14,15 @@
     #      paths:
     #        - 'vars'
 
-    -
-      name: "Including RedHat family setup tasks"
+    - name: "Including RedHat family setup tasks"
       ansible.builtin.include_tasks: setup-RedHat.yml
       when: ansible_os_family == 'RedHat'
 
-    -
-      name: "Including Debian family setup tasks"
+    - name: "Including Debian family setup tasks"
       ansible.builtin.include_tasks: setup-Debian.yml
       when: ansible_os_family == 'Debian'
 
-    -
-      name: "Installing Docker packages"
+    - name: "Installing Docker packages"
       ansible.builtin.package:
         name: "{{ docker_packages }}"
         state: "{{ docker_packages_state }}"
@@ -34,8 +30,7 @@
       ignore_errors: "{{ ansible_check_mode }}"
       when: "ansible_version.full is version_compare('2.12', '<') or ansible_os_family not in ['RedHat', 'Debian']"
 
-    -
-      name: "Installing Docker packages (with downgrade option)"
+    - name: "Installing Docker packages (with downgrade option)"
       ansible.builtin.package:
         name: "{{ docker_packages }}"
         state: "{{ docker_packages_state }}"
@@ -44,8 +39,7 @@
       ignore_errors: "{{ ansible_check_mode }}"
       when: "ansible_version.full is version_compare('2.12', '>=') and ansible_os_family in ['RedHat', 'Debian']"
 
-    -
-      name: "Installing docker-compose plugin"
+    - name: "Installing docker-compose plugin"
       ansible.builtin.package:
         name: "{{ docker_compose_package }}"
         state: "{{ docker_compose_package_state }}"
@@ -53,16 +47,14 @@
       ignore_errors: "{{ ansible_check_mode }}"
       when: docker_install_compose_plugin | bool
 
-    -
-      name: "Ensuring /etc/docker/ directory exists"
+    - name: "Ensuring /etc/docker/ directory exists"
       ansible.builtin.file:
         path: /etc/docker
         state: directory
         mode: "0755"
       when: docker_daemon_options.keys() | length > 0
 
-    -
-      name: "Configuring Docker daemon options"
+    - name: "Configuring Docker daemon options"
       ansible.builtin.copy:
         content: "{{ docker_daemon_options | to_nice_json }}"
         dest: /etc/docker/daemon.json
@@ -70,8 +62,7 @@
       when: docker_daemon_options.keys() | length > 0
       notify: "Restarting Docker"
 
-    -
-      name: "Ensuring Docker is started and enabled at boot"
+    - name: "Ensuring Docker is started and enabled at boot"
       ansible.builtin.service:
         name: docker
         state: "{{ docker_service_state }}"
@@ -79,25 +70,21 @@
       ignore_errors: "{{ ansible_check_mode }}"
       when: docker_service_manage | bool
 
-    -
-      name: "Flushing handlers now to avoid firewall conflicts"
+    - name: "Flushing handlers now to avoid firewall conflicts"
       ansible.builtin.meta: flush_handlers
 
-    -
-      name: "Including docker-compose setup tasks"
+    - name: "Including docker-compose setup tasks"
       ansible.builtin.include_tasks: setup-docker-compose.yml
       when: docker_install_compose | bool
 
-    -
-      name: "Getting docker group info using getent"
+    - name: "Getting docker group info using getent"
       ansible.builtin.getent:
         database: group
         key: docker
-        split: ':'
+        split: ":"
       when: docker_users | length > 0
 
-    -
-      name: "Checking if there are any users to add to the docker group"
+    - name: "Checking if there are any users to add to the docker group"
       ansible.builtin.set_fact:
         at_least_one_user_to_modify: true
       when:
@@ -105,8 +92,7 @@
         - item not in ansible_facts.getent_group["docker"][2]
       with_items: "{{ docker_users }}"
 
-    -
-      name: "Including docker-users tasks"
+    - name: "Including docker-users tasks"
       ansible.builtin.include_tasks: docker-users.yml
       when: at_least_one_user_to_modify is defined
 

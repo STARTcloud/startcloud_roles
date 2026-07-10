@@ -1,7 +1,6 @@
 ---
 # Variable configuration.
--
-  name: "Including OS-specific variables"
+- name: "Including OS-specific variables"
   ansible.builtin.include_vars: "{{ item }}"
   with_first_found:
     - files:
@@ -9,62 +8,52 @@
         - "vars/{{ ansible_os_family }}.yml"
       skip: true
 
--
-  name: "Defining mysql_packages"
+- name: "Defining mysql_packages"
   ansible.builtin.set_fact:
     mysql_packages: "{{ __mysql_packages | list }}"
   when: mysql_packages is not defined
 
--
-  name: "Defining mysql_daemon"
+- name: "Defining mysql_daemon"
   ansible.builtin.set_fact:
     mysql_daemon: "{{ __mysql_daemon }}"
   when: mysql_daemon is not defined
 
--
-  name: "Defining mysql_slow_query_log_file"
+- name: "Defining mysql_slow_query_log_file"
   ansible.builtin.set_fact:
     mysql_slow_query_log_file: "{{ __mysql_slow_query_log_file }}"
   when: mysql_slow_query_log_file is not defined
 
--
-  name: "Defining mysql_log_error"
+- name: "Defining mysql_log_error"
   ansible.builtin.set_fact:
     mysql_log_error: "{{ __mysql_log_error }}"
   when: mysql_log_error is not defined
 
--
-  name: "Defining mysql_syslog_tag"
+- name: "Defining mysql_syslog_tag"
   ansible.builtin.set_fact:
     mysql_syslog_tag: "{{ __mysql_syslog_tag }}"
   when: mysql_syslog_tag is not defined
 
--
-  name: "Defining mysql_pid_file"
+- name: "Defining mysql_pid_file"
   ansible.builtin.set_fact:
     mysql_pid_file: "{{ __mysql_pid_file }}"
   when: mysql_pid_file is not defined
 
--
-  name: "Defining mysql_config_file"
+- name: "Defining mysql_config_file"
   ansible.builtin.set_fact:
     mysql_config_file: "{{ __mysql_config_file }}"
   when: mysql_config_file is not defined
 
--
-  name: "Defining mysql_config_include_dir"
+- name: "Defining mysql_config_include_dir"
   ansible.builtin.set_fact:
     mysql_config_include_dir: "{{ __mysql_config_include_dir }}"
   when: mysql_config_include_dir is not defined
 
--
-  name: "Defining mysql_socket"
+- name: "Defining mysql_socket"
   ansible.builtin.set_fact:
     mysql_socket: "{{ __mysql_socket }}"
   when: mysql_socket is not defined
 
--
-  name: "Defining mysql_supports_innodb_large_prefix"
+- name: "Defining mysql_supports_innodb_large_prefix"
   ansible.builtin.set_fact:
     mysql_supports_innodb_large_prefix: "{{ __mysql_supports_innodb_large_prefix }}"
   when: mysql_supports_innodb_large_prefix is not defined

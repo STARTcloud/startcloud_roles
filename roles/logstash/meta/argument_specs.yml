@@ -3,8 +3,7 @@ argument_specs:
   main:
     short_description: Install and configure Elastic Logstash.
     description:
-      - Adds the Elastic package repository, installs Logstash, deploys its base
-        configuration and a single ingestion pipeline, then enables the service.
+      - Adds the Elastic package repository, installs Logstash, deploys its base configuration and a single ingestion pipeline, then enables the service.
     author: Mark Gilbert
     options:
       run_tasks:
@@ -13,7 +12,7 @@ argument_specs:
         description: Master gate — when false the role loads its vars but runs no tasks.
       logstash_version:
         type: str
-        default: '8.x'
+        default: "8.x"
         description: Elastic package channel used for the APT and YUM repositories.
       logstash_apt_key_url:
         type: str

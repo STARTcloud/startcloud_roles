@@ -27,10 +27,8 @@ mysql_java_connector_jar_url: "https://dlm.mariadb.com/3824147/Connectors/java/c
 
 ## Guacamole Port Forwarding Settings
 startcloud_guacamole_port_forwards:
-    -
-        guest: "{{ startcloud_tomcat_port_forwards[1].guest }}"
-        url: "guacamole"
-    -
-        guest: 4822
-        url: "guacd"
+  - guest: "{{ startcloud_tomcat_port_forwards[1].guest }}"
+    url: "guacamole"
+  - guest: 4822
+    url: "guacd"
 startcloud_guacamole_proxy_url: "{{ startcloud_guacamole_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"

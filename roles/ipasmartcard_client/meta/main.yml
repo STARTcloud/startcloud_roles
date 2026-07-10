@@ -6,12 +6,12 @@ galaxy_info:
   company: STARTcloud
   issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
   license: Apache-2.0
-  min_ansible_version: '2.15'
+  min_ansible_version: "2.15"
   platforms:
     - name: EL
-      versions: ['8', '9']
+      versions: ["8", "9"]
     - name: Fedora
-      versions: ['39', '40']
+      versions: ["39", "40"]
   galaxy_tags:
     - freeipa
     - ipa

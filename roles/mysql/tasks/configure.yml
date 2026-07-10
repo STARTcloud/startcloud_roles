@@ -1,13 +1,11 @@
 ---
--
-  name: "Getting MySQL version"
-  ansible.builtin.command: 'mysql --version'
+- name: "Getting MySQL version"
+  ansible.builtin.command: "mysql --version"
   register: mysql_cli_version
   changed_when: false
   check_mode: false
 
--
-  name: "Copying my.cnf global MySQL configuration"
+- name: "Copying my.cnf global MySQL configuration"
   ansible.builtin.template:
     src: my.cnf.j2
     dest: "{{ mysql_config_file }}"
@@ -17,8 +15,7 @@
     force: "{{ overwrite_global_mycnf }}"
   notify: Restart mysql
 
--
-  name: "Verifying mysql include directory exists"
+- name: "Verifying mysql include directory exists"
   ansible.builtin.file:
     path: "{{ mysql_config_include_dir }}"
     state: directory
@@ -27,8 +24,7 @@
     mode: "0755"
   when: mysql_config_include_files | length
 
--
-  name: "Copying my.cnf override files into include directory"
+- name: "Copying my.cnf override files into include directory"
   ansible.builtin.template:
     src: "{{ item.src }}"
     dest: "{{ mysql_config_include_dir }}/{{ item.src | basename }}"
@@ -39,15 +35,13 @@
   with_items: "{{ mysql_config_include_files }}"
   notify: Restart mysql
 
--
-  name: "Creating slow query log file (if configured)"
+- name: "Creating slow query log file (if configured)"
   ansible.builtin.command: "touch {{ mysql_slow_query_log_file }}"
   args:
     creates: "{{ mysql_slow_query_log_file }}"
   when: mysql_slow_query_log_enabled
 
--
-  name: "Creating datadir if it does not exist"
+- name: "Creating datadir if it does not exist"
   ansible.builtin.file:
     path: "{{ mysql_datadir }}"
     state: directory
@@ -56,8 +50,7 @@
     mode: "0755"
     setype: mysqld_db_t
 
--
-  name: "Setting ownership on slow query log file (if configured)"
+- name: "Setting ownership on slow query log file (if configured)"
   ansible.builtin.file:
     path: "{{ mysql_slow_query_log_file }}"
     state: file
@@ -66,18 +59,16 @@
     mode: "0640"
   when: mysql_slow_query_log_enabled
 
--
-  name: "Creating error log file (if configured)"
+- name: "Creating error log file (if configured)"
   ansible.builtin.command: "touch {{ mysql_log_error }}"
   args:
     creates: "{{ mysql_log_error }}"
   when:
     - mysql_log | default(true)
     - mysql_log_error | default(false)
-  tags: ['skip_ansible_galaxy']
+  tags: ["skip_ansible_galaxy"]
 
--
-  name: "Setting ownership on error log file (if configured)"
+- name: "Setting ownership on error log file (if configured)"
   ansible.builtin.file:
     path: "{{ mysql_log_error }}"
     state: file
@@ -87,10 +78,9 @@
   when:
     - mysql_log | default(true)
     - mysql_log_error | default(false)
-  tags: ['skip_ansible_galaxy']
+  tags: ["skip_ansible_galaxy"]
 
--
-  name: "Ensuring MySQL is started and enabled on boot"
+- name: "Ensuring MySQL is started and enabled on boot"
   ansible.builtin.service:
     name: "{{ mysql_daemon }}"
     state: started

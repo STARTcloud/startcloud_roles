@@ -1,6 +1,5 @@
 ---
--
-  name: "Ensuring PostgreSQL users are configured correctly"
+- name: "Ensuring PostgreSQL users are configured correctly"
   community.postgresql.postgresql_user:
     name: "{{ item.name }}"
     password: "{{ item.password | default(omit) }}"

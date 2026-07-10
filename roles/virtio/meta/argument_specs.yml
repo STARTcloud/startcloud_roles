@@ -3,10 +3,8 @@ argument_specs:
   main:
     short_description: Install VirtIO drivers and the QEMU Guest Agent on Windows.
     description:
-      - Installs the VirtIO paravirtualized drivers and the QEMU Guest Agent on a
-        Windows guest, reading the MSIs from the attached virtio-win CD-ROM and
-        falling back to downloading and mounting the virtio-win ISO when no media
-        is present.
+      - Installs the VirtIO paravirtualized drivers and the QEMU Guest Agent on a Windows guest, reading the MSIs from the attached virtio-win CD-ROM and falling back to downloading and mounting the virtio-win
+        ISO when no media is present.
     author: Mark Gilbert
     options:
       run_tasks:

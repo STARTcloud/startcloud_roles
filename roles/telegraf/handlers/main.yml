@@ -1,6 +1,5 @@
 ---
--
-  name: "Restarting Telegraf"
+- name: "Restarting Telegraf"
   ansible.builtin.service:
     name: telegraf
     state: restarted
@@ -8,20 +7,17 @@
   when: not telegraf_agent_docker
   become: true
 
--
-  name: "Restarting Telegraf Container"
+- name: "Restarting Telegraf Container"
   community.docker.docker_container:
     name: "{{ telegraf_agent_docker_name }}"
     restart: true
   when: telegraf_agent_docker
 
--
-  name: "Restarting Windows Telegraf"
+- name: "Restarting Windows Telegraf"
   ansible.windows.win_service:
     name: Telegraf
     start_mode: auto
     state: restarted
 
--
-  name: "Restarting MacOS Telegraf"
+- name: "Restarting MacOS Telegraf"
   ansible.builtin.shell: brew services restart telegraf

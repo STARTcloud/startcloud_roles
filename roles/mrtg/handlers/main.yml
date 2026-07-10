@@ -1,6 +1,5 @@
 ---
--
-  name: "Regenerating the MRTG index page"
+- name: "Regenerating the MRTG index page"
   ansible.builtin.command:
     cmd: "indexmaker --output={{ mrtg_working_directory }}/index.html {{ mrtg_config_file }}"
   changed_when: true

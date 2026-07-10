@@ -1,20 +1,16 @@
 ---
--
-  name: "Blocking to Allow Loading of Variables without running task"
+- name: "Blocking to Allow Loading of Variables without running task"
   when: run_tasks
   block:
     - name: "Checking value of variable mongodb_net_ssl_host"
       ansible.builtin.fail:
-        msg: 'Set mongodb_net_ssl_mode is preferSSL or set valid hostname for mongodb_net_ssl_host!'
-      when: ( mongodb_net_ssl_mode == 'requireSSL'
-              and mongodb_net_ssl_host|length == 0 )
+        msg: "Set mongodb_net_ssl_mode is preferSSL or set valid hostname for mongodb_net_ssl_host!"
+      when: ( mongodb_net_ssl_mode == 'requireSSL' and mongodb_net_ssl_host|length == 0 )
 
     - name: "Checking value of variable mongodb_login_host"
       ansible.builtin.fail:
-        msg: 'Set mongodb_login_host equal mongodb_net_ssl_host!'
-      when: ( mongodb_net_ssl_mode == 'requireSSL'
-              and mongodb_net_ssl_host != mongodb_login_host
-              and not mongodb_replication_replset )
+        msg: "Set mongodb_login_host equal mongodb_net_ssl_host!"
+      when: ( mongodb_net_ssl_mode == 'requireSSL' and mongodb_net_ssl_host != mongodb_login_host and not mongodb_replication_replset )
 
     - name: "Including OS-specific variables"
       ansible.builtin.include_vars: "{{ item }}"
@@ -36,9 +32,7 @@
 
     - name: "Including replication and auth configuration"
       ansible.builtin.include_tasks: replication_init_auth.yml
-      when: ( mongodb_replication_replset | length > 0
-            and mongodb_security_authorization == 'enabled'
-            and mongodb_master is defined and mongodb_master )
+      when: ( mongodb_replication_replset | length > 0 and mongodb_security_authorization == 'enabled' and mongodb_master is defined and mongodb_master )
       tags: [mongodb]
 
     - name: "Including replication configuration"
@@ -54,20 +48,17 @@
       changed_when: false
       check_mode: false
       ignore_errors: true
-      when: ( mongodb_security_authorization == 'enabled'
-              and not mongodb_replication_replset )
+      when: ( mongodb_security_authorization == 'enabled' and not mongodb_replication_replset )
       no_log: true
       tags: [mongodb]
 
     - name: "Including authorization configuration"
       ansible.builtin.include_tasks: auth_initialization.yml
-      when: ( mongodb_security_authorization == 'enabled'
-              and not mongodb_replication_replset
-              and mongodb_user_admin_check.rc != 0 )
+      when: ( mongodb_security_authorization == 'enabled' and not mongodb_replication_replset and mongodb_user_admin_check.rc != 0 )
       tags: [mongodb]
 
     - name: "Creating normal users with replicaset"
-      mongodb_user:
+      community.mongodb.mongodb_user:
         database: "{{ item.database }}"
         name: "{{ item.name }}"
         password: "{{ item.password }}"
@@ -75,19 +66,17 @@
         roles: "{{ item.roles }}"
         login_user: "{{ mongodb_user_admin_name }}"
         login_password: "{{ mongodb_user_admin_password }}"
-        login_port: "{{ mongodb_login_port|default(27017) }}"
-        login_host: "{{ mongodb_login_host|default('localhost') }}"
+        login_port: "{{ mongodb_login_port | default(27017) }}"
+        login_host: "{{ mongodb_login_host | default('localhost') }}"
         ssl: "{{ True if mongodb_net_ssl_mode == 'requireSSL' else False }}"
       with_items:
         - "{{ mongodb_users | default([]) }}"
-      when: ( mongodb_replication_replset
-            and mongodb_security_authorization == 'enabled'
-            and mongodb_master is defined and mongodb_master )
+      when: ( mongodb_replication_replset and mongodb_security_authorization == 'enabled' and mongodb_master is defined and mongodb_master )
       no_log: true
       tags: [mongodb]
 
     - name: "Creating normal users without replicaset"
-      mongodb_user:
+      community.mongodb.mongodb_user:
         database: "{{ item.database }}"
         name: "{{ item.name }}"
         password: "{{ item.password }}"
@@ -96,17 +85,16 @@
         login_user: "{{ mongodb_user_admin_name }}"
         login_password: "{{ mongodb_user_admin_password }}"
         login_port: "{{ mongodb_net_port | int }}"
-        login_host: "{{ mongodb_login_host|default('localhost') }}"
+        login_host: "{{ mongodb_login_host | default('localhost') }}"
         ssl: "{{ True if mongodb_net_ssl_mode == 'requireSSL' else False }}"
       with_items:
         - "{{ mongodb_users | default([]) }}"
-      when: ( mongodb_security_authorization == 'enabled'
-              and not mongodb_replication_replset )
+      when: ( mongodb_security_authorization == 'enabled' and not mongodb_replication_replset )
       no_log: true
       tags: [mongodb]
 
     - name: "Creating oplog user with replicaset"
-      mongodb_user:
+      community.mongodb.mongodb_user:
         database: admin
         user: "{{ item.user }}"
         password: "{{ item.password }}"
@@ -116,14 +104,12 @@
             role: read
         login_user: "{{ mongodb_user_admin_name }}"
         login_password: "{{ mongodb_user_admin_password }}"
-        login_port: "{{ mongodb_login_port|default(27017) }}"
-        login_host: "{{ mongodb_login_host|default('localhost') }}"
+        login_port: "{{ mongodb_login_port | default(27017) }}"
+        login_host: "{{ mongodb_login_host | default('localhost') }}"
         ssl: "{{ True if mongodb_net_ssl_mode == 'requireSSL' else False }}"
       with_items:
         - "{{ mongodb_oplog_users | default([]) }}"
-      when: ( mongodb_replication_replset | length > 0
-            and mongodb_security_authorization == 'enabled'
-            and mongodb_master is defined and mongodb_master )
+      when: ( mongodb_replication_replset | length > 0 and mongodb_security_authorization == 'enabled' and mongodb_master is defined and mongodb_master )
       no_log: true
       tags: [mongodb]
 

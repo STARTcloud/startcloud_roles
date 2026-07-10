@@ -1,46 +1,38 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Removing Service"
+    - name: "Removing Service"
       ansible.windows.win_service:
         name: winlogbeat
         state: absent
 
-    -
-      name: "Removing Any Previous Winlogbeat"
+    - name: "Removing Any Previous Winlogbeat"
       ansible.windows.win_file:
         path: "{{ winlogbeat_install_location }}"
         state: absent
 
-    -
-      name: "Recreating Directory"
+    - name: "Recreating Directory"
       ansible.windows.win_file:
         path: "{{ winlogbeat_install_location }}"
         state: directory
 
-    -
-      name: "Getting Winlogbeat Zip"
+    - name: "Getting Winlogbeat Zip"
       ansible.windows.win_get_url:
         url: "{{ winlogbeat_download_url_base }}/{{ winlogbeat_download_file }}{{ file_ext }}"
         dest: "{{ winlogbeat_install_location }}/{{ winlogbeat_download_file }}{{ file_ext }}"
 
-    -
-      name: "Unzipping Winlogbeat"
+    - name: "Unzipping Winlogbeat"
       community.windows.win_unzip:
         src: "{{ winlogbeat_install_location }}/{{ winlogbeat_download_file }}{{ file_ext }}"
         dest: "{{ winlogbeat_install_location }}"
 
-    -
-      name: "Installing the Service via Script"
+    - name: "Installing the Service via Script"
       ansible.windows.win_command: powershell.exe -ExecutionPolicy ByPass -File "{{ winlogbeat_install_location }}/{{ winlogbeat_download_file }}/install-service-winlogbeat.ps1"
       args:
         chdir: "{{ winlogbeat_install_location }}/{{ winlogbeat_download_file }}"
 
-    -
-      name: "Copying WinLogBeat Configuration"
+    - name: "Copying WinLogBeat Configuration"
       community.windows.win_template:
         src: winlogbeat.yml.j2
         dest: "{{ winlogbeat_install_location }}/{{ winlogbeat_download_file }}/winlogbeat.yml"

@@ -3,7 +3,8 @@ argument_specs:
   main:
     short_description: OS image cleanup for template finalization
     description:
-      - Purges unneeded packages, caches, logs, machine-ids and stale network configs to reduce and sanitize an OS image before it is captured as a Packer template. Dispatches to OS-specific tasks for Debian, RedHat, FreeBSD and Windows.
+      - Purges unneeded packages, caches, logs, machine-ids and stale network configs to reduce and sanitize an OS image before it is captured as a Packer template. Dispatches to OS-specific tasks for Debian,
+        RedHat, FreeBSD and Windows.
     author: Mark Gilbert
     options:
       run_tasks:

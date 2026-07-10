@@ -3,8 +3,7 @@ argument_specs:
   main:
     short_description: Install utility packages on Debian-family systems
     description:
-      - Updates the apt cache, upgrades installed apt packages, and installs a
-        configured list of system utility and Python packages on Debian-family hosts.
+      - Updates the apt cache, upgrades installed apt packages, and installs a configured list of system utility and Python packages on Debian-family hosts.
     author: Mark Gilbert
     options:
       run_tasks:

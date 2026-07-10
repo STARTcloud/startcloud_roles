@@ -1,26 +1,21 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Setting up Debian Installations"
+    - name: "Setting up Debian Installations"
       when: "ansible_os_family == 'Debian'"
       block:
-        -
-          name: "Ensuring apt cache is updated"
+        - name: "Ensuring apt cache is updated"
           ansible.builtin.apt:
             cache_valid_time: 3600
             update_cache: true
 
-        -
-          name: "Installing Nextcloud System Packages"
+        - name: "Installing Nextcloud System Packages"
           ansible.builtin.apt:
             name: "{{ nextcloud_packages }}"
             state: present
 
-        -
-          name: "Creating Nextcloud Webroot Directory"
+        - name: "Creating Nextcloud Webroot Directory"
           ansible.builtin.file:
             path: "{{ nextcloud_webroot }}"
             state: directory
@@ -28,8 +23,7 @@
             group: "{{ nextcloud_web_group }}"
             mode: "0755"
 
-        -
-          name: "Downloading and Extracting Nextcloud Release"
+        - name: "Downloading and Extracting Nextcloud Release"
           ansible.builtin.unarchive:
             src: "{{ nextcloud_download_url }}"
             dest: "/var/www"
@@ -38,8 +32,7 @@
             group: "{{ nextcloud_web_group }}"
             creates: "{{ nextcloud_webroot }}/occ"
 
-        -
-          name: "Creating Nextcloud Data Directory"
+        - name: "Creating Nextcloud Data Directory"
           ansible.builtin.file:
             path: "{{ nextcloud_data_dir }}"
             state: directory
@@ -47,8 +40,7 @@
             group: "{{ nextcloud_web_group }}"
             mode: "0750"
 
-        -
-          name: "Creating Nextcloud Database"
+        - name: "Creating Nextcloud Database"
           ansible.builtin.command: >
             mysql -uroot -e
             "CREATE DATABASE IF NOT EXISTS {{ nextcloud_db_name }}
@@ -56,8 +48,7 @@
           register: nextcloud_db_created
           changed_when: "'Query OK' in nextcloud_db_created.stderr or nextcloud_db_created.rc == 0"
 
-        -
-          name: "Creating Nextcloud Database User and Grants"
+        - name: "Creating Nextcloud Database User and Grants"
           ansible.builtin.command: 'mysql -uroot -e "{{ item }}"'
           loop:
             - "CREATE USER IF NOT EXISTS '{{ nextcloud_db_user }}'@'{{ nextcloud_db_host }}' IDENTIFIED BY '{{ nextcloud_db_password }}'"
@@ -65,8 +56,7 @@
             - "FLUSH PRIVILEGES"
           changed_when: true
 
-        -
-          name: "Running Nextcloud occ maintenance:install"
+        - name: "Running Nextcloud occ maintenance:install"
           become: true
           become_user: "{{ nextcloud_web_user }}"
           ansible.builtin.command: >
@@ -83,8 +73,7 @@
             chdir: "{{ nextcloud_webroot }}"
             creates: "{{ nextcloud_webroot }}/config/config.php"
 
-        -
-          name: "Configuring Nextcloud Trusted Domain"
+        - name: "Configuring Nextcloud Trusted Domain"
           become: true
           become_user: "{{ nextcloud_web_user }}"
           ansible.builtin.command: >
@@ -94,8 +83,7 @@
             chdir: "{{ nextcloud_webroot }}"
           changed_when: true
 
-        -
-          name: "Installing Nextcloud nginx Virtual Host"
+        - name: "Installing Nextcloud nginx Virtual Host"
           notify: "Restarting nginx"
           ansible.builtin.template:
             src: "nginx.conf.j2"
@@ -104,8 +92,7 @@
             group: root
             mode: "0644"
 
-        -
-          name: "Enabling Nextcloud nginx Virtual Host"
+        - name: "Enabling Nextcloud nginx Virtual Host"
           notify: "Restarting nginx"
           ansible.builtin.file:
             src: "/etc/nginx/sites-available/nextcloud.conf"

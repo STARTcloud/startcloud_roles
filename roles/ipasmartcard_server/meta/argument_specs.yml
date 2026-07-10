@@ -3,9 +3,7 @@ argument_specs:
   main:
     short_description: Configure an IPA server for Smart Card authentication
     description:
-      - Configures an existing IPA server (master or replica) for Smart Card
-        authentication by uploading CA certificates, enabling OCSP and PKINIT,
-        and preparing SSSD for smart card login.
+      - Configures an existing IPA server (master or replica) for Smart Card authentication by uploading CA certificates, enabling OCSP and PKINIT, and preparing SSSD for smart card login.
     author: Mark Gilbert
     options:
       run_tasks:

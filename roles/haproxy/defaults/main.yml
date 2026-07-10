@@ -8,12 +8,9 @@ haproxy_ssl_redirect: true
 haproxy_default_backend: "{{ 'downloads' if startcloud_quick_start_proxy_url is defined and quick_start | default('letsencrypt_80')}}"
 haproxy_cert_bot_port: 8181
 startcloud_haproxy_port_forwards:
-  -
-    guest: 80
+  - guest: 80
     url: "demo"
-  -
-    guest: 443
+  - guest: 443
     url: "demo"
-  -
-    guest: 444
+  - guest: 444
     url: "stats"

@@ -1,18 +1,15 @@
 ---
--
-  name: "Restarting MongoDB"
+- name: "Restarting MongoDB"
   ansible.builtin.systemd:
     name: mongod
     state: restarted
 
--
-  name: "Restarting OpenSearch"
+- name: "Restarting OpenSearch"
   ansible.builtin.systemd:
     name: opensearch
     state: restarted
 
--
-  name: "Restarting Graylog"
+- name: "Restarting Graylog"
   ansible.builtin.systemd:
     name: graylog-server
     state: restarted

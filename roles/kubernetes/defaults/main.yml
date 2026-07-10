@@ -10,8 +10,8 @@ kubernetes_packages:
   - name: kubernetes-cni
     state: present
 
-kubernetes_version: '1.25'
-kubernetes_version_rhel_package: '1.25.1'
+kubernetes_version: "1.25"
+kubernetes_version_rhel_package: "1.25.1"
 
 kubernetes_role: control_plane
 
@@ -23,13 +23,13 @@ kubernetes_join_command_extra_opts: ""
 kubernetes_allow_pods_on_control_plane: true
 kubernetes_pod_network:
   # Flannel CNI.
-  cni: 'flannel'
-  cidr: '10.244.0.0/16'
+  cni: "flannel"
+  cidr: "10.244.0.0/16"
   # Calico CNI.
   # cni: 'calico'
   # cidr: '192.168.0.0/16'
 
-kubernetes_kubeadm_kubelet_config_file_path: '/etc/kubernetes/kubeadm-kubelet-config.yaml'
+kubernetes_kubeadm_kubelet_config_file_path: "/etc/kubernetes/kubeadm-kubelet-config.yaml"
 kubernetes_config_kubelet_configuration:
   cgroupDriver: "systemd"
 
@@ -47,10 +47,9 @@ kubernetes_config_cluster_configuration:
   kubernetesVersion: "{{ kubernetes_version_kubeadm }}"
 
 kubernetes_config_kube_proxy_configuration: {}
-
-kubernetes_apiserver_advertise_address: ''
-kubernetes_version_kubeadm: 'stable-{{ kubernetes_version }}'
-kubernetes_ignore_preflight_errors: 'all'
+kubernetes_apiserver_advertise_address: ""
+kubernetes_version_kubeadm: "stable-{{ kubernetes_version }}"
+kubernetes_ignore_preflight_errors: "all"
 
 kubernetes_apt_release_channel: "stable"
 kubernetes_apt_keyring_file: "/etc/apt/keyrings/kubernetes-apt-keyring.asc"

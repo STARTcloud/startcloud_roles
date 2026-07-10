@@ -161,15 +161,15 @@ argument_specs:
         description: URL of the InfluxData GPG key used to verify yum packages.
       telegraf_win_install_dir:
         type: str
-        default: 'C:\Telegraf'
+        default: "C:\\Telegraf"
         description: Windows installation directory for Telegraf.
       telegraf_win_logfile:
         type: str
-        default: 'C:\\Telegraf\\telegraf.log'
+        default: "C:\\\\Telegraf\\\\telegraf.log"
         description: Windows Telegraf log file path.
       telegraf_win_include:
         type: str
-        default: 'C:\Telegraf\telegraf_agent.d'
+        default: "C:\\Telegraf\\telegraf_agent.d"
         description: Windows directory for extra Telegraf plugin configuration files.
       telegraf_win_service_args:
         type: list

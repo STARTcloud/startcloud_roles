@@ -1,27 +1,22 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Installing Gnome for Debian"
+    - name: "Installing Gnome for Debian"
       when: "ansible_os_family == 'Debian'"
       become: true
       block:
-        -
-          name: "Ensuring apt cache is updated"
+        - name: "Ensuring apt cache is updated"
           ansible.builtin.apt:
             update_cache: true
             cache_valid_time: 3600
 
-        -
-          name: "Upgrading all apt packages"
+        - name: "Upgrading all apt packages"
           ansible.builtin.apt:
             force_apt_get: true
             upgrade: dist
 
-        -
-          name: "Installing some helpful utilities"
+        - name: "Installing some helpful utilities"
           ansible.builtin.apt:
             name:
               - ffmpeg
@@ -43,8 +38,7 @@
             state: present
             update_cache: true
 
-        -
-          name: "Removing bloat"
+        - name: "Removing bloat"
           ansible.builtin.apt:
             name:
               - thunderbird
@@ -82,19 +76,16 @@
               - shotwell
             state: absent
 
-        -
-          name: "Ensuring apt cache is updated"
+        - name: "Ensuring apt cache is updated"
           ansible.builtin.apt:
             update_cache: true
             cache_valid_time: 3600
 
-        -
-          name: "Setting Graphical Boot Target"
+        - name: "Setting Graphical Boot Target"
           changed_when: false
           ansible.builtin.command: "systemctl set-default graphical.target"
 
-        -
-          name: "Creating dconf DB Directories"
+        - name: "Creating dconf DB Directories"
           ansible.builtin.file:
             path: "{{ item }}"
             state: directory
@@ -102,8 +93,7 @@
             - "/etc/dconf/db/gdm.d/"
             - "/etc/dconf/db/local.d/"
 
-        -
-          name: "Setting User Dconf"
+        - name: "Setting User Dconf"
           ansible.builtin.copy:
             content: |
               user-db:user
@@ -111,86 +101,73 @@
             dest: /etc/dconf/profile/user
             mode: "0644"
 
-        -
-          name: "Setting Global Dconf"
+        - name: "Setting Global Dconf"
           ansible.builtin.template:
             src: userconf.j2
             dest: /etc/dconf/db/local.d/userconf
             mode: "0644"
             force: true
 
-        -
-          name: "Removing Initial Setup Package"
+        - name: "Removing Initial Setup Package"
           ansible.builtin.apt:
             name:
               - gnome-initial-setup
             state: absent
 
-        -
-          name: "Updating dconf Configuration for all users"
+        - name: "Updating dconf Configuration for all users"
           ansible.builtin.command: dconf update
 
-    -
-      name: "Installing Gnome for Ubuntu"
+    - name: "Installing Gnome for Ubuntu"
       when: "ansible_os_family == 'Ubuntu'"
       become: true
       block:
-        -
-          name: "Disabling Ubuntu Welcome Screen"
+        - name: "Disabling Ubuntu Welcome Screen"
           ansible.builtin.lineinfile:
             line: "InitialSetupEnable = false"
             path: /etc/gdm3/custom.conf
             regexp: "^[daemon]"
-            insertafter: '^[daemon]'
+            insertafter: "^[daemon]"
 
-        -
-          name: "Disabling Upgrade Prompt"
+        - name: "Disabling Upgrade Prompt"
           ansible.builtin.lineinfile:
             path: /etc/update-manager/release-upgrades
-            regexp: '^Prompt='
+            regexp: "^Prompt="
             line: Prompt=never
 
-    -
-      name: "Installing Gnome Extensions"
+    - name: "Installing Gnome Extensions"
       when: ansible_os_family == 'Debian' and desktop_extensions_enabled
       become: true
       block:
-        -
-          name: "Cloning dash-to-panel Gnome Extension"
+        - name: "Cloning dash-to-panel Gnome Extension"
           ansible.builtin.git:
             repo: https://github.com/home-sweet-gnome/dash-to-panel.git
             dest: /usr/local/src/dash-to-panel
 
-        -
-          name: "Installing dash-to-panel Gnome Extension Plus for all users"
-          ansible.builtin.make:
+        - name: "Installing dash-to-panel Gnome Extension Plus for all users"
+          community.general.make:
             chdir: /usr/local/src/dash-to-panel
             target: install
             params:
               DESTDIR: /
 
-        -
-          name: "Installing Extension -- Sound Output Chooser"
+        - name: "Installing Extension -- Sound Output Chooser"
           ansible.builtin.git:
             repo: https://github.com/kgshank/gse-sound-output-device-chooser.git
             dest: /usr/share/gnome-shell/extensions/gse-sound-output-device-chooser
 
-        -
-          name: "Correcting Directory Structure for Sound Output Chooser"
+        - name: "Correcting Directory Structure for Sound Output Chooser"
           changed_when: false
           ansible.builtin.command: "{{ item }}"
           with_items:
             - "cp -r /usr/share/gnome-shell/extensions/gse-sound-output-device-chooser/sound-output-device-chooser@kgshank.net  /usr/share/gnome-shell/extensions"
             - "rm -rf gse-sound-output-device-chooser"
 
-        -
-          name: "Installing Extension -- Clipboard Indicator"
+        - name: "Installing Extension -- Clipboard Indicator"
           ansible.builtin.git:
             repo: https://github.com/Tudmotu/gnome-shell-extension-clipboard-indicator.git
             dest: /usr/share/gnome-shell/extensions/clipboard-indicator@tudmotu.com
 
-        -
-          name: "Enabling Extensions"
+        - name: "Enabling Extensions"
           changed_when: false
           ansible.builtin.command: "{{ item }}"
           with_items:
@@ -198,27 +175,23 @@
             - gnome-extensions enable sound-output-device-chooser@kgshank.net
             - gnome-extensions enable clipboard-indicator@tudmotu.com
 
-    -
-      name: "Configuring Desktop"
+    - name: "Configuring Desktop"
       when: "ansible_os_family == 'Debian'"
       become: true
       block:
-        -
-          name: "Copying Logout Desktop Shortcut to /usr/share/applications"
+        - name: "Copying Logout Desktop Shortcut to /usr/share/applications"
           ansible.builtin.template:
             src: Logout.desktop.j2
             dest: /usr/share/applications/Logout.desktop
             mode: "0644"
 
-        -
-          name: "Copying Logout Script to /usr/share/applications"
+        - name: "Copying Logout Script to /usr/share/applications"
           ansible.builtin.template:
             src: logout.sh.j2
             dest: /usr/share/applications/logout.sh
             mode: a+x
 
-        -
-          name: "Copying Logout Desktop Icons to /usr/share/applications"
+        - name: "Copying Logout Desktop Icons to /usr/share/applications"
           ansible.builtin.copy:
             src: "{{ item }}"
             dest: /usr/share/applications
@@ -226,49 +199,39 @@
           with_items:
             - Logout.png
 
-    -
-      name: "Configuring Desktop Polkit Rules"
+    - name: "Configuring Desktop Polkit Rules"
       when: desktop_update_polkit
       become: true
       block:
-        -
-          name: "Allowing Access to commonly used functions on Desktop for Debian Based VMs"
+        - name: "Allowing Access to commonly used functions on Desktop for Debian Based VMs"
           when: ansible_os_family == 'Debian' and not ansible_os_family == 'Ubuntu'
           ansible.builtin.template:
             mode: "0644"
             dest: "{{ item.dest }}"
             src: "{{ item.src }}"
           with_items:
-            -
-              src: 47-allow-wifi-scan.pkla.j2
+            - src: 47-allow-wifi-scan.pkla.j2
               dest: "/etc/polkit-1/rules.d/50-local.d/47-allow-wifi-scan.pkla"
-            -
-              src: 45-allow-colord.pkla.j2
+            - src: 45-allow-colord.pkla.j2
               dest: "/etc/polkit-1/rules.d/50-local.d/45-allow-colord.pkla"
-            -
-              src: universal.pkla.j2
+            - src: universal.pkla.j2
               dest: "/etc/polkit-1/rules.d/universal.pkla"
 
-        -
-          name: "Allowing Access to commonly used functions on Desktop For Ubuntu Based VMS"
+        - name: "Allowing Access to commonly used functions on Desktop For Ubuntu Based VMS"
           when: ansible_os_family == 'Ubuntu'
           ansible.builtin.template:
             mode: "0644"
             dest: "{{ item.dest }}"
             src: "{{ item.src }}"
           with_items:
-            -
-              src: 47-allow-wifi-scan.pkla.j2
+            - src: 47-allow-wifi-scan.pkla.j2
               dest: "/etc/polkit-1/localauthority/50-local.d/47-allow-wifi-scan.pkla"
-            -
-              src: 45-allow-colord.pkla.j2
+            - src: 45-allow-colord.pkla.j2
               dest: "/etc/polkit-1/localauthority/50-local.d/45-allow-colord.pkla"
-            -
-              src: universal.pkla.j2
+            - src: universal.pkla.j2
               dest: "/etc/polkit-1/localauthority/50-local.d/universal.pkla"
 
-    -
-      name: "Restarting GDM3"
+    - name: "Restarting GDM3"
       become: true
       ansible.builtin.service:
         name: gdm3

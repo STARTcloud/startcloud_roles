@@ -2,7 +2,7 @@
 - name: "Checking for existing OpCache config files."
   ansible.builtin.find:
     paths: "{{ item }}"
-    contains: 'zend_extension(\s+)?=(\s+)?opcache\.so'
+    contains: "zend_extension(\\s+)?=(\\s+)?opcache\\.so"
   register: php_installed_opcache_confs
   with_items: "{{ php_extension_conf_paths }}"
 
@@ -23,7 +23,7 @@
     owner: root
     group: root
     force: true
-    mode: 0644
+    mode: "0644"
   with_items: "{{ php_extension_conf_paths }}"
   when: php_opcache_enable | bool
   notify: restart webserver

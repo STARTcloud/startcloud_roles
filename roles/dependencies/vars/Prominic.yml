@@ -16,46 +16,46 @@ chocolatey_packages:
   - bginfo
   - chromium
   - firefox
-#  - librewolf #Works
-#  - libreoffice
+  #  - librewolf #Works
+  #  - libreoffice
   - clamwin
-#  - drawio
-#  - filezilla #Works
-#  - winscp #Works
-#  - git  #Works
-#  - windirstat  #Works
-#  - winfsp  #Works
+  #  - drawio
+  #  - filezilla #Works
+  #  - winscp #Works
+  #  - git  #Works
+  #  - windirstat  #Works
+  #  - winfsp  #Works
   - winget
   - winget-cli
   - notepadplusplus
   - NugetPackageExplorer
-#  - putty #Works
-#  - superputty #Works
-#  - royalts
-#  - tightvnc
-#  - cmder #Works
-#  - crystaldiskmark
+  #  - putty #Works
+  #  - superputty #Works
+  #  - royalts
+  #  - tightvnc
+  #  - cmder #Works
+  #  - crystaldiskmark
   - curl
   - cyg-get
-#  - inkscape
+  #  - inkscape
   - microsoft-ui-xaml-2-7
   - vcredist140
   - vcredist2010
-#  - vim #Works
-#  - vmware-converter
-#  - vscode #Works
-#  - bluej
-#  - intellijidea-community
-#  - vagrant
-#  - superhumaninstaller
-#  - hostsfileupdate
-#  - kubernetes-cli
-#  - docker
-#  - docker-cli
-#  - docker-compose
-#  - ca-cert #Works
-#  - jre7 #Works
-#  - raritan #Works
+  #  - vim #Works
+  #  - vmware-converter
+  #  - vscode #Works
+  #  - bluej
+  #  - intellijidea-community
+  #  - vagrant
+  #  - superhumaninstaller
+  #  - hostsfileupdate
+  #  - kubernetes-cli
+  #  - docker
+  #  - docker-cli
+  #  - docker-compose
+  #  - ca-cert #Works
+  #  - jre7 #Works
+  #  - raritan #Works
   - softperfect-ramdisk
 #  - nmap
 #  - kyrtest -- Installs Notes11

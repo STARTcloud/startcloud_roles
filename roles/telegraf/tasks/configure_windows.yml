@@ -1,6 +1,5 @@
 ---
--
-  name: "Windows | Creating directory structure"
+- name: "Windows | Creating directory structure"
   ansible.windows.win_file:
     path: "{{ item }}"
     state: directory
@@ -8,39 +7,34 @@
     - "{{ telegraf_win_install_dir }}"
     - "{{ telegraf_win_include }}"
 
--
-  name: "Windows | Checking if file is already downloaded"
+- name: "Windows | Checking if file is already downloaded"
   ansible.windows.win_stat:
-    path: '{{ telegraf_win_install_dir }}\telegraf-{{ telegraf_agent_version }}_windows_amd64.zip'
+    path: "{{ telegraf_win_install_dir }}\\telegraf-{{ telegraf_agent_version }}_windows_amd64.zip"
   register: file_info
 
--
-  name: "Windows | Downloading Telegraf Agent Zip file"
+- name: "Windows | Downloading Telegraf Agent Zip file"
   ansible.windows.win_get_url:
     url: https://dl.influxdata.com/telegraf/releases/telegraf-{{ telegraf_agent_version }}_windows_amd64.zip
-    dest: '{{ telegraf_win_install_dir }}\telegraf-{{ telegraf_agent_version }}_windows_amd64.zip'
+    dest: "{{ telegraf_win_install_dir }}\\telegraf-{{ telegraf_agent_version }}_windows_amd64.zip"
   when:
     - not file_info.stat.exists
 
--
-  name: "Windows | Unzipping file"
+- name: "Windows | Unzipping file"
   community.windows.win_unzip:
-    src: '{{ telegraf_win_install_dir }}\telegraf-{{ telegraf_agent_version }}_windows_amd64.zip'
+    src: "{{ telegraf_win_install_dir }}\\telegraf-{{ telegraf_agent_version }}_windows_amd64.zip"
     dest: "{{ telegraf_win_install_dir }}"
-    creates: '{{ telegraf_win_install_dir }}\telegraf\telegraf.exe'
+    creates: "{{ telegraf_win_install_dir }}\\telegraf\\telegraf.exe"
 
--
-  name: "Windows | Configuring Telegraf"
+- name: "Windows | Configuring Telegraf"
   ansible.windows.win_template:
     src: telegraf.conf.j2
-    dest: '{{ telegraf_win_install_dir }}\telegraf\telegraf.conf'
+    dest: "{{ telegraf_win_install_dir }}\\telegraf\\telegraf.conf"
   notify: "Restarting Windows Telegraf"
 
--
-  name: "Windows | Copying telegraf extra plugins"
+- name: "Windows | Copying telegraf extra plugins"
   ansible.windows.win_template:
     src: "telegraf-extra-plugin.conf.j2"
-    dest: '{{ telegraf_win_include }}\{{ item.key }}.conf'
+    dest: "{{ telegraf_win_include }}\\{{ item.key }}.conf"
   with_dict: "{{ telegraf_plugins_extra }}"
   loop_control:
     label: "{{ item.key }}"
@@ -50,10 +44,9 @@
     - item.value.state|default('present') != 'absent'
   notify: "Restarting Windows Telegraf"
 
--
-  name: "Windows | Removing telegraf extra plugins"
+- name: "Windows | Removing telegraf extra plugins"
   ansible.windows.win_file:
-    path: '{{ telegraf_win_include }}\{{ item.key }}.conf'
+    path: "{{ telegraf_win_include }}\\{{ item.key }}.conf"
     state: absent
   with_dict: "{{ telegraf_plugins_extra }}"
   loop_control:
@@ -64,23 +57,20 @@
     - item.value.state|default('present') == 'absent'
   notify: "Restarting Windows Telegraf"
 
--
-  name: "Windows | Registering Service"
+- name: "Windows | Registering Service"
   ansible.windows.win_command: '{{ telegraf_win_install_dir }}\telegraf\telegraf.exe {{ telegraf_win_service_args | join(" ") }}'
   register: telegraf_windows_install
   args:
-    creates: '{{ telegraf_win_install_dir }}\.installed'
+    creates: "{{ telegraf_win_install_dir }}\\.installed"
 
--
-  name: "Windows | Creating done file so it won't register itself again"
+- name: "Windows | Creating done file so it won't register itself again"
   ansible.windows.win_file:
-    path: '{{ telegraf_win_install_dir }}\.installed'
+    path: "{{ telegraf_win_install_dir }}\\.installed"
     state: touch
   when:
     - telegraf_windows_install is changed
 
--
-  name: "Windows | Setting service startup mode to auto and ensuring it is started"
+- name: "Windows | Setting service startup mode to auto and ensuring it is started"
   ansible.windows.win_service:
     name: Telegraf
     start_mode: auto

@@ -1,15 +1,13 @@
 ---
--
-    name: "Running Database Updates"
-    ansible.builtin.command: "{{ drush_path }} updatedb -y"
-    args:
-        chdir: "{{ drupal_core_path }}"
-    register: drush_database_updates
-    changed_when: "'No database updates required.' not in drush_database_updates.stdout"
+- name: "Running Database Updates"
+  ansible.builtin.command: "{{ drush_path }} updatedb -y"
+  args:
+    chdir: "{{ drupal_core_path }}"
+  register: drush_database_updates
+  changed_when: "'No database updates required.' not in drush_database_updates.stdout"
 
--
-    name: "Rebuilding Drupal Caches"
-    ansible.builtin.command: "{{ drush_path }} cache-rebuild --quiet"
-    args:
-        chdir: "{{ drupal_core_path }}"
-    tags: ['skip_ansible_lint']
+- name: "Rebuilding Drupal Caches"
+  ansible.builtin.command: "{{ drush_path }} cache-rebuild --quiet"
+  args:
+    chdir: "{{ drupal_core_path }}"
+  tags: ["skip_ansible_lint"]

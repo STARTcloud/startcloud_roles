@@ -29,7 +29,7 @@ argument_specs:
         description: Fetch the APT signing key from a URL instead of a keyserver.
       mongodb_apt_keyserver:
         type: str
-        default: 'hkp://keyserver.ubuntu.com:80'
+        default: "hkp://keyserver.ubuntu.com:80"
         description: Keyserver used to fetch the MongoDB APT signing key.
       mongodb_apt_key_id:
         type: dict

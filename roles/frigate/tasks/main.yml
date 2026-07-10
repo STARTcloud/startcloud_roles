@@ -1,10 +1,8 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Creating Frigate configuration and media directories"
+    - name: "Creating Frigate configuration and media directories"
       ansible.builtin.file:
         path: "{{ item }}"
         state: directory
@@ -13,15 +11,13 @@
         - "{{ frigate_config_dir }}"
         - "{{ frigate_media_dir }}"
 
-    -
-      name: "Templating Frigate configuration"
+    - name: "Templating Frigate configuration"
       ansible.builtin.template:
         src: frigate-config.yml.j2
         dest: "{{ frigate_config_dir }}/config.yml"
         mode: "0644"
 
-    -
-      name: "Deploying Frigate container"
+    - name: "Deploying Frigate container"
       community.docker.docker_container:
         name: "{{ frigate_container_name }}"
         image: "{{ frigate_image }}"

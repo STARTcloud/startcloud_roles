@@ -56,7 +56,7 @@ appx_packages_to_remove:
   - "Microsoft.ZuneVideo"
   - "Microsoft.MicrosoftStickyNotes"
   - "microsoft.windowscommunicationsapps"
-  - "Microsoft.549981C3F5F10"  # Cortana
+  - "Microsoft.549981C3F5F10" # Cortana
   - "*CandyCrush*"
   - "*BubbleWitch*"
   - "*Twitter*"

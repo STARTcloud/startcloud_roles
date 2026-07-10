@@ -1,16 +1,13 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Gathering DEB architecture"
+    - name: "Gathering DEB architecture"
       ansible.builtin.command: dpkg --print-architecture
       register: deb_architecture
       changed_when: false
 
-    -
-      name: "Installing python3 packages for GPIO"
+    - name: "Installing python3 packages for GPIO"
       when: ansible_os_family == 'Debian' and (deb_architecture.stdout == 'arm64' or deb_architecture.stdout == 'armhf')
       ansible.builtin.apt:
         name:
@@ -32,41 +29,35 @@
           - libsdl2-mixer-dev
           - libsdl2-ttf-dev
           - libportmidi-dev
-    
-    -
-      name: "Adding x728 Scripts"
+
+    - name: "Adding x728 Scripts"
       when: ansible_os_family == 'Debian' and (deb_architecture.stdout == 'arm64' or deb_architecture.stdout == 'armhf')
       ansible.builtin.template:
         mode: a+x
         dest: "{{ item.dest }}"
         src: "{{ item.src }}"
       with_items:
-        -
-          src: display.py.j2
+        - src: display.py.j2
           dest: "/usr/local/bin/display.py"
-        -
-          src: x728bat_display.py.j2
+        - src: x728bat_display.py.j2
           dest: "/usr/local/bin/x728bat_display.py"
-        -
-          src: lcd-display.service.j2
+        - src: lcd-display.service.j2
           dest: "/etc/systemd/system/lcd-display.service"
-    
-    -
-      name: "Enabling LCD-Display Service"
+
+    - name: "Enabling LCD-Display Service"
       when: ansible_os_family == 'Debian' and (deb_architecture.stdout == 'arm64' or deb_architecture.stdout == 'armhf')
       ansible.builtin.service:
         name: lcd-display
         enabled: true
         state: stopped
         daemon_reload: true
-    
-    -
-      name: "Enabling i2c-dev on Next Reboot"
+
+    - name: "Enabling i2c-dev on Next Reboot"
       when: ansible_os_family == 'Debian' and (deb_architecture.stdout == 'arm64' or deb_architecture.stdout == 'armhf')
       ansible.builtin.lineinfile:
         line: "{{ item.line }}"
-        path:  /etc/modules
+        path: /etc/modules
         state: present
         create: true
       with_items:
-        - line: 'i2c-dev'
+        - line: "i2c-dev"

@@ -1,10 +1,8 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Adding OS specific variables"
+    - name: "Adding OS specific variables"
       ansible.builtin.include_vars: "{{ loop_vars }}"
       loop_control:
         loop_var: loop_vars
@@ -22,8 +20,7 @@
           paths:
             - vars
 
-    -
-      name: "Including distribution tasks"
+    - name: "Including distribution tasks"
       ansible.builtin.include_tasks: "{{ loop_distribution }}"
       loop_control:
         loop_var: loop_distribution

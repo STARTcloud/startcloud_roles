@@ -3,10 +3,8 @@ argument_specs:
   main:
     short_description: Deploys Greenbone Community Edition (GVM / OpenVAS) via Docker Compose.
     description:
-      - Renders the official Greenbone Community Containers compose file, brings the
-        stack up with docker compose, and creates the initial administrator account.
-      - On first start the stack downloads and synchronises the vulnerability feeds
-        before scans can run and before the web UI becomes usable.
+      - Renders the official Greenbone Community Containers compose file, brings the stack up with docker compose, and creates the initial administrator account.
+      - On first start the stack downloads and synchronises the vulnerability feeds before scans can run and before the web UI becomes usable.
     author: Mark Gilbert
     options:
       run_tasks:

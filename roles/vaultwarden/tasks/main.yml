@@ -1,17 +1,14 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Creating the Vaultwarden data directory"
+    - name: "Creating the Vaultwarden data directory"
       ansible.builtin.file:
         path: "{{ vaultwarden_data_dir }}"
         state: directory
         mode: "0750"
 
-    -
-      name: "Deploying the Vaultwarden container"
+    - name: "Deploying the Vaultwarden container"
       community.docker.docker_container:
         name: "{{ vaultwarden_container_name }}"
         image: "{{ vaultwarden_image }}"

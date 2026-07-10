@@ -1,11 +1,9 @@
 ---
-
 - name: information
   hosts: all
   gather_facts: true
 
   pre_tasks:
-
     - name: environment
       ansible.builtin.debug:
         msg:
@@ -19,7 +17,6 @@
   gather_facts: true
 
   pre_tasks:
-
     - name: update package cache
       become: true
       ansible.builtin.package:
@@ -33,4 +30,3 @@
         state: present
       when:
         - ansible_os_family | lower == "debian"
-...

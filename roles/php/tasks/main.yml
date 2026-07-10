@@ -1,6 +1,5 @@
 ---
--
-  name: "Allowing loading of variables without running task"
+- name: "Allowing loading of variables without running task"
   when: run_tasks
   block:
     - name: "Including OS-specific variables."
@@ -20,7 +19,7 @@
 
     - name: "Defining the name of the JSON extension package on Debian for PHP <8."
       ansible.builtin.set_fact:
-        __php_json_package_debian: "{{ 'php' + php_default_version_debian|string + '-json' }}"
+        __php_json_package_debian: "{{ 'php' + php_default_version_debian | string + '-json' }}"
       when: ansible_os_family == 'Debian' and php_default_version_debian is version('8.0', '<')
 
     - name: "Adding the JSON extension on Debian for PHP <8."

@@ -3,9 +3,7 @@ argument_specs:
   main:
     short_description: Installs and configures Docker on Linux.
     description:
-      - Installs Docker CE from the official Docker repository, optionally installs the
-        docker-compose plugin and standalone binary, configures the Docker daemon, and
-        manages membership of the docker group.
+      - Installs Docker CE from the official Docker repository, optionally installs the docker-compose plugin and standalone binary, configures the Docker daemon, and manages membership of the docker group.
     author: Mark Gilbert
     options:
       run_tasks:
@@ -14,7 +12,7 @@ argument_specs:
         description: Master gate — when false the role loads its vars but runs no tasks.
       docker_edition:
         type: str
-        default: 'ce'
+        default: "ce"
         description: Docker edition to install, either 'ce' (Community) or 'ee' (Enterprise).
       docker_packages:
         type: list
@@ -115,11 +113,11 @@ argument_specs:
         description: URL of the Docker YUM/DNF repository definition on RHEL-family systems.
       docker_yum_repo_enable_nightly:
         type: str
-        default: '0'
+        default: "0"
         description: Whether to enable the Docker nightly YUM repo ('1' to enable).
       docker_yum_repo_enable_test:
         type: str
-        default: '0'
+        default: "0"
         description: Whether to enable the Docker test YUM repo ('1' to enable).
       docker_yum_gpg_key:
         type: str

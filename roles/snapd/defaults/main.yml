@@ -15,5 +15,3 @@ snapd_files:
   - /etc/apt/apt.conf.d/20snapd.conf
 
 snapd_block_packages: []
-
-...

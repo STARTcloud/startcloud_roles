@@ -1,7 +1,6 @@
 ---
 # Should this live inside this role?  Can this be generalized?
--
-  name: "Disabling Screen Locking"
+- name: "Disabling Screen Locking"
   ansible.builtin.file:
     path: /etc/xdg/autostart/light-locker.desktop
     state: absent

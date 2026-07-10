@@ -1,6 +1,5 @@
 ---
--
-  name: "Disabling NFS, Exim and Cockpit, reboot to fully apply"
+- name: "Disabling NFS, Exim and Cockpit, reboot to fully apply"
   when: not ansible_module_running_in_container
   ansible.builtin.service:
     name: "{{ item }}"
@@ -9,31 +8,27 @@
   loop: "{{ lockdown }}"
   ignore_errors: true
 
--
-  name: "Changing startcloud Password"
+- name: "Changing startcloud Password"
   when: lockdown_use_settings_password
   ansible.builtin.user:
     name: "startcloud"
     state: present
     password: "{{ vagrant_user_pass | password_hash('sha512') }}"
 
--
-  name: "Changing startcloud Password"
+- name: "Changing startcloud Password"
   when: not lockdown_use_settings_password
   ansible.builtin.user:
     name: "startcloud"
     state: present
     password: "{{ lockdown_new_password | password_hash('sha512') }}"
 
--
-  name: "Generating an OpenSSH keypair with the default values"
+- name: "Generating an OpenSSH keypair with the default values"
   community.crypto.openssh_keypair:
     owner: startcloud
     group: startcloud
     path: /home/startcloud/.ssh/id_ssh_rsa
 
--
-  name: "Setting ownership of SSH files"
+- name: "Setting ownership of SSH files"
   ansible.builtin.file:
     owner: startcloud
     group: startcloud
@@ -43,20 +38,17 @@
   with_items:
     - "/home/startcloud/.ssh"
 
--
-  name: "Copying the public key to the remote server"
+- name: "Copying the public key to the remote server"
   ansible.posix.authorized_key:
     user: startcloud
     state: present
     exclusive: false
     key: "{{ lookup('file', '/home/startcloud/.ssh/id_ssh_rsa.pub') }}"
 
--
-  name: "Resetting ssh connection to apply user changes"
+- name: "Resetting ssh connection to apply user changes"
   ansible.builtin.meta: reset_connection
 
--
-  name: "Cleaning up specified sensitive files"
+- name: "Cleaning up specified sensitive files"
   when:
     - lockdown_cleanup_debug_files | default(false)
     - (lockdown_file_cleanups_list | default([]) | length) > 0

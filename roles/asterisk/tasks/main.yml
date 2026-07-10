@@ -1,63 +1,51 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Setting up Debian Installations"
+    - name: "Setting up Debian Installations"
       when: "ansible_os_family == 'Debian'"
       block:
-        -
-          name: "Including additional vars"
+        - name: "Including additional vars"
           ansible.builtin.include_vars: vars/debian12.yml
 
-        -
-          name: "Gathering DEB architecture"
+        - name: "Gathering DEB architecture"
           ansible.builtin.command: dpkg --print-architecture
           register: deb_architecture
           changed_when: false
 
-        -
-          name: "Printing DEB architecture"
+        - name: "Printing DEB architecture"
           ansible.builtin.debug:
             msg: "deb_architecture.stdout: {{ deb_architecture.stdout }}"
 
-        -
-          name: "Ensuring apt cache is updated"
+        - name: "Ensuring apt cache is updated"
           ansible.builtin.apt:
             cache_valid_time: 3600
             update_cache: true
 
-        -
-          name: "Upgrading all apt packages"
+        - name: "Upgrading all apt packages"
           ansible.builtin.apt:
             upgrade: dist
             update_cache: true
 
-        -
-          name: "Adding Additional Dependencies"
+        - name: "Adding Additional Dependencies"
           ansible.builtin.apt:
             name: "{{ packages }}"
             state: present
 
--
-  name: "Asterisk User and Directory Setup"
+- name: "Asterisk User and Directory Setup"
   when: run_tasks and (ansible_os_family == 'Debian')
   block:
-    -
-      name: "Checking if Asterisk is installed (Pre-Setup)"
+    - name: "Checking if Asterisk is installed (Pre-Setup)"
       ansible.builtin.stat:
         path: "{{ asterisk_config_dir }}"
       register: asterisk_bin_path
 
-    -
-      name: "Ensuring group asterisk exists"
+    - name: "Ensuring group asterisk exists"
       ansible.builtin.group:
         name: "{{ asterisk_group }}"
         state: present
 
-    -
-      name: "Adding the user asterisk"
+    - name: "Adding the user asterisk"
       ansible.builtin.user:
         comment: Asterisk SIP User
         shell: /bin/bash
@@ -69,28 +57,25 @@
           - dialout
           - "{{ service_group }}"
 
-    -
-      name: "Creating Export Directory"
+    - name: "Creating Export Directory"
       ansible.builtin.file:
         path: /data
         state: directory
-        mode: '0755'
+        mode: "0755"
         owner: "{{ asterisk_user }}"
         group: "{{ asterisk_group }}"
 
-    -
-      name: "Creating asterisk directories if they do not exist"
+    - name: "Creating asterisk directories if they do not exist"
       ansible.builtin.file:
         path: "{{ item }}"
         state: directory
         owner: "{{ asterisk_user }}"
-        mode: '0755'
+        mode: "0755"
       with_items:
         - "{{ asterisk_source_dir }}"
         - "{{ asterisk_config_dir }}"
 
-    -
-      name: "Downloading and Extracting Asterisk"
+    - name: "Downloading and Extracting Asterisk"
       ansible.builtin.unarchive:
         src: "{{ asterisk_package }}"
         dest: "{{ asterisk_source_dir }}"
@@ -98,17 +83,14 @@
         list_files: true
       register: asterisk_archive_contents
 
-    -
-      name: "Checking if Asterisk is installed (Post-Download)"
+    - name: "Checking if Asterisk is installed (Post-Download)"
       ansible.builtin.debug:
         msg: "Asterisk directory path is {{ asterisk_source_dir }}/{{ asterisk_archive_contents.files[0] }}, installed: {{ asterisk_bin_path.stat.exists }}"
 
--
-  name: "Asterisk Compilation and Installation"
+- name: "Asterisk Compilation and Installation"
   when: run_tasks and (ansible_os_family == 'Debian') and not asterisk_bin_path.stat.exists
   block:
-    -
-      name: "Installing Asterisk Packages"
+    - name: "Installing Asterisk Packages"
       ansible.builtin.command: "{{ item }}"
       with_items:
         - ./configure --with-jansson-bundled
@@ -123,17 +105,15 @@
       poll: 15
       changed_when: true
 
--
-  name: "Asterisk Final Configuration"
+- name: "Asterisk Final Configuration"
   when: run_tasks and (ansible_os_family == 'Debian')
   block:
-    -
-      name: "Changing file ownership, group and permissions"
+    - name: "Changing file ownership, group and permissions"
       ansible.builtin.file:
         path: "{{ item }}"
         owner: "{{ asterisk_user }}"
         group: "{{ asterisk_group }}"
-        mode: '0755'
+        mode: "0755"
         state: directory
         recurse: true
       loop:
@@ -145,77 +125,67 @@
         - "{{ asterisk_user_lib_dir }}"
         - "{{ asterisk_config_dir }}"
 
-    -
-      name: "Setting Asterisk ACLs"
+    - name: "Setting Asterisk ACLs"
       ansible.builtin.file:
         path: "{{ asterisk_log_dir }}"
         state: directory
-        mode: '0755'
+        mode: "0755"
         owner: "{{ asterisk_user }}"
         group: "{{ asterisk_group }}"
 
-    -
-      name: "Removing Asterisk init.d script"
+    - name: "Removing Asterisk init.d script"
       ansible.builtin.file:
         path: /etc/init.d/asterisk
         state: absent
 
-    -
-      name: "Copying Asterisk Templates"
+    - name: "Copying Asterisk Templates"
       ansible.builtin.template:
         src: asterisk.service.j2
         dest: /etc/systemd/system/asterisk.service
-        mode: '0644'
+        mode: "0644"
 
-    -
-      name: "Restarting Asterisk server"
+    - name: "Restarting Asterisk server"
       ansible.builtin.systemd_service:
         name: asterisk.service
         state: restarted
         enabled: true
         daemon_reload: true
 
-    -
-      name: "Copying Asterisk configuration to remote"
+    - name: "Copying Asterisk configuration to remote"
       ansible.builtin.copy:
-        src: './files/conf/'
+        src: "./files/conf/"
         dest: "{{ asterisk_config_dir }}"
         owner: "{{ asterisk_user }}"
         group: "{{ asterisk_group }}"
-        mode: '0644'
+        mode: "0644"
 
-    -
-      name: "Copying Config files to Asterisk Box"
+    - name: "Copying Config files to Asterisk Box"
       ansible.builtin.template:
-        src: 'sysconfig.sh.j2'
-        dest: '/etc/default/asterisk'
+        src: "sysconfig.sh.j2"
+        dest: "/etc/default/asterisk"
         mode: "+x"
         owner: "{{ asterisk_user }}"
         group: "{{ asterisk_group }}"
 
-    -
-      name: "Loading Asterisk Security module"
+    - name: "Loading Asterisk Security module"
       ansible.builtin.lineinfile:
         path: "{{ asterisk_config_dir }}/modules.conf"
-        search_string: 'load => res_security_log.so'
+        search_string: "load => res_security_log.so"
         line: load => res_security_log.so
 
-    -
-      name: "Enabling Asterisk Security logs"
+    - name: "Enabling Asterisk Security logs"
       ansible.builtin.lineinfile:
         path: "{{ asterisk_config_dir }}/logger.conf"
-        search_string: 'security = security'
+        search_string: "security = security"
         line: security = security
 
-    -
-      name: "Copying jail.local template"
+    - name: "Copying jail.local template"
       ansible.builtin.template:
         src: asterisk.jail.local.j2
         dest: /etc/fail2ban/jail.d/asterisk.conf
-        mode: '0644'
+        mode: "0644"
 
-    -
-      name: "Starting and Enabling fail2ban"
+    - name: "Starting and Enabling fail2ban"
       ansible.builtin.systemd:
         name: fail2ban
         state: restarted

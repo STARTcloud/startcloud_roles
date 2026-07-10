@@ -3,9 +3,7 @@ argument_specs:
   main:
     short_description: Installs and configures a PostgreSQL database server.
     description:
-      - Installs PostgreSQL server packages, initializes the database cluster,
-        applies global and host-based authentication configuration, and ensures
-        the requested databases and users exist.
+      - Installs PostgreSQL server packages, initializes the database cluster, applies global and host-based authentication configuration, and ensures the requested databases and users exist.
     author: Mark Gilbert
     options:
       run_tasks:

@@ -9,7 +9,7 @@
       cgroupDriver: "systemd"
       failSwapOn: false
       cgroupsPerQOS: true
-      enforceNodeAllocatable: ['pods']
+      enforceNodeAllocatable: ["pods"]
     containerd_config_cgroup_driver_systemd: true
 
   pre_tasks:

@@ -1,27 +1,22 @@
 ---
--
-  name: "Including OS-specific vars"
+- name: "Including OS-specific vars"
   ansible.builtin.include_vars: "{{ ansible_os_family | lower }}.yml"
 
--
-  name: "Updating yum cache"
-  ansible.builtin.yum:
+- name: "Updating yum cache"
+  ansible.builtin.dnf:
     update_cache: true
 
--
-  name: "Upgrading all yum packages"
-  ansible.builtin.yum:
-    name: '*'
+- name: "Upgrading all yum packages"
+  ansible.builtin.dnf:
+    name: "*"
     state: latest # noqa package-latest
 
--
-  name: "Installing EPEL repo"
-  ansible.builtin.yum:
+- name: "Installing EPEL repo"
+  ansible.builtin.dnf:
     name: epel-release
     state: present
 
--
-  name: "Installing Cockpit"
-  ansible.builtin.yum:
+- name: "Installing Cockpit"
+  ansible.builtin.dnf:
     name: "cockpit"
     state: present

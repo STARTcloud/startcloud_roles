@@ -3,8 +3,7 @@ argument_specs:
   main:
     short_description: Print a hello_world debug message
     description:
-      - A minimal example role that prints a debug message containing the
-        hello_world variable supplied from Hosts.yml.
+      - A minimal example role that prints a debug message containing the hello_world variable supplied from Hosts.yml.
     author: Mark Gilbert
     options:
       run_tasks:

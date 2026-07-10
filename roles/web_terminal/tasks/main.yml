@@ -1,87 +1,74 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Gathering facts on current container"
+    - name: "Gathering facts on current container"
       community.docker.current_container_facts:
 
-    -
-      name: "Installing Web Terminal from the STARTcloud APT repository"
+    - name: "Installing Web Terminal from the STARTcloud APT repository"
       when: not web_terminal_build_from_source
       block:
-        -
-          name: "Creating keyrings directory for repository GPG keys"
+        - name: "Creating keyrings directory for repository GPG keys"
           ansible.builtin.file:
             path: /etc/apt/keyrings
             state: directory
-            mode: '0755'
+            mode: "0755"
 
-        -
-          name: "Downloading armored STARTcloud GPG key"
+        - name: "Downloading armored STARTcloud GPG key"
           ansible.builtin.get_url:
             url: "{{ web_terminal_apt_key_url }}"
             dest: /tmp/startcloud-archive-keyring.asc
-            mode: '0644'
+            mode: "0644"
 
-        -
-          name: "Dearmoring STARTcloud GPG key"
+        - name: "Dearmoring STARTcloud GPG key"
           ansible.builtin.command:
             cmd: "gpg --dearmor -o /etc/apt/keyrings/startcloud-archive-keyring.gpg /tmp/startcloud-archive-keyring.asc"
             creates: /etc/apt/keyrings/startcloud-archive-keyring.gpg
 
-        -
-          name: "Adding STARTcloud APT repository"
+        - name: "Adding STARTcloud APT repository"
           ansible.builtin.apt_repository:
             repo: "deb [signed-by=/etc/apt/keyrings/startcloud-archive-keyring.gpg] {{ web_terminal_apt_repo_url }} {{ ansible_distribution_release }} main"
             state: present
             filename: startcloud
 
-        -
-          name: "Installing web-terminal"
+        - name: "Installing web-terminal"
           ansible.builtin.apt:
             name: "{{ web_terminal_package }}"
             state: present
             update_cache: true
 
-        -
-          name: "Placing Configuration file"
+        - name: "Placing Configuration file"
           become: true
           ansible.builtin.template:
             src: "{{ item.src }}"
             dest: "{{ item.dest }}"
-            mode: '0755'
+            mode: "0755"
           loop:
-            - { src: 'config.yaml.j2', dest: '/etc/web-terminal/config.yaml' }
-            - { src: 'config.yaml.j2', dest: '/etc/web-terminal/dev-config.yaml' }
-            - { src: 'config.yaml.j2', dest: '/opt/web-terminal/dev-config.yaml' }
-            - { src: 'config.yaml.j2', dest: '/opt/web-terminal/config.yaml' }
+            - { src: "config.yaml.j2", dest: "/etc/web-terminal/config.yaml" }
+            - { src: "config.yaml.j2", dest: "/etc/web-terminal/dev-config.yaml" }
+            - { src: "config.yaml.j2", dest: "/opt/web-terminal/dev-config.yaml" }
+            - { src: "config.yaml.j2", dest: "/opt/web-terminal/config.yaml" }
 
-        -
-          name: "Starting Web Terminal Service"
+        - name: "Starting Web Terminal Service"
           when: not ansible_module_running_in_container
           ansible.builtin.service:
             name: web-terminal
             state: started
             enabled: true
 
-        -
-          name: "Copying Web Terminal supervisord configuration file"
+        - name: "Copying Web Terminal supervisord configuration file"
           when: ansible_module_running_in_container
           ansible.builtin.template:
             src: supervisord.webterminal.conf.j2
             dest: /etc/supervisor/conf.d/supervisord.webterminal.conf
             owner: root
             group: root
-            mode: '0644'
+            mode: "0644"
 
-    -
-      name: "Building Web Terminal from source"
+    - name: "Building Web Terminal from source"
       when: web_terminal_build_from_source
       block:
-        -
-          name: "Installing Node.js, npm, and git"
+        - name: "Installing Node.js, npm, and git"
           ansible.builtin.apt:
             name:
               - nodejs
@@ -90,8 +77,7 @@
             state: present
             update_cache: true
 
-        -
-          name: "Cloning Web Terminal repository"
+        - name: "Cloning Web Terminal repository"
           become: true
           become_user: "{{ service_user }}"
           ansible.builtin.git:
@@ -100,8 +86,7 @@
             version: "{{ web_terminal_git_version }}"
             force: true
 
-        -
-          name: "Setting ownership of Web Terminal directory"
+        - name: "Setting ownership of Web Terminal directory"
           ansible.builtin.file:
             path: "{{ web_terminal_path }}"
             state: directory
@@ -109,22 +94,19 @@
             group: "{{ service_group }}"
             recurse: true
 
-        -
-          name: "Installing backend npm packages"
+        - name: "Installing backend npm packages"
           become: true
           become_user: "{{ service_user }}"
           community.general.npm:
             path: "{{ web_terminal_path }}"
 
-        -
-          name: "Installing frontend npm packages"
+        - name: "Installing frontend npm packages"
           become: true
           become_user: "{{ service_user }}"
           community.general.npm:
             path: "{{ web_terminal_path }}/web"
 
-        -
-          name: "Building Web Terminal frontend"
+        - name: "Building Web Terminal frontend"
           become: true
           become_user: "{{ service_user }}"
           ansible.builtin.command: npm run build
@@ -133,31 +115,28 @@
           register: web_terminal_build
           changed_when: web_terminal_build.rc == 0
 
-        -
-          name: "Placing Web Terminal Service file"
+        - name: "Placing Web Terminal Service file"
           become: true
           ansible.builtin.template:
             owner: "{{ item.owner }}"
             src: "{{ item.src }}"
             dest: "{{ item.dest }}"
-            mode: '0644'
+            mode: "0644"
           loop:
-            - { src: 'web-terminal.service.j2', dest: '/etc/systemd/system/web-terminal.service', owner: '{{ service_user }}' }
+            - { src: "web-terminal.service.j2", dest: "/etc/systemd/system/web-terminal.service", owner: "{{ service_user }}" }
 
-        -
-          name: "Placing Configuration file"
+        - name: "Placing Configuration file"
           become: true
           ansible.builtin.template:
             owner: "{{ item.owner }}"
             src: "{{ item.src }}"
             dest: "{{ item.dest }}"
-            mode: '0644'
+            mode: "0644"
           loop:
-            - { src: 'config.yaml.j2', dest: '{{ web_terminal_path }}/config.yaml', owner: '{{ service_user }}' }
-            - { src: 'config.yaml.j2', dest: '{{ web_terminal_path }}/dev-config.yaml', owner: '{{ service_user }}' }
+            - { src: "config.yaml.j2", dest: "{{ web_terminal_path }}/config.yaml", owner: "{{ service_user }}" }
+            - { src: "config.yaml.j2", dest: "{{ web_terminal_path }}/dev-config.yaml", owner: "{{ service_user }}" }
 
-        -
-          name: "Starting Web Terminal Service"
+        - name: "Starting Web Terminal Service"
           when: not ansible_module_running_in_container
           ansible.builtin.service:
             name: web-terminal
@@ -165,8 +144,7 @@
             enabled: true
             daemon_reload: true
 
-        -
-          name: "Checking if Web Terminal Service is listening on port {{ startcloud_web_terminal_port_forwards[0].guest }}"
+        - name: "Checking if Web Terminal Service is listening on port {{ startcloud_web_terminal_port_forwards[0].guest }}"
           when: not ansible_module_running_in_container
           ansible.builtin.wait_for:
             port: "{{ startcloud_web_terminal_port_forwards[0].guest }}"
@@ -176,12 +154,11 @@
           register: port_check_web_terminal
           ignore_errors: true
 
-        -
-          name: "Copying Web Terminal supervisord configuration file"
+        - name: "Copying Web Terminal supervisord configuration file"
           when: ansible_module_running_in_container
           ansible.builtin.template:
             src: supervisord.webterminal.conf.j2
             dest: /etc/supervisor/conf.d/supervisord.webterminal.conf
             owner: root
             group: root
-            mode: '0644'
+            mode: "0644"

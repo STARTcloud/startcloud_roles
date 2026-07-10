@@ -1,29 +1,24 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Installing Telegraf"
+    - name: "Installing Telegraf"
       when: ansible_os_family == 'Debian'
       ansible.builtin.apt:
         name:
           - telegraf
-    
-    -
-      name: "Adding Telegraf Configurations"
+
+    - name: "Adding Telegraf Configurations"
       when: ansible_os_family == 'Debian'
       ansible.builtin.template:
-        mode: '0644'
+        mode: "0644"
         dest: "{{ item.dest }}"
         src: "{{ item.src }}"
       with_items:
-        -
-          src: telegraf.cnf.j2
+        - src: telegraf.cnf.j2
           dest: "/etc/telegraf/telegraf.conf"
-    
-    -
-      name: "Enabling Telegraf"
+
+    - name: "Enabling Telegraf"
       when: ansible_os_family == 'Debian'
       ansible.builtin.service:
         name: telegraf

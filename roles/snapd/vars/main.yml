@@ -24,5 +24,3 @@ snapd_defaults_block_packages:
   - libsnapd-qt1
   - snapd-xdg-open
   - qml-module-snapd
-
-...

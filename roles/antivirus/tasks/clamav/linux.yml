@@ -1,18 +1,15 @@
 ---
--
-  name: "Installing ClamAV Antivirus"
+- name: "Installing ClamAV Antivirus"
   when: install_clamav | default(false) | bool and (ansible_os_family == 'Debian' or ansible_os_family == 'RedHat')
   block:
-    -
-      name: "Ensuring ClamAV packages are installed"
+    - name: "Ensuring ClamAV packages are installed"
       ansible.builtin.package:
         name: "{{ item }}"
         state: present
       with_items: "{{ clamav_packages }}"
       register: clamav_packages_install
 
-    -
-      name: "Running freshclam after ClamAV packages change"
+    - name: "Running freshclam after ClamAV packages change"
       ansible.builtin.command: freshclam
       when: clamav_packages_install.changed
       register: freshclam_result
@@ -23,13 +20,11 @@
         - freshclam_result.stderr.find('locked by another process') != -1
       tags: ["skip_ansible_lint"]
 
-    -
-      name: "Including setup-RedHat.yml"
+    - name: "Including setup-RedHat.yml"
       ansible.builtin.include_tasks: setup-RedHat.yml
       when: ansible_os_family == 'RedHat'
 
-    -
-      name: "Changing configuration for the ClamAV daemon"
+    - name: "Changing configuration for the ClamAV daemon"
       ansible.builtin.lineinfile:
         path: "{{ clamav_daemon_config_path }}"
         regexp: "{{ item.regexp }}"
@@ -40,26 +35,23 @@
       notify: Restarting clamav daemon
       with_items: "{{ clamav_daemon_configuration_changes }}"
 
-    -
-      name: "Changing configuration for the freshclam daemon"
+    - name: "Changing configuration for the freshclam daemon"
       ansible.builtin.lineinfile:
         path: "{{ clamav_freshclam_daemon_config_path }}"
-        regexp: '{{ item.regexp }}'
+        regexp: "{{ item.regexp }}"
         line: "{{ item.line | default('') }}"
         state: "{{ item.state | default('present') }}"
       with_items: "{{ clamav_freshclam_configuration_changes }}"
       when: clamav_freshclam_configuration_changes is defined
 
-    -
-      name: "Ensuring ClamAV daemon is running (if configured)"
+    - name: "Ensuring ClamAV daemon is running (if configured)"
       ansible.builtin.service:
         name: "{{ clamav_daemon }}"
         state: "{{ clamav_daemon_state }}"
         enabled: "{{ clamav_daemon_enabled }}"
       when: not ansible_check_mode
 
-    -
-      name: "Ensuring ClamAV freshclam daemon is running (if configured)"
+    - name: "Ensuring ClamAV freshclam daemon is running (if configured)"
       ansible.builtin.service:
         name: "{{ clamav_freshclam_daemon }}"
         state: "{{ clamav_freshclam_daemon_state }}"

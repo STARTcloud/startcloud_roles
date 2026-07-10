@@ -12,7 +12,7 @@ argument_specs:
         description: Master gate — when false the role loads its vars but runs no tasks.
       prometheus_version:
         type: str
-        default: '2.53.1'
+        default: "2.53.1"
         description: Prometheus release version to download and install.
       prometheus_user:
         type: str
@@ -36,19 +36,19 @@ argument_specs:
         description: Directory used for the Prometheus time-series database.
       prometheus_listen_address:
         type: str
-        default: '0.0.0.0:9090'
+        default: "0.0.0.0:9090"
         description: Address and port Prometheus binds its web interface to.
       prometheus_storage_retention:
         type: str
-        default: '15d'
+        default: "15d"
         description: How long the time-series database retains data.
       prometheus_scrape_interval:
         type: str
-        default: '15s'
+        default: "15s"
         description: Default interval between metric scrapes.
       prometheus_evaluation_interval:
         type: str
-        default: '15s'
+        default: "15s"
         description: Default interval between rule evaluations.
       prometheus_arch_map:
         type: dict

@@ -3,8 +3,7 @@ argument_specs:
   main:
     short_description: Install and configure NFS
     description:
-      - Installs NFS server and client utilities, renders /etc/exports from a
-        list of export definitions, and enables the NFS service.
+      - Installs NFS server and client utilities, renders /etc/exports from a list of export definitions, and enables the NFS service.
     author: Mark Gilbert
     options:
       run_tasks:

@@ -1,6 +1,5 @@
 ---
--
-  name: "Allowing loading of variables without running task"
+- name: "Allowing loading of variables without running task"
   when: run_tasks
   block:
     - name: "Importing variables specific to distribution"

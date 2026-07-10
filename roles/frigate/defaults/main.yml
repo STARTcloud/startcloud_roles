@@ -19,7 +19,6 @@ frigate_webrtc_port: 8555
 # Optional hardware-acceleration devices passed through to the container,
 # e.g. ["/dev/bus/usb", "/dev/dri/renderD128", "/dev/apex_0"]
 frigate_devices: []
-
 # MQTT integration (optional)
 frigate_mqtt_enabled: false
 frigate_mqtt_host: ""

@@ -1,32 +1,28 @@
 ---
--
-  name: "RedHat | Setting name if state is not latest"
+- name: "RedHat | Setting name if state is not latest"
   ansible.builtin.set_fact:
     telegraf_agent_package: telegraf-{{ telegraf_agent_version }}
   when:
     - telegraf_agent_package_state != "latest"
 
--
-  name: "RedHat | Using RHEL 7 packages for Fedora"
+- name: "RedHat | Using RHEL 7 packages for Fedora"
   ansible.builtin.set_fact:
     telegraf_redhat_releasever: 7
   when:
     - ansible_distribution == "Fedora"
 
--
-  name: "RedHat | Adding yum repository"
+- name: "RedHat | Adding yum repository"
   ansible.builtin.yum_repository:
     name: influxdb
     description: InfluxDB Repository - RHEL $releasever
-    baseurl: "{{ telegraf_yum_baseurl[ansible_distribution|lower] | default(telegraf_yum_baseurl['default']) }}"
+    baseurl: "{{ telegraf_yum_baseurl[ansible_distribution | lower] | default(telegraf_yum_baseurl['default']) }}"
     gpgcheck: "{{ telegraf_yum_gpgcheck | default('true') }}"
     gpgkey: "{{ telegraf_yum_gpgkey }}"
   become: true
   when:
     - telegraf_agent_package_method == "repo"
 
--
-  name: "RedHat | Downloading Telegraf package (online)"
+- name: "RedHat | Downloading Telegraf package (online)"
   ansible.builtin.get_url:
     url: https://dl.influxdata.com/telegraf/releases/{{ telegraf_agent_package_file_rpm }}
     dest: "{{ telegraf_agent_package }}"
@@ -37,8 +33,7 @@
   when:
     - telegraf_agent_package_method == "online"
 
--
-  name: "RedHat | Installing Telegraf package"
+- name: "RedHat | Installing Telegraf package"
   ansible.builtin.package:
     name: "{{ telegraf_agent_package }}"
     state: "{{ telegraf_agent_package_state }}"

@@ -1,32 +1,27 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Creating the Greenbone installation directory"
+    - name: "Creating the Greenbone installation directory"
       ansible.builtin.file:
         path: "{{ greenbone_install_dir }}"
         state: directory
         mode: "0755"
 
-    -
-      name: "Rendering the Greenbone Community Containers compose file"
+    - name: "Rendering the Greenbone Community Containers compose file"
       ansible.builtin.template:
         src: "docker-compose.yml.j2"
         dest: "{{ greenbone_install_dir }}/docker-compose.yml"
         mode: "0644"
 
-    -
-      name: "Deploying the Greenbone Community Edition stack"
+    - name: "Deploying the Greenbone Community Edition stack"
       community.docker.docker_compose_v2:
         project_src: "{{ greenbone_install_dir }}"
         project_name: "{{ greenbone_project_name }}"
         state: "{{ greenbone_compose_state }}"
         pull: "{{ greenbone_compose_pull }}"
 
-    -
-      name: "Creating the initial Greenbone administrator account"
+    - name: "Creating the initial Greenbone administrator account"
       community.docker.docker_container_exec:
         container: "{{ greenbone_project_name }}-gvmd-1"
         user: "gvmd"

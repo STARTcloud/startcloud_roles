@@ -1,12 +1,10 @@
 ---
--
-  name: "Ensuring docker users are added to the docker group"
+- name: "Ensuring docker users are added to the docker group"
   ansible.builtin.user:
     name: "{{ item }}"
     groups: docker
     append: true
   with_items: "{{ docker_users }}"
 
--
-  name: "Resetting ssh connection to apply user changes"
+- name: "Resetting ssh connection to apply user changes"
   ansible.builtin.meta: reset_connection

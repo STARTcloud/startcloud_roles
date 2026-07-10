@@ -1,30 +1,25 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Disabling Windows Security Notification Icon"
+    - name: "Disabling Windows Security Notification Icon"
       when: disable_security_notifications
       block:
-        -
-          name: "Disabling Windows Security Notification Icon"
+        - name: "Disabling Windows Security Notification Icon"
           ansible.windows.win_regedit:
             path: HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender Security Center\Systray
             name: HideSystray
             data: 1
             type: dword
 
-        -
-          name: "Disabling Windows Security Notification Icon"
+        - name: "Disabling Windows Security Notification Icon"
           ansible.windows.win_regedit:
             path: HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender Security Center\Notifications-Name
             name: DisableNotifications
             data: 1
             type: dword
 
-    -
-      name: "Disabling Windows Feedback Experience program"
+    - name: "Disabling Windows Feedback Experience program"
       when: disable_feedback
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo
@@ -32,8 +27,7 @@
         data: 0
         type: dword
 
-    -
-      name: "Stopping Cortana from being used as part of your Windows Search Function"
+    - name: "Stopping Cortana from being used as part of your Windows Search Function"
       when: disable_cortana
       ansible.windows.win_regedit:
         path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search
@@ -41,8 +35,7 @@
         data: 0
         type: dword
 
-    -
-      name: "Disabling Bing Search in Start Menu"
+    - name: "Disabling Bing Search in Start Menu"
       when: disable_bing_search
       ansible.windows.win_regedit:
         path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Search
@@ -50,18 +43,15 @@
         data: 0
         type: dword
 
-    -
-      name: "Adding Registry key to prevent bloatware apps from returning"
+    - name: "Adding Registry key to prevent bloatware apps from returning"
       when: disable_consumer_features or disable_content_delivery
       block:
-        -
-          name: "Ensuring CloudContent registry path exists"
+        - name: "Ensuring CloudContent registry path exists"
           ansible.windows.win_regedit:
             path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent
             state: present
 
-        -
-          name: "Setting DisableWindowsConsumerFeatures"
+        - name: "Setting DisableWindowsConsumerFeatures"
           when: disable_consumer_features
           ansible.windows.win_regedit:
             path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent
@@ -69,14 +59,12 @@
             data: 1
             type: dword
 
-        -
-          name: "Ensuring ContentDeliveryManager registry path exists"
+        - name: "Ensuring ContentDeliveryManager registry path exists"
           ansible.windows.win_regedit:
             path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
             state: present
 
-        -
-          name: "Setting ContentDeliveryAllowed"
+        - name: "Setting ContentDeliveryAllowed"
           when: disable_content_delivery
           ansible.windows.win_regedit:
             path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
@@ -84,8 +72,7 @@
             data: 0
             type: dword
 
-        -
-          name: "Setting OemPreInstalledAppsEnabled"
+        - name: "Setting OemPreInstalledAppsEnabled"
           when: disable_content_delivery
           ansible.windows.win_regedit:
             path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
@@ -93,8 +80,7 @@
             data: 0
             type: dword
 
-        -
-          name: "Setting PreInstalledAppsEnabled"
+        - name: "Setting PreInstalledAppsEnabled"
           when: disable_content_delivery
           ansible.windows.win_regedit:
             path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
@@ -102,8 +88,7 @@
             data: 0
             type: dword
 
-        -
-          name: "Setting PreInstalledAppsEverEnabled"
+        - name: "Setting PreInstalledAppsEverEnabled"
           when: disable_content_delivery
           ansible.windows.win_regedit:
             path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
@@ -111,8 +96,7 @@
             data: 0
             type: dword
 
-        -
-          name: "Setting SilentInstalledAppsEnabled"
+        - name: "Setting SilentInstalledAppsEnabled"
           when: disable_content_delivery
           ansible.windows.win_regedit:
             path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
@@ -120,104 +104,89 @@
             data: 0
             type: dword
 
-    -
-      name: "Turning off Data Collection"
+    - name: "Turning off Data Collection"
       when: disable_telemetry
       block:
-        -
-          name: "Disabling Data Collection for HKLM"
+        - name: "Disabling Data Collection for HKLM"
           ansible.windows.win_regedit:
             path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection
             name: AllowTelemetry
             data: 0
             type: dword
 
-        -
-          name: "Disabling Data Collection for HKLM (Wow6432Node)"
+        - name: "Disabling Data Collection for HKLM (Wow6432Node)"
           ansible.windows.win_regedit:
             path: HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Policies\DataCollection
             name: AllowTelemetry
             data: 0
             type: dword
 
-        -
-          name: "Disabling Data Collection for HKLM (Windows DataCollection)"
+        - name: "Disabling Data Collection for HKLM (Windows DataCollection)"
           ansible.windows.win_regedit:
             path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection
             name: AllowTelemetry
             data: 0
             type: dword
 
-    -
-      name: "Disabling Location Tracking"
+    - name: "Disabling Location Tracking"
       when: disable_location_tracking
       block:
-        -
-          name: "Ensuring SensorState registry path exists"
+        - name: "Ensuring SensorState registry path exists"
           ansible.windows.win_regedit:
             path: HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}
             state: present
 
-        -
-          name: "Setting SensorPermissionState to 0"
+        - name: "Setting SensorPermissionState to 0"
           ansible.windows.win_regedit:
             path: HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}
             name: SensorPermissionState
             data: 0
             type: dword
 
-        -
-          name: "Ensuring LocationConfig registry path exists"
+        - name: "Ensuring LocationConfig registry path exists"
           ansible.windows.win_regedit:
             path: HKLM:\SYSTEM\CurrentControlSet\Services\lfsvc\Service\Configuration
             state: present
 
-        -
-          name: "Setting LocationConfig Status to 0"
+        - name: "Setting LocationConfig Status to 0"
           ansible.windows.win_regedit:
             path: HKLM:\SYSTEM\CurrentControlSet\Services\lfsvc\Service\Configuration
             name: Status
             data: 0
             type: dword
 
-    -
-      name: "Stopping and disabling Diagnostics Tracking Service"
+    - name: "Stopping and disabling Diagnostics Tracking Service"
       when: disable_diagnostics_tracking
       ansible.windows.win_service:
         name: DiagTrack
         state: stopped
         start_mode: disabled
 
-    -
-      name: "Setting Mixed Reality Portal value to 0"
+    - name: "Setting Mixed Reality Portal value to 0"
       ansible.windows.win_regedit:
         path: HKCU:\Software\Microsoft\Windows\CurrentVersion\Holographic
         name: FirstRunSucceeded
         data: 0
         type: dword
 
-    -
-      name: "Disabling live tiles"
+    - name: "Disabling live tiles"
       ansible.windows.win_regedit:
         path: HKCU:\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\PushNotifications
         name: NoTileApplicationNotification
         data: 1
         type: dword
 
-    -
-      name: "Applying Blackscreen Resolution: Disable Firewall rule on Container log in and out"
+    - name: "Applying Blackscreen Resolution: Disable Firewall rule on Container log in and out"
       ansible.windows.win_regedit:
         path: HKLM:\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy
         name: DeleteUserAppContainersOnLogoff
         data: 1
         type: dword
 
-    -
-      name: "Applying Enhanced Privacy Settings (ChrisTitusTech inspired)"
+    - name: "Applying Enhanced Privacy Settings (ChrisTitusTech inspired)"
       when: enhanced_privacy
       block:
-        -
-          name: "Disabling Activity History"
+        - name: "Disabling Activity History"
           ansible.windows.win_regedit:
             path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\System
             name: "{{ item }}"
@@ -228,8 +197,7 @@
             - PublishUserActivities
             - UploadUserActivities
 
-        -
-          name: "Disabling Wi-Fi Sense"
+        - name: "Disabling Wi-Fi Sense"
           when: disable_wifi_sense
           ansible.windows.win_regedit:
             path: "HKLM:\\Software\\Microsoft\\PolicyManager\\default\\WiFi\\{{ item }}"
@@ -240,12 +208,10 @@
             - AllowWiFiHotSpotReporting
             - AllowAutoConnectToWiFiSenseHotspots
 
-        -
-          name: "Disabling GameDVR"
+        - name: "Disabling GameDVR"
           when: disable_gameDVR
           block:
-            -
-              name: "Disabling GameDVR registry settings"
+            - name: "Disabling GameDVR registry settings"
               ansible.windows.win_regedit:
                 path: "{{ item.path }}"
                 name: "{{ item.name }}"
@@ -257,26 +223,22 @@
                 - { path: "HKCU:\\System\\GameConfigStore", name: "GameDVR_HonorUserFSEBehaviorMode", value: 1 }
                 - { path: "HKCU:\\System\\GameConfigStore", name: "GameDVR_EFSEFeatureFlags", value: 0 }
 
-            -
-              name: "Disabling GameDVR policy"
+            - name: "Disabling GameDVR policy"
               ansible.windows.win_regedit:
                 path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\GameDVR
                 name: AllowGameDVR
                 data: 0
                 type: dword
 
-    -
-      name: "Debloating Microsoft Edge"
+    - name: "Debloating Microsoft Edge"
       when: debloat_edge
       block:
-        -
-          name: "Ensuring Edge Policies registry path exists"
+        - name: "Ensuring Edge Policies registry path exists"
           ansible.windows.win_regedit:
             path: HKLM:\SOFTWARE\Policies\Microsoft\Edge
             state: present
 
-        -
-          name: "Setting Edge privacy and debloat registry keys"
+        - name: "Setting Edge privacy and debloat registry keys"
           ansible.windows.win_regedit:
             path: HKLM:\SOFTWARE\Policies\Microsoft\Edge
             name: "{{ item.name }}"
@@ -299,43 +261,41 @@
             - { name: "CryptoWalletEnabled", value: 0 }
             - { name: "WalletDonationEnabled", value: 0 }
 
-    -
-      name: "Removing AppX Bloatware Packages"
+    - name: "Removing AppX Bloatware Packages"
       when: remove_appx_bloatware
       ansible.windows.win_shell: |
         Write-Host "Starting AppX package removal for system debloating..."
-        
+
         # Import required modules
         Import-Module Appx -ErrorAction SilentlyContinue
         Import-Module Dism -ErrorAction SilentlyContinue
-        
+
         # List of apps to remove
         $AppsToRemove = @(
         {% for app in appx_packages_to_remove %}
           "{{ app }}"{{ "," if not loop.last }}
         {% endfor %}
         )
-        
+
         foreach ($App in $AppsToRemove) {
           Write-Host "Processing: $App"
           try {
             # Remove installed packages for all users
             Get-AppxPackage "*$App*" | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue
-            
+
             # Remove provisioned packages (prevents reinstall for new users)
             Get-AppxProvisionedPackage -Online | Where-Object DisplayName -like "*$App*" | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
-            
+
             Write-Host "Successfully processed: $App"
           }
           catch {
             Write-Host "Warning: Could not remove $App - $($_.Exception.Message)"
           }
         }
-        
+
         Write-Host "AppX package removal completed."
 
-    -
-      name: "Disabling Telemetry Scheduled Tasks"
+    - name: "Disabling Telemetry Scheduled Tasks"
       when: disable_telemetry_tasks
       community.windows.win_scheduled_task:
         name: "{{ item.name }}"
@@ -350,41 +310,35 @@
         - "'empty task folder' not in (telemetry_result.msg | default(''))"
         - "'not found' not in (telemetry_result.msg | default(''))"
 
-    -
-      name: "Applying Performance Optimizations"
+    - name: "Applying Performance Optimizations"
       when: optimize_performance
       block:
-        -
-          name: "Disabling Hibernation"
+        - name: "Disabling Hibernation"
           when: disable_hibernation
           ansible.windows.win_shell: "powercfg.exe /hibernate off"
 
-        -
-          name: "Setting Network Throttling Index for better performance"
+        - name: "Setting Network Throttling Index for better performance"
           ansible.windows.win_regedit:
             path: HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile
             name: NetworkThrottlingIndex
             data: 4294967295
             type: dword
 
-        -
-          name: "Setting System Responsiveness for better performance"
+        - name: "Setting System Responsiveness for better performance"
           ansible.windows.win_regedit:
             path: HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile
             name: SystemResponsiveness
             data: 0
             type: dword
 
-        -
-          name: "Enabling Long Path Support"
+        - name: "Enabling Long Path Support"
           ansible.windows.win_regedit:
             path: HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem
             name: LongPathsEnabled
             data: 1
             type: dword
 
-    -
-      name: "Disabling HomeGroup Services (tolerated if not present on this edition)"
+    - name: "Disabling HomeGroup Services (tolerated if not present on this edition)"
       when: disable_homegroup
       ansible.windows.win_service:
         name: "{{ item }}"
@@ -398,20 +352,17 @@
         - homegroup_result is failed
         - "'is not installed' not in (homegroup_result.msg | default(''))"
 
-    -
-      name: "Applying Additional Enhanced Telemetry Blocking"
+    - name: "Applying Additional Enhanced Telemetry Blocking"
       when: enhanced_privacy
       block:
-        -
-          name: "Disabling Windows Error Reporting"
+        - name: "Disabling Windows Error Reporting"
           ansible.windows.win_regedit:
             path: HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting
             name: Disabled
             data: 1
             type: dword
 
-        -
-          name: "Disabling Delivery Optimization"
+        - name: "Disabling Delivery Optimization"
           ansible.windows.win_regedit:
             path: "{{ item.path }}"
             name: "{{ item.name }}"
@@ -421,24 +372,21 @@
             - { path: "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\DeliveryOptimization\\Config", name: "DODownloadMode", value: 0 }
             - { path: "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DeliveryOptimization", name: "DODownloadMode", value: 0 }
 
-        -
-          name: "Disabling Remote Assistance"
+        - name: "Disabling Remote Assistance"
           ansible.windows.win_regedit:
             path: HKLM:\SYSTEM\CurrentControlSet\Control\Remote Assistance
             name: fAllowToGetHelp
             data: 0
             type: dword
 
-        -
-          name: "Disabling Advertising ID"
+        - name: "Disabling Advertising ID"
           ansible.windows.win_regedit:
             path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo
             name: DisabledByGroupPolicy
             data: 1
             type: dword
 
-        -
-          name: "Disabling Tailored Experiences"
+        - name: "Disabling Tailored Experiences"
           ansible.windows.win_regedit:
             path: HKCU:\SOFTWARE\Policies\Microsoft\Windows\CloudContent
             name: DisableTailoredExperiencesWithDiagnosticData

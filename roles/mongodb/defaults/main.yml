@@ -5,7 +5,7 @@ mongodb_package: mongodb-org
 mongodb_package_state: present
 mongodb_version: "4.4"
 mongodb_apt_key_from_url: false
-mongodb_apt_keyserver: 'hkp://keyserver.ubuntu.com:80'
+mongodb_apt_keyserver: "hkp://keyserver.ubuntu.com:80"
 mongodb_apt_key_id:
   "3.6": "2930ADAE8CAF5059EE73BB4B58712A2291FA4AD5"
   "4.0": "9DA31620334BD75D9DCB49F368818C72E52529D4"
@@ -17,10 +17,10 @@ mongodb_apt_key_url:
   "4.2": "https://www.mongodb.org/static/pgp/server-4.2.asc"
   "4.4": "https://www.mongodb.org/static/pgp/server-4.4.asc"
 
-mongodb_pymongo_from_pip: true                   # Install latest PyMongo via PIP or package manager
+mongodb_pymongo_from_pip: true # Install latest PyMongo via PIP or package manager
 mongodb_pymongo_pip_version: 3.11.3
 
-mongodb_user_update_password: "on_create"        # MongoDB user password update default policy
+mongodb_user_update_password: "on_create" # MongoDB user password update default policy
 mongodb_manage_service: true
 mongodb_manage_systemd_unit: true
 mongodb_systemd_unit_limit_nofile: 64000
@@ -36,15 +36,15 @@ mongodb_gid:
 mongodb_daemon_name: "{{ 'mongod' if ('mongodb-org' in mongodb_package) else 'mongodb' }}"
 
 ## net Options
-mongodb_net_bindip: 127.0.0.1                    # Comma separated list of ip addresses to listen on
-mongodb_net_http_enabled: false                  # Enable http interface
-mongodb_net_ipv6: false                          # Enable IPv6 support (disabled by default)
-mongodb_net_maxconns: 65536                      # Max number of simultaneous connections
-mongodb_net_port: 27017                          # Specify port number
-mongodb_net_ssl: disabled                        # Enable or disable ssl connections
-mongodb_net_ssl_mode: ""                         # Set the ssl mode (RequireSSL / preferSSL / AllowSSL / disabled)
-mongodb_net_ssl_pemfile: ""                      # Location of the pemfile to use for ssl
-mongodb_net_ssl_host: ""                         # Valid ssl hostname
+mongodb_net_bindip: 127.0.0.1 # Comma separated list of ip addresses to listen on
+mongodb_net_http_enabled: false # Enable http interface
+mongodb_net_ipv6: false # Enable IPv6 support (disabled by default)
+mongodb_net_maxconns: 65536 # Max number of simultaneous connections
+mongodb_net_port: 27017 # Specify port number
+mongodb_net_ssl: disabled # Enable or disable ssl connections
+mongodb_net_ssl_mode: "" # Set the ssl mode (RequireSSL / preferSSL / AllowSSL / disabled)
+mongodb_net_ssl_pemfile: "" # Location of the pemfile to use for ssl
+mongodb_net_ssl_host: "" # Valid ssl hostname
 
 ## processManagement Options
 # Fork server process
@@ -54,22 +54,22 @@ mongodb_processmanagement_fork: "{{ 'RedHat' == ansible_os_family }}"
 ## security Options
 # Disable or enable security. Possible values: 'disabled', 'enabled'
 mongodb_security_authorization: "disabled"
-mongodb_security_keyfile: /etc/mongodb-keyfile   # Specify path to keyfile with password for inter-process authentication
-mongodb_security_javascript_enabled: true        # Enables or disables server-side JavaScript execution
+mongodb_security_keyfile: /etc/mongodb-keyfile # Specify path to keyfile with password for inter-process authentication
+mongodb_security_javascript_enabled: true # Enables or disables server-side JavaScript execution
 
 ## storage Options
-mongodb_storage_dbpath: /data/db                 # Directory for datafiles
-mongodb_storage_dirperdb: false                  # Use one directory per DB
+mongodb_storage_dbpath: /data/db # Directory for datafiles
+mongodb_storage_dirperdb: false # Use one directory per DB
 
 # The storage engine for the mongod database
 mongodb_storage_engine: "wiredTiger"
 # mmapv1 specific options
-mongodb_storage_quota_enforced: false            # Limits each database to a certain number of files
-mongodb_storage_quota_maxfiles: 8                # Number of quota files per DB
-mongodb_storage_smallfiles: false                # Very useful for non-data nodes
+mongodb_storage_quota_enforced: false # Limits each database to a certain number of files
+mongodb_storage_quota_maxfiles: 8 # Number of quota files per DB
+mongodb_storage_smallfiles: false # Very useful for non-data nodes
 
-mongodb_storage_journal_enabled: true            # Enable journaling
-mongodb_storage_prealloc: true                   # Enable data file preallocation
+mongodb_storage_journal_enabled: true # Enable journaling
+mongodb_storage_prealloc: true # Enable data file preallocation
 
 mongodb_wiredtiger_directory_for_indexes: false
 
@@ -77,9 +77,9 @@ mongodb_wiredtiger_directory_for_indexes: false
 ## The destination to which MongoDB sends all log output. Specify either 'file' or 'syslog'.
 ## If you specify 'file', you must also specify mongodb_systemlog_path.
 mongodb_systemlog_destination: "file"
-mongodb_systemlog_logappend: true                                        # Append to logpath instead of over-writing
-mongodb_systemlog_logrotate: "rename"                                    # Logrotation behavior
-mongodb_systemlog_path: /var/log/mongodb/{{ mongodb_daemon_name }}.log   # Log file to send write to instead of stdout
+mongodb_systemlog_logappend: true # Append to logpath instead of over-writing
+mongodb_systemlog_logrotate: "rename" # Logrotation behavior
+mongodb_systemlog_path: /var/log/mongodb/{{ mongodb_daemon_name }}.log # Log file to send write to instead of stdout
 
 ## operationProfiling Options
 mongodb_operation_profiling_slow_op_threshold_ms: 100
@@ -89,9 +89,9 @@ mongodb_operation_profiling_mode: "off"
 mongodb_cloud_monitoring_free_state: "runtime"
 
 ## replication Options
-mongodb_replication_replset: ""                   # Enable replication
-mongodb_replication_replindexprefetch: "all"      # specify index prefetching behavior (if secondary) [none|_id_only|all]
-mongodb_replication_oplogsize: 1024               # specifies a maximum size in megabytes for the replication operation log
+mongodb_replication_replset: "" # Enable replication
+mongodb_replication_replindexprefetch: "all" # specify index prefetching behavior (if secondary) [none|_id_only|all]
+mongodb_replication_oplogsize: 1024 # specifies a maximum size in megabytes for the replication operation log
 
 # MMS Agent
 mongodb_mms_agent_pkg: https://cloud.mongodb.com/download/agent/monitoring/mongodb-mms-monitoring-agent_7.2.0.488-1_amd64.ubuntu1604.deb
@@ -131,6 +131,5 @@ mongodb_root_backup_password: passw0rd
 
 # setParameter config
 mongodb_set_parameters:
-
 # custom config options
 mongodb_config:

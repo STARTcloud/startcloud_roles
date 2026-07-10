@@ -1,9 +1,9 @@
 ---
 run_tasks: true
 
-winlogbeat_download_url_base: 'https://artifacts.elastic.co/downloads/beats/winlogbeat'
-file_ext: '.zip'
-winlogbeat_download_file: 'winlogbeat-6.3.0-windows-x86_64'
+winlogbeat_download_url_base: "https://artifacts.elastic.co/downloads/beats/winlogbeat"
+file_ext: ".zip"
+winlogbeat_download_file: "winlogbeat-6.3.0-windows-x86_64"
 winlogbeat_install_location: "C:/Program Files/Winlogbeat"
 
 winlogbeat_event_logs:
@@ -14,7 +14,6 @@ winlogbeat_event_logs:
 winlogbeat_tags:
 winlogbeat_fields:
 winlogbeat_fields_under_root:
-
 winlogbeat_output_elasticsearch_hosts:
 #  - "localhost:9200"
 

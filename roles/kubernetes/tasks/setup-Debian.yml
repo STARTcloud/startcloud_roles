@@ -1,44 +1,38 @@
 ---
--
-  name: "Ensuring dependencies are installed"
+- name: "Ensuring dependencies are installed"
   ansible.builtin.apt:
     name:
       - apt-transport-https
       - ca-certificates
     state: present
 
--
-  name: "Preparing apt keyring directory"
+- name: "Preparing apt keyring directory"
   ansible.builtin.file:
     path: "{{ kubernetes_apt_keyring_file | dirname }}"
     state: directory
-    mode: '0755'
+    mode: "0755"
 
--
-  name: "Getting Kubernetes apt key"
+- name: "Getting Kubernetes apt key"
   ansible.builtin.get_url:
     url: "https://pkgs.k8s.io/core:/{{ kubernetes_apt_release_channel }}:/v{{ kubernetes_version }}/deb/Release.key"
     dest: "{{ kubernetes_apt_keyring_file }}"
-    mode: '0644'
+    mode: "0644"
     force: true
 
--
-  name: "Ensuring deprecated Kubernetes repository is absent"
+- name: "Ensuring deprecated Kubernetes repository is absent"
   ansible.builtin.file:
     path: "/etc/apt/sources.list.d/apt_kubernetes_io.list"
     state: absent
 
--
-  name: "Adding Kubernetes repository"
+- name: "Adding Kubernetes repository"
   ansible.builtin.apt_repository:
     repo: "{{ kubernetes_apt_repository }}"
     filename: pkgs_k8s_io
     state: present
     update_cache: true
 
--
-  name: "Adding Kubernetes apt preferences file to pin a version"
+- name: "Adding Kubernetes apt preferences file to pin a version"
   ansible.builtin.template:
     src: apt-preferences-kubernetes.j2
     dest: /etc/apt/preferences.d/kubernetes
-    mode: '0644'
+    mode: "0644"

@@ -1,6 +1,5 @@
 ---
--
-  name: "Ensuring Kubernetes repository exists"
+- name: "Ensuring Kubernetes repository exists"
   ansible.builtin.yum_repository:
     name: kubernetes
     description: Kubernetes
@@ -10,14 +9,12 @@
     baseurl: "{{ kubernetes_yum_base_url }}"
     gpgkey: "{{ kubernetes_yum_gpg_key }}"
 
--
-  name: "Adding Kubernetes GPG keys"
+- name: "Adding Kubernetes GPG keys"
   ansible.builtin.rpm_key:
     key: "{{ kubernetes_yum_gpg_key }}"
     state: present
   register: kubernetes_rpm_key
 
--
-  name: "Making cache if Kubernetes GPG key changed"
+- name: "Making cache if Kubernetes GPG key changed"
   ansible.builtin.command: "yum -q makecache -y --disablerepo='*' --enablerepo='kubernetes'"
   when: kubernetes_rpm_key is changed

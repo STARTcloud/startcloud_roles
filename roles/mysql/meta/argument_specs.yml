@@ -65,7 +65,7 @@ argument_specs:
         description: TCP port MySQL listens on.
       mysql_bind_address:
         type: str
-        default: '0.0.0.0'
+        default: "0.0.0.0"
         description: Address MySQL binds to.
       mysql_skip_name_resolve:
         type: bool
@@ -243,11 +243,11 @@ argument_specs:
         description: Number of days after which binary logs are purged.
       mysql_replication_role:
         type: str
-        default: ''
+        default: ""
         description: Replication role for this host (master or slave); empty disables replication config.
       mysql_replication_master:
         type: str
-        default: ''
+        default: ""
         description: Hostname or IP of the replication master reachable by the slaves.
       mysql_replication_master_inventory_host:
         type: str

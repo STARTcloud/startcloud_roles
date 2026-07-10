@@ -2,16 +2,17 @@
 galaxy_info:
   role_name: jenkins
   author: Mark Gilbert
-  description: Installs and configures a Jenkins CI server on Debian/Ubuntu, including repository and key setup, initial security bypass for plugin installation, core plugins, git configuration, and desktop launcher integration.
+  description: Installs and configures a Jenkins CI server on Debian/Ubuntu, including repository and key setup, initial security bypass for plugin installation, core plugins, git configuration, and desktop
+    launcher integration.
   company: STARTcloud
   issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
   license: Apache-2.0
-  min_ansible_version: '2.15'
+  min_ansible_version: "2.15"
   platforms:
     - name: Debian
-      versions: ['bookworm', 'trixie']
+      versions: ["bookworm", "trixie"]
     - name: Ubuntu
-      versions: ['jammy', 'noble']
+      versions: ["jammy", "noble"]
   galaxy_tags:
     - jenkins
     - ci

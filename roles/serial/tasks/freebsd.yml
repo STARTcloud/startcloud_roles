@@ -11,19 +11,17 @@
 #     natively, so this role should generally be skipped for OPNsense
 #     playbooks. Kept here for non-OPNsense FreeBSD use.
 
--
-  name: "Configuring FreeBSD boot loader.conf.local for serial console + virtio-console"
+- name: "Configuring FreeBSD boot loader.conf.local for serial console + virtio-console"
   ansible.builtin.lineinfile:
     path: /boot/loader.conf.local
     line: "{{ item }}"
     create: true
-    mode: '0644'
+    mode: "0644"
   with_items:
     - 'console="comconsole"'
     - 'comconsole_speed="115200"'
     - 'virtio_console_load="YES"'
 
--
-  name: "Setting fact for serial console configuration"
+- name: "Setting fact for serial console configuration"
   ansible.builtin.set_fact:
     serial_console_configured: true

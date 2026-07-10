@@ -1,42 +1,34 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Including OS-Specific variables"
+    - name: "Including OS-Specific variables"
       ansible.builtin.include_vars: "{{ ansible_os_family | lower }}.yml"
       when: ansible_os_family == 'Debian' or ansible_os_family == 'RedHat'
 
-    -
-      name: "Including setup vars"
+    - name: "Including setup vars"
       ansible.builtin.include_tasks: setup-vars.yml
       when: ansible_os_family == 'Debian' or ansible_os_family == 'RedHat'
 
-    -
-      name: "Loading vendor-specific variables"
+    - name: "Loading vendor-specific variables"
       ansible.builtin.include_vars: "{{ vendor }}.yml"
       when: vendor is defined
       ignore_errors: true
 
     # SOPHOS ANTIVIRUS INSTALLATION
-    -
-      name: "Including Sophos installation for Windows"
+    - name: "Including Sophos installation for Windows"
       ansible.builtin.include_tasks: sophos/windows.yml
       when: ansible_os_family == 'Windows'
 
-    -
-      name: "Including Sophos installation for Linux"
+    - name: "Including Sophos installation for Linux"
       ansible.builtin.include_tasks: sophos/linux.yml
       when: ansible_os_family == 'Debian' or ansible_os_family == 'RedHat'
 
     # CLAMAV ANTIVIRUS INSTALLATION
-    -
-      name: "Including ClamAV installation for Windows"
+    - name: "Including ClamAV installation for Windows"
       ansible.builtin.include_tasks: clamav/windows.yml
       when: ansible_os_family == 'Windows'
 
-    -
-      name: "Including ClamAV installation for Linux"
+    - name: "Including ClamAV installation for Linux"
       ansible.builtin.include_tasks: clamav/linux.yml
       when: ansible_os_family == 'Debian' or ansible_os_family == 'RedHat'

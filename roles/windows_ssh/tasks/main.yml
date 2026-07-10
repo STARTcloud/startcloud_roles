@@ -1,35 +1,29 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Setting up SSH"
+    - name: "Setting up SSH"
       block:
-        -
-          name: "Updating SSH default Shell"
+        - name: "Updating SSH default Shell"
           ansible.windows.win_regedit:
             path: HKLM:\SOFTWARE\OpenSSH
             name: DefaultShell
             data: "{{ ssh_default_shell }}"
             type: string
 
-        -
-          name: "Updating SSH Default Shell Command Option"
+        - name: "Updating SSH Default Shell Command Option"
           ansible.windows.win_regedit:
             path: HKLM:\SOFTWARE\OpenSSH
             name: DefaultShellCommandOption
             data: "{{ ssh_default_shell_option }}"
             type: string
 
-        -
-          name: "Creating SSH key for sysprep to provision on start"
+        - name: "Creating SSH key for sysprep to provision on start"
           ansible.windows.win_copy:
             src: "id_rsa.pub"
             dest: C:\ProgramData\ssh\administrators_authorized_keys
 
-        -
-          name: "Removing inheritance and reset permissions on administrators_authorized_keys"
+        - name: "Removing inheritance and reset permissions on administrators_authorized_keys"
           ansible.windows.win_acl:
             path: C:\ProgramData\ssh\administrators_authorized_keys
             user: Administrators
@@ -38,8 +32,7 @@
             state: present
             inheritance: None
 
-        -
-          name: "Setting SYSTEM permissions on administrators_authorized_keys"
+        - name: "Setting SYSTEM permissions on administrators_authorized_keys"
           ansible.windows.win_acl:
             path: C:\ProgramData\ssh\administrators_authorized_keys
             user: SYSTEM
@@ -48,23 +41,19 @@
             state: present
             inheritance: None
 
-        -
-          name: "Configuring SSH Service"
+        - name: "Configuring SSH Service"
           ansible.windows.win_powershell:
             script: Set-Service -Name 'sshd' -StartupType Automatic
 
-        -
-          name: "Configuring Uptime for SSH monitoring"
+        - name: "Configuring Uptime for SSH monitoring"
           block:
-            -
-              name: "Preparing Uptime"
+            - name: "Preparing Uptime"
               ansible.windows.win_copy:
                 src: uptime
                 dest: "{{ item }}"
               loop: "{{ uptime_files }}"
 
-            -
-              name: "Setting permissions on uptime"
+            - name: "Setting permissions on uptime"
               ansible.windows.win_shell: |
                 icacls "{{ item }}" /grant Everyone:F
               loop: "{{ uptime_files }}"

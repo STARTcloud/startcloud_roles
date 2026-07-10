@@ -1,3 +1,4 @@
+---
 name: Debian
 
 on:
@@ -17,15 +18,15 @@ jobs:
           - debian9
           - debian10
         mongodb_version:
-          - '4.4'
-          - '4.2'
-          - '4.0'
-          - '3.6'
+          - "4.4"
+          - "4.2"
+          - "4.0"
+          - "3.6"
         exclude:
           - molecule_distro: debian10
-            mongodb_version: '3.6'
+            mongodb_version: "3.6"
           - molecule_distro: debian10
-            mongodb_version: '4.0'
+            mongodb_version: "4.0"
     env:
       MONGODB_VERSION: ${{ matrix.mongodb_version }}
       MOLECULE_DISTRO: ${{ matrix.molecule_distro }}
@@ -37,20 +38,20 @@ jobs:
       - name: Run default test
         run: export "PATH=/home/runner/.local/bin:$PATH" && molecule test
         env:
-          PY_COLORS: '1'
-          ANSIBLE_FORCE_COLOR: '1'
+          PY_COLORS: "1"
+          ANSIBLE_FORCE_COLOR: "1"
       - name: Run default test with enabled authentication
         run: export "PATH=/home/runner/.local/bin:$PATH" && AUTH_STATE=enabled molecule test
         env:
-          PY_COLORS: '1'
-          ANSIBLE_FORCE_COLOR: '1'
+          PY_COLORS: "1"
+          ANSIBLE_FORCE_COLOR: "1"
       - name: Run cluster test
         run: export "PATH=/home/runner/.local/bin:$PATH" && molecule test -s cluster
         env:
-          PY_COLORS: '1'
-          ANSIBLE_FORCE_COLOR: '1'
+          PY_COLORS: "1"
+          ANSIBLE_FORCE_COLOR: "1"
       - name: Run cluster test with enabled authentication
         run: export "PATH=/home/runner/.local/bin:$PATH" && AUTH_STATE=enabled molecule test -s cluster
         env:
-          PY_COLORS: '1'
-          ANSIBLE_FORCE_COLOR: '1'
+          PY_COLORS: "1"
+          ANSIBLE_FORCE_COLOR: "1"

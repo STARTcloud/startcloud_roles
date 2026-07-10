@@ -1,6 +1,5 @@
 ---
--
-  name: "Restarting VoIPmonitor Sniffer"
+- name: "Restarting VoIPmonitor Sniffer"
   ansible.builtin.systemd:
     name: "voipmonitor"
     state: restarted

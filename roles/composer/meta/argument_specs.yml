@@ -4,8 +4,7 @@ argument_specs:
     short_description: Install and configure Composer, the PHP dependency manager.
     description:
       - Downloads and installs Composer into a globally-accessible location.
-      - Optionally keeps it updated, installs global packages, adds vendor bin
-        directories to the system PATH, and configures a GitHub OAuth token.
+      - Optionally keeps it updated, installs global packages, adds vendor bin directories to the system PATH, and configures a GitHub OAuth token.
     author: Mark Gilbert
     options:
       run_tasks:
@@ -22,15 +21,15 @@ argument_specs:
         description: When true, run composer self-update to the latest release on every run.
       composer_version:
         type: str
-        default: ''
+        default: ""
         description: Pin Composer to a specific release; empty installs the latest for the branch.
       composer_version_branch:
         type: str
-        default: '--2'
+        default: "--2"
         description: Major branch flag passed to the installer and self-update (e.g. --2).
       composer_home_path:
         type: str
-        default: '~/.composer'
+        default: "~/.composer"
         description: COMPOSER_HOME directory where global packages are installed.
       composer_home_owner:
         type: str
@@ -55,5 +54,5 @@ argument_specs:
         description: When true, add a project vendor bin directory to the system PATH.
       composer_github_oauth_token:
         type: str
-        default: ''
+        default: ""
         description: GitHub OAuth token written to auth.json to avoid API rate limits.

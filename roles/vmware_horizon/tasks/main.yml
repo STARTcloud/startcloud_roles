@@ -1,18 +1,15 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
+    - name: "Downloading VMWare View Horizon Client for Linux"
       ansible.builtin.get_url:
         dest: "/tmp/VMware-Horizon-Client-2103-8.2.0-17742757.x64.bundle"
         url: "https:///downloads/VMware-Horizon-Client-2103-8.2.0-17742757.x64.bundle"
-      name: "Downloading VMWare View Horizon Client for Linux"
       register: leptonica_source
 
-    -
+    - name: "Installing VMWare View Horizon Client for Linux"
       become: true
-      name: "Installing VMWare View Horizon Client for Linux"
       ansible.builtin.command: "env TERM=dumb VMWARE_EULAS_AGREED=yes bash /tmp/VMware-Horizon-Client-2103-8.2.0-17742757.x64.bundle --console --required --eulas-agreed"
       args:
         chdir: "/tmp"

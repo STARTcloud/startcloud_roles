@@ -1,20 +1,16 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Configuring Raritan PDU SNMP Tooling on Debian"
+    - name: "Configuring Raritan PDU SNMP Tooling on Debian"
       when: "ansible_os_family == 'Debian'"
       block:
-        -
-          name: "Ensuring apt cache is updated"
+        - name: "Ensuring apt cache is updated"
           ansible.builtin.apt:
             cache_valid_time: 3600
             update_cache: true
 
-        -
-          name: "Installing Raritan PDU SNMP management packages"
+        - name: "Installing Raritan PDU SNMP management packages"
           ansible.builtin.apt:
             name: "{{ packages }}"
             state: present

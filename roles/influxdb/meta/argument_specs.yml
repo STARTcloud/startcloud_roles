@@ -3,9 +3,8 @@ argument_specs:
   main:
     short_description: Installs and configures a single-node InfluxDB 2.x server.
     description:
-      - Adds the InfluxData package repository, installs the influxdb2 server and the
-        influx CLI, writes the InfluxDB configuration, manages the systemd service, and
-        optionally performs the initial org/bucket/admin onboarding.
+      - Adds the InfluxData package repository, installs the influxdb2 server and the influx CLI, writes the InfluxDB configuration, manages the systemd service, and optionally performs the initial org/bucket/admin
+        onboarding.
     author: Mark Gilbert
     options:
       run_tasks:

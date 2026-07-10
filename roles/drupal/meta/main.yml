@@ -6,14 +6,14 @@ galaxy_info:
   company: STARTcloud
   issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
   license: Apache-2.0
-  min_ansible_version: '2.15'
+  min_ansible_version: "2.15"
   platforms:
     - name: Debian
-      versions: ['bookworm', 'trixie']
+      versions: ["bookworm", "trixie"]
     - name: Ubuntu
-      versions: ['jammy', 'noble']
+      versions: ["jammy", "noble"]
     - name: EL
-      versions: ['8', '9']
+      versions: ["8", "9"]
   galaxy_tags:
     - drupal
     - cms

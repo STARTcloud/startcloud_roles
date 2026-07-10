@@ -1,28 +1,23 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Allowing access to 3389 for XRDP"
+    - name: "Allowing access to 3389 for XRDP"
       community.general.ufw:
         rule: allow
         port: 3389
         proto: tcp
-    -
-      name: "Allowing access to SSH for X11"
+    - name: "Allowing access to SSH for X11"
       community.general.ufw:
         rule: allow
         port: 22
         proto: tcp
-    -
-      name: "Allowing access to 9090 for Cockpit"
+    - name: "Allowing access to 9090 for Cockpit"
       community.general.ufw:
         rule: allow
         port: 9090
         proto: tcp
-    -
-      name: "Allowing access to 5900 for VNC"
+    - name: "Allowing access to 5900 for VNC"
       community.general.ufw:
         rule: allow
         port: 5900

@@ -1,17 +1,14 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Installing LibreNMS Dependencies"
+    - name: "Installing LibreNMS Dependencies"
       ansible.builtin.apt:
         name: "{{ librenms_packages }}"
         state: present
         update_cache: true
 
-    -
-      name: "Creating the librenms System User"
+    - name: "Creating the librenms System User"
       ansible.builtin.user:
         name: "{{ librenms_user }}"
         group: "{{ librenms_group }}"
@@ -20,24 +17,21 @@
         create_home: false
         system: true
 
-    -
-      name: "Cloning LibreNMS from Git"
+    - name: "Cloning LibreNMS from Git"
       ansible.builtin.git:
         repo: "{{ librenms_git_repo }}"
         dest: "{{ librenms_install_dir }}"
         version: "{{ librenms_git_version }}"
         force: true
 
-    -
-      name: "Setting Ownership on the LibreNMS Directory"
+    - name: "Setting Ownership on the LibreNMS Directory"
       ansible.builtin.file:
         path: "{{ librenms_install_dir }}"
         owner: "{{ librenms_user }}"
         group: "{{ librenms_group }}"
         recurse: true
 
-    -
-      name: "Setting Default ACLs on the LibreNMS Runtime Directories"
+    - name: "Setting Default ACLs on the LibreNMS Runtime Directories"
       ansible.builtin.command:
         cmd: >-
           setfacl -d -m g::rwx
@@ -47,8 +41,7 @@
           {{ librenms_install_dir }}/storage
       changed_when: true
 
-    -
-      name: "Setting Recursive ACLs on the LibreNMS Runtime Directories"
+    - name: "Setting Recursive ACLs on the LibreNMS Runtime Directories"
       ansible.builtin.command:
         cmd: >-
           setfacl -R -m g::rwx
@@ -58,8 +51,7 @@
           {{ librenms_install_dir }}/storage
       changed_when: true
 
-    -
-      name: "Installing PHP Dependencies with Composer"
+    - name: "Installing PHP Dependencies with Composer"
       become: true
       become_user: "{{ librenms_user }}"
       ansible.builtin.command:
@@ -67,18 +59,16 @@
         chdir: "{{ librenms_install_dir }}"
       changed_when: true
 
-    -
-      name: "Setting the PHP Timezone"
+    - name: "Setting the PHP Timezone"
       ansible.builtin.replace:
         path: "{{ item }}"
-        regexp: '^;?date.timezone =.*'
+        regexp: "^;?date.timezone =.*"
         replace: "date.timezone = {{ librenms_php_timezone }}"
       with_items:
         - "/etc/php/{{ librenms_php_version }}/fpm/php.ini"
         - "/etc/php/{{ librenms_php_version }}/cli/php.ini"
 
-    -
-      name: "Configuring MariaDB for LibreNMS"
+    - name: "Configuring MariaDB for LibreNMS"
       ansible.builtin.copy:
         dest: "/etc/mysql/mariadb.conf.d/60-librenms.cnf"
         owner: "root"
@@ -90,15 +80,13 @@
           lower_case_table_names=0
       notify: "Restart mariadb"
 
-    -
-      name: "Starting and Enabling MariaDB"
+    - name: "Starting and Enabling MariaDB"
       ansible.builtin.systemd:
         name: "mariadb"
         state: started
         enabled: true
 
-    -
-      name: "Rendering the Root MariaDB Credentials File"
+    - name: "Rendering the Root MariaDB Credentials File"
       ansible.builtin.template:
         src: ".my.cnf"
         dest: "/root/.my.cnf"
@@ -106,18 +94,16 @@
         group: "root"
         mode: "0600"
 
-    -
-      name: "Creating the LibreNMS MariaDB Database"
-      community.mysql.mysql_db:
+    - name: "Creating the LibreNMS MariaDB Database"
+      ansible.mysql.mysql_db:
         name: "{{ librenms_mysql_database }}"
         encoding: "utf8mb4"
         collation: "utf8mb4_unicode_ci"
         state: present
         login_unix_socket: "/run/mysqld/mysqld.sock"
 
-    -
-      name: "Creating the LibreNMS MariaDB User"
-      community.mysql.mysql_user:
+    - name: "Creating the LibreNMS MariaDB User"
+      ansible.mysql.mysql_user:
         name: "{{ librenms_mysql_user }}"
         password: "{{ librenms_mysql_password }}"
         priv: "{{ librenms_mysql_database }}.*:ALL"
@@ -125,8 +111,7 @@
         state: present
         login_unix_socket: "/run/mysqld/mysqld.sock"
 
-    -
-      name: "Rendering the LibreNMS config.php"
+    - name: "Rendering the LibreNMS config.php"
       ansible.builtin.template:
         src: "config.php.j2"
         dest: "{{ librenms_install_dir }}/config.php"
@@ -134,8 +119,7 @@
         group: "{{ librenms_group }}"
         mode: "0640"
 
-    -
-      name: "Rendering the LibreNMS PHP-FPM Pool"
+    - name: "Rendering the LibreNMS PHP-FPM Pool"
       ansible.builtin.template:
         src: "librenms-fpm.conf.j2"
         dest: "/etc/php/{{ librenms_php_version }}/fpm/pool.d/{{ librenms_fpm_pool }}.conf"
@@ -144,15 +128,13 @@
         mode: "0644"
       notify: "Restart php-fpm"
 
-    -
-      name: "Removing the Default PHP-FPM Pool"
+    - name: "Removing the Default PHP-FPM Pool"
       ansible.builtin.file:
         path: "/etc/php/{{ librenms_php_version }}/fpm/pool.d/www.conf"
         state: absent
       notify: "Restart php-fpm"
 
-    -
-      name: "Rendering the LibreNMS Nginx Site"
+    - name: "Rendering the LibreNMS Nginx Site"
       ansible.builtin.template:
         src: "librenms.conf"
         dest: "/etc/nginx/sites-available/librenms.conf"
@@ -161,16 +143,14 @@
         mode: "0644"
       notify: "Restart nginx"
 
-    -
-      name: "Enabling the LibreNMS Nginx Site"
+    - name: "Enabling the LibreNMS Nginx Site"
       ansible.builtin.file:
         src: "/etc/nginx/sites-available/librenms.conf"
         dest: "/etc/nginx/sites-enabled/librenms.conf"
         state: link
       notify: "Restart nginx"
 
-    -
-      name: "Removing the Default Nginx Site"
+    - name: "Removing the Default Nginx Site"
       ansible.builtin.file:
         path: "{{ item }}"
         state: absent
@@ -179,29 +159,25 @@
         - "/etc/nginx/sites-available/default"
       notify: "Restart nginx"
 
-    -
-      name: "Starting and Enabling PHP-FPM"
+    - name: "Starting and Enabling PHP-FPM"
       ansible.builtin.systemd:
         name: "php{{ librenms_php_version }}-fpm"
         state: started
         enabled: true
 
-    -
-      name: "Starting and Enabling Nginx"
+    - name: "Starting and Enabling Nginx"
       ansible.builtin.systemd:
         name: "nginx"
         state: started
         enabled: true
 
-    -
-      name: "Linking the lnms Command"
+    - name: "Linking the lnms Command"
       ansible.builtin.file:
         src: "{{ librenms_install_dir }}/lnms"
         dest: "/usr/bin/lnms"
         state: link
 
-    -
-      name: "Installing the lnms Bash Completion"
+    - name: "Installing the lnms Bash Completion"
       ansible.builtin.copy:
         src: "{{ librenms_install_dir }}/misc/lnms-completion.bash"
         dest: "/etc/bash_completion.d/lnms"
@@ -210,8 +186,7 @@
         group: "root"
         mode: "0644"
 
-    -
-      name: "Configuring snmpd from the LibreNMS Example"
+    - name: "Configuring snmpd from the LibreNMS Example"
       ansible.builtin.copy:
         src: "{{ librenms_install_dir }}/snmpd.conf.example"
         dest: "/etc/snmp/snmpd.conf"
@@ -220,22 +195,19 @@
         group: "root"
         mode: "0600"
 
-    -
-      name: "Setting the SNMP Community String"
+    - name: "Setting the SNMP Community String"
       ansible.builtin.replace:
         path: "/etc/snmp/snmpd.conf"
         regexp: "RANDOMSTRINGGOESHERE"
         replace: "{{ librenms_community_string }}"
 
-    -
-      name: "Starting and Enabling snmpd"
+    - name: "Starting and Enabling snmpd"
       ansible.builtin.systemd:
         name: "snmpd"
         state: restarted
         enabled: true
 
-    -
-      name: "Rendering the RRDCached Defaults"
+    - name: "Rendering the RRDCached Defaults"
       ansible.builtin.template:
         src: "rrdcached"
         dest: "/etc/default/rrdcached"
@@ -243,8 +215,7 @@
         group: "root"
         mode: "0644"
 
-    -
-      name: "Creating the RRDCached Journal Directory"
+    - name: "Creating the RRDCached Journal Directory"
       ansible.builtin.file:
         path: "/var/lib/rrdcached/journal/"
         state: directory
@@ -253,15 +224,13 @@
         mode: "0755"
         recurse: true
 
-    -
-      name: "Starting and Enabling RRDCached"
+    - name: "Starting and Enabling RRDCached"
       ansible.builtin.systemd:
         name: "rrdcached"
         state: restarted
         enabled: true
 
-    -
-      name: "Installing the LibreNMS Cron Jobs"
+    - name: "Installing the LibreNMS Cron Jobs"
       ansible.builtin.copy:
         src: "{{ librenms_install_dir }}/librenms.nonroot.cron"
         dest: "/etc/cron.d/librenms"
@@ -270,8 +239,7 @@
         group: "root"
         mode: "0644"
 
-    -
-      name: "Installing the LibreNMS Logrotate Configuration"
+    - name: "Installing the LibreNMS Logrotate Configuration"
       ansible.builtin.copy:
         src: "{{ librenms_install_dir }}/misc/librenms.logrotate"
         dest: "/etc/logrotate.d/librenms"

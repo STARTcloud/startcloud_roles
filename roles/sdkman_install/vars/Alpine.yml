@@ -3,7 +3,7 @@
 system_packages:
   - ca-certificates
   - curl
-  - dpkg  # for update-alternatives
+  - dpkg # for update-alternatives
   - findutils
   - libstdc++
   - openssl

@@ -1,39 +1,33 @@
 ---
--
-  name: "Allowing loading of variables without running task"
+- name: "Allowing loading of variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Checking if OS is supported"
+    - name: "Checking if OS is supported"
       ansible.builtin.fail:
         msg: "OS not supported for BigBlueButton installation"
       when: ansible_distribution != "Ubuntu" or ansible_distribution_version != bbb_ubuntu_version
 
-    -
-      name: "Asserting primary BigBlueButton server name is defined"
+    - name: "Asserting primary BigBlueButton server name is defined"
       ansible.builtin.assert:
         that:
           - bbb_server_names[0] != ""
       tags:
         - bbb-check_vars
 
-    -
-      name: "Enabling https support for apt"
+    - name: "Enabling https support for apt"
       ansible.builtin.apt:
         name: apt-transport-https
         state: present
       tags:
         - apt_transport_https
 
-    -
-      name: "Updating apt cache"
+    - name: "Updating apt cache"
       ansible.builtin.apt:
         update_cache: true
       tags:
         - update_apt_cache
 
-    -
-      name: "Installing BigBlueButton required packages"
+    - name: "Installing BigBlueButton required packages"
       ansible.builtin.apt:
         name: "{{ item }}"
         state: present
@@ -43,95 +37,85 @@
       tags:
         - bbb-dependencies
 
-    -
-      name: "Ensuring python-apt is present"
+    - name: "Ensuring python-apt is present"
       ansible.builtin.apt:
         name: python-apt
         state: present
       tags:
         - bbb-role_dependencies
 
-    -
-      name: "Updating locale to ensure LANG=en_US.UTF-8"
+    - name: "Updating locale to ensure LANG=en_US.UTF-8"
       ansible.builtin.lineinfile:
         dest: /etc/default/locale
-        regexp: '^LANG'
-        line: 'LANG=en_US.UTF-8'
+        regexp: "^LANG"
+        line: "LANG=en_US.UTF-8"
       tags:
         - set_locale
 
-    -
-      name: "Updating locale to ensure LC_ALL is absent"
+    - name: "Updating locale to ensure LC_ALL is absent"
       ansible.builtin.lineinfile:
         dest: /etc/default/locale
-        regexp: '^LC_ALL'
+        regexp: "^LC_ALL"
         state: absent
       tags:
         - set_locale
 
-    -
-      name: "Ensuring BigBlueButton apt key is present"
+    - name: "Ensuring BigBlueButton apt key is present"
       ansible.builtin.apt_key:
         url: https://ubuntu.bigbluebutton.org/repo/bigbluebutton.asc
         state: present
       tags:
         - bbb-apt_key
 
-    -
-      name: "Enabling multiverse apt repositories"
+    - name: "Enabling multiverse apt repositories"
       ansible.builtin.apt_repository:
         repo: "{{ item }}"
         state: present
       with_items:
-        - 'deb http://archive.ubuntu.com/ubuntu xenial multiverse'
-        - 'deb-src http://archive.ubuntu.com/ubuntu xenial multiverse'
-        - 'deb http://archive.ubuntu.com/ubuntu xenial-updates multiverse'
-        - 'deb-src http://archive.ubuntu.com/ubuntu xenial-updates multiverse'
+        - "deb http://archive.ubuntu.com/ubuntu xenial multiverse"
+        - "deb-src http://archive.ubuntu.com/ubuntu xenial multiverse"
+        - "deb http://archive.ubuntu.com/ubuntu xenial-updates multiverse"
+        - "deb-src http://archive.ubuntu.com/ubuntu xenial-updates multiverse"
       tags:
         - multiverse_repositories
         - repositories
 
-    -
-      name: "Enabling supplemental PPA repositories"
+    - name: "Enabling supplemental PPA repositories"
       ansible.builtin.apt_repository:
         repo: "{{ item }}"
         state: present
       with_items:
-        - 'ppa:bigbluebutton/support'
-        - 'ppa:rmescandon/yq'
+        - "ppa:bigbluebutton/support"
+        - "ppa:rmescandon/yq"
       tags:
         - ppa-repositories
         - repositories
 
-    -
-      name: "Enabling BigBlueButton repository"
+    - name: "Enabling BigBlueButton repository"
       ansible.builtin.apt_repository:
         repo: "{{ item }}"
         state: present
       with_items:
-        - 'deb {{ bbb_apt_repo_url }} bigbluebutton-xenial main'
+        - "deb {{ bbb_apt_repo_url }} bigbluebutton-xenial main"
       tags:
         - bbb-repositories
         - repositories
 
     # BigBlueButton UFW firewall configuration
-    -
-      name: "Including firewall configuration"
+    - name: "Including firewall configuration"
       ansible.builtin.include_tasks: firewall.yml
       when: bbb_configure_firewall == True
       tags:
         - firewall
 
-    -
-      name: "Installing BigBlueButton"
+    - name: "Installing BigBlueButton"
       ansible.builtin.apt:
         name: bigbluebutton
         state: present
       tags:
         - install_bbb
 
-    -
-      name: "Ensuring MongoDB apt key is present"
+    - name: "Ensuring MongoDB apt key is present"
       ansible.builtin.apt_key:
         url: "https://www.mongodb.org/static/pgp/server-3.4.asc"
         state: present
@@ -139,8 +123,7 @@
       tags:
         - mongodb-apt_key
 
-    -
-      name: "Enabling MongoDB repository"
+    - name: "Enabling MongoDB repository"
       ansible.builtin.apt_repository:
         repo: "deb [ arch=amd64,arm64 ] http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.4 multiverse"
         state: present
@@ -149,8 +132,7 @@
         - mongodb-repositories
         - repositories
 
-    -
-      name: "Ensuring NodeJS apt key is present"
+    - name: "Ensuring NodeJS apt key is present"
       ansible.builtin.apt_key:
         url: "https://deb.nodesource.com/gpgkey/nodesource.gpg.key"
         state: present
@@ -158,8 +140,7 @@
       tags:
         - nodejs-apt_key
 
-    -
-      name: "Enabling NodeJS repository"
+    - name: "Enabling NodeJS repository"
       ansible.builtin.apt_repository:
         repo: "deb https://deb.nodesource.com/node_8.x xenial main"
         state: present
@@ -168,8 +149,7 @@
         - nodejs-repositories
         - repositories
 
-    -
-      name: "Installing bbb-html5 and dependencies"
+    - name: "Installing bbb-html5 and dependencies"
       ansible.builtin.apt:
         name:
           - bbb-html5
@@ -181,8 +161,7 @@
       tags:
         - install_bbb-html5
 
-    -
-      name: "Installing notes playback package"
+    - name: "Installing notes playback package"
       ansible.builtin.apt:
         name: bbb-playback-notes
         state: present
@@ -190,8 +169,7 @@
       tags:
         - install_bbb-playback-notes
 
-    -
-      name: "Installing podcast playback package"
+    - name: "Installing podcast playback package"
       ansible.builtin.apt:
         name: bbb-playback-podcast
         state: present
@@ -199,8 +177,7 @@
       tags:
         - install_bbb-playback-podcast
 
-    -
-      name: "Installing screenshare playback package"
+    - name: "Installing screenshare playback package"
       ansible.builtin.apt:
         name: bbb-playback-screenshare
         state: present
@@ -208,8 +185,7 @@
       tags:
         - install_bbb-playback-screenshare
 
-    -
-      name: "Installing bbb webhooks package"
+    - name: "Installing bbb webhooks package"
       ansible.builtin.apt:
         name: bbb-webhooks
         state: present
@@ -217,8 +193,7 @@
       tags:
         - install_bbb-webhooks
 
-    -
-      name: "Installing bbb-demo package"
+    - name: "Installing bbb-demo package"
       ansible.builtin.apt:
         name: bbb-demo
         state: present
@@ -226,8 +201,7 @@
       tags:
         - install_bbb-demo
 
-    -
-      name: "Installing bbb-check package"
+    - name: "Installing bbb-check package"
       ansible.builtin.apt:
         name: bbb-check
         state: present
@@ -235,51 +209,44 @@
       tags:
         - install_bbb-check
 
-    -
-      name: "Setting BigBlueButton server name"
+    - name: "Setting BigBlueButton server name"
       ansible.builtin.command: bbb-conf --setip "{{ bbb_server_names[0] }}"
       tags:
         - run_bbb-conf_setip
 
-    -
-      name: "Getting server local IP address"
+    - name: "Getting server local IP address"
       ansible.builtin.set_fact:
         server_ip: "{{ ansible_default_ipv4.address }}"
       tags:
         - bbb-get_local_ip
 
-    -
-      name: "Getting server public IP address"
+    - name: "Getting server public IP address"
       community.general.ipify_facts:
       register: public_ip
       tags:
         - bbb-get_public_ip
 
-    -
-      name: "Setting server public IP address fact"
+    - name: "Setting server public IP address fact"
       ansible.builtin.set_fact:
         public_ip: "{{ public_ip.ansible_facts.ipify_public_ip }}"
       tags:
         - bbb-get_public_ip
 
-    -
-      name: "Verifying local IP vs public IP addresses (internal_ip)"
+    - name: "Verifying local IP vs public IP addresses (internal_ip)"
       ansible.builtin.set_fact:
         internal_ip: "{{ server_ip }}"
       when: server_ip != public_ip
       tags:
         - bbb-check_server_ip
 
-    -
-      name: "Verifying local IP vs public IP addresses (server_ip)"
+    - name: "Verifying local IP vs public IP addresses (server_ip)"
       ansible.builtin.set_fact:
         server_ip: "{{ public_ip }}"
       when: server_ip != public_ip
       tags:
         - bbb-check_server_ip
 
-    -
-      name: "Updating BwMon server IP address"
+    - name: "Updating BwMon server IP address"
       ansible.builtin.replace:
         path: /var/www/bigbluebutton/client/conf/config.xml
         regexp: '<bwMon server="[^"]*"'
@@ -288,59 +255,50 @@
       tags:
         - update_bwmon_ip
 
-    -
-      name: "Including NAT configuration"
+    - name: "Including NAT configuration"
       ansible.builtin.include_tasks: nat.yml
       when: bbb_configure_nat == True and internal_ip is defined
 
-    -
-      name: "Including letsencrypt configuration"
+    - name: "Including letsencrypt configuration"
       ansible.builtin.include_tasks: letsencrypt.yml
       when: bbb_configure_ssl == True
 
-    -
-      name: "Including ssl configuration"
+    - name: "Including ssl configuration"
       ansible.builtin.include_tasks: ssl.yml
       when: bbb_configure_ssl == True
 
-    -
-      name: "Including sip configuration"
+    - name: "Including sip configuration"
       ansible.builtin.include_tasks: sip.yml
       when: bbb_sip_providers is defined
       tags:
         - bbb-sip
 
-    -
-      name: "Restarting BigBlueButton"
+    - name: "Restarting BigBlueButton"
       ansible.builtin.command: bbb-conf --restart
       tags:
         - bbb-restart
 
-    -
-      name: "Checking BigBlueButton installation"
+    - name: "Checking BigBlueButton installation"
       ansible.builtin.command: bbb-conf --check
       changed_when: false
       register: bbb_check_out
       tags:
         - bbb-check_install
 
-    -
-      name: "Printing bbb-conf --check output"
+    - name: "Printing bbb-conf --check output"
       ansible.builtin.debug:
         msg: "{{ bbb_check_out }}"
       tags:
         - bbb-check_install
 
-    -
-      name: "Including Docker dependency"
+    - name: "Including Docker dependency"
       ansible.builtin.include_tasks: docker.yml
       when: bbb_install_greenlight == True
       tags:
         - greenlight
         - docker
 
-    -
-      name: "Including greenlight"
+    - name: "Including greenlight"
       ansible.builtin.include_tasks: greenlight.yml
       when: bbb_install_greenlight == True
       tags:

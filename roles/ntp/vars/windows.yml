@@ -1,10 +1,10 @@
 ---
 # Windows NTP configuration variables
 __ntp_daemon: w32time
-__ntp_package: ""  # Windows Time service is built-in
-__ntp_config_file: ""  # Windows uses registry for configuration
-__ntp_driftfile: ""  # Not applicable for Windows
-ntp_cron_daemon: ""  # Not applicable for Windows
+__ntp_package: "" # Windows Time service is built-in
+__ntp_config_file: "" # Windows uses registry for configuration
+__ntp_driftfile: "" # Not applicable for Windows
+ntp_cron_daemon: "" # Not applicable for Windows
 
 # Extract individual NTP servers from the ntp_servers list
 # Remove 'iburst' and other options, keep only the server names

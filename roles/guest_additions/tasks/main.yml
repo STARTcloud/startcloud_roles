@@ -15,7 +15,7 @@
 
     - name: "Ensuring necessary packages are installed."
       when: "ansible_os_family == 'RedHat'"
-      ansible.builtin.yum:
+      ansible.builtin.dnf:
         name:
           - "kernel-devel-{{ kernel_release.stdout }}"
           - "{{ packer_rhel_libselinux_package }}"

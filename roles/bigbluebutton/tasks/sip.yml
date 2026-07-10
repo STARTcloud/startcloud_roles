@@ -29,15 +29,14 @@
   ansible.builtin.systemd:
     name: freeswitch
     state: restarted
-  when:
-    sip_profile_config.changed or sip_dialin_config.changed
+  when: sip_profile_config.changed or sip_dialin_config.changed
   tags:
     - bbb-add-sip-provider-config
 
 - name: "Configuring default dial-in number"
   ansible.builtin.replace:
     path: "/usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties"
-    regexp: '^defaultDialAccessNumber=.*'
+    regexp: "^defaultDialAccessNumber=.*"
     replace: 'defaultDialAccessNumber={{ bbb_sip_default_dialin | default("+" + (bbb_sip_providers.values() | first).extension) }}'
     backup: true
   tags:
@@ -46,7 +45,7 @@
 - name: "Configuring dial-in numbers in welcome footer"
   ansible.builtin.replace:
     path: "/usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties"
-    regexp: '^defaultWelcomeMessageFooter=.*'
+    regexp: "^defaultWelcomeMessageFooter=.*"
     replace: 'defaultWelcomeMessageFooter={{ bbb_sip_welcome_footer | default("<br><br>To join this meeting by phone, dial:<br>  %%DIALNUM%%<br>Then enter %%CONFNUM%% as the conference PIN number.") }}'
     backup: true
   tags:

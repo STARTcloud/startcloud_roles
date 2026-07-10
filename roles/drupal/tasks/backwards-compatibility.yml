@@ -1,31 +1,26 @@
 ---
 # Shims for Drupal VM backwards compatibility.
--
-    name: "Applying Build Makefile Shim"
-    ansible.builtin.set_fact:
-        drupal_build_makefile: "{{ build_makefile }}"
-    when: build_makefile | default('')
+- name: "Applying Build Makefile Shim"
+  ansible.builtin.set_fact:
+    drupal_build_makefile: "{{ build_makefile }}"
+  when: build_makefile | default('')
 
--
-    name: "Applying Build Composer Shim"
-    ansible.builtin.set_fact:
-        drupal_build_composer: "{{ build_composer }}"
-    when: build_composer | default('')
+- name: "Applying Build Composer Shim"
+  ansible.builtin.set_fact:
+    drupal_build_composer: "{{ build_composer }}"
+  when: build_composer | default('')
 
--
-    name: "Applying Build Composer Project Shim"
-    ansible.builtin.set_fact:
-        drupal_build_composer_project: "{{ build_composer_project }}"
-    when: build_composer_project | default('')
+- name: "Applying Build Composer Project Shim"
+  ansible.builtin.set_fact:
+    drupal_build_composer_project: "{{ build_composer_project }}"
+  when: build_composer_project | default('')
 
--
-    name: "Applying Install Site Shim"
-    ansible.builtin.set_fact:
-        drupal_install_site: "{{ install_site }}"
-    when: install_site | default('')
+- name: "Applying Install Site Shim"
+  ansible.builtin.set_fact:
+    drupal_install_site: "{{ install_site }}"
+  when: install_site | default('')
 
--
-    name: "Applying Database Backend Shim"
-    ansible.builtin.set_fact:
-        drupal_db_backend: "{{ drupalvm_database }}"
-    when: drupalvm_database | default('')
+- name: "Applying Database Backend Shim"
+  ansible.builtin.set_fact:
+    drupal_db_backend: "{{ drupalvm_database }}"
+  when: drupalvm_database | default('')

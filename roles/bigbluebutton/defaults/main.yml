@@ -1,18 +1,18 @@
 ---
 run_tasks: true
-bbb_apt_repo_url: 'https://ubuntu.bigbluebutton.org/xenial-220/'
+bbb_apt_repo_url: "https://ubuntu.bigbluebutton.org/xenial-220/"
 bbb_ubuntu_version: "16.04"
-bbb_install_html5: True
-bbb_install_playback_notes: True
-bbb_install_playback_podcast: True
-bbb_install_playback_screenshare: True
-bbb_install_webhooks: True
-bbb_install_greenlight: False
-bbb_install_demo: False
-bbb_install_check: False
-bbb_configure_firewall: True
-bbb_configure_nat: False
-bbb_configure_ssl: False
+bbb_install_html5: true
+bbb_install_playback_notes: true
+bbb_install_playback_podcast: true
+bbb_install_playback_screenshare: true
+bbb_install_webhooks: true
+bbb_install_greenlight: false
+bbb_install_demo: false
+bbb_install_check: false
+bbb_configure_firewall: true
+bbb_configure_nat: false
+bbb_configure_ssl: false
 bbb_server_names:
   - "{{ bbb_server_name }}"
 bbb_ssl_webroot_path: /var/www/bigbluebutton-default

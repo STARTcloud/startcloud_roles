@@ -3,8 +3,7 @@ argument_specs:
   main:
     short_description: Install and configure the Exim MTA
     description:
-      - Installs the Exim mail transfer agent and applies basic configuration
-        such as the config type, local delivery method, and primary hostname.
+      - Installs the Exim mail transfer agent and applies basic configuration such as the config type, local delivery method, and primary hostname.
     author: Mark Gilbert
     options:
       run_tasks:

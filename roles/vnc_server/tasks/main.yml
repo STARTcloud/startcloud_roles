@@ -1,10 +1,8 @@
 ---
--
-  name: "Block to Allow Loading of Variables without running task"
+- name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Loading Variable File with Package Names Based on the OS Type"
+    - name: "Loading Variable File with Package Names Based on the OS Type"
       ansible.builtin.include_vars: "{{ lookup('first_found', params) }}"
       vars:
         params:
@@ -15,18 +13,14 @@
           paths:
             - "{{ role_path }}/vars"
 
-    -
-      name: "Installing VNC Server"
+    - name: "Installing VNC Server"
       ansible.builtin.include_tasks: install.yml
 
-    -
-      name: "Disabling Screen Locking"
+    - name: "Disabling Screen Locking"
       ansible.builtin.include_tasks: disable_screen_locking.yml
 
-    -
-      name: "Creating VNC User"
+    - name: "Creating VNC User"
       ansible.builtin.include_tasks: create_vnc_user.yml
 
-    -
-      name: "Configuring SystemD"
+    - name: "Configuring SystemD"
       ansible.builtin.include_tasks: configure_systemd.yml

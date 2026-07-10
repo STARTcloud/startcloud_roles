@@ -1,23 +1,19 @@
 ---
--
-  name: "Setting the correct opcache filename (Ubuntu/Debian)"
+- name: "Setting the correct opcache filename (Ubuntu/Debian)"
   ansible.builtin.set_fact:
     php_opcache_conf_filename: "10-opcache.ini"
 
--
-  name: "Ensuring dirmngr is installed (gnupg dependency)"
+- name: "Ensuring dirmngr is installed (gnupg dependency)"
   ansible.builtin.apt:
     name: dirmngr
     state: present
 
--
-  name: "Adding repository for PHP versions (Ubuntu)"
+- name: "Adding repository for PHP versions (Ubuntu)"
   ansible.builtin.apt_repository:
-    repo: 'ppa:ondrej/php'
+    repo: "ppa:ondrej/php"
   when: ansible_distribution == "Ubuntu"
 
--
-  name: "Adding dependencies for PHP versions (Debian)"
+- name: "Adding dependencies for PHP versions (Debian)"
   ansible.builtin.apt:
     name:
       - apt-transport-https
@@ -25,33 +21,29 @@
     state: present
   when: ansible_distribution == "Debian"
 
--
-  name: "Adding Ondrej Sury's apt key (Debian)"
+- name: "Adding Ondrej Sury's apt key (Debian)"
   ansible.builtin.apt_key:
     url: https://packages.sury.org/php/apt.gpg
     id: 15058500A0235D97F5D10063B188E2B695BD4743
     state: present
   when: ansible_distribution == "Debian"
 
--
-  name: "Adding Ondrej Sury's repo (Debian)"
+- name: "Adding Ondrej Sury's repo (Debian)"
   ansible.builtin.apt_repository:
     repo: "deb https://packages.sury.org/php/ {{ ansible_distribution_release }} main"
     state: present
   register: php_ondrej_debian_repo
   when: ansible_distribution == "Debian"
 
--
-  name: "Updating apt caches after repo is added (Debian)"
+- name: "Updating apt caches after repo is added (Debian)"
   ansible.builtin.apt:
     update_cache: true
   when:
     - php_ondrej_debian_repo.changed
     - ansible_distribution == "Debian"
-  tags: ['skip_ansible_lint']
+  tags: ["skip_ansible_lint"]
 
--
-  name: "Purging PHP version packages (besides the currently chosen php_version)"
+- name: "Purging PHP version packages (besides the currently chosen php_version)"
   ansible.builtin.apt:
     name: "{{ php_versions_debian | reject('search', 'php' ~ php_version) | list }}"
     state: absent
@@ -59,8 +51,7 @@
     force: true
   register: php_version_purge
 
--
-  name: "Purging php-common package if any versions were just purged"
+- name: "Purging php-common package if any versions were just purged"
   ansible.builtin.apt:
     name: php-common
     state: absent
