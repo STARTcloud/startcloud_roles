@@ -17,9 +17,9 @@
 
 - name: "Generating Drupal Site With Drush Makefile"
   changed_when: false
-  ansible.builtin.command: >
-    {{ drush_path }} make -y /tmp/drupal.make.yml {{ drush_make_options }}
-    chdir={{ drupal_core_path }}
+  ansible.builtin.command:
+    cmd: "{{ drush_path }} make -y /tmp/drupal.make.yml {{ drush_make_options }}"
+    chdir: "{{ drupal_core_path }}"
   when: not drupal_site_exists
   become: false
 
@@ -30,9 +30,9 @@
   when: not drupal_site_exists
 
 - name: "Running Composer Install When composer.json Is Present"
-  ansible.builtin.command: >
-    composer install
-    chdir={{ drupal_core_path }}
+  ansible.builtin.command:
+    cmd: composer install
+    chdir: "{{ drupal_core_path }}"
   when: not drupal_site_exists and drupal_core_composer_file.stat.exists
   changed_when: false
   become: false

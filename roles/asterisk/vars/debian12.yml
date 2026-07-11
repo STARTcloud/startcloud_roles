@@ -17,7 +17,7 @@ packages:
   - libncurses5-dev
   - build-essential
   - pkg-config
-  - libspeex-dev #Asterisk: for addons
+  - libspeex-dev # Asterisk: for addons
   - libspeexdsp-dev
   - libogg-dev
   - libvorbis-dev

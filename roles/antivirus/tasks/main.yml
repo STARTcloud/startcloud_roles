@@ -13,7 +13,7 @@
     - name: "Loading vendor-specific variables"
       ansible.builtin.include_vars: "{{ vendor }}.yml"
       when: vendor is defined
-      ignore_errors: true
+      failed_when: false
 
     # SOPHOS ANTIVIRUS INSTALLATION
     - name: "Including Sophos installation for Windows"

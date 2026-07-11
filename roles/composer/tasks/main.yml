@@ -15,7 +15,8 @@
       when: php_executable is not defined
 
     - name: "Checking if Composer Is Installed"
-      ansible.builtin.stat: "path={{ composer_path }}"
+      ansible.builtin.stat:
+        path: "{{ composer_path }}"
       register: composer_bin
 
     - name: "Getting Composer Installer Signature"
@@ -34,15 +35,17 @@
       when: not composer_bin.stat.exists
 
     - name: "Running Composer Installer"
-      ansible.builtin.command: >
-        {{ php_executable }} composer-installer.php {% if composer_version_branch %} {{ composer_version_branch }}{% elif composer_version %} --version={{ composer_version }}{% endif %}
-        chdir=/tmp
+      ansible.builtin.command:
+        cmd: >
+          {{ php_executable }} composer-installer.php {% if composer_version_branch %} {{ composer_version_branch }}{% elif composer_version %} --version={{ composer_version }}{% endif %}
+        chdir: /tmp
+      changed_when: true
       when: not composer_bin.stat.exists
 
     - name: "Moving Composer Into Globally-Accessible Location"
-      ansible.builtin.command: >
-        mv /tmp/composer.phar {{ composer_path }}
-        creates={{ composer_path }}
+      ansible.builtin.command:
+        cmd: "mv /tmp/composer.phar {{ composer_path }}"
+        creates: "{{ composer_path }}"
       when: not composer_bin.stat.exists
 
     - name: "Updating Composer to Latest Version (if Configured)"

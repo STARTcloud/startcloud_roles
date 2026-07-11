@@ -8,6 +8,6 @@
 
 - name: "Rebuilding Drupal Caches"
   ansible.builtin.command: "{{ drush_path }} cache-rebuild --quiet"
+  changed_when: true
   args:
     chdir: "{{ drupal_core_path }}"
-  tags: ["skip_ansible_lint"]

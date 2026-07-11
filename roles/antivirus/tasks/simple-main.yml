@@ -6,7 +6,8 @@
       - clamav
 
 - name: "Running Freshclam"
-  ansible.builtin.shell: freshclam
+  ansible.builtin.command: freshclam
+  changed_when: true
   when: ansible_os_family == 'Debian'
 
 - name: "Adding ClamScan Cron Job Script"

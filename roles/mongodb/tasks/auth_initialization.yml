@@ -7,8 +7,8 @@
     group: root
     mode: "0644"
   notify:
-    - mongodb restart
-    - wait when mongodb is started on localhost
+    - Mongodb restart
+    - Wait when mongodb is started on localhost
 
 - name: "Flushing all handlers at this point"
   ansible.builtin.meta: flush_handlers
@@ -60,8 +60,8 @@
     group: root
     mode: "0644"
   notify:
-    - mongodb restart
-    - wait when mongodb is started
+    - Mongodb restart
+    - Wait when mongodb is started
 
 - name: "Flushing all handlers at this point"
   ansible.builtin.meta: flush_handlers

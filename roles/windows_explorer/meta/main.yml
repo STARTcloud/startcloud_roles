@@ -10,10 +10,7 @@ galaxy_info:
   platforms:
     - name: Windows
       versions:
-        - "10"
-        - "11"
-        - "2019"
-        - "2022"
+        - all
   galaxy_tags:
     - windows
     - explorer

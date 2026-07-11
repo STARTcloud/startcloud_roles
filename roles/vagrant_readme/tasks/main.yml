@@ -11,7 +11,9 @@
         - name: "Executing shell command to sort network interfaces"
           when: networks[0] is defined
           changed_when: false
-          ansible.builtin.shell: "ls /sys/class/net | grep -v ^lo$"
+          ansible.builtin.shell: |
+            set -o pipefail
+            ls /sys/class/net | grep -v ^lo$
           args:
             executable: /bin/bash
           register: sorted_interfaces_output
@@ -26,7 +28,9 @@
 
         - name: "Gathering details of the first adapter"
           changed_when: false
-          ansible.builtin.shell: "ip addr show {{ first_adapter }} | awk '/inet / {print $2}'"
+          ansible.builtin.shell: |
+            set -o pipefail
+            ip addr show {{ first_adapter }} | awk '/inet / {print $2}'
           args:
             executable: /bin/bash
           register: first_ip

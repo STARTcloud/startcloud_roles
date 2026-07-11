@@ -31,4 +31,5 @@
 
     - name: "Adding Flatpak Repos"
       ansible.builtin.command: "flatpak remote-add --if-not-exists --system {{ item.name }} {{ item.url }}"
+      changed_when: false
       with_items: "{{ repos }}"

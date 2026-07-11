@@ -38,7 +38,7 @@
 
     - name: "Removing superseded components"
       ansible.windows.win_shell: "DISM /Online /Cleanup-Image /SPSuperseded"
-      ignore_errors: true
+      failed_when: false
 
     - name: "Rebooting to ensure all dism commands complete"
       ansible.windows.win_reboot:

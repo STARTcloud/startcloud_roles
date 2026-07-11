@@ -17,7 +17,7 @@
   args:
     executable: /usr/bin/ksh
 
-#-
+# -
 #  name: "Getting rpool disks"
 #  become: true
 #  ansible.builtin.command: "zpool list -Ho name {{ zfs_pool_name }}"

@@ -10,11 +10,14 @@
     path: /etc/environment
     line: "{{ item }}"
   loop:
-    - "http_proxy=http://{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.user }}:{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.pass }}@{{ (proxy | selectattr(proxy_systemwide_proxy,
+    - "http_proxy=http://{{ (proxy | selectattr(proxy_systemwide_proxy,
+      'defined') | first).squid.user }}:{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.pass }}@{{ (proxy | selectattr(proxy_systemwide_proxy,
       'defined') | first).squid.host }}:{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.port }}"
-    - "https_proxy=http://{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.user }}:{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.pass }}@{{ (proxy | selectattr(proxy_systemwide_proxy,
+    - "https_proxy=http://{{ (proxy | selectattr(proxy_systemwide_proxy,
+      'defined') | first).squid.user }}:{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.pass }}@{{ (proxy | selectattr(proxy_systemwide_proxy,
       'defined') | first).squid.host }}:{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.port }}"
-    - "ftp_proxy=http://{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.user }}:{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.pass }}@{{ (proxy | selectattr(proxy_systemwide_proxy,
+    - "ftp_proxy=http://{{ (proxy | selectattr(proxy_systemwide_proxy,
+      'defined') | first).squid.user }}:{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.pass }}@{{ (proxy | selectattr(proxy_systemwide_proxy,
       'defined') | first).squid.host }}:{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.port }}"
     - "no_proxy=localhost,127.0.0.1,localaddress,.localdomain.com"
   when: proxy_systemwide | bool

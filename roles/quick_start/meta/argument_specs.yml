@@ -3,7 +3,8 @@ argument_specs:
   main:
     short_description: Python simple HTTP quick-start server
     description:
-      - Provisions a Python simple HTTP/upload web server with a welcome landing page, gathers network details, and serves it via systemd (VM) or supervisord (container); also packages a support bundle.
+      - Provisions a Python simple HTTP/upload web server with a welcome landing page, gathers network details, and serves
+        it via systemd (VM) or supervisord (container); also packages a support bundle.
     author: Mark Gilbert
     options:
       run_tasks:

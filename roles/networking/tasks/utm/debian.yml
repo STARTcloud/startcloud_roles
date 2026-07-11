@@ -17,7 +17,9 @@
   block:
     - name: "Grabbing local address for scripts"
       changed_when: false
-      ansible.builtin.shell: "ip -h route list  dev {{ first_adapter }} default | awk '{ print $3}'"
+      ansible.builtin.shell: |
+        set -o pipefail
+        ip -h route list  dev {{ first_adapter }} default | awk '{ print $3}'
       args:
         executable: /bin/bash
       register: first_adapter_gateway
@@ -104,7 +106,8 @@
     - name: "Adding Extra Host Records"
       ansible.builtin.lineinfile:
         path: "/etc/hosts"
-        line: "{{ netoutput.stdout }} {{ settings.hostname }} {{ settings.hostname }}.{{ settings.domain }} console.{{ settings.hostname }}.{{ settings.domain }} auth.{{ settings.hostname }}.{{ settings.domain
+        line: "{{ netoutput.stdout }} {{ settings.hostname }} {{ settings.hostname }}.{{ settings.domain }} console.{{ settings.hostname }}.{{
+          settings.domain }} auth.{{ settings.hostname }}.{{ settings.domain
           }}"
         insertbefore: EOF
 
@@ -119,7 +122,8 @@
   block:
     - name: "Registering whether any network configs changed"
       ansible.builtin.set_fact:
-        network_configs_changed: "{{ nat_adapter_config.changed | default(false) or static_nat_adapter_config.changed | default(false) or vagrant_adapter_config.changed | default(false) or public_adapter_config.changed
+        network_configs_changed: "{{ nat_adapter_config.changed | default(false) or static_nat_adapter_config.changed | default(false) or
+          vagrant_adapter_config.changed | default(false) or public_adapter_config.changed
           | default(false) }}"
 
     - name: "Applying netplan configurations"

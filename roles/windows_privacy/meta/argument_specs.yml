@@ -83,7 +83,7 @@ argument_specs:
         type: bool
         default: true
         description: Stops and sets the HomeGroup services to manual start.
-      disable_gameDVR:
+      disable_game_dvr:
         type: bool
         default: true
         description: Disables GameDVR registry settings and policy (applied under enhanced_privacy).

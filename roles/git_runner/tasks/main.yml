@@ -164,6 +164,7 @@
       args:
         executable: /bin/bash
       register: _git_runner_local_remove
+      changed_when: _git_runner_local_remove.rc == 0
       failed_when: false
 
     - name: "Configuring persistent runner"
@@ -179,6 +180,7 @@
           --work {{ git_runner_work_folder }}
       args:
         executable: /bin/bash
+      changed_when: true
 
     - name: "Installing systemd service using svc.sh"
       become: true

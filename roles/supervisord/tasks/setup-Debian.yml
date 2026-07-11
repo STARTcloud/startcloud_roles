@@ -18,6 +18,7 @@
   ansible.builtin.file:
     path: /etc/supervisor/conf.d
     state: directory
+    mode: "0755"
 
 - name: "Copying supervisord configuration file"
   ansible.builtin.template:

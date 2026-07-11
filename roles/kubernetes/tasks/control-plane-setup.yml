@@ -3,11 +3,13 @@
   ansible.builtin.file:
     path: "{{ kubernetes_kubeadm_kubelet_config_file_path | dirname }}"
     state: directory
+    mode: "0755"
 
 - name: "Deploying the config file for kubeadm and kubelet"
   ansible.builtin.template:
     src: "kubeadm-kubelet-config.j2"
     dest: "{{ kubernetes_kubeadm_kubelet_config_file_path }}"
+    mode: "0644"
 
 - name: "Initializing Kubernetes control plane with kubeadm init"
   ansible.builtin.command: >
@@ -15,6 +17,7 @@
     --config {{ kubernetes_kubeadm_kubelet_config_file_path }}
     {{ kubernetes_kubeadm_init_extra_opts }}
   register: kubeadmin_init
+  changed_when: true
   when: (not kubernetes_init_stat.stat.exists) and (kubernetes_ignore_preflight_errors is not defined)
 
 - name: "Initializing Kubernetes control plane with kubeadm init and ignore_preflight_errors"
@@ -24,6 +27,7 @@
     --ignore-preflight-errors={{ kubernetes_ignore_preflight_errors }}
     {{ kubernetes_kubeadm_init_extra_opts }}
   register: kubeadmin_init
+  changed_when: true
   when: (not kubernetes_init_stat.stat.exists) and (kubernetes_ignore_preflight_errors is defined)
 
 - name: "Printing the init output to screen"
@@ -64,7 +68,11 @@
   delay: 5
 
 - name: "Getting Kubernetes version for Weave installation"
-  ansible.builtin.shell: kubectl version | base64 | tr -d '\n'
+  ansible.builtin.shell: |
+    set -o pipefail
+    kubectl version | base64 | tr -d '\n'
+  args:
+    executable: /bin/bash
   changed_when: false
   register: kubectl_version
   when: kubernetes_pod_network.cni == 'weave'
@@ -84,6 +92,7 @@
 # instead of using kubernetes_init_stat.stat.exists check.
 - name: "Allowing pods on control plane (if configured)"
   ansible.builtin.command: "kubectl taint nodes --all node-role.kubernetes.io/control-plane-"
+  changed_when: true
   when:
     - kubernetes_allow_pods_on_control_plane | bool
     - not kubernetes_init_stat.stat.exists

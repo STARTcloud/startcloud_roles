@@ -4,12 +4,16 @@
     name:
       - epel-release
       - perl-Sys-Syslog
-- mode: a+x
-  name: "Preparing TSAMP configuration Scripts: installSAM.centos"
-  template: "src=installSAM.centos dest=/local/server_t/db2/linuxamd64/tsamp/installSAM.centos"
-- mode: a+x
-  name: "Preparing TSAMP configuration Scripts: prereqSAM.centos"
-  template: "src=prereqSAM.centos dest=/local/server_t/db2/linuxamd64/tsamp/prereqSAM.centos"
+- name: "Preparing TSAMP configuration Scripts: installSAM.centos"
+  ansible.builtin.template:
+    src: installSAM.centos
+    dest: /local/server_t/db2/linuxamd64/tsamp/installSAM.centos
+    mode: "a+x"
+- name: "Preparing TSAMP configuration Scripts: prereqSAM.centos"
+  ansible.builtin.template:
+    src: prereqSAM.centos
+    dest: /local/server_t/db2/linuxamd64/tsamp/prereqSAM.centos
+    mode: "a+x"
 - command: "sh /local/server_t/db2/linuxamd64/tsamp/installSAM.centos"
   name: "Running Pre-Requisite Check"
 - command: "sh /local/server_t/db2/linuxamd64/tsamp/prereqSAM.centos --silent"
@@ -35,7 +39,7 @@
     db2haicu <<EOF
     1
     1
-    EOF	
+    EOF
 - name: "Running db2haicu"
   shell: |-
     db2haicu <<EOF

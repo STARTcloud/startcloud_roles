@@ -14,7 +14,7 @@
         - C:\vagrant\ansible_collections
         - C:\Windows\Setup\Scripts
 
-    #-
+    # -
     #  name: "Copying SetupComplete.cmd"
     #  ansible.windows.win_template:
     #    src: SetupComplete.cmd.j2

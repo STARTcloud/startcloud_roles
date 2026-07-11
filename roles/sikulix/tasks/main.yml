@@ -68,6 +68,7 @@
       ansible.builtin.get_url:
         dest: "/home/{{ user }}/.Sikulix/Extensions/jruby-complete-{{ jruby_version }}.jar"
         url: "https://repo1.maven.org/maven2/org/jruby/jruby-complete/{{ jruby_version }}/jruby-complete-{{ jruby_version }}.jar"
+        mode: "0644"
       register: jruby_source_vagrant
       retries: 5
       until: "jruby_source_vagrant is success"
@@ -76,6 +77,7 @@
       ansible.builtin.get_url:
         dest: "/home/{{ user }}/.Sikulix/Extensions/jython-standalone-{{ jython_version }}.jar"
         url: "https://repo1.maven.org/maven2/org/python/jython-standalone/{{ jython_version }}/jython-standalone-{{ jython_version }}.jar"
+        mode: "0644"
       register: jython_source_vagrant
       retries: 5
       until: "jython_source_vagrant is success"
@@ -84,17 +86,19 @@
       ansible.builtin.get_url:
         dest: /jars/sikulixapi.jar
         url: "{{ sikulixapi_download_url }}{{ sikulixapi_jar }}"
-      register: SikulixJarAPI_source
+        mode: "0644"
+      register: sikulixjarapi_source
       retries: 5
-      until: "SikulixJarAPI_source is success"
+      until: "sikulixjarapi_source is success"
     - name: "Downloading SikulixJar sources"
       delay: 5
       ansible.builtin.get_url:
         dest: /jars/sikulix.jar
         url: "{{ sikulix_download_url }}{{ sikulix_jar }}"
-      register: SikulixJar_source
+        mode: "0644"
+      register: sikulixjar_source
       retries: 5
-      until: "SikulixJar_source is success"
+      until: "sikulixjar_source is success"
     ### Desktop Icons
     - name: "Creating Menu Icons for All Users"
       become: true
@@ -119,11 +123,13 @@
         dest: "{{ item.dest }}"
         owner: "{{ user }}"
         group: "{{ user }}"
+        mode: "0755"
         remote_src: true
       with_items:
         - { src: /vagrant/scripts, dest: "/home/{{ user }}/Desktop" }
     - name: "Ensuring that Desktop Icons are Launchable"
       ansible.builtin.command: "dbus-launch gio set {{ item }}  \"metadata::trusted\" true"
+      changed_when: false
       with_items:
         - /usr/share/applications/Sikulix.desktop
     - name: "Changing perm of Jar files"

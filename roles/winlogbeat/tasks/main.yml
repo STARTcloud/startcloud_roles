@@ -33,7 +33,7 @@
         chdir: "{{ winlogbeat_install_location }}/{{ winlogbeat_download_file }}"
 
     - name: "Copying WinLogBeat Configuration"
-      community.windows.win_template:
+      ansible.windows.win_template:
         src: winlogbeat.yml.j2
         dest: "{{ winlogbeat_install_location }}/{{ winlogbeat_download_file }}/winlogbeat.yml"
       notify: "Restarting Winlogbeat"

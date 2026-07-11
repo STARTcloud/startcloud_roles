@@ -13,12 +13,12 @@
       ansible.builtin.command: freshclam
       when: clamav_packages_install.changed
       register: freshclam_result
+      changed_when: true
       notify: Restarting clamav daemon
       # On Debian, freshclam is automatically run post-install, so this may fail.
       failed_when:
         - freshclam_result is failed
-        - freshclam_result.stderr.find('locked by another process') != -1
-      tags: ["skip_ansible_lint"]
+        - freshclam_result.stderr.find('locked by another process') == -1
 
     - name: "Including setup-RedHat.yml"
       ansible.builtin.include_tasks: setup-RedHat.yml

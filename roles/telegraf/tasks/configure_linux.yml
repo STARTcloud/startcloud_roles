@@ -149,7 +149,7 @@
         name: smartmontools
 
     - name: "Finding path of smartctl"
-      ansible.builtin.shell: which smartctl
+      ansible.builtin.command: which smartctl
       register: which_smartctl
       ignore_errors: true
       changed_when: false
@@ -161,6 +161,7 @@
         dest: "/etc/sudoers.d/telegraf"
         block: "telegraf ALL=(root) NOPASSWD: {{ which_smartctl.stdout }}"
         create: true
+        mode: "0440"
       become: true
       notify:
         - "Restarting Telegraf"

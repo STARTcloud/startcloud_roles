@@ -3,8 +3,8 @@ argument_specs:
   main:
     short_description: mumble-web HTML5 client container deployment
     description:
-      - Deploys mumble-web, a browser-based Mumble client, together with mumble-web-proxy which bridges browser WebSocket/WebRTC connections to a Mumble (murmur) server. Both run as Docker containers on
-        a shared network.
+      - Deploys mumble-web, a browser-based Mumble client, together with mumble-web-proxy which bridges browser
+        WebSocket/WebRTC connections to a Mumble (murmur) server. Both run as Docker containers on a shared network.
     author: Mark Gilbert
     options:
       run_tasks:

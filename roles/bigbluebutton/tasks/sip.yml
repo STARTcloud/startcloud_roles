@@ -5,6 +5,7 @@
     dest: /opt/freeswitch/conf/sip_profiles/external/{{ item.key }}.xml
     owner: freeswitch
     group: daemon
+    mode: "0644"
     backup: true
   loop: "{{ bbb_sip_providers | dict2items }}"
   register: sip_profile_config
@@ -18,6 +19,7 @@
     dest: /opt/freeswitch/conf/dialplan/{{ item.value.context | default("public") }}/{{ item.key }}.xml
     owner: freeswitch
     group: daemon
+    mode: "0644"
     backup: true
   loop: "{{ bbb_sip_providers | dict2items }}"
   register: sip_dialin_config
@@ -46,7 +48,8 @@
   ansible.builtin.replace:
     path: "/usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties"
     regexp: "^defaultWelcomeMessageFooter=.*"
-    replace: 'defaultWelcomeMessageFooter={{ bbb_sip_welcome_footer | default("<br><br>To join this meeting by phone, dial:<br>  %%DIALNUM%%<br>Then enter %%CONFNUM%% as the conference PIN number.") }}'
+    replace: 'defaultWelcomeMessageFooter={{ bbb_sip_welcome_footer | default("<br><br>To join this meeting by phone, dial:<br>
+      %%DIALNUM%%<br>Then enter %%CONFNUM%% as the conference PIN number.") }}'
     backup: true
   tags:
     - bbb-add-sip-dialin-config

@@ -46,7 +46,7 @@
     group: "{{ postgresql_group }}"
     mode: "0644"
   when: not pgdata_dir_version.stat.exists and (initdb_result is defined and initdb_result.rc != 0) and __postgresql_version is defined
-  ignore_errors: true
+  failed_when: false
 
 - name: "Ensuring PostgreSQL log directory exists"
   ansible.builtin.file:

@@ -104,7 +104,7 @@
     # BigBlueButton UFW firewall configuration
     - name: "Including firewall configuration"
       ansible.builtin.include_tasks: firewall.yml
-      when: bbb_configure_firewall == True
+      when: bbb_configure_firewall
       tags:
         - firewall
 
@@ -119,7 +119,7 @@
       ansible.builtin.apt_key:
         url: "https://www.mongodb.org/static/pgp/server-3.4.asc"
         state: present
-      when: bbb_install_html5 == True
+      when: bbb_install_html5
       tags:
         - mongodb-apt_key
 
@@ -127,7 +127,7 @@
       ansible.builtin.apt_repository:
         repo: "deb [ arch=amd64,arm64 ] http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.4 multiverse"
         state: present
-      when: bbb_install_html5 == True
+      when: bbb_install_html5
       tags:
         - mongodb-repositories
         - repositories
@@ -136,7 +136,7 @@
       ansible.builtin.apt_key:
         url: "https://deb.nodesource.com/gpgkey/nodesource.gpg.key"
         state: present
-      when: bbb_install_html5 == True
+      when: bbb_install_html5
       tags:
         - nodejs-apt_key
 
@@ -144,7 +144,7 @@
       ansible.builtin.apt_repository:
         repo: "deb https://deb.nodesource.com/node_8.x xenial main"
         state: present
-      when: bbb_install_html5 == True
+      when: bbb_install_html5
       tags:
         - nodejs-repositories
         - repositories
@@ -157,7 +157,7 @@
           - curl
           - nodejs
         state: present
-      when: bbb_install_html5 == True
+      when: bbb_install_html5
       tags:
         - install_bbb-html5
 
@@ -165,7 +165,7 @@
       ansible.builtin.apt:
         name: bbb-playback-notes
         state: present
-      when: bbb_install_playback_notes == True
+      when: bbb_install_playback_notes
       tags:
         - install_bbb-playback-notes
 
@@ -173,7 +173,7 @@
       ansible.builtin.apt:
         name: bbb-playback-podcast
         state: present
-      when: bbb_install_playback_podcast == True
+      when: bbb_install_playback_podcast
       tags:
         - install_bbb-playback-podcast
 
@@ -181,7 +181,7 @@
       ansible.builtin.apt:
         name: bbb-playback-screenshare
         state: present
-      when: bbb_install_playback_screenshare == True
+      when: bbb_install_playback_screenshare
       tags:
         - install_bbb-playback-screenshare
 
@@ -189,7 +189,7 @@
       ansible.builtin.apt:
         name: bbb-webhooks
         state: present
-      when: bbb_install_webhooks == True
+      when: bbb_install_webhooks
       tags:
         - install_bbb-webhooks
 
@@ -197,7 +197,7 @@
       ansible.builtin.apt:
         name: bbb-demo
         state: present
-      when: bbb_install_demo == True
+      when: bbb_install_demo
       tags:
         - install_bbb-demo
 
@@ -205,12 +205,13 @@
       ansible.builtin.apt:
         name: bbb-check
         state: present
-      when: bbb_install_check == True
+      when: bbb_install_check
       tags:
         - install_bbb-check
 
     - name: "Setting BigBlueButton server name"
       ansible.builtin.command: bbb-conf --setip "{{ bbb_server_names[0] }}"
+      changed_when: true
       tags:
         - run_bbb-conf_setip
 
@@ -257,15 +258,15 @@
 
     - name: "Including NAT configuration"
       ansible.builtin.include_tasks: nat.yml
-      when: bbb_configure_nat == True and internal_ip is defined
+      when: bbb_configure_nat and internal_ip is defined
 
     - name: "Including letsencrypt configuration"
       ansible.builtin.include_tasks: letsencrypt.yml
-      when: bbb_configure_ssl == True
+      when: bbb_configure_ssl
 
     - name: "Including ssl configuration"
       ansible.builtin.include_tasks: ssl.yml
-      when: bbb_configure_ssl == True
+      when: bbb_configure_ssl
 
     - name: "Including sip configuration"
       ansible.builtin.include_tasks: sip.yml
@@ -275,6 +276,7 @@
 
     - name: "Restarting BigBlueButton"
       ansible.builtin.command: bbb-conf --restart
+      changed_when: true
       tags:
         - bbb-restart
 
@@ -293,13 +295,13 @@
 
     - name: "Including Docker dependency"
       ansible.builtin.include_tasks: docker.yml
-      when: bbb_install_greenlight == True
+      when: bbb_install_greenlight
       tags:
         - greenlight
         - docker
 
     - name: "Including greenlight"
       ansible.builtin.include_tasks: greenlight.yml
-      when: bbb_install_greenlight == True
+      when: bbb_install_greenlight
       tags:
         - greenlight

@@ -26,6 +26,7 @@
       ansible.builtin.file:
         path: /etc/apt/sources.list.d/jenkins.list
         state: touch
+        mode: "0644"
     - name: "Adding Jenkins to Sources.list"
 
       ansible.builtin.lineinfile:
@@ -111,11 +112,17 @@
         dest: /var/lib/jenkins/config.xml.orig
         src: /var/lib/jenkins/config.xml
         remote_src: true
+        mode: "0644"
     - name: "Configuring Jenkins"
       become: true
-      ansible.builtin.shell: "cd /var/lib/jenkins && tail -n +2 config.xml.orig >config.xml && xmlstarlet edit --inplace -u '/hudson/useSecurity' -v 'false' config.xml && xmlstarlet edit --inplace -d '/hudson/authorizationStrategy'
-        config.xml && xmlstarlet edit --inplace -d '/hudson/securityRealm' config.xml && xmlstarlet edit --inplace -u '/hudson/installStateName' -v 'RUNNING' config.xml &&  diff -u config.xml{.orig,} ||
+      ansible.builtin.shell: "cd /var/lib/jenkins && tail -n +2 config.xml.orig >config.xml &&
+        xmlstarlet edit --inplace -u '/hudson/useSecurity' -v 'false' config.xml &&
+        xmlstarlet edit --inplace -d '/hudson/authorizationStrategy' config.xml &&
+        xmlstarlet edit --inplace -d '/hudson/securityRealm' config.xml &&
+        xmlstarlet edit --inplace -u '/hudson/installStateName' -v 'RUNNING' config.xml &&
+        diff -u config.xml{.orig,} ||
         true"
+      changed_when: true
 
     - name: "Checking if /var/lib/jenkins/init.groovy.d exists"
       ansible.builtin.stat:
@@ -129,7 +136,7 @@
         owner: "{{ user }}"
         group: "{{ group }}"
         mode: "0775"
-      when: output_folder.stat.exists == false
+      when: not output_folder.stat.exists
 
     - name: "Disabling the Security Check so we can download Plugins"
       become: true
@@ -151,6 +158,7 @@
       ansible.builtin.get_url:
         dest: "/home/{{ user }}/jenkins-cli.jar"
         url: "http://localhost:8080/jnlpJars/jenkins-cli.jar"
+        mode: "0644"
       register: jenkinscli_source
       retries: 5
       until: "jenkinscli_source is success"
@@ -171,8 +179,10 @@
         mode: u=rwX,g=rX,o=rX
     - name: "Installing Jenkins Plugins"
       become: true
-      ansible.builtin.shell: "cd /home/{{ user }} && java -jar jenkins-cli.jar -s http://localhost:8080/ install-plugin xvfb xunit workflow-step-api scm-api structs junit script-security git email-ext email-ext-recipients-column
+      ansible.builtin.shell: "cd /home/{{ user }} && java -jar jenkins-cli.jar -s http://localhost:8080/ install-plugin xvfb xunit workflow-step-api scm-api structs junit
+        script-security git email-ext email-ext-recipients-column
         mailer"
+      changed_when: true
       retries: 5
       delay: 5
     - name: "Configuring git Email"
@@ -212,7 +222,7 @@
       loop: "{{ java_accessibility_files.files }}"
       loop_control:
         label: "{{ item.path }}"
-    - name: "Setting {{ user }} permissions"
+    - name: "Setting permissions for {{ user }}"
       ansible.builtin.file:
         group: "{{ group }}"
         owner: "{{ user }}"
@@ -236,6 +246,7 @@
 
     - name: "Ensuring that Desktop Icons are Launchable"
       ansible.builtin.command: "dbus-launch gio set {{ item }}  \"metadata::trusted\" true"
+      changed_when: false
       with_items:
         - "/home/{{ user }}/Desktop/jenkins.desktop"
         - "/usr/share/applications/jenkins.desktop"
@@ -247,6 +258,7 @@
         dest: "{{ item.dest }}"
         owner: "{{ user }}"
         group: "{{ user }}"
+        mode: "0755"
         remote_src: true
       with_items:
         - { src: /vagrant/jobs, dest: "/home/{{ user }}/Desktop" }

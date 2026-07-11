@@ -12,7 +12,7 @@
         network_name: "nat_adapter"
       register: nat_adapter_config
 
-    #-
+    # -
     #  name: "Enabling systemd-networkd"
     #  when: nat_adapter_config.changed
     #  ansible.builtin.systemd_service:
@@ -40,7 +40,9 @@
   block:
     - name: "Grabbing local address for scripts"
       changed_when: false
-      ansible.builtin.shell: "ip -h route list  dev {{ first_adapter }} default | awk '{ print $3}'"
+      ansible.builtin.shell: |
+        set -o pipefail
+        ip -h route list  dev {{ first_adapter }} default | awk '{ print $3}'
       args:
         executable: /bin/bash
       register: first_adapter_gateway
@@ -123,7 +125,8 @@
     - name: "Adding Extra Host Records"
       ansible.builtin.lineinfile:
         path: "/etc/hosts"
-        line: "{{ netoutput.stdout }} {{ settings.hostname }} {{ settings.hostname }}.{{ settings.domain }} console.{{ settings.hostname }}.{{ settings.domain }} auth.{{ settings.hostname }}.{{ settings.domain
+        line: "{{ netoutput.stdout }} {{ settings.hostname }} {{ settings.hostname }}.{{ settings.domain }} console.{{ settings.hostname }}.{{
+          settings.domain }} auth.{{ settings.hostname }}.{{ settings.domain
           }}"
         insertbefore: EOF
 

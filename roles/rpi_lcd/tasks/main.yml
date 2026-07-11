@@ -59,5 +59,6 @@
         path: /etc/modules
         state: present
         create: true
+        mode: "0644"
       with_items:
         - line: "i2c-dev"

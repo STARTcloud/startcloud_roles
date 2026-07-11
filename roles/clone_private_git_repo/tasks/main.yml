@@ -22,7 +22,6 @@
         decrypt: false
         dest: "{{ git_dest }}/{{ github_token_file }}"
         src: "{{ github_token_file }}"
-      tags: ["skip_ansible_lint"]
 
     - name: "Decrypting github_token from variable"
       when: github_deploy_key is not defined or github_deploy_key != ""
@@ -48,7 +47,6 @@
         decrypt: false
         dest: "{{ git_dest }}/../{{ github_deploy_key }}"
         src: "{{ github_deploy_key }}"
-      tags: ["skip_ansible_lint"]
 
     - name: "Cloning the Git Repository"
       when: github_deploy_key is defined and github_deploy_key != ""

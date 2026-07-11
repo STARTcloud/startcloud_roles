@@ -8,6 +8,7 @@
         group: www-data
         owner: www-data
         state: directory
+        mode: "0755"
 
     - name: "Extracting phpMyAdmin"
       become: true
@@ -32,6 +33,7 @@
     - name: "Setting up PHP configuration"
       become: true
       ansible.builtin.command: "mv config.sample.inc.php config.inc.php"
+      changed_when: true
       when: not config_inc.stat.exists and config_inc_sample.stat.exists
       args:
         chdir: /usr/share/phpmyadmin
@@ -46,6 +48,7 @@
       ansible.builtin.file:
         path: /etc/nginx/global.d
         state: directory
+        mode: "0755"
       when: nginx_conf_dir.stat.exists
 
     - name: "Ensuring phpmyadmin configuration for nginx is installed"
@@ -53,6 +56,7 @@
       ansible.builtin.template:
         dest: /etc/nginx/global.d/phpmyadmin.conf
         src: nginx.conf.j2
+        mode: "0644"
       when: nginx_conf_dir.stat.exists
 
     - name: "Generating Unique Key"

@@ -1,9 +1,9 @@
 ---
 - name: "Updating pkg cache"
   ansible.builtin.command: pkg update -f
+  changed_when: true
   environment:
     ASSUME_ALWAYS_YES: "yes"
-  tags: ["skip_ansible_lint"]
 
 - name: "Ensuring nginx is installed"
   community.general.pkgng:

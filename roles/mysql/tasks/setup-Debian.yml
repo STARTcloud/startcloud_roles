@@ -4,11 +4,15 @@
     url: https://repo.mysql.com/mysql-apt-config_0.8.30-1_all.deb
     dest: /tmp/mysql-apt-config.deb
     timeout: 60
+    mode: "0644"
 
 - name: "Pre-configuring MySQL APT configuration options"
   ansible.builtin.shell: |
+    set -o pipefail
     echo "mysql-apt-config mysql-apt-config/select-server select mysql-8.0" | sudo debconf-set-selections
     echo "mysql-apt-config mysql-apt-config/select-product select Ok" | sudo debconf-set-selections
+  args:
+    executable: /bin/bash
   changed_when: false
 
 - name: "Installing MySQL APT configuration"
@@ -29,10 +33,12 @@
 
 - name: "Setting MySQL root password before installation"
   ansible.builtin.shell: |
+    set -o pipefail
     echo "mysql-server mysql-server/root_password password {{ mysql_root_password }}" | sudo debconf-set-selections
     echo "mysql-server mysql-server/root_password_again password {{ mysql_root_password }}" | sudo debconf-set-selections
   args:
     creates: "{{ mysql_config_file }}"
+    executable: /bin/bash
   when:
     - mysql_root_password is defined and mysql_root_password != ""
 

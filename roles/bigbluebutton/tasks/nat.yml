@@ -43,6 +43,7 @@
   ansible.builtin.template:
     src: templates/dmmy_nic.j2
     dest: /lib/systemd/system/dummy-nic.service
+    mode: "0644"
     backup: true
   tags:
     - bbb-create_dummy_nic

@@ -46,7 +46,8 @@
   when: mongodb_systemlog_destination == "file"
 
 - name: "Checking than logfile exists"
-  ansible.builtin.stat: path={{ mongodb_systemlog_path }}
+  ansible.builtin.stat:
+    path: "{{ mongodb_systemlog_path }}"
   register: logfile_stat
   when: mongodb_systemlog_destination == "file"
 
@@ -78,8 +79,8 @@
     group: root
     mode: "0644"
   notify:
-    - mongodb restart
-    - wait when mongodb is started
+    - Mongodb restart
+    - Wait when mongodb is started
 
 - name: "Flushing all handlers at this point"
   ansible.builtin.meta: flush_handlers

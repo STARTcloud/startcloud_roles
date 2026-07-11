@@ -50,9 +50,10 @@
               }
 
         - name: "Compiling program: {{ package_name }}"
-          ansible.builtin.shell: gcc -o {{ package_name }} main.c
+          ansible.builtin.command: gcc -o {{ package_name }} main.c
           args:
             chdir: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}"
+          changed_when: true
 
         - name: "Creating package directory"
           ansible.builtin.file:

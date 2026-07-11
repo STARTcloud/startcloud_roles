@@ -19,7 +19,7 @@ galaxy_info:
   galaxy_tags:
     - snmp
     - monitoring
-    - net-snmp
+    - netsnmp
     - librenms
 dependencies: []
 collections:

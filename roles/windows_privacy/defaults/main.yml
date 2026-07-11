@@ -36,7 +36,7 @@ disable_hibernation: true
 # Enhanced privacy features
 enhanced_privacy: true
 disable_homegroup: true
-disable_gameDVR: true
+disable_game_dvr: true
 
 # AppX packages to remove (safe list based on ChrisTitusTech)
 appx_packages_to_remove:

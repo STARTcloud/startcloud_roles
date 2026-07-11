@@ -2,7 +2,8 @@
 galaxy_info:
   role_name: choco_phpnuget
   author: Mark Gilbert
-  description: Provisions Debian-based thin-client desktops with Prominic provisioning scripts, VMware Horizon client shortcuts, CA certificates, VPN authentication, and Raspberry Pi boot configuration.
+  description: Provisions Debian-based thin-client desktops with Prominic provisioning scripts, VMware Horizon client
+    shortcuts, CA certificates, VPN authentication, and Raspberry Pi boot configuration.
   company: STARTcloud
   issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
   license: Apache-2.0

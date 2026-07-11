@@ -13,18 +13,22 @@
         verbosity: 2
 
     - name: "Installing latest Chocolatey"
-      ansible.builtin.raw: "$env:chocolateyUseWindowsCompression='{{ chocolatey_windows_compression }}'; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; iex ((New-Object
+      ansible.builtin.raw: "$env:chocolateyUseWindowsCompression='{{ chocolatey_windows_compression }}';
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; iex ((New-Object
         System.Net.WebClient).DownloadString('{{ chocolatey_installer }}'))"
       register: chocolatey_install_result
+      changed_when: true
       when:
         - chocolatey_exe.stat.exists is defined
         - not chocolatey_exe.stat.exists
         - chocolatey_version == "latest"
 
     - name: "Installing specific Chocolatey"
-      ansible.builtin.raw: "$env:chocolateyUseWindowsCompression='{{ chocolatey_windows_compression }}'; $env:chocolateyVersion = '{{ chocolatey_version }}'; iex ((New-Object System.Net.WebClient).DownloadString('{{
+      ansible.builtin.raw: "$env:chocolateyUseWindowsCompression='{{ chocolatey_windows_compression }}';
+        $env:chocolateyVersion = '{{ chocolatey_version }}'; iex ((New-Object System.Net.WebClient).DownloadString('{{
         chocolatey_installer }}'))"
       register: chocolatey_install_result
+      changed_when: true
       when:
         - chocolatey_exe.stat.exists is defined
         - not chocolatey_exe.stat.exists

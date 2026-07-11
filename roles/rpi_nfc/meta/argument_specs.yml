@@ -3,8 +3,8 @@ argument_specs:
   main:
     short_description: Install libnfc and the nfc-daemon service
     description:
-      - Installs the libnfc packages, renders the libnfc configuration, clones and builds the nfc-daemon source, installs it, and registers the nfc-daemon systemd service for NFC reader support on Raspberry
-        Pi.
+      - Installs the libnfc packages, renders the libnfc configuration, clones and builds the nfc-daemon source, installs
+        it, and registers the nfc-daemon systemd service for NFC reader support on Raspberry Pi.
     author: Mark Gilbert
     options:
       run_tasks:

@@ -2,7 +2,7 @@
 - name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    # This playbook prints a simple debug message of {{ hello_world }} from Hosts.yml
-    - name: "Printing a simple debug message of {{ hello_world }} from Hosts.yml"
+    # This playbook prints a simple debug message of the hello_world variable from Hosts.yml
+    - name: "Printing a simple debug message from Hosts.yml of {{ hello_world }}"
       ansible.builtin.debug:
         msg: "{{ hello_world }}"

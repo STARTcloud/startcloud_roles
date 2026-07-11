@@ -85,6 +85,7 @@
     - name: "Creating new greenlight secret"
       ansible.builtin.command: docker run --rm --entrypoint /bin/sh {{ bbb_greenlight_image }} -c "bundle exec rails secret"
       register: bbb_greenlight_rails_secret
+      changed_when: true
       tags:
         - greenlight-config
 

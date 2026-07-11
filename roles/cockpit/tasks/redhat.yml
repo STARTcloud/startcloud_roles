@@ -9,7 +9,7 @@
 - name: "Upgrading all yum packages"
   ansible.builtin.dnf:
     name: "*"
-    state: latest # noqa package-latest
+    state: latest
 
 - name: "Installing EPEL repo"
   ansible.builtin.dnf:

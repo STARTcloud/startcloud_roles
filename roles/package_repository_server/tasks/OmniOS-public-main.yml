@@ -120,7 +120,7 @@
     path: "/{{ storage_disk.path }}/src/completed"
     checksum_algorithm: sha256
 
-#-
+# -
 #  name: "Running Build Script"
 #  ansible.builtin.command: "./buildctl build all && touch /{{ storage_disk.path }}/src/completed"
 #  when: not repo_built.stat.exists

@@ -3,7 +3,8 @@ argument_specs:
   main:
     short_description: Apply STARTcloud system branding and theme
     description:
-      - Deploys STARTcloud branding assets - Plymouth boot splash, GRUB background and GDM login theme on Debian/Ubuntu, and desktop and lock-screen wallpaper plus taskbar/Start-menu tweaks on Windows.
+      - Deploys STARTcloud branding assets - Plymouth boot splash, GRUB background and GDM login theme on Debian/Ubuntu,
+        and desktop and lock-screen wallpaper plus taskbar/Start-menu tweaks on Windows.
     author: Mark Gilbert
     options:
       run_tasks:

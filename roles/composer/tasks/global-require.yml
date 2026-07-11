@@ -1,8 +1,8 @@
 ---
 - name: "Installing Configured Globally-Required Packages"
-  ansible.builtin.command: >
-    {{ composer_path }} global require {{ item.name }}:{{ item.release | default('@stable') }} --no-progress --no-interaction
-    creates={{ composer_home_path }}/vendor/{{ item.name }}
+  ansible.builtin.command:
+    cmd: "{{ composer_path }} global require {{ item.name }}:{{ item.release | default('@stable') }} --no-progress --no-interaction"
+    creates: "{{ composer_home_path }}/vendor/{{ item.name }}"
   environment:
     COMPOSER_HOME: "{{ composer_home_path }}"
   become: true

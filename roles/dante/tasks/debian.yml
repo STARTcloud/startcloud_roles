@@ -34,6 +34,7 @@
 - name: "Creating New Dante Configuration"
   ansible.builtin.copy:
     dest: /etc/danted.conf
+    mode: "0644"
     content: |
       logoutput: syslog
       user.privileged: root

@@ -51,9 +51,9 @@
 
     - name: "Building ruby"
       changed_when: false
-      ansible.builtin.command: >
-        {{ item }}
-        chdir={{ workspace }}/ruby-{{ ruby_version }}
+      ansible.builtin.command:
+        cmd: "{{ item }}"
+        chdir: "{{ workspace }}/ruby-{{ ruby_version }}"
       with_items:
         - "{{ ruby_source_configure_command }}"
         - make
@@ -66,7 +66,7 @@
         mode: "0644"
 
 - name: "Adding ruby symlinks"
-  ansible.builtin.file: # noqa 208
+  ansible.builtin.file:
     src: "/usr/local/bin/{{ item }}"
     dest: "/usr/bin/{{ item }}"
     state: link

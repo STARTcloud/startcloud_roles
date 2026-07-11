@@ -41,7 +41,6 @@
   when:
     - php_ondrej_debian_repo.changed
     - ansible_distribution == "Debian"
-  tags: ["skip_ansible_lint"]
 
 - name: "Purging PHP version packages (besides the currently chosen php_version)"
   ansible.builtin.apt:

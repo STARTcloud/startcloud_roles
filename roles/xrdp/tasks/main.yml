@@ -27,6 +27,7 @@
       ansible.builtin.get_url:
         dest: "/tmp/{{ cnergy_script }}"
         url: "{{ cnergy_download_url }}{{ cnergy_script }}.zip"
+        mode: "0644"
       delay: 5
       register: xrdp_scripts
       retries: 5
@@ -47,8 +48,10 @@
         group: "{{ service_group }}"
 
     - name: "Installing XRDP"
+      become: true
       become_user: "{{ service_user }}"
       ansible.builtin.shell: "/tmp/{{ cnergy_script }}.sh -s -l"
+      changed_when: true
       args:
         executable: /usr/bin/bash
       register: shell_output
@@ -145,6 +148,7 @@
 
     - name: "Setting Default to Graphical Target"
       ansible.builtin.command: "systemctl set-default graphical.target"
+      changed_when: true
       when: "'graphical' not in systemdefault.stdout"
 
     - name: "Restarting xRDP on Reboot"

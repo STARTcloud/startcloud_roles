@@ -3,8 +3,8 @@ argument_specs:
   main:
     short_description: Web-terminal console service
     description:
-      - Installs the STARTcloud web-terminal from the STARTcloud APT repository (default) or builds it from the GitHub source via git clone and npm, renders its config with TLS/auth settings, and starts
-        it under systemd or supervisord.
+      - Installs the STARTcloud web-terminal from the STARTcloud APT repository (default) or builds it from the GitHub
+        source via git clone and npm, renders its config with TLS/auth settings, and starts it under systemd or supervisord.
     author: Mark Gilbert
     options:
       run_tasks:

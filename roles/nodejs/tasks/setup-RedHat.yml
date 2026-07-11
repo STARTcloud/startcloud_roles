@@ -12,10 +12,9 @@
   register: node_repo
 
 - name: "Updating package cache if repository was added"
-  ansible.builtin.yum:
+  ansible.builtin.dnf:
     update_cache: true
   when: node_repo is changed
-  tags: ["skip_ansible_lint"]
 
 - name: "Ensuring Node.js and npm are installed"
   ansible.builtin.dnf:

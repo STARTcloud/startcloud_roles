@@ -3,7 +3,8 @@ argument_specs:
   main:
     short_description: Collect diagnostics into a support bundle zip
     description:
-      - Creates a support bundle directory, archives the Ansible playbook, records installer and completed-role manifests, includes Domino One Touch autoconfigure output, and zips it all into /vagrant/support-bundle.zip.
+      - Creates a support bundle directory, archives the Ansible playbook, records installer and completed-role manifests,
+        includes Domino One Touch autoconfigure output, and zips it all into /vagrant/support-bundle.zip.
     author: Mark Gilbert
     options:
       run_tasks:

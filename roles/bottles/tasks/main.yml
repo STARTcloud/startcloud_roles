@@ -4,3 +4,5 @@
   block:
     - name: "Adding Bottles from flatpak"
       ansible.builtin.command: "flatpak install --system flathub com.usebottles.bottles -y"
+      register: bottles_install
+      changed_when: "'app/com.usebottles.bottles' in bottles_install.stdout or 'Installing' in bottles_install.stdout"

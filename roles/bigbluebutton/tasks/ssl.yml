@@ -10,6 +10,7 @@
   ansible.builtin.template:
     src: templates/bbb-ssl.conf.j2
     dest: /etc/nginx/sites-available/bigbluebutton
+    mode: "0644"
     backup: true
   tags:
     - bbb_install_nginx_ssl_conf
@@ -99,6 +100,6 @@
     regexp: 'String BigBlueButtonURL = "http:'
     replace: 'String BigBlueButtonURL = "https:'
     backup: true
-  when: demo.stat.exists == True
+  when: demo.stat.exists
   tags:
     - bbb_enable_https

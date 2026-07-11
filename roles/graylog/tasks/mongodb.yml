@@ -7,7 +7,8 @@
 
 - name: "Adding MongoDB APT Repository"
   ansible.builtin.apt_repository:
-    repo: "deb [ signed-by=/usr/share/keyrings/mongodb-server-{{ graylog_mongodb_version }}.asc ] https://repo.mongodb.org/apt/{{ ansible_distribution | lower }} {{ ansible_distribution_release }}/mongodb-org/{{
+    repo: "deb [ signed-by=/usr/share/keyrings/mongodb-server-{{ graylog_mongodb_version }}.asc ] https://repo.mongodb.org/apt/{{
+      ansible_distribution | lower }} {{ ansible_distribution_release }}/mongodb-org/{{
       graylog_mongodb_version }} {{ 'main' if ansible_distribution == 'Debian' else 'multiverse' }}"
     filename: "mongodb-org-{{ graylog_mongodb_version }}"
     state: present

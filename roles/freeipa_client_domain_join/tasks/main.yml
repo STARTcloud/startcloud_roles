@@ -24,6 +24,7 @@
         remote_src: true
         src: /usr/lib/firefox/libnssckbi.so
         dest: /usr/lib/firefox/libnssckbi.so.bak
+        mode: "0644"
 
     - name: "Removing old for libnssckbi.so Firefox to Trust Prominic.Global"
       ansible.builtin.file:

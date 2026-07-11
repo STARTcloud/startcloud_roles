@@ -3,8 +3,8 @@ argument_specs:
   main:
     short_description: Install and configure a single-node Authelia server
     description:
-      - Downloads a pinned Authelia release binary, creates a dedicated system account and directories, renders the Authelia configuration and file-based users database, and installs a systemd service on
-        Debian and Ubuntu.
+      - Downloads a pinned Authelia release binary, creates a dedicated system account and directories, renders the Authelia
+        configuration and file-based users database, and installs a systemd service on Debian and Ubuntu.
     author: Mark Gilbert
     options:
       run_tasks:

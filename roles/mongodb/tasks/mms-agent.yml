@@ -25,7 +25,7 @@
     owner: "{{ mongodb_user }}"
     group: "{{ mongodb_user }}"
     mode: "0644"
-  notify: mongodb-mms-monitoring-agent restart
+  notify: Mongodb-mms-monitoring-agent restart
 
 - name: "Ensuring that the MMS agent is started"
   ansible.builtin.service:

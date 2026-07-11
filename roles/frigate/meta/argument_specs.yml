@@ -3,8 +3,8 @@ argument_specs:
   main:
     short_description: Frigate NVR container deployment
     description:
-      - Deploys Frigate, a Docker-based NVR with real-time object detection, rendering a config file and running the official container with configurable ports, media/config volumes, and optional hardware-acceleration
-        devices.
+      - Deploys Frigate, a Docker-based NVR with real-time object detection, rendering a config file and running the
+        official container with configurable ports, media/config volumes, and optional hardware-acceleration devices.
     author: Mark Gilbert
     options:
       run_tasks:

@@ -25,11 +25,11 @@ winlogbeat_log_level: warning
 winlogbeat_log_dir: "{{ winlogbeat_install_location }}/{{ winlogbeat_download_file }}/logs"
 winlogbeat_log_filename: mybeat.log
 
-winlogbeat_ssl_certificate_authorities: #Collection
+winlogbeat_ssl_certificate_authorities: # Collection
 #  - "C:\trust_store\ca.pem"
 winlogbeat_ssl_verification_mode: # none, full
-winlogbeat_ssl_renegotiation: #never, once, freely
-winlogbeat_ssl_supported_protocols: #Collection: [SSLv3, TLSv1, TLSv1.0, TLSv1.1, TLSv1.2]
-winlogbeat_ssl_cipher_suites: #Collection - See docs for available types
-winlogbeat_ssl_curve_types: #Collection - [P-256, P-384, P521]
+winlogbeat_ssl_renegotiation: # never, once, freely
+winlogbeat_ssl_supported_protocols: # Collection: [SSLv3, TLSv1, TLSv1.0, TLSv1.1, TLSv1.2]
+winlogbeat_ssl_cipher_suites: # Collection - See docs for available types
+winlogbeat_ssl_curve_types: # Collection - [P-256, P-384, P521]
 winlogbeat_ssl_enabled: # true, false

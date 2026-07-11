@@ -3,7 +3,8 @@ argument_specs:
   main:
     short_description: Deploy a single-node Vaultwarden container
     description:
-      - Creates a data directory and runs the Vaultwarden (Bitwarden-compatible password manager) container via Docker, with a configurable published port, public domain, admin token, and signup policy.
+      - Creates a data directory and runs the Vaultwarden (Bitwarden-compatible password manager) container via Docker,
+        with a configurable published port, public domain, admin token, and signup policy.
     author: Mark Gilbert
     options:
       run_tasks:

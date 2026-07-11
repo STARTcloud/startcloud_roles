@@ -68,11 +68,13 @@
       ansible.builtin.file:
         path: /var/kayak/kayak/xml
         state: directory
+        mode: "0755"
 
     - name: "Creating the Promimic Script Directories"
       ansible.builtin.file:
         path: "{{ item }}"
         state: directory
+        mode: "0755"
       loop:
         - /opt/promimic
         - /opt/promimic/scripts
@@ -87,7 +89,7 @@
         - dest: /opt/promimic/scripts/xml2ai
           src: xml2ai
 
-    - name: "Generating the XML from {{ pxe_profile }}hosttemplate.xml"
+    - name: "Generating the XML from hosttemplate for {{ pxe_profile }}"
       become: true
       ansible.builtin.template:
         dest: "{{ item.dest }}"
@@ -117,7 +119,8 @@
         - "PATH=$PATH:{{ profile_path }}"
         - "export PATH"
 
-    - name: "Generating Kayak Configurations with XML2AI with {{ pxe_client_hostname }}.xml"
+    - name: "Generating Kayak Configurations with XML2AI for {{ pxe_client_hostname }}"
       become: true
+      changed_when: true
       ansible.builtin.shell:
         cmd: "pfexec python3 {{ pxe_script_generator }} < /var/kayak/kayak/xml/{{ pxe_client_hostname }}.xml"

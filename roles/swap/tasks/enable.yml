@@ -1,8 +1,8 @@
 ---
 - name: "Ensuring swap file exists"
-  ansible.builtin.command: >
-    {{ swap_file_create_command }}
-    creates='{{ swap_file_path }}'
+  ansible.builtin.command:
+    cmd: "{{ swap_file_create_command }}"
+    creates: "{{ swap_file_path }}"
   register: swap_file_create
   notify:
     - Making swap file if necessary

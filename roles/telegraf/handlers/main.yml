@@ -20,4 +20,5 @@
     state: restarted
 
 - name: "Restarting MacOS Telegraf"
-  ansible.builtin.shell: brew services restart telegraf
+  ansible.builtin.command: brew services restart telegraf
+  changed_when: true

@@ -11,7 +11,7 @@
   become: true
   ansible.builtin.dnf:
     name: "*"
-    state: latest # noqa package-latest
+    state: latest
 
 - name: "Installing EPEL repo"
   become: true

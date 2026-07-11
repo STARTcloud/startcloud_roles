@@ -2,7 +2,7 @@
 - name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    #-
+    # -
     #  name: Load OS-specific vars.
     #  ansible.builtin.include_vars: "{{ lookup('first_found', params) }}"
     #  vars:
@@ -96,7 +96,7 @@
       ansible.builtin.include_tasks: docker-users.yml
       when: at_least_one_user_to_modify is defined
 
-    #-
+    # -
     #  name: "Setting Docker Daemon"
     #  ansible.builtin.template:
     #    src: "docker-daemon.json.j2"
@@ -105,7 +105,7 @@
     #    group: "root"
     #    mode: "0644"
 
-    #-
+    # -
     #  name: "Setting Docker SSL/TLS Service Options"
     #  ansible.builtin.template:
     #    src: "startup_options.conf.j2"

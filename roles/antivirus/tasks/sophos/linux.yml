@@ -21,13 +21,14 @@
         cmd: /tmp/SophosSetup.sh
         chdir: /tmp
       register: sophos_install_result
+      changed_when: true
       become: true
 
     - name: "Cleaning up Sophos installer"
       ansible.builtin.file:
         path: /tmp/SophosSetup.sh
         state: absent
-      ignore_errors: true
+      failed_when: false
 
     - name: "Displaying Sophos installation result"
       ansible.builtin.debug:

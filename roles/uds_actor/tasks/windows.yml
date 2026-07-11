@@ -23,7 +23,7 @@
     url_password: "{{ installer_url_pass }}"
   when: not uds_actor_installer_check.stat.exists and not uds_actor_installed.stat.exists
 
-#-
+# -
 #  name: "Installing UDS Actor"
 #  ansible.windows.win_powershell:
 #    script: iex "C:\\temp\\{{ uds_actor_installer }}"

@@ -43,7 +43,7 @@
       ansible.windows.win_file:
         path: "{{ ansible_env.TEMP }}\\SophosSetup.exe"
         state: absent
-      ignore_errors: true
+      failed_when: false
 
     - name: "Displaying Sophos installation result"
       ansible.builtin.debug:

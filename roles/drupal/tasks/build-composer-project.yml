@@ -26,9 +26,9 @@
   failed_when: false
 
 - name: "Moving Drupal Project Files To Install Directory"
-  ansible.builtin.command: >
-    cp -r /tmp/composer-project/. {{ drupal_composer_install_dir }}/
-    creates={{ drupal_core_path }}/index.php
+  ansible.builtin.command:
+    cmd: "cp -r /tmp/composer-project/. {{ drupal_composer_install_dir }}/"
+    creates: "{{ drupal_core_path }}/index.php"
   become: false
   when: not drupal_site_exists
 

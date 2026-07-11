@@ -9,7 +9,7 @@
     - "/etc/tomcat{{ tomcat_version }}/webapps/manager/META-INF"
 
 # These have been moved to the startcloud_ssl role, so that users can import their own keys
-#- 
+# -
 #  name: "Creating a keystore for the self-signed certificate/private key pair"
 #  when: selfsigned_enabled
 #  become_user: "{{ service_user }}"
@@ -24,7 +24,7 @@
 #  environment:
 #    PATH: "{{ ansible_env.PATH }}:{{ service_home_dir }}/.sdkman/candidates/java/current/bin"
 
-#-
+# -
 #  name: "Creating a keystore for the given certificate/private key pair"
 #  when: not selfsigned_enabled
 #  become: true

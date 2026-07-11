@@ -30,7 +30,9 @@
   when: ansible_os_family == 'RedHat'
 
 - name: "Updating apt cache (Debian)."
-  ansible.builtin.apt: update_cache=true cache_valid_time=86400
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 86400
   when: ansible_os_family == 'Debian'
 
 - name: "Ensuring dependencies for building from source are installed (Debian)."
@@ -67,11 +69,12 @@
   when: php_fpm_daemon is not defined
 
 - name: "Checking if gmp.h is already in a location accessible to gcc."
-  ansible.builtin.stat: path=/usr/include/gmp.h
+  ansible.builtin.stat:
+    path: /usr/include/gmp.h
   register: gmp_file
 
 - name: "Ensuring gmp.h is symlinked into a location accessible to gcc."
-  ansible.builtin.file: # noqa 208
+  ansible.builtin.file:
     src: "{{ php_source_install_gmp_path }}"
     dest: /usr/include/gmp.h
     state: link
@@ -100,35 +103,38 @@
   when: php_installed.rc != 0
 
 - name: "Building configure script."
-  ansible.builtin.command: >
-    ./buildconf --force
-    chdir={{ php_source_clone_dir }}
+  ansible.builtin.command:
+    cmd: ./buildconf --force
+    chdir: "{{ php_source_clone_dir }}"
+  changed_when: true
   when: php_installed.rc != 0
 
 - name: "Running configure script."
-  ansible.builtin.command: >
-    {{ php_source_configure_command }}
-    chdir={{ php_source_clone_dir }}
+  ansible.builtin.command:
+    cmd: "{{ php_source_configure_command }}"
+    chdir: "{{ php_source_clone_dir }}"
+  changed_when: true
   when: php_installed.rc != 0
 
 - name: "Making and installing PHP."
-  ansible.builtin.command: >
-    {{ item }}
-    chdir={{ php_source_clone_dir }}
+  ansible.builtin.command:
+    cmd: "{{ item }}"
+    chdir: "{{ php_source_clone_dir }}"
+  changed_when: true
   with_items:
     - "{{ php_source_make_command }}"
     - make install
   when: php_installed.rc != 0
 
 - name: "Ensuring php executable is symlinked into a standard path."
-  ansible.builtin.file: # noqa 208
+  ansible.builtin.file:
     src: "{{ php_source_install_path }}/bin/php"
     dest: /usr/bin/php
     state: link
 
 # PHP FPM configuration.
 - name: "Ensuring php-fpm executable is symlinked into a standard path."
-  ansible.builtin.file: # noqa 208
+  ansible.builtin.file:
     src: "{{ php_source_install_path }}/sbin/php-fpm"
     dest: "/usr/sbin/{{ php_fpm_daemon }}"
     state: link
@@ -140,7 +146,7 @@
     dest: "/etc/init.d/{{ php_fpm_daemon }}"
     mode: "0755"
   when: "'--enable-fpm' in php_source_configure_command"
-  notify: restart php-fpm
+  notify: Restart php-fpm
 
 - name: "Ensuring php-fpm config directory exists."
   ansible.builtin.file:
@@ -155,4 +161,4 @@
     dest: "{{ php_fpm_conf_path }}/php-fpm.conf"
     mode: "0644"
   when: "'--enable-fpm' in php_source_configure_command"
-  notify: restart php-fpm
+  notify: Restart php-fpm

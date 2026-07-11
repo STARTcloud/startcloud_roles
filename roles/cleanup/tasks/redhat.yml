@@ -5,7 +5,7 @@
 - name: "Updating all packages"
   ansible.builtin.dnf:
     name: "*"
-    state: latest # noqa package-latest
+    state: latest
 
 - name: "Removing unnecessary development packages and documentation"
   ansible.builtin.dnf:

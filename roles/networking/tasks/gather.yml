@@ -19,7 +19,8 @@
 
 - name: "Creating sorted interface list"
   ansible.builtin.set_fact:
-    sorted_interfaces: "{{ interfaces | zip(interface_indices.results | map(attribute='content') | map('b64decode') | map('trim') | map('int') | list) | sort(attribute='1') | map(attribute='0') | list }}"
+    sorted_interfaces: "{{ interfaces | zip(interface_indices.results | map(attribute='content') | map('b64decode') | map('trim')
+      | map('int') | list) | sort(attribute='1') | map(attribute='0') | list }}"
 
 - name: "Setting first and second adapters"
   ansible.builtin.set_fact:

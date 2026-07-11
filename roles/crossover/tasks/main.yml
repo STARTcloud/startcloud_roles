@@ -5,6 +5,7 @@
     - name: "Enabling i386 Repo for Crossover and Updating Sources"
       become: true
       ansible.builtin.shell: "dpkg --add-architecture i386 && apt-get update -y"
+      changed_when: true
     - name: "Installing Required Dependencies for Crossover -- Takes about 3 Mins"
       ansible.builtin.apt:
         name: "{{ packages }}"
@@ -36,9 +37,10 @@
       ansible.builtin.get_url:
         dest: "/tmp/crossover.deb"
         url: "http://crossover.codeweavers.com/redirect/crossover.deb"
-      register: Crossover_source
+        mode: "0644"
+      register: crossover_source
       retries: 5
-      until: "Crossover_source is success"
+      until: "crossover_source is success"
     - name: "Downloading and Installing Crossover -- Takes about 5 Mins"
       ansible.builtin.apt:
         deb: "/tmp/crossover.deb"
@@ -62,7 +64,8 @@
         name: psutil
     - name: "Installing extra Libraries and Drivers"
       register: cxfixresults
-      ansible.builtin.shell: "/opt/cxoffice/bin/cxfix --auto --dry-run"
+      ansible.builtin.command: "/opt/cxoffice/bin/cxfix --auto --dry-run"
+      changed_when: false
     - name: "Checking for Additional Libraries and Software:"
       ansible.builtin.set_fact:
         results: "{{ cxfixresults.stdout | regex_search(regexp, '\\1') }}"

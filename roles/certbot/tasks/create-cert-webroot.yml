@@ -8,7 +8,9 @@
   ansible.builtin.file:
     path: "{{ cert_item.webroot | default(certbot_webroot) }}"
     state: directory
+    mode: "0755"
 
 - name: "Generating new certificate if one doesn't exist"
   ansible.builtin.command: "{{ certbot_create_command }}"
+  changed_when: true
   when: not letsencrypt_cert.stat.exists

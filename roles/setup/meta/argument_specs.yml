@@ -3,8 +3,9 @@ argument_specs:
   main:
     short_description: Initial per-host system setup
     description:
-      - Performs baseline setup before other roles run — sets the timezone, creates support-bundle directories, writes the resolved Ansible variables to the support bundle, reports provisioner versions,
-        and installs the root SSH key on platforms without a preseed/kickstart.
+      - Performs baseline setup before other roles run — sets the timezone, creates support-bundle directories, writes the
+        resolved Ansible variables to the support bundle, reports provisioner versions, and installs the root SSH key on
+        platforms without a preseed/kickstart.
     author: Mark Gilbert
     options:
       run_tasks:

@@ -89,6 +89,7 @@
           ansible.builtin.file:
             path: "{{ item }}"
             state: directory
+            mode: "0755"
           with_items:
             - "/etc/dconf/db/gdm.d/"
             - "/etc/dconf/db/local.d/"
@@ -116,6 +117,7 @@
 
         - name: "Updating dconf Configuration for all users"
           ansible.builtin.command: dconf update
+          changed_when: true
 
     - name: "Installing Gnome for Ubuntu"
       when: "ansible_os_family == 'Ubuntu'"

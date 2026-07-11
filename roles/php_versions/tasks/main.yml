@@ -16,7 +16,8 @@
         - php_version is version('8.0', '>=')
 
     - name: "Defining PHP Variables"
-      ansible.builtin.set_fact: "{{ item.key }}={{ lookup('vars', item.value) }}"
+      ansible.builtin.set_fact:
+        "{{ item.key }}": "{{ lookup('vars', item.value) }}"
       when:
         - vars[item.key] is undefined
         - vars[item.value] is defined

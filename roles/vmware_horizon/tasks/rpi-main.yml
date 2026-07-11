@@ -35,7 +35,8 @@
       register: package_archive_dir
 
     - name: "Setting Extracted VMWare Horizon Directory Variable"
-      ansible.builtin.set_fact: package_extracted_dir="{{ package_archive_dir.files | map(attribute='path') | join('') }}"
+      ansible.builtin.set_fact:
+        package_extracted_dir: "{{ package_archive_dir.files | map(attribute='path') | join('') }}"
 
     - name: "Showing Extracted VMWare Horizon Directory"
       ansible.builtin.debug:
@@ -62,7 +63,8 @@
       register: extracted_package_archives
 
     - name: "Setting Variable for the Package Dir for VMWare Horizon package files"
-      ansible.builtin.set_fact: packages_extracted_dirs="{{ extracted_package_archives.files | map(attribute='path') | list  }}"
+      ansible.builtin.set_fact:
+        packages_extracted_dirs: "{{ extracted_package_archives.files | map(attribute='path') | list }}"
 
     - name: "Displaying Extracted VMWare Horizon binary directories"
       ansible.builtin.debug:
@@ -200,6 +202,7 @@
 
     - name: "Adding ARMHF as VMWare Horizon Only runs on ARMHF, i386 or x64"
       ansible.builtin.command: dpkg --add-architecture armhf
+      changed_when: true
 
     - name: "Ensuring apt cache is updated"
       ansible.builtin.apt:

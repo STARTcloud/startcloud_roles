@@ -231,14 +231,17 @@
     - name: "Creating CSR for server certificate with OpenSSL"
       when: openssl_available
       ansible.windows.win_command:
-        cmd: '"{{ openssl_bin }}" req -new -key "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key" -out "{{ win_cert_dir }}\\csr\\{{ settings.hostname }}.{{ settings.domain
+        cmd: '"{{ openssl_bin }}" req -new -key "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain
+          }}-self-signed.key" -out "{{ win_cert_dir }}\\csr\\{{ settings.hostname }}.{{ settings.domain
           }}-self-signed.csr" -config "{{ win_cert_dir }}\\csr\\openssl.conf"'
 
     - name: "Generating CA-signed certificate with OpenSSL"
       when: openssl_available
       ansible.windows.win_command:
-        cmd: '"{{ openssl_bin }}" x509 -req -in "{{ win_cert_dir }}\\csr\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.csr" -CA "{{ win_cert_dir }}\\ca\\ca-certificate.crt" -CAkey "{{ win_cert_dir
-          }}\\ca\\ca-certificate.key" -CAcreateserial -out "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt" -days 3650 -extensions v3_req -extfile "{{ win_cert_dir
+        cmd: '"{{ openssl_bin }}" x509 -req -in "{{ win_cert_dir }}\\csr\\{{ settings.hostname }}.{{ settings.domain
+          }}-self-signed.csr" -CA "{{ win_cert_dir }}\\ca\\ca-certificate.crt" -CAkey "{{ win_cert_dir
+          }}\\ca\\ca-certificate.key" -CAcreateserial -out "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain
+          }}-self-signed.crt" -days 3650 -extensions v3_req -extfile "{{ win_cert_dir
           }}\\csr\\openssl.conf" -passin "pass:{{ ca_cert_pass }}"'
 
     - name: "Generating self-signed server certificate with native PowerShell (OpenSSL fallback)"
@@ -315,7 +318,8 @@
     - name: "Generating self signed PKCS12 file with OpenSSL"
       when: openssl_available
       ansible.windows.win_command:
-        cmd: '"{{ openssl_bin }}" pkcs12 -export -out "{{ win_cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.pfx" -inkey "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{
+        cmd: '"{{ openssl_bin }}" pkcs12 -export -out "{{ win_cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.pfx"
+          -inkey "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{
           settings.domain }}-self-signed.key" -in "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt" -passout "pass:{{ cert_pass }}"'
 
     - name: "Copying PKCS12 file"
@@ -326,8 +330,10 @@
 
     - name: "Creating keystore for self-signed certificate with keytool"
       ansible.windows.win_command:
-        cmd: '"{{ detected_java_path.output[0] }}\\bin\\keytool.exe" -importkeystore -srckeystore "{{ win_cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.pfx" -srcstoretype PKCS12
-          -srcstorepass "{{ cert_pass }}" -destkeystore "{{ win_cert_dir }}\\jks\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.jks" -deststoretype JKS -deststorepass "{{ cert_pass }}" -noprompt'
+        cmd: '"{{ detected_java_path.output[0] }}\\bin\\keytool.exe" -importkeystore
+          -srckeystore "{{ win_cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.pfx" -srcstoretype PKCS12
+          -srcstorepass "{{ cert_pass }}" -destkeystore "{{ win_cert_dir }}\\jks\\{{ settings.hostname }}.{{ settings.domain
+          }}-self-signed.jks" -deststoretype JKS -deststorepass "{{ cert_pass }}" -noprompt'
 
     - name: "Copying JKS keystore"
       ansible.windows.win_copy:
@@ -359,8 +365,8 @@
 
     - name: "Creating clean DNS names list for PowerShell certificate generation"
       ansible.builtin.set_fact:
-        powershell_dns_names: "{{ ([settings.hostname + '.' + settings.domain] + (dns_entries_list | map('regex_replace', '^(.*)$', '\\1.' + settings.hostname + '.' + settings.domain) | list)) | to_json
-          }}"
+        powershell_dns_names: "{{ ([settings.hostname + '.' + settings.domain] +
+          (dns_entries_list | map('regex_replace', '^(.*)$', '\\1.' + settings.hostname + '.' + settings.domain) | list)) | to_json }}"
 
     - name: "Checking if certificate exists"
       ansible.windows.win_stat:

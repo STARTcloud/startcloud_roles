@@ -13,10 +13,12 @@
     upgrade: dist
 
 - name: "Removing Unneeded Dev Packages, Docs and Man Pages"
-  ansible.builtin.shell: "{{ item }}" # noqa: command-instead-of-shell
-  loop:
-    - "dpkg --list | awk '{ print $2 }' | grep linux-source | xargs apt-get -y purge"
-    - "dpkg --list | awk '{ print $2 }' | grep -- '-doc$' | xargs apt-get -y purge"
+  ansible.builtin.shell: |
+    set -o pipefail
+    dpkg --list | awk '{ print $2 }' | grep linux-source | xargs apt-get -y purge
+    dpkg --list | awk '{ print $2 }' | grep -- '-doc$' | xargs apt-get -y purge
+  args:
+    executable: /bin/bash
   changed_when: true
   failed_when: false
 
@@ -59,10 +61,12 @@
     state: absent
 
 - name: "Using Deborphan to clean up packages"
-  ansible.builtin.shell: "{{ item }}" # noqa: command-instead-of-shell
-  loop:
-    - "deborphan --find-config | xargs apt-get -y purge"
-    - "deborphan | xargs apt-get -y purge"
+  ansible.builtin.shell: |
+    set -o pipefail
+    deborphan --find-config | xargs apt-get -y purge
+    deborphan | xargs apt-get -y purge
+  args:
+    executable: /bin/bash
   changed_when: true
   failed_when: false
 
@@ -244,7 +248,7 @@
     purge: true
 
 - name: "Running Final Cleanup Commands"
-  ansible.builtin.shell: "{{ item }}" # noqa: command-instead-of-shell
+  ansible.builtin.command: "{{ item }}"
   loop:
     - "sudo apt-get --purge autoremove"
     - "rm /var/lib/dbus/machine-id"

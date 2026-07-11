@@ -73,7 +73,7 @@
         dest: "/tmp/mysql-connector-j-{{ mysql_java_connector_jar }}"
         url: "{{ mysql_java_connector_jar_url }}"
 
-        #-
+        # -
         #  name: "Unpacking MySQL Connector {{ mysql_java_connector_jar }}"
         #  when: not guacamole_installed_check.stat.exists
         #  register: asterisk_archive_contents
@@ -113,7 +113,7 @@
       become: true
       become_user: "{{ service_user }}"
       changed_when: false
-      ansible.builtin.shell: "{{ item }}"
+      ansible.builtin.command: "{{ item }}"
       with_items:
         - "git config --global --add safe.directory /usr/local/src/guacamole/{{ guacamole_version }}/guacamole-client"
         - "git config --global --add safe.directory /usr/local/src/guacamole/{{ guacamole_version }}/guacamole-server"
@@ -192,7 +192,7 @@
       args:
         chdir: "/usr/local/src/guacamole/{{ guacamole_version }}/guacamole-client"
         executable: "/bin/bash"
-      #environment:
+      # environment:
       #  JAVA_HOME: "/usr/lib/jvm/java-11-openjdk-amd64"
       with_items:
         - { shell: "mvn clean package -U" }
@@ -311,7 +311,11 @@
     - name: "Fixing bug with JDBC Driver over Version 8"
       when: not guacamole_installed_check.stat.exists
       changed_when: false
-      ansible.builtin.shell: "mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql -u{{ mysql_root_user }} mysql -p{{ mysql_root_password }}"
+      ansible.builtin.shell: |
+        set -o pipefail
+        mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql -u{{ mysql_root_user }} mysql -p{{ mysql_root_password }}
+      args:
+        executable: /bin/bash
 
     - name: "Importing Schema into database {{ mysql_db_name }}"
       when: not guacamole_installed_check.stat.exists

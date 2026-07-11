@@ -38,10 +38,12 @@
       ansible.builtin.template:
         dest: /etc/squid/squid.conf
         src: squid.conf.j2
+        mode: "0644"
 
     - name: "Running Squid Configuration Parse Check"
       ansible.builtin.command: squid -k parse
       register: squid_parse_result
+      changed_when: false
       ignore_errors: true
 
     - name: "Failing if Squid Configuration is Invalid"

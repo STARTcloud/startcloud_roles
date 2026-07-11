@@ -209,7 +209,7 @@
             - AllowAutoConnectToWiFiSenseHotspots
 
         - name: "Disabling GameDVR"
-          when: disable_gameDVR
+          when: disable_game_dvr
           block:
             - name: "Disabling GameDVR registry settings"
               ansible.windows.win_regedit:

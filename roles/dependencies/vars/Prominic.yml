@@ -59,7 +59,7 @@ chocolatey_packages:
   - softperfect-ramdisk
 #  - nmap
 #  - kyrtest -- Installs Notes11
-#  - prominicnative -- tries to install vmrc 
+#  - prominicnative -- tries to install vmrc
 #  - vmrc -- Fails due to VMWare/Broadcom monopoly
 #  - sysinternals -- Failes due to invalid hashes
 #  - vmware-tools -- Fails due to VMWare/Broadcom monopoly

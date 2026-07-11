@@ -3,8 +3,8 @@ argument_specs:
   main:
     short_description: Install and configure a single-node Nextcloud server.
     description:
-      - Downloads a Nextcloud server release, extracts it to the webroot, installs nginx, PHP-FPM, and the required PHP extensions, provisions a MariaDB database, and runs the occ installer to bootstrap
-        the instance.
+      - Downloads a Nextcloud server release, extracts it to the webroot, installs nginx, PHP-FPM, and the required PHP
+        extensions, provisions a MariaDB database, and runs the occ installer to bootstrap the instance.
     author: Mark Gilbert
     options:
       run_tasks:

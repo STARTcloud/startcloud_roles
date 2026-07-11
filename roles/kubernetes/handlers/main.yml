@@ -3,3 +3,9 @@
   ansible.builtin.service:
     name: kubelet
     state: restarted
+
+- name: "Making Kubernetes yum cache"
+  ansible.builtin.dnf:
+    update_cache: true
+    disablerepo: "*"
+    enablerepo: kubernetes

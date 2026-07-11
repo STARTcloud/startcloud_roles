@@ -15,7 +15,7 @@
       ansible.builtin.include_tasks: "{{ ansible_os_family | lower }}.yml"
 
     - name: "Ensuring directories to export exist"
-      ansible.builtin.file: # noqa 208
+      ansible.builtin.file:
         path: "{{ item.strip().split()[0] }}"
         state: directory
       with_items: "{{ nfs_exports }}"

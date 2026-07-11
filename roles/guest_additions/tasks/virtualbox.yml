@@ -15,9 +15,7 @@
 - name: "Running VirtualBox guest additions installation."
   changed_when: true
   failed_when: false
-  ansible.builtin.shell: "sh /tmp/vbox/VBoxLinuxAdditions.run"
-  tags:
-    - skip_ansible_lint
+  ansible.builtin.command: "sh /tmp/vbox/VBoxLinuxAdditions.run"
 
 - name: "Unmounting VirtualBox guest additions ISO."
   ansible.posix.mount:
