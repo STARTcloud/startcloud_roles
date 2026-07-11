@@ -10,7 +10,7 @@ argument_specs:
         type: bool
         default: true
         description: Master gate — when false the role loads its vars but runs no tasks.
-      packages:
+      raritan_mpc_packages:
         type: list
         elements: str
         description: SNMP tooling packages installed for managing Raritan PDUs.

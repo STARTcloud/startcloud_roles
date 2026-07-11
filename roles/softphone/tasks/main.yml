@@ -24,9 +24,9 @@
             upgrade: dist
             update_cache: true
 
-        - name: "Adding Additional Dependencies {{ packages }}"
+        - name: "Adding Additional Dependencies {{ softphone_packages }}"
           ansible.builtin.apt:
-            name: "{{ packages }}"
+            name: "{{ softphone_packages }}"
             state: present
 
         - name: "Pinning linphone"

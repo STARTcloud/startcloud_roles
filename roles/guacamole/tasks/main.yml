@@ -319,7 +319,7 @@
 
     - name: "Importing Schema into database {{ mysql_db_name }}"
       when: not guacamole_installed_check.stat.exists
-      ansible.mysql.mysql_db:
+      community.mysql.mysql_db:
         login_password: "{{ mysql_root_password }}"
         login_user: "{{ mysql_root_user }}"
         name: "{{ mysql_db_name }}"

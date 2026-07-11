@@ -12,5 +12,5 @@
 
         - name: "Installing Raritan PDU SNMP management packages"
           ansible.builtin.apt:
-            name: "{{ packages }}"
+            name: "{{ raritan_mpc_packages }}"
             state: present

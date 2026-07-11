@@ -198,7 +198,7 @@
     state: absent
   loop:
     - /root/.bash_history
-    - "/home/{{ user }}/.bash_history"
+    - "/home/{{ vagrant_user }}/.bash_history"
     - /usr/share/doc/*
     - /usr/share/man/*
     - /tmp/*

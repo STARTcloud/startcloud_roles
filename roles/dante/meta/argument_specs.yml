@@ -18,7 +18,7 @@ argument_specs:
         type: str
         default: dante24@!
         description: Password associated with the dedicated SOCKS user.
-      packages:
+      dante_packages:
         type: list
         elements: str
         default: ["dante-server"]

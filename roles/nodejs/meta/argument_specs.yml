@@ -35,6 +35,6 @@ argument_specs:
         default: ""
         description: Path to a package.json whose dependencies are installed globally; empty to skip.
       nodejs_generate_etc_profile:
-        type: str
-        default: "true"
+        type: bool
+        default: true
         description: Whether to generate /etc/profile.d/npm.sh exporting the npm prefix onto the global PATH.

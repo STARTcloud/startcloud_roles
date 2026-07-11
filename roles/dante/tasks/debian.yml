@@ -21,9 +21,9 @@
         upgrade: dist
         update_cache: true
 
-    - name: "Adding Additional Dependencies {{ packages }}"
+    - name: "Adding Additional Dependencies {{ dante_packages }}"
       ansible.builtin.apt:
-        name: "{{ packages }}"
+        name: "{{ dante_packages }}"
         state: present
 
 - name: "Removing Default Dante Configuration"
@@ -59,7 +59,7 @@
     name: "{{ dante_user }}"
     shell: /bin/false
     system: true
-    password: "{{ 'dante_pass' | password_hash('sha512') }}"
+    password: "{{ dante_pass | password_hash('sha512') }}"
 
 - name: "Restarting Dante Service"
   ansible.builtin.systemd:

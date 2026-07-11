@@ -1,7 +1,7 @@
 ---
 - name: "Downloading MySQL APT configuration package"
   ansible.builtin.get_url:
-    url: https://repo.mysql.com/mysql-apt-config_0.8.30-1_all.deb
+    url: "https://repo.mysql.com/mysql-apt-config_{{ mysql_apt_config_version }}_all.deb"
     dest: /tmp/mysql-apt-config.deb
     timeout: 60
     mode: "0644"
@@ -9,18 +9,39 @@
 - name: "Pre-configuring MySQL APT configuration options"
   ansible.builtin.shell: |
     set -o pipefail
-    echo "mysql-apt-config mysql-apt-config/select-server select mysql-8.0" | sudo debconf-set-selections
+    echo "mysql-apt-config mysql-apt-config/select-server select {{ mysql_apt_series }}" | sudo debconf-set-selections
     echo "mysql-apt-config mysql-apt-config/select-product select Ok" | sudo debconf-set-selections
   args:
     executable: /bin/bash
   changed_when: false
 
+- name: "Checking installed mysql-apt-config version"
+  ansible.builtin.shell: "dpkg-query -W -f '${Version}' mysql-apt-config 2>/dev/null || true"
+  register: mysql_apt_config_installed
+  changed_when: false
+
+# Version-gated instead of "creates: mysql.list" so signing-key refreshes shipped
+# in newer mysql-apt-config releases actually get installed on existing machines.
 - name: "Installing MySQL APT configuration"
   ansible.builtin.command: dpkg -i /tmp/mysql-apt-config.deb
-  args:
-    creates: /etc/apt/sources.list.d/mysql.list
+  changed_when: true
+  when: mysql_apt_config_installed.stdout != mysql_apt_config_version
   environment:
     DEBIAN_FRONTEND: noninteractive
+
+# mysql-apt-config bundles a copy of Oracle's signing key that has gone stale
+# before (expired 2025-10-22 while still shipping in the latest .deb). Always
+# install the live key Oracle publishes instead of trusting the bundled copy.
+- name: "Downloading the current MySQL repository signing key"
+  ansible.builtin.get_url:
+    url: https://repo.mysql.com/RPM-GPG-KEY-mysql-2025
+    dest: /tmp/mysql-signing-key.asc
+    timeout: 60
+    mode: "0644"
+
+- name: "Installing the MySQL repository signing key"
+  ansible.builtin.command: gpg --batch --yes --dearmor -o /usr/share/keyrings/mysql-apt-config.gpg /tmp/mysql-signing-key.asc
+  changed_when: true
 
 - name: "Updating apt cache"
   ansible.builtin.apt:
@@ -31,16 +52,12 @@
     name: "{{ mysql_python_package_debian }}"
     state: present
 
-- name: "Setting MySQL root password before installation"
-  ansible.builtin.shell: |
-    set -o pipefail
-    echo "mysql-server mysql-server/root_password password {{ mysql_root_password }}" | sudo debconf-set-selections
-    echo "mysql-server mysql-server/root_password_again password {{ mysql_root_password }}" | sudo debconf-set-selections
-  args:
-    creates: "{{ mysql_config_file }}"
-    executable: /bin/bash
-  when:
-    - mysql_root_password is defined and mysql_root_password != ""
+# No debconf root-password preseed here, deliberately: installing the server
+# without a password leaves root on auth_socket, which is what lets the
+# secure-installation tasks talk to MySQL over the root socket before the
+# password is set via ALTER USER and persisted to /root/.my.cnf. (The old
+# preseed task never ran anyway — its "creates: my.cnf" guard was always
+# satisfied by mariadb-common, pulled in by python3-mysqldb above.)
 
 - name: "Ensuring MySQL packages are installed"
   ansible.builtin.apt:

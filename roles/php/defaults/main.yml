@@ -121,7 +121,7 @@ php_source_make_command: "make"
 php_source_configure_command: >
   ./configure
   --prefix={{ php_source_install_path }}
-  --with-config-file-path={{ php_conf_paths | first }}
+  --with-config-file-path={{ php_conf_paths | default(['/etc/php']) | first }}
   --enable-mbstring
   --enable-zip
   --enable-bcmath

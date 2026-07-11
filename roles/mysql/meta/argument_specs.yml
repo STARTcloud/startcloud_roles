@@ -55,6 +55,13 @@ argument_specs:
         type: str
         default: ""
         description: Comma-separated list of extra repositories to enable when installing packages (RedHat only).
+      mysql_apt_config_version:
+        type: str
+        default: "0.8.39-1"
+        description: Version of Oracle's mysql-apt-config package providing the MySQL APT repository and signing key (Debian/Ubuntu only).
+      mysql_apt_series:
+        type: str
+        description: MySQL server series selected in the Oracle APT repository (mysql-8.4-lts on Debian 13+, mysql-8.0 on older releases).
       mysql_python_package_debian:
         type: str
         default: python3-mysqldb

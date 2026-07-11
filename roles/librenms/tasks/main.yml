@@ -95,7 +95,7 @@
         mode: "0600"
 
     - name: "Creating the LibreNMS MariaDB Database"
-      ansible.mysql.mysql_db:
+      community.mysql.mysql_db:
         name: "{{ librenms_mysql_database }}"
         encoding: "utf8mb4"
         collation: "utf8mb4_unicode_ci"
@@ -103,7 +103,7 @@
         login_unix_socket: "/run/mysqld/mysqld.sock"
 
     - name: "Creating the LibreNMS MariaDB User"
-      ansible.mysql.mysql_user:
+      community.mysql.mysql_user:
         name: "{{ librenms_mysql_user }}"
         password: "{{ librenms_mysql_password }}"
         priv: "{{ librenms_mysql_database }}.*:ALL"

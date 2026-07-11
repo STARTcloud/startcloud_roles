@@ -15,17 +15,32 @@
         root_disk: "{{ root_partition | regex_replace('[0-9]+$', '') }}"
         root_partition_number: "{{ root_partition | regex_search('[0-9]+$') }}"
 
+    # growpart exits 0 when it grew the partition (stdout CHANGED:), 1 when there was
+    # nothing to grow (NOCHANGE:), and 2+ on real errors. Normalizing rc 1 to success
+    # inside the script keeps ansible's non-zero-rc error banner out of healthy runs.
     - name: "Extending the unencrypted Root Partition"
-      ansible.builtin.command: "{{ item }}"
-      register: extend_root_partition
-      failed_when:
-        - extend_root_partition.rc != 0
-        - "'NOCHANGE' not in extend_root_partition.stdout"
-        - "'Bad magic number' not in extend_root_partition.stderr"
-      changed_when: extend_root_partition.rc == 0
-      with_items:
-        - "growpart /dev/{{ root_disk }} {{ root_partition_number }}"
-        - "resize2fs /dev/{{ root_partition }}"
+      ansible.builtin.shell: |
+        growpart /dev/{{ root_disk }} {{ root_partition_number }}
+        rc=$?
+        if [ $rc -ne 0 ] && [ $rc -ne 1 ]; then exit $rc; fi
+        exit 0
+      args:
+        executable: /bin/bash
+      register: growpart_result
+      changed_when: "'CHANGED' in growpart_result.stdout"
+
+    - name: "Resizing the root filesystem"
+      ansible.builtin.shell: |
+        set -o pipefail
+        output=$(resize2fs /dev/{{ root_partition }} 2>&1)
+        rc=$?
+        echo "$output"
+        if echo "$output" | grep -q "Bad magic number"; then exit 0; fi
+        exit $rc
+      args:
+        executable: /bin/bash
+      register: resize2fs_result
+      changed_when: "'Nothing to do' not in resize2fs_result.stdout"
 
 - name: "Expanding the Encrypted Root Disk"
   become: true

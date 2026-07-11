@@ -10,13 +10,7 @@ argument_specs:
         type: bool
         default: true
         description: Master gate — when false the role loads its vars but runs no tasks.
-      packages:
-        type: list
-        elements: str
-        default:
-          - flatpak
-        description: Packages required to support Flatpak on the target host.
-      repos:
+      flatpak_repos:
         type: list
         elements: dict
         description: Flatpak remotes to register, each with a name and flatpakrepo url.

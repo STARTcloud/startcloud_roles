@@ -44,38 +44,38 @@
       with_items: "{{ file_to_copy.files }}"
     - name: "Creating Directory for Sikulix Jars"
       ansible.builtin.file:
-        group: "{{ user }}"
+        group: "{{ vagrant_user }}"
         mode: "u=rwX,g=rX,o=rX"
-        owner: "{{ user }}"
+        owner: "{{ vagrant_user }}"
         path: /jars
         state: directory
     - name: "Creating directory for Sikulix Extensions"
       ansible.builtin.file:
-        group: "{{ user }}"
+        group: "{{ vagrant_user }}"
         mode: "u=rwX,g=rX,o=rX"
-        owner: "{{ user }}"
-        path: "/home/{{ user }}/.Sikulix/Extensions/"
+        owner: "{{ vagrant_user }}"
+        path: "/home/{{ vagrant_user }}/.Sikulix/Extensions/"
         state: directory
     - name: "Creating Directory for Sikulix Extensions"
       ansible.builtin.file:
-        group: "{{ user }}"
+        group: "{{ vagrant_user }}"
         mode: "u=rwX,g=rX,o=rX"
-        owner: "{{ user }}"
-        path: "/home/{{ user }}/.Sikulix/SikulixStore/"
+        owner: "{{ vagrant_user }}"
+        path: "/home/{{ vagrant_user }}/.Sikulix/SikulixStore/"
         state: directory
-    - name: "Downloading jruby sources for {{ user }}"
+    - name: "Downloading jruby sources for {{ vagrant_user }}"
       delay: 5
       ansible.builtin.get_url:
-        dest: "/home/{{ user }}/.Sikulix/Extensions/jruby-complete-{{ jruby_version }}.jar"
+        dest: "/home/{{ vagrant_user }}/.Sikulix/Extensions/jruby-complete-{{ jruby_version }}.jar"
         url: "https://repo1.maven.org/maven2/org/jruby/jruby-complete/{{ jruby_version }}/jruby-complete-{{ jruby_version }}.jar"
         mode: "0644"
       register: jruby_source_vagrant
       retries: 5
       until: "jruby_source_vagrant is success"
-    - name: "Downloading jython sources for {{ user }}"
+    - name: "Downloading jython sources for {{ vagrant_user }}"
       delay: 5
       ansible.builtin.get_url:
-        dest: "/home/{{ user }}/.Sikulix/Extensions/jython-standalone-{{ jython_version }}.jar"
+        dest: "/home/{{ vagrant_user }}/.Sikulix/Extensions/jython-standalone-{{ jython_version }}.jar"
         url: "https://repo1.maven.org/maven2/org/python/jython-standalone/{{ jython_version }}/jython-standalone-{{ jython_version }}.jar"
         mode: "0644"
       register: jython_source_vagrant
@@ -121,12 +121,12 @@
       ansible.builtin.copy:
         src: "{{ item.src }}"
         dest: "{{ item.dest }}"
-        owner: "{{ user }}"
-        group: "{{ user }}"
+        owner: "{{ vagrant_user }}"
+        group: "{{ vagrant_user }}"
         mode: "0755"
         remote_src: true
       with_items:
-        - { src: /vagrant/scripts, dest: "/home/{{ user }}/Desktop" }
+        - { src: /vagrant/scripts, dest: "/home/{{ vagrant_user }}/Desktop" }
     - name: "Ensuring that Desktop Icons are Launchable"
       ansible.builtin.command: "dbus-launch gio set {{ item }}  \"metadata::trusted\" true"
       changed_when: false
@@ -134,8 +134,8 @@
         - /usr/share/applications/Sikulix.desktop
     - name: "Changing perm of Jar files"
       ansible.builtin.file:
-        group: "{{ user }}"
+        group: "{{ vagrant_user }}"
         mode: "u=wrX,g=rX,o=rX"
-        owner: "{{ user }}"
+        owner: "{{ vagrant_user }}"
         path: /jars
         recurse: true

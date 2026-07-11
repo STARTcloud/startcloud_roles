@@ -14,7 +14,7 @@
 
     - name: "Setting the password for {{ mariadb_admin_user }}"
       become: true
-      ansible.mysql.mysql_user:
+      community.mysql.mysql_user:
         user: "{{ mariadb_admin_user }}"
         password: "{{ mariadb_admin_pass }}"
         host: localhost

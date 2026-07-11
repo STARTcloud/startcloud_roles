@@ -4,10 +4,12 @@
   register: freshclam_result
   changed_when: true
   notify: "Restarting clamav daemon"
-  # On Debian, freshclam is automatically run post-install, so this may fail.
+  # On Debian the clamav-freshclam daemon autostarts on install and holds the
+  # log lock, so a manual freshclam run may lose the race; tolerate only that.
   failed_when:
     - freshclam_result is failed
-    - freshclam_result.stderr.find('locked by another process') == -1
+    - "'locked by another process' not in freshclam_result.stderr"
+    - "'Failed to lock the log file' not in freshclam_result.stdout"
 
 - name: "Restarting clamav daemon"
   ansible.builtin.service:

@@ -24,9 +24,9 @@
             upgrade: dist
             update_cache: true
 
-        - name: "Adding Additional Dependencies {{ packages }}"
+        - name: "Adding Additional Dependencies {{ squid_packages }}"
           ansible.builtin.apt:
-            name: "{{ packages }}"
+            name: "{{ squid_packages }}"
             state: present
 
     - name: "Removing Default Squid Configuration"

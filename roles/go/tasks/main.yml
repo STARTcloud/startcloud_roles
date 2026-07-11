@@ -3,17 +3,22 @@
   when: run_tasks
   block:
     - name: "Checking if Go is Already Installed"
+      ansible.builtin.stat:
+        path: /usr/local/go/bin/go
+      register: go_binary
+
+    - name: "Getting installed Go version"
       ansible.builtin.command: /usr/local/go/bin/go version
-      ignore_errors: true
       register: go_version_result
       changed_when: false
+      when: go_binary.stat.exists
 
     - name: "Removing Current Go Installation"
       ansible.builtin.file:
         state: absent
         path: /usr/local/go
       when:
-        - go_version_result is succeeded
+        - go_binary.stat.exists
         - go_version not in go_version_result.stdout
 
     - name: "Downloading Go"
@@ -22,14 +27,14 @@
         dest: /usr/local/src/{{ go_tarball }}
         checksum: "sha256:{{ go_checksum }}"
         mode: "0644"
-      when: go_version_result is failed or go_version not in go_version_result.stdout
+      when: not go_binary.stat.exists or go_version not in go_version_result.stdout
 
     - name: "Extracting Go"
       ansible.builtin.unarchive:
         src: /usr/local/src/{{ go_tarball }}
         dest: /usr/local
         copy: false
-      when: go_version_result is failed or go_version not in go_version_result.stdout
+      when: not go_binary.stat.exists or go_version not in go_version_result.stdout
 
     - name: "Adding Go to System-Wide $PATH"
       ansible.builtin.copy:

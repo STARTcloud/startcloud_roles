@@ -87,7 +87,8 @@ read_buffer_size = {{ mysql_read_buffer_size }}
 read_rnd_buffer_size = {{ mysql_read_rnd_buffer_size }}
 myisam_sort_buffer_size = {{ mysql_myisam_sort_buffer_size }}
 thread_cache_size = {{ mysql_thread_cache_size }}
-{% if '8.0.' not in mysql_cli_version.stdout %}
+{# The query cache was removed in MySQL 8.0; only 5.x clients print "Distrib 5.x". #}
+{% if 'Distrib 5.' in mysql_cli_version.stdout %}
 query_cache_type = {{ mysql_query_cache_type }}
 query_cache_size = {{ mysql_query_cache_size }}
 query_cache_limit = {{ mysql_query_cache_limit }}
@@ -104,7 +105,8 @@ lower_case_table_names = {{ mysql_lower_case_table_names }}
 event_scheduler = {{ mysql_event_scheduler_state }}
 
 # InnoDB settings.
-{% if mysql_supports_innodb_large_prefix and '8.0.' not in mysql_cli_version.stdout %}
+{# innodb_large_prefix/innodb_file_format were removed in MySQL 8.0. #}
+{% if mysql_supports_innodb_large_prefix and 'Distrib 5.' in mysql_cli_version.stdout %}
 innodb_large_prefix = {{ mysql_innodb_large_prefix }}
 innodb_file_format = {{ mysql_innodb_file_format }}
 {% endif %}

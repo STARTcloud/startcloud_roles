@@ -3,10 +3,11 @@
   ansible.builtin.set_fact:
     sdkman_profile_path: "{{ service_home_dir }}/{{ sdkman_profile }}"
 
+# "|| true" keeps grep's expected no-match/no-file results (rc 1/2) from tripping
+# ansible's non-zero-rc error banner; the gate below keys on the matched output.
 - name: "Detecting SDKMAN settings in {{ sdkman_profile_path }}"
-  ansible.builtin.command: "grep 'sdkman-init.sh' '{{ sdkman_profile_path }}'"
+  ansible.builtin.shell: "grep 'sdkman-init.sh' '{{ sdkman_profile_path }}' || true"
   changed_when: false
-  failed_when: false
   register: sdkman_profile_result
 
 - name: "Adding SDKMAN_OFFLINE_MODE to {{ sdkman_profile_path }}"
@@ -14,4 +15,4 @@
     path: "{{ sdkman_profile_path }}"
     regexp: "^export SDKMAN_OFFLINE_MODE="
     line: "export SDKMAN_OFFLINE_MODE={{ 'true' if sdkman_offline_mode else 'false' }}"
-  when: sdkman_profile_result.rc == 0
+  when: sdkman_profile_result.stdout | length > 0

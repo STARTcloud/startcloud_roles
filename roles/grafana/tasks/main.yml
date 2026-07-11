@@ -24,9 +24,9 @@
             upgrade: dist
             update_cache: true
 
-        - name: "Adding Additional Dependencies {{ packages }}"
+        - name: "Adding Additional Dependencies {{ grafana_packages }}"
           ansible.builtin.apt:
-            name: "{{ packages }}"
+            name: "{{ grafana_packages }}"
             state: present
 
         - name: "Downloading Grafana GPG key"

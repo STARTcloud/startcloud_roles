@@ -24,7 +24,7 @@
             upgrade: dist
             update_cache: true
 
-        - name: "Adding Additional Dependencies {{ packages }}"
+        - name: "Adding Additional Dependencies {{ ifconfig_me_packages }}"
           ansible.builtin.apt:
-            name: "{{ packages }}"
+            name: "{{ ifconfig_me_packages }}"
             state: present

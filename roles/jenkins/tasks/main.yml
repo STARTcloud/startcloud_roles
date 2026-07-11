@@ -14,7 +14,7 @@
     - name: "Creating Backup Directory for Script outputs"
       ansible.builtin.file:
         path: /backup
-        owner: "{{ user }}"
+        owner: "{{ vagrant_user }}"
         group: "{{ group }}"
         mode: "0755"
         state: directory
@@ -54,25 +54,25 @@
       ansible.builtin.file:
         group: "{{ group }}"
         mode: "0751"
-        owner: "{{ user }}"
+        owner: "{{ vagrant_user }}"
         path: /var/cache/jenkins
         recurse: true
     - name: "Preparing Jenkins Library folder permissions for user setup"
       ansible.builtin.file:
         group: "{{ group }}"
-        owner: "{{ user }}"
+        owner: "{{ vagrant_user }}"
         path: /var/lib/jenkins
         recurse: true
     - name: "Preparing Jenkins run folder permissions for user setup"
       ansible.builtin.file:
         group: "{{ group }}"
-        owner: "{{ user }}"
+        owner: "{{ vagrant_user }}"
         path: /var/run/jenkins
         recurse: true
     - name: "Preparing Jenkins log folder permissions for user setup"
       ansible.builtin.file:
         group: "{{ group }}"
-        owner: "{{ user }}"
+        owner: "{{ vagrant_user }}"
         path: /var/log/jenkins
         recurse: true
     - name: "Skipping Initial Configuration"
@@ -84,7 +84,7 @@
     - name: "Setting Jenkins to start as user"
       ansible.builtin.lineinfile:
         insertafter: "^# user and group"
-        line: JENKINS_USER="{{ user }}"
+        line: JENKINS_USER="{{ vagrant_user }}"
         path: /etc/default/jenkins
         regexp: ^JENKINS_USER=
     - name: "Setting Jenkins to start as user"
@@ -133,7 +133,7 @@
       ansible.builtin.file:
         path: /var/lib/jenkins/init.groovy.d
         state: directory
-        owner: "{{ user }}"
+        owner: "{{ vagrant_user }}"
         group: "{{ group }}"
         mode: "0775"
       when: not output_folder.stat.exists
@@ -143,7 +143,7 @@
       ansible.builtin.template:
         src: "{{ item.src }}"
         dest: "{{ item.dest }}"
-        owner: "{{ user }}"
+        owner: "{{ vagrant_user }}"
         group: "{{ group }}"
         mode: "0644"
       with_items:
@@ -156,7 +156,7 @@
     - name: "Downloading  Jenkins CLI from localhost"
       delay: 5
       ansible.builtin.get_url:
-        dest: "/home/{{ user }}/jenkins-cli.jar"
+        dest: "/home/{{ vagrant_user }}/jenkins-cli.jar"
         url: "http://localhost:8080/jnlpJars/jenkins-cli.jar"
         mode: "0644"
       register: jenkinscli_source
@@ -174,12 +174,12 @@
       ansible.builtin.template:
         src: org.jenkinsci.plugins.xvfb.Xvfb.xml
         dest: /var/lib/jenkins/
-        owner: "{{ user }}"
+        owner: "{{ vagrant_user }}"
         group: "{{ group }}"
         mode: u=rwX,g=rX,o=rX
     - name: "Installing Jenkins Plugins"
       become: true
-      ansible.builtin.shell: "cd /home/{{ user }} && java -jar jenkins-cli.jar -s http://localhost:8080/ install-plugin xvfb xunit workflow-step-api scm-api structs junit
+      ansible.builtin.shell: "cd /home/{{ vagrant_user }} && java -jar jenkins-cli.jar -s http://localhost:8080/ install-plugin xvfb xunit workflow-step-api scm-api structs junit
         script-security git email-ext email-ext-recipients-column
         mailer"
       changed_when: true
@@ -222,11 +222,11 @@
       loop: "{{ java_accessibility_files.files }}"
       loop_control:
         label: "{{ item.path }}"
-    - name: "Setting permissions for {{ user }}"
+    - name: "Setting permissions for {{ vagrant_user }}"
       ansible.builtin.file:
         group: "{{ group }}"
-        owner: "{{ user }}"
-        path: "/home/{{ user }}"
+        owner: "{{ vagrant_user }}"
+        path: "/home/{{ vagrant_user }}"
         recurse: true
     - name: "Removing Groovy Startup Bypass"
       ansible.builtin.file:
@@ -237,18 +237,18 @@
       ansible.builtin.template:
         src: "{{ item.src }}"
         dest: "{{ item.dest }}"
-        owner: "{{ user }}"
+        owner: "{{ vagrant_user }}"
         group: "{{ group }}"
         mode: "0755"
       with_items:
         - { src: "jenkins.desktop", dest: "/usr/share/applications/jenkins.desktop" }
-        - { src: "jenkins.desktop", dest: "/home/{{ user }}/Desktop/jenkins.desktop" }
+        - { src: "jenkins.desktop", dest: "/home/{{ vagrant_user }}/Desktop/jenkins.desktop" }
 
     - name: "Ensuring that Desktop Icons are Launchable"
       ansible.builtin.command: "dbus-launch gio set {{ item }}  \"metadata::trusted\" true"
       changed_when: false
       with_items:
-        - "/home/{{ user }}/Desktop/jenkins.desktop"
+        - "/home/{{ vagrant_user }}/Desktop/jenkins.desktop"
         - "/usr/share/applications/jenkins.desktop"
 
     - name: "Adding Jenkins Jobs to Desktop"
@@ -256,9 +256,9 @@
       ansible.builtin.copy:
         src: "{{ item.src }}"
         dest: "{{ item.dest }}"
-        owner: "{{ user }}"
-        group: "{{ user }}"
+        owner: "{{ vagrant_user }}"
+        group: "{{ vagrant_user }}"
         mode: "0755"
         remote_src: true
       with_items:
-        - { src: /vagrant/jobs, dest: "/home/{{ user }}/Desktop" }
+        - { src: /vagrant/jobs, dest: "/home/{{ vagrant_user }}/Desktop" }

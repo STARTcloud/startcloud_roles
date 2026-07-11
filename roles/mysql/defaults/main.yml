@@ -29,6 +29,14 @@ overwrite_global_mycnf: true
 # for RedHat systems (and derivatives).
 mysql_enablerepo: ""
 
+# Version of Oracle's mysql-apt-config package that provides the MySQL APT
+# repository and its signing key on Debian/Ubuntu.
+mysql_apt_config_version: "0.8.39-1"
+
+# MySQL server series selected in the Oracle APT repository. Oracle publishes no
+# mysql-8.0 component for Debian 13+ (trixie), only 8.4 LTS and newer.
+mysql_apt_series: "{{ 'mysql-8.4-lts' if (ansible_distribution == 'Debian' and ansible_distribution_major_version | int >= 13) else 'mysql-8.0' }}"
+
 # Define a custom list of packages to install; if none provided, the default
 # package list from vars/[OS-family].yml will be used.
 # mysql_packages:

@@ -10,7 +10,7 @@
             cache_valid_time: 3600
             update_cache: true
 
-        - name: "Installing Java-free IPMI console packages {{ packages }}"
+        - name: "Installing Java-free IPMI console packages {{ nojavaipmi_packages }}"
           ansible.builtin.apt:
-            name: "{{ packages }}"
+            name: "{{ nojavaipmi_packages }}"
             state: present

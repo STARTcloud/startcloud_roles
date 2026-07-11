@@ -24,9 +24,9 @@
             upgrade: dist
             update_cache: true
 
-        - name: "Adding Additional Dependencies {{ packages }}"
+        - name: "Adding Additional Dependencies {{ monit_packages }}"
           ansible.builtin.apt:
-            name: "{{ packages }}"
+            name: "{{ monit_packages }}"
             state: present
 
     - name: "Starting monit service"

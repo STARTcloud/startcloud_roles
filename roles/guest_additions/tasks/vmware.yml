@@ -27,7 +27,7 @@
       ansible.posix.mount:
         fstype: iso9660
         name: /tmp/vmfusion
-        src: "/home/{{ user }}/linux.iso"
+        src: "/home/{{ vagrant_user }}/linux.iso"
         state: mounted
 
     - name: "Finding VMware Tools installer archive."
@@ -56,7 +56,7 @@
       ansible.posix.mount:
         fstype: iso9660
         name: /tmp/vmfusion
-        src: "/home/{{ user }}/linux.iso"
+        src: "/home/{{ vagrant_user }}/linux.iso"
         state: absent
 
     - name: "Removing temporary directories for VMware tools."
@@ -69,5 +69,5 @@
 
     - name: "Deleting VMWare Tools."
       ansible.builtin.file:
-        path: "/home/{{ user }}/linux.iso"
+        path: "/home/{{ vagrant_user }}/linux.iso"
         state: absent

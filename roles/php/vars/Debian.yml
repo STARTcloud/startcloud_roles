@@ -1,19 +1,22 @@
 ---
 __php_default_version_debian: "7.0"
-__php_packages:
+__php_packages_base:
   - php{{ php_default_version_debian }}-common
   - php{{ php_default_version_debian }}-cli
   - php{{ php_default_version_debian }}-dev
   - php{{ php_default_version_debian }}-fpm
-  - libpcre3-dev
+  - libpcre2-dev
   - php{{ php_default_version_debian }}-gd
   - php{{ php_default_version_debian }}-curl
-  - php{{ php_default_version_debian }}-imap
   - php{{ php_default_version_debian }}-opcache
   - php{{ php_default_version_debian }}-xml
   - php{{ php_default_version_debian }}-mbstring
   - php{{ php_default_version_debian }}-apcu
   - php{{ php_default_version_debian }}-sqlite3
+
+# The imap extension was unbundled from PHP core in 8.4 and Debian 13 ships no
+# php8.4-imap package; older releases still get it.
+__php_packages: "{{ __php_packages_base + (['php' ~ php_default_version_debian ~ '-imap'] if php_default_version_debian is version('8.4', '<') else []) }}"
 
 __php_webserver_daemon: "apache2"
 

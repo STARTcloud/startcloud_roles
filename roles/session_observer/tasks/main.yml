@@ -24,7 +24,7 @@
             upgrade: dist
             update_cache: true
 
-        - name: "Adding Additional Dependencies {{ packages }}"
+        - name: "Adding Additional Dependencies {{ session_observer_packages }}"
           ansible.builtin.apt:
-            name: "{{ packages }}"
+            name: "{{ session_observer_packages }}"
             state: present
