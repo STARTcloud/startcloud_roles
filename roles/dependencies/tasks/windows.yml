@@ -2,7 +2,7 @@
 - name: "Loading vendor-specific variables"
   ansible.builtin.include_vars: "{{ vendor }}.yml"
   when: vendor is defined
-  ignore_errors: true
+  failed_when: false
 
 - name: "Ensuring Packer Installations Directory exists"
   ansible.windows.win_file:
@@ -34,7 +34,7 @@
       when: ps7_check != "7"
       ansible.windows.win_powershell:
         script: iex "C:\temp\install-powershell.ps1"
-      ignore_errors: true
+      failed_when: false
 
 - name: "Windows Updates (initial - fully patch the OS before installing software)"
   when: install_windows_updates | default(true)
@@ -42,7 +42,7 @@
     - name: "Ensuring Windows Update is not paused"
       ansible.windows.win_shell: |
         Set-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings' -Name 'PauseUpdatesExpiryTime' -Value ((Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"))
-      ignore_errors: true
+      failed_when: false
 
     - name: "Resetting Windows Update components (clears stuck/looping update state)"
       ansible.windows.win_shell: |
@@ -52,7 +52,7 @@
         Start-Service -Name BITS,wuauserv,CryptSvc -ErrorAction SilentlyContinue
         Start-Service -Name WaaSMedicSvc -ErrorAction SilentlyContinue
         UsoClient RefreshSettings
-      ignore_errors: true
+      failed_when: false
 
     - name: "Searching for available updates (visibility)"
       ansible.windows.win_updates:
@@ -62,7 +62,7 @@
         state: searched
         server_selection: "{{ windows_update_source | default('windows_update') }}"
       register: wu_search
-      ignore_errors: true
+      failed_when: false
 
     - name: "Updates available before patching"
       ansible.builtin.debug:
@@ -91,7 +91,7 @@
     - name: "Removing default chocolatey source to reconfigure with priority"
       ansible.windows.win_powershell:
         script: choco source remove -n="chocolatey"
-      ignore_errors: true
+      failed_when: false
 
     - name: "Adding vendor-specific Chocolatey repositories with priority"
       ansible.windows.win_powershell:
@@ -206,7 +206,7 @@
         state: searched
         server_selection: "{{ windows_update_source | default('windows_update') }}"
       register: wu_final
-      ignore_errors: true
+      failed_when: false
 
     - name: "Updates still pending after final pass (should be empty aside from rejected)"
       ansible.builtin.debug:

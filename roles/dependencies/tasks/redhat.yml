@@ -9,9 +9,9 @@
 
 - name: "Upgrading all yum packages"
   become: true
-  ansible.builtin.dnf:
-    name: "*"
-    state: latest
+  ansible.builtin.command: dnf -y upgrade
+  register: dnf_upgrade
+  changed_when: "'Nothing to do' not in dnf_upgrade.stdout"
 
 - name: "Installing EPEL repo"
   become: true
@@ -26,12 +26,13 @@
     section: epel
     option: enabled
     value: "1"
+    mode: "0644"
 
 - name: "Installing utilities to enable package repositories"
   become: true
   ansible.builtin.package:
     name: yum-utils
-    state: latest
+    state: present
 
 - name: "Updating yum cache"
   ansible.builtin.dnf:

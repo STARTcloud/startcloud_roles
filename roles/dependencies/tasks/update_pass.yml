@@ -11,7 +11,7 @@
 # a known Microsoft reboot-loop (installs fail with HRESULT -1 and the same def is
 # re-offered every reboot, tripping win_updates' loop detector). It is a definition
 # update that refreshes on first boot post-deploy, so excluding it costs no currency.
-- name: "Installing applicable Windows updates (pass {{ pass_number }}) - reboots as many times as needed"
+- name: "Installing applicable Windows updates, rebooting as many times as needed - pass {{ pass_number }}"
   ansible.windows.win_updates:
     category_names: "*"
     reject_list: "{{ windows_update_reject_list | default(['Windows Security platform']) }}"

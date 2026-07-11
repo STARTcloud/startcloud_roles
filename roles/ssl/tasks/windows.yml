@@ -65,7 +65,7 @@
         src: "ssls/ca/default-signed.ca"
         dest: "{{ win_cert_dir }}\\ca\\{{ settings.hostname }}.{{ settings.domain }}.crt"
         remote_src: true
-      ignore_errors: true
+      failed_when: false
 
     - name: "Generating signed PKCS12 file with PowerShell"
       ansible.windows.win_powershell:
@@ -98,7 +98,9 @@
           $tempPfx = [System.IO.Path]::GetTempFileName() + ".pfx"
           [System.IO.File]::WriteAllBytes($tempPfx, $pfxBytes)
           $keytoolPath = "{{ detected_java_path.output[0] }}\\bin\\keytool.exe"
-          & $keytoolPath -importkeystore -srckeystore $tempPfx -srcstoretype PKCS12 -srcstorepass "{{ cert_pass }}" -destkeystore "{{ win_cert_dir }}\\jks\\default-signed.jks" -deststoretype JKS -deststorepass "{{ cert_pass }}" -alias 1 -destalias "{{ settings.hostname }}.{{ settings.domain }}"
+          & $keytoolPath -importkeystore -srckeystore $tempPfx -srcstoretype PKCS12 -srcstorepass "{{ cert_pass }}" `
+            -destkeystore "{{ win_cert_dir }}\\jks\\default-signed.jks" -deststoretype JKS `
+            -deststorepass "{{ cert_pass }}" -alias 1 -destalias "{{ settings.hostname }}.{{ settings.domain }}"
           Remove-Item $tempPfx
           return "Signed JKS keystore created successfully"
 
@@ -160,7 +162,9 @@
               $rsa = [System.Security.Cryptography.RSA]::Create()
               $rsa.ImportPkcs8PrivateKey($privateKeyBytes, [ref]$null)
               $subject = "CN={{ settings.domain }}, O={{ organization }}, C={{ countrycode }}"
-              $req = [System.Security.Cryptography.X509Certificates.CertificateRequest]::new($subject, $rsa, [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
+              $hashAlg = [System.Security.Cryptography.HashAlgorithmName]::SHA256
+              $padding = [System.Security.Cryptography.RSASignaturePadding]::Pkcs1
+              $req = [System.Security.Cryptography.X509Certificates.CertificateRequest]::new($subject, $rsa, $hashAlg, $padding)
               $basicConstraints = [System.Security.Cryptography.X509Certificates.X509BasicConstraintsExtension]::new($true, $false, 0, $true)
               $req.CertificateExtensions.Add($basicConstraints)
               $keyUsage = [System.Security.Cryptography.X509Certificates.X509KeyUsageExtension]::new([System.Security.Cryptography.X509Certificates.X509KeyUsageFlags]::KeyCertSign, $true)
@@ -266,9 +270,12 @@
           Set-Content -Path "$CertDir\key\$HostFqdn-self-signed.key" -Value $keyPem
 
           # Certificate request: server-auth EKU + Subject Alternative Names
-          $req = [System.Security.Cryptography.X509Certificates.CertificateRequest]::new($Subject, $rsa, [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
+          $hashAlg = [System.Security.Cryptography.HashAlgorithmName]::SHA256
+          $padding = [System.Security.Cryptography.RSASignaturePadding]::Pkcs1
+          $req = [System.Security.Cryptography.X509Certificates.CertificateRequest]::new($Subject, $rsa, $hashAlg, $padding)
           $req.CertificateExtensions.Add([System.Security.Cryptography.X509Certificates.X509BasicConstraintsExtension]::new($false, $false, 0, $false))
-          $req.CertificateExtensions.Add([System.Security.Cryptography.X509Certificates.X509KeyUsageExtension]::new(([System.Security.Cryptography.X509Certificates.X509KeyUsageFlags]::DigitalSignature -bor [System.Security.Cryptography.X509Certificates.X509KeyUsageFlags]::KeyEncipherment), $false))
+          $kuFlags = [System.Security.Cryptography.X509Certificates.X509KeyUsageFlags]::DigitalSignature -bor [System.Security.Cryptography.X509Certificates.X509KeyUsageFlags]::KeyEncipherment
+          $req.CertificateExtensions.Add([System.Security.Cryptography.X509Certificates.X509KeyUsageExtension]::new($kuFlags, $false))
           $eku = [System.Security.Cryptography.OidCollection]::new()
           [void]$eku.Add([System.Security.Cryptography.Oid]::new("1.3.6.1.5.5.7.3.1"))
           $req.CertificateExtensions.Add([System.Security.Cryptography.X509Certificates.X509EnhancedKeyUsageExtension]::new($eku, $false))
@@ -397,7 +404,9 @@
           $privateKeyBytes = [System.Convert]::FromBase64String(($privateKeyPem -replace "-----BEGIN PRIVATE KEY-----" -replace "-----END PRIVATE KEY-----" -replace "`n" -replace "`r"))
           $rsa = [System.Security.Cryptography.RSA]::Create()
           $rsa.ImportPkcs8PrivateKey($privateKeyBytes, [ref]$null)
-          $req = [System.Security.Cryptography.X509Certificates.CertificateRequest]::new($subject, $rsa, [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
+          $hashAlg = [System.Security.Cryptography.HashAlgorithmName]::SHA256
+          $padding = [System.Security.Cryptography.RSASignaturePadding]::Pkcs1
+          $req = [System.Security.Cryptography.X509Certificates.CertificateRequest]::new($subject, $rsa, $hashAlg, $padding)
           $sanBuilder = [System.Security.Cryptography.X509Certificates.SubjectAlternativeNameBuilder]::new()
           foreach ($dns in $dnsNames) { $sanBuilder.AddDnsName($dns) }
           $req.CertificateExtensions.Add($sanBuilder.Build())
@@ -440,7 +449,12 @@
         remaining_days: 60
         data: "{{ acme_challenge }}"
         modify_account: false
-      when: acme_challenge is changed
+      # Second acme_certificate call completes the pending HTTP-01 challenges from the
+      # first call; keyed on challenge_data (pending challenges exist) rather than task
+      # change state, because it must run in-sequence, not as a handler.
+      when:
+        - acme_challenge is not skipped
+        - acme_challenge.challenge_data | default({}) | length > 0
 
     - name: "Copying Let's Encrypt certificate"
       ansible.windows.win_copy:
@@ -485,7 +499,9 @@
           $tempPfx = [System.IO.Path]::GetTempFileName() + ".pfx"
           [System.IO.File]::WriteAllBytes($tempPfx, $pfxBytes)
           $keytoolPath = "{{ detected_java_path.output[0] }}\\bin\\keytool.exe"
-          & $keytoolPath -importkeystore -srckeystore $tempPfx -srcstoretype PKCS12 -srcstorepass "{{ cert_pass }}" -destkeystore "{{ win_cert_dir }}\\jks\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.jks" -deststoretype JKS -deststorepass "{{ cert_pass }}" -alias 1 -destalias "{{ settings.hostname }}.{{ settings.domain }}"
+          & $keytoolPath -importkeystore -srckeystore $tempPfx -srcstoretype PKCS12 -srcstorepass "{{ cert_pass }}" `
+            -destkeystore "{{ win_cert_dir }}\\jks\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.jks" -deststoretype JKS `
+            -deststorepass "{{ cert_pass }}" -alias 1 -destalias "{{ settings.hostname }}.{{ settings.domain }}"
           Remove-Item $tempPfx
           return "Let's Encrypt JKS keystore created successfully"
 

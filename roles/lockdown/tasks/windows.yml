@@ -16,7 +16,7 @@
   # changing the connected account's password drops this WinRM session; the change
   # applies but the result fetch with the old password is rejected. Connection is
   # switched to the new password below; wait_for_connection re-validates it.
-  ignore_errors: true
+  failed_when: false
 
 - name: "Changing default user password (using lockdown password)"
   when:
@@ -29,7 +29,7 @@
   # changing the connected account's password drops this WinRM session; the change
   # applies but the result fetch with the old password is rejected. Connection is
   # switched to the new password below; wait_for_connection re-validates it.
-  ignore_errors: true
+  failed_when: false
 
 - name: "Switching the WinRM connection to the new password"
   when: >-
@@ -61,7 +61,7 @@
   loop: "{{ lockdown_file_cleanups_list }}"
   loop_control:
     label: "{{ item }}"
-  ignore_errors: true
+  failed_when: false
 
 - name: "Removing temporary files and caches"
   when: lockdown_cleanup_temp | default(true)
@@ -72,7 +72,7 @@
     - "C:\\Windows\\Temp\\*"
     - "C:\\Users\\*\\AppData\\Local\\Temp\\*"
     - "C:\\Windows\\Prefetch\\*"
-  ignore_errors: true
+  failed_when: false
 
 - name: "Clearing Windows event logs (if specified)"
   when: lockdown_clear_event_logs | default(false)
@@ -87,4 +87,4 @@
           Write-Output "Could not clear log: $($log.LogName) - $($_.Exception.Message)"
         }
       }
-  ignore_errors: true
+  failed_when: false

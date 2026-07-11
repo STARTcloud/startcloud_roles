@@ -72,7 +72,8 @@
             Remove-NetIPAddress -InterfaceAlias "{{ third_adapter_details.name }}" -Confirm:$false -ErrorAction SilentlyContinue
 
             # Set static IP configuration
-            New-NetIPAddress -InterfaceAlias "{{ third_adapter_details.name }}" -IPAddress "{{ networks[0].address }}" -PrefixLength {{ networks[0].netmask }} -DefaultGateway "{{ networks[0].gateway }}" -ErrorAction SilentlyContinue
+            New-NetIPAddress -InterfaceAlias "{{ third_adapter_details.name }}" -IPAddress "{{ networks[0].address }}" `
+              -PrefixLength {{ networks[0].netmask }} -DefaultGateway "{{ networks[0].gateway }}" -ErrorAction SilentlyContinue
 
             Write-Output "Configured static IP for public interface"
           }

@@ -48,4 +48,4 @@
     name: qemu-guest-agent
     state: started
   when: "'os-qemu-guest-agent' in packages"
-  ignore_errors: true
+  failed_when: false

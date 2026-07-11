@@ -66,6 +66,7 @@
   ansible.builtin.git:
     repo: "{{ pkg_server.repo_url }}"
     dest: "/{{ storage_disk.path }}/src"
+    version: "{{ pkg_server.repo_branch | default('master') }}"
     clone: true
     update: true
     force: true

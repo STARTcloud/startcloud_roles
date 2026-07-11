@@ -32,14 +32,20 @@
       ansible.windows.win_shell: "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072"
       register: execution_policy_bypass
 
-# win_timezone is a community.windows module (NOT ansible.windows). Use the
-# community.windows FQCN explicitly: on ansible-core 2.16 (the OmniOS deploy hosts)
-# ansible.windows has no redirect for it, so ansible.windows.win_timezone fails to
-# resolve. community.windows ships the module on both build and deploy hosts.
+# tzutil instead of the win_timezone module: win_timezone moved between
+# community.windows and ansible.windows across collection versions, so no single
+# FQCN resolves on both the build hosts and the ansible-core 2.16 OmniOS deploy
+# hosts. tzutil ships with Windows and needs only ansible.windows.win_shell.
 - name: "Setting timezone to {{ win_timezone }}"
   when: ansible_os_family == 'Windows'
-  community.windows.win_timezone:
-    timezone: "{{ win_timezone }}"
+  ansible.windows.win_shell: |
+    $current = tzutil /g
+    if ($current -ne '{{ win_timezone }}') {
+      tzutil /s '{{ win_timezone }}'
+      Write-Output 'changed'
+    }
+  register: win_tz_result
+  changed_when: "'changed' in win_tz_result.stdout"
 
 - name: "Writing current variables to support bundle"
   block:

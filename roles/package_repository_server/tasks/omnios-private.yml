@@ -45,7 +45,9 @@
 
 - name: "Setting Package Description"
   become: true
-  ansible.builtin.command: "pkgrepo set -s /{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg -p {{ pkg_server.archive | replace('.', '') }}  repository/description='{{ pkg_server.description }}'"
+  ansible.builtin.command: >-
+    pkgrepo set -s /{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg
+    -p {{ pkg_server.archive | replace('.', '') }} repository/description='{{ pkg_server.description }}'
   changed_when: true
 
 - name: "Setting Package Service Repo Name"
@@ -57,6 +59,7 @@
   ansible.builtin.git:
     repo: "{{ pkg_server.repo_url }}"
     dest: "/{{ storage_disk.path }}/src"
+    version: "{{ pkg_server.repo_branch | default('master') }}"
     clone: true
     update: true
     force: true

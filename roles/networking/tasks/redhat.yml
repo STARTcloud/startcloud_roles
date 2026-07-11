@@ -100,3 +100,4 @@
         marker: "# {mark} SHI ANSIBLE MANAGED HOST ENTRIES"
         block: "{{ hosts_block }}"
         create: true
+        mode: "0644"

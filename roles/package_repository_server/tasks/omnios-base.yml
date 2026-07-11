@@ -11,13 +11,13 @@
     name: "{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg"
     state: present
 
-- name: "Checking if pkgrepo {{ pkg_server.archive }}/{{ pkg_server.omnios_release }} exists"
+- name: "Checking for existing pkgrepo {{ pkg_server.archive ~ '/' ~ pkg_server.omnios_release }}"
   register: repo_exists
   ansible.builtin.stat:
     path: "/{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg/pkg5.repository"
     checksum_algorithm: sha256
 
-- name: "Creating {{ pkg_server.omnios_release }} {{ pkg_server.archive }} repo"
+- name: "Creating repo {{ pkg_server.omnios_release ~ ' ' ~ pkg_server.archive }}"
   become: true
   ansible.builtin.command: "pfexec pkgrepo create /{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg"
   changed_when: true
@@ -34,7 +34,7 @@
   ansible.builtin.command: "pkgrepo set -s /{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg -p {{ pkg_server.archive }}  repository/name='{{ pkg_server.name }}'"
   changed_when: true
 
-- name: "Setting pkg instance {{ pkg_server.omnios_release }}_{{ pkg_server.archive | replace('.', '') }}"
+- name: "Setting pkg instance {{ pkg_server.omnios_release ~ '_' ~ (pkg_server.archive | replace('.', '')) }}"
   become: true
   ansible.builtin.command: "pfexec svccfg -s pkg/server add {{ pkg_server.omnios_release }}_{{ pkg_server.archive | replace('.', '') }}"
   changed_when: true
@@ -50,8 +50,9 @@
 
 - name: "Setting pkg root"
   become: true
-  ansible.builtin.command: "pfexec svccfg -s pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive | replace('.', '') }} setprop pkg/inst_root = /{{ storage_disk.path }}/{{ pkg_server.omnios_release
-    }}/pkg"
+  ansible.builtin.command: >-
+    pfexec svccfg -s pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive | replace('.', '') }}
+    setprop pkg/inst_root = /{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg
   changed_when: true
 
 - name: "Setting package service to read only, preventing package updates over the web"
