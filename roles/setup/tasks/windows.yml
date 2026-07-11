@@ -2,7 +2,7 @@
 - name: "Loading vendor-specific variables"
   ansible.builtin.include_vars: "{{ vendor }}.yml"
   when: vendor is defined
-  ignore_errors: true
+  failed_when: false
 
 - name: "Windows Activation"
   when: activate_os | default(false) | bool and windows_license_key is defined and windows_license_key != ""

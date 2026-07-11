@@ -23,6 +23,7 @@
 
 - name: "Setting Java SDK version from SDKMAN: {{ java_version }}"
   ansible.builtin.shell: "echo {{ java_version }}"
+  become: true
   become_user: "{{ sdk_service_user }}"
   changed_when: false
   args:
@@ -35,6 +36,7 @@
     java_version_to_install: "{{ computed_java_version.stdout if (java_version == 'LATEST') else selected_java_version.stdout }}"
 
 - name: "Installing Java via SDKMAN: {{ java_version }}"
+  become: true
   become_user: "{{ sdk_service_user }}"
   ansible.builtin.shell: . {{ sdkman_dir }}/bin/sdkman-init.sh && sdk install java {{ java_version_to_install }} {{ item.localpath | default('') }}
   args:

@@ -12,26 +12,22 @@
         network_name: "nat_adapter"
       register: nat_adapter_config
 
-    # -
-    #  name: "Enabling systemd-networkd"
-    #  when: nat_adapter_config.changed
-    #  ansible.builtin.systemd_service:
-    #    state: restarted
-    #    enabled: true
-    #    name: systemd-networkd
+    - name: "Registering whether the NAT adapter config changed"
+      ansible.builtin.set_fact:
+        nat_adapter_updated: "{{ nat_adapter_config.changed | default(false) }}"
 
     - name: "Waiting for 5 seconds for IP to set for Vagrant NAT Adapter"
-      when: "nat_adapter_config.changed"
+      when: nat_adapter_updated
       ansible.builtin.pause:
         seconds: 5
 
     - name: "Setting Networking for Vagrant NAT Adapter"
-      when: "nat_adapter_config.changed"
+      when: nat_adapter_updated
       changed_when: false
       ansible.builtin.command: netplan apply
 
     - name: "Waiting for 5 seconds for IP to set for Vagrant NAT Adapter"
-      when: "nat_adapter_config.changed"
+      when: nat_adapter_updated
       ansible.builtin.pause:
         seconds: 5
 
@@ -60,15 +56,19 @@
         address: "{{ first_adapter_details.ip }}"
         gateway: "{{ first_adapter_gateway.stdout }}"
 
+    - name: "Registering whether the static NAT adapter config changed"
+      ansible.builtin.set_fact:
+        static_nat_adapter_updated: "{{ static_nat_adapter_config.changed | default(false) }}"
+
     - name: "Setting Networking"
-      when: static_nat_adapter_config.changed
+      when: static_nat_adapter_updated
       changed_when: false
       ansible.builtin.command: "{{ item }}"
       with_items:
         - "netplan apply"
 
     - name: "Waiting for 2 seconds for IP to set"
-      when: static_nat_adapter_config.changed
+      when: static_nat_adapter_updated
       ansible.builtin.pause:
         seconds: 2
 

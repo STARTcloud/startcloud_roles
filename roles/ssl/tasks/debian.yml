@@ -187,6 +187,8 @@
 
     - name: "Updating system's certificate store"
       ansible.builtin.command: update-ca-certificates
+      register: ca_store_update
+      changed_when: "'0 added, 0 removed' not in ca_store_update.stdout"
 
     - name: "Generating Servers self signed SSL Key"
       community.crypto.openssl_privatekey:
@@ -379,7 +381,7 @@
         path: "/etc/letsencrypt/live/{{ settings.hostname | lower }}.{{ settings.domain | lower }}/cert.pem"
 
     - name: "Generating new staging certificate request"
-      ansible.builtin.shell: >-
+      ansible.builtin.command: >-
         certbot certonly --standalone
         --noninteractive
         --agree-tos
@@ -387,18 +389,22 @@
         --staging
         --email {{ settings.email }}
         {{ le_entries | join(' ') }}
+      changed_when: true
       when: (haproxy_status.changed and not haproxy_in_enabled_roles) and not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled
 
     - name: "Generating new staging request via HAProxy"
-      ansible.builtin.shell: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --staging --email {{ settings.email }} {{ le_entries | join(' ') }} --http-01-port=8181
+      ansible.builtin.command: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --staging --email {{ settings.email }} {{ le_entries | join(' ') }} --http-01-port=8181
+      changed_when: true
       when: (not haproxy_status.changed or (haproxy_status.changed and haproxy_in_enabled_roles)) and not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled
 
     - name: "Generating new certificate request"
-      ansible.builtin.shell: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --email {{ settings.email }} {{ le_entries | join(' ') }}
+      ansible.builtin.command: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --email {{ settings.email }} {{ le_entries | join(' ') }}
+      changed_when: true
       when: (haproxy_status.changed and not haproxy_in_enabled_roles) and not letsencrypt_cert.stat.exists and not letsencrypt_staging_enabled
 
     - name: "Generating new certificate request via HAProxy"
-      ansible.builtin.shell: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --email {{ settings.email }} {{ le_entries | join(' ') }} --http-01-port=8181
+      ansible.builtin.command: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --email {{ settings.email }} {{ le_entries | join(' ') }} --http-01-port=8181
+      changed_when: true
       when: (not haproxy_status.changed or (haproxy_status.changed and haproxy_in_enabled_roles)) and not letsencrypt_cert.stat.exists and not letsencrypt_staging_enabled
 
     - name: "Removing old cert directories for SSLs"

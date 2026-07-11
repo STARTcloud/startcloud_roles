@@ -15,8 +15,8 @@
         root_disk: "{{ root_partition | regex_replace('[0-9]+$', '') }}"
         root_partition_number: "{{ root_partition | regex_search('[0-9]+$') }}"
 
-    - name: "Extending the unecrypted Root Partition"
-      ansible.builtin.shell: "{{ item }}"
+    - name: "Extending the unencrypted Root Partition"
+      ansible.builtin.command: "{{ item }}"
       register: extend_root_partition
       failed_when:
         - extend_root_partition.rc != 0
@@ -43,15 +43,21 @@
         root_disk: "{{ root_partition | regex_replace('[0-9]+$', '') }}"
         root_partition_number: "{{ root_partition | regex_search('[0-9]+$') }}"
 
+    # One step per resize stage; each may legitimately report "nothing to do" on an
+    # already-expanded system, so the task never hard-fails (matching the old
+    # per-item ignore_errors behavior). The cryptsetup step needs the pipe, hence shell.
     - name: "Extending the Encrypted Root Partition"
-      ansible.builtin.shell: "{{ item }}"
-      ignore_errors: true
-      with_items:
-        - "growpart /dev/{{ root_disk }} {{ root_partition_number }}"
-        - "echo {{ root_unlock_key }} | sudo cryptsetup resize /dev/mapper/{{ root_partition }}_crypt"
-        - "pvresize /dev/mapper/{{ root_partition }}_crypt"
-        - "lvresize -l+100%FREE /dev/crypt/root"
-        - "resize2fs /dev/mapper/crypt-root"
+      ansible.builtin.shell: |
+        set -o pipefail
+        growpart /dev/{{ root_disk }} {{ root_partition_number }}
+        echo {{ root_unlock_key }} | cryptsetup resize /dev/mapper/{{ root_partition }}_crypt
+        pvresize /dev/mapper/{{ root_partition }}_crypt
+        lvresize -l+100%FREE /dev/crypt/root
+        resize2fs /dev/mapper/crypt-root
+      args:
+        executable: /bin/bash
+      changed_when: true
+      failed_when: false
 
 - name: "Configuring Extra Disks"
   become: true
@@ -67,8 +73,13 @@
         - disks.additional_disks | length > 0
       block:
         - name: "Identifying available disks"
-          ansible.builtin.shell: "lsblk -no NAME -x NAME | grep -v {{ root_disk }}"
+          ansible.builtin.shell: |
+            set -o pipefail
+            lsblk -no NAME -x NAME | grep -v {{ root_disk }}
+          args:
+            executable: /bin/bash
           register: lsblk_output
+          changed_when: false
 
         - name: "Parsing available disks"
           ansible.builtin.set_fact:
@@ -85,6 +96,7 @@
       ansible.builtin.file:
         path: "{{ item.mount }}"
         state: directory
+        mode: "0755"
       loop: "{{ disks.additional_disks | default([], true) }}"
 
     - name: "Creating filesystems on additional disks"

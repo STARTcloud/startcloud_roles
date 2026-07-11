@@ -48,11 +48,13 @@
 
 - name: "Installing SDKMAN"
   when: not sdkman_init.stat.exists
+  become: true
   become_user: "{{ sdk_service_user }}"
   block:
     - name: "Checking service user and group"
       ansible.builtin.command: id {{ sdk_service_user }}
       register: sdk_service_user_info
+      changed_when: false
 
     - name: "Debugging service user info"
       ansible.builtin.debug:
@@ -99,6 +101,7 @@
         mode: "0755"
 
     - name: "Flushing SDK caches before install"
+      become: true
       become_user: "{{ sdk_service_user }}"
       ansible.builtin.shell: >-
         . {{ sdkman_dir }}/bin/sdkman-init.sh && sdk flush {{ item }}
@@ -108,6 +111,7 @@
       changed_when: false
 
     - name: "Updating SDKMAN"
+      become: true
       become_user: "{{ sdk_service_user }}"
       ansible.builtin.shell: >-
         . {{ sdkman_dir }}/bin/sdkman-init.sh && sdk selfupdate
@@ -118,6 +122,7 @@
       when: sdkman_update
 
     - name: "Installing SDK candidates/versions"
+      become: true
       become_user: "{{ sdk_service_user }}"
       ansible.builtin.shell: >-
         . {{ sdkman_dir }}/bin/sdkman-init.sh &&
@@ -133,6 +138,7 @@
         'is already installed.' not in sdk_install.stdout
 
     - name: "Uninstalling SDK candidates/versions"
+      become: true
       become_user: "{{ sdk_service_user }}"
       ansible.builtin.shell: >-
         . {{ sdkman_dir }}/bin/sdkman-init.sh &&
