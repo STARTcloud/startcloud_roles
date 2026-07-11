@@ -1,6 +1,0 @@
----
-- name: "Testing the greenbone role"
-  hosts: localhost
-  remote_user: root
-  roles:
-    - startcloud.startcloud_roles.greenbone

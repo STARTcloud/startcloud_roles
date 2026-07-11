@@ -115,7 +115,7 @@
         dest: "{{ item.dest }}"
         mode: "0777"
       with_items:
-        - { src: ../templates/Sikuli.png, dest: "/usr/share/applications/Sikuli.png" }
+        - { src: Sikuli.png, dest: "/usr/share/applications/Sikuli.png" }
     - name: "Adding Scripts to Desktop"
       become: true
       ansible.builtin.copy:
