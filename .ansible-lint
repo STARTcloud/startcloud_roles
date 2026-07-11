@@ -1,18 +1,5 @@
 ---
-# Strictest built-in ansible-lint profile — enforces fqcn, yaml formatting,
-# name casing, changed_when, risky-file-permissions, meta completeness, etc.
 profile: production
 
 skip_list:
-  # This collection's vars (run_tasks, service_user, packages, startcloud_*)
-  # are deliberately shared across roles and driven from Hosts.yml, so the
-  # role-name-prefix convention does not fit. May be revisited later.
   - var-naming[no-role-prefix]
-
-exclude_paths:
-  # Upstream test scaffolding referencing external Galaxy roles we don't
-  # vendor (geerlingguy.*, ansible-mattermost, etc.) — not part of what we ship.
-  - roles/*/molecule/
-  - roles/*/tests/
-  # Binary asset ansible-lint tries (and fails) to decode as YAML.
-  - roles/sikulix/templates/Sikuli.png

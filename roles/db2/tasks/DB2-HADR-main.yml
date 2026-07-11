@@ -1,5 +1,0 @@
----
-- name: "Setting DB2-A-HADR as Primary"
-  ansible.builtin.raw: "su - {{ db2usr }} -c 'db2 start hadr on database  {{ db2dbname }} as primary'"
-- name: "Running Monitoring Tool"
-  ansible.builtin.raw: "su - {{ db2usr }} -c 'db2pd -alldbs -hadr'"

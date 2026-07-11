@@ -1,2 +1,31 @@
 ---
 run_tasks: true
+
+# DB2 instance identity
+db2usr: db2inst1
+db2grp: db2iadm1
+db2dbname: STARTDB
+database_dir: db2data
+
+# Installer
+db2version: 11.1.4.5
+db2_installer_archive: v11.1.4fp5_linuxx64_server_t.tar.gz
+db2_installer_url: "https://www./{{ db2_installer_archive }}"
+
+# Database creation
+db2_create_database: true
+
+# HADR replication (pairs one primary with one standby)
+db2_hadr_enabled: false
+db2_hadr_role: primary
+db2_hadr_activate: true
+db2_a_hadr_host: db2
+db2_b_hadr_host: db2z
+db2_a_hadr_port: 60010
+db2_b_hadr_port: 60010
+db2_hadr_backend_ports: 60010
+peer_window: 300
+
+# TSAMP clustering
+db2_tsamp_enabled: false
+tsamp_vip: ""

@@ -2,5 +2,25 @@
 - name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    - name: "Including OS-specific tasks"
-      ansible.builtin.include_tasks: "{{ ansible_os_family | lower }}.yml"
+    - name: "Including DB2 installation tasks"
+      ansible.builtin.include_tasks: install.yml
+
+    - name: "Including database creation tasks"
+      ansible.builtin.include_tasks: create.yml
+      when: db2_create_database
+
+    - name: "Including HADR primary configuration tasks"
+      ansible.builtin.include_tasks: hadr-primary.yml
+      when: db2_hadr_enabled and db2_hadr_role == 'primary'
+
+    - name: "Including HADR standby configuration tasks"
+      ansible.builtin.include_tasks: hadr-standby.yml
+      when: db2_hadr_enabled and db2_hadr_role == 'standby'
+
+    - name: "Including HADR activation tasks"
+      ansible.builtin.include_tasks: hadr-activate.yml
+      when: db2_hadr_enabled and db2_hadr_role == 'primary' and db2_hadr_activate
+
+    - name: "Including TSAMP clustering tasks"
+      ansible.builtin.include_tasks: tsamp.yml
+      when: db2_tsamp_enabled

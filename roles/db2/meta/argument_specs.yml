@@ -3,12 +3,33 @@ argument_specs:
   main:
     short_description: IBM DB2 installation with HADR and TSAMP
     description:
-      - Installs IBM DB2 11.1 from the server_t installer, creates the database, and configures HADR primary/standby
-        replication plus TSAMP clustering. Additional variables (db2usr, db2grp, db2version, db2dbname, database_dir,
-        HADR hosts/ports) are supplied externally by the calling play.
+      - Installs IBM DB2 11.1 from the server_t installer, optionally creates the database, and optionally configures
+        HADR primary/standby replication plus TSAMP clustering. Instance identity, installer source, and HADR
+        hosts/ports are role defaults overridable by the calling play.
     author: Mark Gilbert
     options:
       run_tasks:
         type: bool
         default: true
         description: Master gate — when false the role loads its vars but runs no tasks.
+      db2_create_database:
+        type: bool
+        default: true
+        description: Create the database defined by db2dbname after installation.
+      db2_hadr_enabled:
+        type: bool
+        default: false
+        description: Configure HADR replication on this host.
+      db2_hadr_role:
+        type: str
+        default: primary
+        choices: [primary, standby]
+        description: Which side of the HADR pair this host is.
+      db2_hadr_activate:
+        type: bool
+        default: true
+        description: Start HADR as primary after configuration (requires the standby to be restored first).
+      db2_tsamp_enabled:
+        type: bool
+        default: false
+        description: Install and configure TSAMP clustering (requires the operator-supplied sam41.lic template).

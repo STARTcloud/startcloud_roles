@@ -1,0 +1,150 @@
+---
+- name: "Updating System"
+  ansible.builtin.dnf:
+    name: "*"
+    state: latest
+
+- name: "Installing the 'Development tools' package group"
+  ansible.builtin.dnf:
+    name: "@Development tools"
+    state: present
+
+- name: "Installing Dependencies"
+  vars:
+    packages:
+      - libstdc++-devel
+      - libaio
+      - pam-devel.i686
+  ansible.builtin.dnf:
+    name: "{{ packages }}"
+    state: present
+
+- name: "Disabling SELinux"
+  ansible.posix.selinux:
+    state: disabled
+
+- name: "Ensuring DB2 group exists: {{ db2grp }}"
+  ansible.builtin.group:
+    name: "{{ db2grp }}"
+    state: present
+
+- name: "Adding User: {{ db2usr }}"
+  ansible.builtin.user:
+    comment: "DB2 User"
+    group: "{{ db2grp }}"
+    name: "{{ db2usr }}"
+
+- name: "Ensuring /local is mounted and writeable by user: {{ db2usr }}"
+  ansible.builtin.file:
+    group: "{{ db2grp }}"
+    mode: "0755"
+    owner: "{{ db2usr }}"
+    path: /local
+    state: directory
+  register: local_exists
+
+- name: "Ensuring the data directory is writeable by user: {{ db2usr }}"
+  ansible.builtin.file:
+    group: "{{ db2grp }}"
+    mode: "0755"
+    owner: "{{ db2usr }}"
+    path: "/local/{{ database_dir }}"
+    state: directory
+
+- name: "Ensuring /local/backup is writeable by user: {{ db2usr }}"
+  ansible.builtin.file:
+    group: "{{ db2grp }}"
+    mode: "0755"
+    owner: "{{ db2usr }}"
+    path: /local/backup
+    state: directory
+
+- name: "Ensuring /local-log is mounted and writeable by user: {{ db2usr }}"
+  ansible.builtin.file:
+    group: "{{ db2grp }}"
+    mode: "0755"
+    owner: "{{ db2usr }}"
+    path: /local-log
+    state: directory
+  register: local_log_exists
+
+- name: "Checking if /local/server_t exists to skip extraction if already extracted"
+  register: server_t_exists
+  ansible.builtin.stat:
+    path: /local/server_t
+
+- name: "Downloading the DB2 installer: {{ db2version }}"
+  ansible.builtin.get_url:
+    dest: "/local/{{ db2_installer_archive }}"
+    url: "{{ db2_installer_url }}"
+    mode: "0644"
+  when: "server_t_exists.stat.exists is not defined or not server_t_exists.stat.exists"
+
+- name: "Extracting the DB2 installer to /local/server_t"
+  ansible.builtin.unarchive:
+    dest: /local/
+    src: "/local/{{ db2_installer_archive }}"
+    remote_src: true
+  when: "server_t_exists.stat.exists is not defined or not server_t_exists.stat.exists"
+
+- name: "Checking if DB2 is Already Installed"
+  block:
+    - name: "Checking the DB2 license manager"
+      ansible.builtin.command: "su - {{ db2usr }} -c 'db2licm -l'"
+      register: db2_installed
+      changed_when: false
+  rescue:
+    - name: "Checking Pre-Requisites for DB2 Version: {{ db2version }}"
+      ansible.builtin.command: "/local/server_t/db2prereqcheck -v {{ db2version }} -c"
+      changed_when: false
+
+    - name: "Creating Response File for Automated DB2 installation"
+      ansible.builtin.blockinfile:
+        block: |
+          PROD = DB2_SERVER_EDITION
+          FILE = /opt/ibm/db2/V11.1
+          LIC_AGREEMENT = ACCEPT
+          DB2_INST.START_DURING_INSTALL = YES
+          DB2_INST.AUTOSTART = YES
+          INSTALL_TYPE = TYPICAL
+          INSTANCE = DB2_INST
+          DB2_INST.NAME = {{ db2usr }}
+          DB2_INST.GROUP_NAME = {{ db2grp }}
+        create: true
+        path: /local/server_t/db2server.rsp
+        mode: "0644"
+
+    - name: "Installing DB2 from the response file"
+      ansible.builtin.command: "/local/server_t/db2setup -r /local/server_t/db2server.rsp"
+      changed_when: true
+
+- name: "Stopping the Service"
+  ansible.builtin.command: "su - {{ db2usr }} -c 'db2stop'"
+  changed_when: true
+
+- name: "Starting the Service"
+  ansible.builtin.command: "su - {{ db2usr }} -c 'db2start'"
+  changed_when: true
+
+- name: "Checking Licensing"
+  ansible.builtin.command: "su - {{ db2usr }} -c 'db2licm -l'"
+  changed_when: false
+
+- name: "Checking if /local/backup data directory already exists"
+  register: local_backup_exists
+  ansible.builtin.stat:
+    path: /local/backup
+
+- name: "Removing Previous Backups"
+  ansible.builtin.file:
+    path: /local/backup
+    state: absent
+  when: "local_backup_exists.stat.exists is defined and local_backup_exists.stat.exists"
+
+- name: "Creating new Backup folder"
+  ansible.builtin.file:
+    group: "{{ db2grp }}"
+    owner: "{{ db2usr }}"
+    mode: "0755"
+    path: /local/backup
+    state: directory

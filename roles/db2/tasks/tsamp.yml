@@ -1,0 +1,91 @@
+---
+- name: "Installing epel-release and Perl-Sys-Syslog for TSAMP"
+  ansible.builtin.dnf:
+    name:
+      - epel-release
+      - perl-Sys-Syslog
+    state: present
+
+- name: "Preparing TSAMP configuration Scripts: installSAM.centos"
+  ansible.builtin.template:
+    src: installSAM.centos
+    dest: /local/server_t/db2/linuxamd64/tsamp/installSAM.centos
+    mode: "a+x"
+
+- name: "Preparing TSAMP configuration Scripts: prereqSAM.centos"
+  ansible.builtin.template:
+    src: prereqSAM.centos
+    dest: /local/server_t/db2/linuxamd64/tsamp/prereqSAM.centos
+    mode: "a+x"
+
+- name: "Running the TSAMP Pre-Requisite Check"
+  ansible.builtin.command: "sh /local/server_t/db2/linuxamd64/tsamp/prereqSAM.centos --silent"
+  changed_when: false
+
+- name: "Running the TSAMP Installation Script"
+  ansible.builtin.command: "sh /local/server_t/db2/linuxamd64/tsamp/installSAM.centos"
+  changed_when: true
+
+- name: "Ensuring License is Writable"
+  ansible.builtin.file:
+    mode: "0777"
+    path: /var/opt/sam/lic/nodelock
+
+# sam41.lic is the operator-supplied IBM license file; it is deliberately not
+# committed to this public repository. Place it in this role's templates/
+# directory before enabling db2_tsamp_enabled.
+- name: "Preparing the TSAMP License"
+  ansible.builtin.template:
+    src: sam41.lic
+    dest: /local/server_t/db2/linuxamd64/tsamp/sam41.lic
+    mode: "0644"
+
+- name: "Licensing TSAMP"
+  ansible.builtin.command: "/usr/bin/samlicm -i /local/server_t/db2/linuxamd64/tsamp/sam41.lic"
+  changed_when: true
+
+- name: "Preparing TSAMP"
+  ansible.builtin.command: /opt/ibm/db2/V11.1/install/tsamp/db2cptsa
+  changed_when: true
+
+- name: "Preparing the nodes for Clustering"
+  ansible.builtin.command: "preprpnode {{ db2_a_hadr_host }} {{ db2_b_hadr_host }}"
+  environment:
+    CT_MANAGEMENT_SCOPE: "2"
+  changed_when: true
+
+- name: "Preparing the db2haicu Domain configuration"
+  ansible.builtin.template:
+    src: db2haicu_setup.xml.j2
+    dest: "/home/{{ db2usr }}/db2haicu_setup.xml"
+    mode: "0644"
+
+- name: "Importing Domain configuration into TSAMP and Preparing Nodes"
+  ansible.builtin.command: "db2haicu -f /home/{{ db2usr }}/db2haicu_setup.xml"
+  changed_when: true
+
+- name: "Running db2haicu network setup"
+  ansible.builtin.shell: |
+    db2haicu <<EOF
+    1
+    1
+    EOF
+  changed_when: true
+
+- name: "Running db2haicu VIP setup"
+  ansible.builtin.shell: |-
+    db2haicu <<EOF
+    3
+    1
+    1
+    4
+    1
+    "{{ db2dbname }}"
+    "{{ tsamp_vip }}"
+    255.255.0.0
+    1
+    1
+    2
+    2
+    EOF
+  changed_when: true
