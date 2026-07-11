@@ -5,6 +5,8 @@ argument_specs:
     description:
       - Builds and serves OS package repositories — OmniOS IPS pkg server instances and a PGP-signed Debian APT repository.
         Additional structures (pkg_server, storage_disk) are supplied externally by the calling play.
+        main.yml always runs the OS base tasks, then the archive tasks selected by pkg_server.type
+        (core/extra mirror via pkgrecv, public/private build from source via buildctl).
     author: Mark Gilbert
     options:
       run_tasks:

@@ -71,7 +71,7 @@ frontend  HTTPS-IN
 backend {{backend.title}}
     mode http
     http-response set-header Strict-Transport-Security "max-age=16000000; includeSubDomains; preload;"
-    reqadd X-Forwarded-Proto:\ https
+    http-request add-header X-Forwarded-Proto https
     option http-keep-alive
     option forwardfor
     option redispatch

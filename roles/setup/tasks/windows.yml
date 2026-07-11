@@ -38,7 +38,7 @@
 # resolve. community.windows ships the module on both build and deploy hosts.
 - name: "Setting timezone to {{ win_timezone }}"
   when: ansible_os_family == 'Windows'
-  ansible.windows.win_timezone:
+  community.windows.win_timezone:
     timezone: "{{ win_timezone }}"
 
 - name: "Writing current variables to support bundle"

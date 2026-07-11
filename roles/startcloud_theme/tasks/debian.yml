@@ -85,7 +85,6 @@
         mode: "0644"
         src: "startcloud-grub.png"
         dest: /boot/grub/
-      loop: "{{ files.files }}"
 
     - name: "Setting theme-specific GRUB parameters"
       ansible.builtin.set_fact:

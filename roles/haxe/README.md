@@ -1,47 +1,80 @@
-# Role Name
-=========
+# Ansible Role: Haxe
 
-## Description
-This role installs Haxe and sets up the necessary environment for developing applications with Haxe. It includes tasks for downloading the Haxe compiler, extracting it, and setting up Haxelib, the package manager for Haxe.
+Installs a pinned Haxe release on Debian/Ubuntu — build dependencies, the Haxe
+compiler from the official GitHub release tarball, Neko, haxelib setup, and the
+configured Haxe libraries (including git-sourced dev libraries and optional
+OpenFL setup).
 
 ## Requirements
-------------
-- Ensure that the target system meets the prerequisites for running Haxe, such as having a compatible operating system and sufficient disk space.
+
+Debian-family target with network access to github.com and lib.haxe.org.
 
 ## Role Variables
-------------------
 
-Variables can be set in the `defaults/main.yml` file or overridden in the inventory file or through extra vars. Some notable variables include:
+Available variables are listed below, along with default values (see `defaults/main.yml`):
 
-- `haxe_version`: Specifies the version of Haxe to download and install.
-- `service_user`: Defines the user under which Haxe and its libraries will be installed. Defaults to 'startcloud'.
-- `additional_haxe_libraries`: A list of additional Haxe libraries to install after setting up Haxelib.
+    run_tasks: true
+
+Master gate — when false the role loads its variables but runs no tasks.
+
+    haxe_version: "4.3.6"
+
+Haxe release version to download and install.
+
+    haxe_home: "/opt/haxe/haxe-{{ haxe_version }}"
+
+Base directory for the Haxe installation.
+
+    haxelib_dir: "/opt/haxe/haxelib_default"
+
+Directory used as the haxelib library store.
+
+    haxe: "{{ haxe_home }}/haxe"
+    haxelib: "{{ haxe_home }}/haxelib"
+
+Paths to the haxe and haxelib binaries.
+
+    install_neko: true
+
+Whether Neko (required by Haxe) is part of the install.
+
+    install_openfl: true
+
+Run `haxelib run openfl setup` after the libraries are installed.
+
+    additional_haxe_libraries:
+      - feathersui-validators
+      - lime
+      - pako
+
+Haxe libraries installed via `haxelib install`.
+
+    additional_haxe_libraries_dev:
+      - library: "mxhx-feathersui"
+        repo: "https://github.com/mxhx-dev/mxhx-feathersui.git"
+        branch: ""
+
+Haxe libraries installed from git via `haxelib git` (library, repo, branch).
+
+The install runs as `service_user` (falling back to the Ansible connection
+user) and exposes the Haxe binaries by appending `haxe_home` to the PATH used
+by the haxelib commands.
 
 ## Dependencies
-------------
 
-This role depends on the following:
-
-- Other roles hosted on Galaxy can be included as dependencies by specifying them in the `meta/main.yml` file.
+None.
 
 ## Example Playbook
--------------------
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
-
-```
-yaml
-
-hosts: servers roles:
-{ role: username.haxe_install, haxe_version: 4.3.6, additional_haxe_libraries: ['neko', 'lime'] }
-```
+    - hosts: builders
+      vars:
+        haxe_version: "4.3.6"
+        additional_haxe_libraries:
+          - lime
+          - pako
+      roles:
+        - startcloud.startcloud_roles.haxe
 
 ## License
--------
 
-BSD
-
-## Author Information
-------------------
-
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+GPL-2.0-or-later

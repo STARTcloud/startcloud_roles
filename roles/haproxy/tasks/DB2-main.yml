@@ -1,18 +1,25 @@
 ---
 - name: "Installing Latest Stable Source for haproxy"
   tags: haproxy
-  ansible.builtin.dnf: "name=centos-release-scl state=present"
+  ansible.builtin.dnf:
+    name: centos-release-scl
+    state: present
+
 - name: "Installing haproxy"
   tags: haproxy
   ansible.builtin.dnf:
     name:
       - rh-haproxy18-haproxy
       - rh-haproxy18-haproxy-syspaths
+    state: present
+
 - name: "Configuring haproxy"
   tags: haproxy
   ansible.builtin.template:
     src: "haproxy.cfg.j2"
     dest: "/etc/opt/rh/rh-haproxy18/haproxy/haproxy.cfg"
+    mode: "0644"
+
 - name: "Change file ownership, group and permissions"
   ansible.builtin.file:
     group: haproxy
@@ -20,8 +27,9 @@
     owner: haproxy
     path: /etc/haproxy/
     recurse: true
+
 - name: "Configuring haproxy"
-  notify: "reload haproxy"
+  notify: "Reload haproxy"
   tags: haproxy
   ansible.builtin.template:
     dest: /etc/haproxy/db2healthcheck.sh

@@ -10,10 +10,12 @@
   become: true
   ansible.builtin.command: "pfexec pkgrecv -s {{ pkg_server.repo_url }}/{{ pkg_server.omnios_release }}/{{ pkg_server.archive }}/ -d file:///{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg/
     --clone -p *"
+  changed_when: true
 
 - name: "Recreating package repository caches"
   become: true
-  ansible.builtin.command: "pkgrepo rebuild -s /{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg/"
+  ansible.builtin.command: "pfexec pkgrepo rebuild -s /{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg/"
+  changed_when: true
 
 - name: "Starting pkg server"
   become: true

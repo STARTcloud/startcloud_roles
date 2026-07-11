@@ -1,5 +1,5 @@
 ---
-- name: "Stopping pkg server"
+- name: "Ensuring pkg server is running"
   become: true
   ansible.builtin.service:
     name: "pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive | replace('.', '') }}"
@@ -14,7 +14,7 @@
       - developer/build/gnu-make
       - system/header
 
-- name: "Creating Public Repo Build directories"
+- name: "Creating Private Repo Build directories"
   become: true
   ansible.builtin.file:
     mode: "0755"
@@ -28,25 +28,30 @@
   ansible.builtin.pip:
     name: pexpect
 
-- name: "Setting package service to read only, preventing package updates over the web"
+- name: "Setting package service to read-write for the rebuild"
   become: true
-  ansible.builtin.command: "pfexec svccfg -s pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive | replace('.','') }} setprop pkg/readonly = false"
+  ansible.builtin.command: "pfexec svccfg -s pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive | replace('.', '') }} setprop pkg/readonly = false"
+  changed_when: true
 
-- name: "Setting Package Service port {{ pkg_server.port }}"
+- name: "Restricting Package Service to localhost during the rebuild"
   become: true
-  ansible.builtin.command: "pfexec svccfg -s pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive | replace('.','') }} setprop pkg/address = 127.0.0.1"
+  ansible.builtin.command: "pfexec svccfg -s pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive | replace('.', '') }} setprop pkg/address = 127.0.0.1"
+  changed_when: true
 
 - name: "Setting Package Service as Supplemental"
   become: true
-  ansible.builtin.command: "pkgrepo set -s /{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg -p {{ pkg_server.archive | replace('.','') }}  repository/collection_type=supplemental"
+  ansible.builtin.command: "pkgrepo set -s /{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg -p {{ pkg_server.archive | replace('.', '') }}  repository/collection_type=supplemental"
+  changed_when: true
 
 - name: "Setting Package Description"
   become: true
-  ansible.builtin.command: "pkgrepo set -s /{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg -p {{ pkg_server.archive | replace('.','') }}  repository/description='{{ pkg_server.description }}'"
+  ansible.builtin.command: "pkgrepo set -s /{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg -p {{ pkg_server.archive | replace('.', '') }}  repository/description='{{ pkg_server.description }}'"
+  changed_when: true
 
 - name: "Setting Package Service Repo Name"
   become: true
-  ansible.builtin.command: "pkgrepo set -s /{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg -p {{ pkg_server.archive | replace('.','') }}  repository/name='{{ pkg_server.name }}'"
+  ansible.builtin.command: "pkgrepo set -s /{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg -p {{ pkg_server.archive | replace('.', '') }}  repository/name='{{ pkg_server.name }}'"
+  changed_when: true
 
 - name: "Downloading packages from source"
   ansible.builtin.git:
@@ -90,7 +95,7 @@
     state: started
     enabled: true
 
-- name: "Configuring PGKSRVR Variable"
+- name: "Configuring PKGSRVR Variable"
   become: true
   ansible.builtin.lineinfile:
     path: "/{{ storage_disk.path }}/src/lib/site.sh"
@@ -106,24 +111,26 @@
     line: "IPS_REPO=http://localhost:{{ pkg_server.port }}/"
     backrefs: true
 
-- name: "Expecting input for rebuild"
+- name: "Building all packages, answering the cache-clear prompt"
   ansible.builtin.expect:
     command: "./buildctl build all"
     chdir: "/{{ storage_disk.path }}/src/build"
     echo: true
-    timeout:
+    timeout: null
     responses:
       "Built package cache will be cleared, continue\\?": "y"
 
-- name: "Setting package service to read only, preventing package updates over the web"
+- name: "Setting package service back to read only, preventing package updates over the web"
   become: true
-  ansible.builtin.command: "pfexec svccfg -s pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive | replace('.','') }} setprop pkg/readonly = true"
+  ansible.builtin.command: "pfexec svccfg -s pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive | replace('.', '') }} setprop pkg/readonly = true"
+  changed_when: true
 
-- name: "Setting Package Service port {{ pkg_server.port }}"
+- name: "Removing the localhost address restriction from the Package Service"
   become: true
-  ansible.builtin.command: "pfexec svccfg -s pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive | replace('.','') }} delprop pkg/address"
+  ansible.builtin.command: "pfexec svccfg -s pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive | replace('.', '') }} delprop pkg/address"
+  changed_when: true
 
-- name: "Starting pkg server"
+- name: "Restarting pkg server"
   become: true
   ansible.builtin.service:
     name: "pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive | replace('.', '') }}"

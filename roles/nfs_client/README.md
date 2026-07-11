@@ -19,13 +19,13 @@ Available variables are listed below, along with default values (see
 A list of NFS shares to mount. Empty by default (no-op). Nothing is hard-coded
 in the role — supply the values from `Hosts.yml`. Each item:
 
-| Key      | Required | Default            | Description                         |
-|----------|----------|--------------------|-------------------------------------|
-| `src`    | yes      | —                  | `server:/export/path`               |
-| `path`   | yes      | —                  | Local mount point (created if absent)|
-| `fstype` | no       | `nfs`              | Filesystem type                     |
-| `opts`   | no       | `defaults,_netdev` | Mount options (`_netdev` = wait net)|
-| `state`  | no       | `mounted`          | `ansible.builtin.mount` state       |
+| Key      | Required | Default            | Description                            |
+|----------|----------|--------------------|----------------------------------------|
+| `src`    | yes      | —                  | `server:/export/path`                  |
+| `path`   | yes      | —                  | Local mount point (created if absent)  |
+| `fstype` | no       | `nfs`              | Filesystem type                        |
+| `opts`   | no       | `defaults,_netdev` | Mount options (`_netdev` = wait net)   |
+| `state`  | no       | `mounted`          | `ansible.builtin.mount` state          |
 
 ## Example (Hosts.yml)
 
@@ -42,4 +42,4 @@ None.
 
 ## License
 
-Apache
+GPL-2.0-or-later
