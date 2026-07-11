@@ -1,8 +1,8 @@
 # Ansible Role: NFS
 
-[![CI](https://github.com/geerlingguy/ansible-role-nfs/workflows/CI/badge.svg?event=push)](https://github.com/geerlingguy/ansible-role-nfs/actions?query=workflow%3ACI)
-
-Installs NFS utilities on RedHat/CentOS or Debian/Ubuntu.
+Installs NFS server utilities on Debian/Ubuntu or RHEL-family systems, creates the
+export directories, renders `/etc/exports`, and ensures the NFS server daemon is running.
+Export changes trigger an `exportfs -ra` reload.
 
 ## Requirements
 
@@ -12,14 +12,24 @@ None.
 
 Available variables are listed below, along with default values (see `defaults/main.yml`):
 
+    run_tasks: true
+
+Master gate — when false the role loads its variables but runs no tasks.
+
     nfs_exports: []
 
-A list of exports which will be placed in the `/etc/exports` file. See Ubuntu's simple [Network File System (NFS)](https://ubuntu.com/server/docs/service-nfs) guide for more info and examples. (Simple example: `nfs_exports: [ "/home/public    *(rw,sync,no_root_squash)" ]`).
+A list of export lines placed verbatim in `/etc/exports`. The first field of each entry
+is also created as a directory (mode 0755). Simple example:
+`nfs_exports: [ "/home/public    *(rw,sync,no_root_squash)" ]`.
 
     nfs_rpcbind_state: started
     nfs_rpcbind_enabled: true
 
-(RedHat/CentOS/Fedora only) The state of the `rpcbind` service, and whether it should be enabled at system boot.
+(RHEL-family only) The state of the `rpcbind` service and whether it should be enabled
+at boot.
+
+The NFS server daemon name is resolved per OS from `vars/` (`nfs_server_daemon`:
+`nfs-kernel-server` on Debian, `nfs-server` on RHEL/Fedora).
 
 ## Dependencies
 
@@ -27,14 +37,10 @@ None.
 
 ## Example Playbook
 
-    - hosts: db-servers
+    - hosts: nfs-servers
       roles:
-        - { role: startcloud.startcloud_roles.nfs }
+        - startcloud.startcloud_roles.nfs
 
 ## License
 
-MIT / BSD
-
-## Author Information
-
-This role was created in 2014 by [Jeff Geerling](https://www.jeffgeerling.com/), author of [Ansible for DevOps](https://www.ansiblefordevops.com/).
+GPL-2.0-or-later

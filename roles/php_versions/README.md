@@ -1,8 +1,14 @@
 # Ansible Role: PHP Versions
 
-[![CI](https://github.com/geerlingguy/ansible-role-php-versions/workflows/CI/badge.svg?event=push)](https://github.com/geerlingguy/ansible-role-php-versions/actions?query=workflow%3ACI)
+Selects a single PHP version for a host and prepares the system so the
+`startcloud.startcloud_roles.php` role (or a similar role) installs exactly that version.
+On Debian/Ubuntu it configures the Ondrej Sury repositories (PPA on Ubuntu, sury.org apt
+repo on Debian) and purges the package sets of every other PHP version; on EL it selects
+the matching Remi repositories and enables the `php:remi-*` DNF module on EL 8+.
 
-Allows different PHP versions to be installed when using the `geerlingguy.php` role (or a similar role). This role was originally built for [Drupal VM](https://www.drupalvm.com) but was released more generically so others could use an easier mechanism for switching PHP versions.
+The role also defines the version-specific variables consumed by the php role
+(`php_packages`, `php_fpm_daemon`, `php_conf_paths`, extension module paths, and so on)
+from its `vars/` files, so switching `php_version` is a one-variable change.
 
 ## Requirements
 
@@ -12,37 +18,38 @@ N/A
 
 Available variables are listed below, along with default values (see `defaults/main.yml`):
 
+    run_tasks: true
+
+Master gate — when false the role loads its variables but runs no tasks.
+
     php_version: '8.2'
 
-The PHP version to be installed. Any [currently-supported PHP major version](http://php.net/supported-versions.php) is a valid option (e.g. `7.4`, `8.0`, `8.1`, or `8.2`).
+The PHP version to be installed. Any currently-supported PHP major version is a valid
+option (e.g. `7.4`, `8.0`, `8.1`, or `8.2`).
 
     php_versions_install_recommends: false
 
-(For Debian OSes only) Whether to install recommended packages. This is set to `no` by default because setting it to `yes` often leads to multiple PHP versions being installed (thus making a bit of a mess) when using repos like Ondrej's PHP PPA for Ubuntu.
+(Debian/Ubuntu only) Whether to install recommended packages. Disabled by default
+because enabling it often leads to multiple PHP versions being installed when using the
+Sury repositories.
 
 ## Dependencies
 
-  - geerlingguy.php is a soft dependency as the `php_version` variable is required to be set.
-  - geerlingguy.repo-remi, if you're using CentOS or a Red Hat derivative.
+- `startcloud.startcloud_roles.php` is a soft dependency — this role exists to feed it
+  the `php_version`-specific variables and should run before it.
 
 ## Example Playbook
 
     - hosts: webservers
       become: true
-    
+
       vars:
         php_version: '8.2'
-    
+
       roles:
-        - name: geerlingguy.repo-remi
-          when: ansible_os_family == 'RedHat'
-        - geerlingguy.php-versions
-        - geerlingguy.php
+        - startcloud.startcloud_roles.php_versions
+        - startcloud.startcloud_roles.php
 
 ## License
 
-MIT / BSD
-
-## Author Information
-
-This role was created in 2017 by [Jeff Geerling](https://www.jeffgeerling.com/), author of [Ansible for DevOps](https://www.ansiblefordevops.com/).
+GPL-2.0-or-later

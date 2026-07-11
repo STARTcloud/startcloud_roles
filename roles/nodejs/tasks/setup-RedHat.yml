@@ -8,13 +8,11 @@
   ansible.builtin.dnf:
     name: "https://rpm.nodesource.com/pub_{{ nodejs_version }}/nodistro/repo/nodesource-release-nodistro-1.noarch.rpm"
     state: present
+  notify: "Updating package cache after NodeSource repository change"
   when: ansible_distribution_major_version | int >= 7
-  register: node_repo
 
-- name: "Updating package cache if repository was added"
-  ansible.builtin.dnf:
-    update_cache: true
-  when: node_repo is changed
+- name: "Flushing handlers to refresh the package cache before install"
+  ansible.builtin.meta: flush_handlers
 
 - name: "Ensuring Node.js and npm are installed"
   ansible.builtin.dnf:

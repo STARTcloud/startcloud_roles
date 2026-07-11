@@ -9,11 +9,8 @@
     repo: "ppa:nginx/{{ nginx_ppa_version }}"
     state: present
     update_cache: true
-  register: nginx_ppa_added
+  notify: Remove nginx for PPA reinstall
   when: nginx_ppa_use | bool
 
-- name: "Ensuring nginx will reinstall if the PPA was just added"
-  ansible.builtin.apt:
-    name: "{{ nginx_package_name }}"
-    state: absent
-  when: nginx_ppa_added is changed
+- name: "Flushing handlers to reinstall nginx from the PPA"
+  ansible.builtin.meta: flush_handlers

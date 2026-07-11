@@ -5,7 +5,7 @@ galaxy_info:
   description: Gathers playbook archives, installer and completion manifests, and Domino autoconfigure output into a support bundle zip at /vagrant/support-bundle.zip
   company: STARTcloud
   issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
-  license: Apache-2.0
+  license: GPL-2.0-or-later
   min_ansible_version: "2.15"
   platforms:
     - name: Debian

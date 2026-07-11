@@ -1,12 +1,10 @@
 # Ansible Role: Nginx
 
-[![CI](https://github.com/geerlingguy/ansible-role-nginx/workflows/CI/badge.svg?event=push)](https://github.com/geerlingguy/ansible-role-nginx/actions?query=workflow%3ACI)
-
-**Note:** Please consider using the official [NGINX Ansible role](https://github.com/nginxinc/ansible-role-nginx) from NGINX, Inc.
-
-Installs Nginx on RedHat/CentOS, Debian/Ubuntu, ArchLinux, FreeBSD or OpenBSD servers.
-
-This role installs and configures the latest version of Nginx from the Nginx yum repository (on RedHat-based systems), apt (on Debian-based systems), pacman (ArchLinux), pkgng (on FreeBSD systems) or pkg_add (on OpenBSD systems). You will likely need to do extra setup work after this role has installed Nginx, like adding your own [virtualhost].conf file inside `/etc/nginx/conf.d/`, describing the location and options to use for your particular website.
+Installs Nginx on RedHat/CentOS, Debian/Ubuntu, ArchLinux, SLES, FreeBSD, or OpenBSD
+servers from the appropriate repository for each platform, renders the main
+`nginx.conf`, and manages virtual hosts, upstreams, and the service state. You will
+likely need extra setup after this role runs, like adding your own vhost `.conf`
+describing your particular website.
 
 ## Requirements
 
@@ -16,14 +14,20 @@ None.
 
 Available variables are listed below, along with default values (see `defaults/main.yml`):
 
+    run_tasks: true
+
+Master gate — when false the role loads its variables but runs no tasks.
 
     nginx_listen_ipv6: true
 
-Whether or not to listen on IPv6 (applied to all vhosts managed by this role).
+Whether to listen on IPv6 (applied to all vhosts managed by this role).
 
     nginx_vhosts: []
 
-A list of vhost definitions (server blocks) for Nginx virtual hosts. Each entry will create a separate config file named by `server_name`. If left empty, you will need to supply your own virtual host configuration. See the commented example in `defaults/main.yml` for available server options. If you have a large number of customizations required for your server definition(s), you're likely better off managing the vhost configuration file yourself, leaving this variable set to `[]`.
+A list of vhost definitions (server blocks). Each entry creates a config file named by
+`server_name` (or `filename`). If left empty, supply your own virtual host
+configuration. See the commented example in `defaults/main.yml` for available options.
+A fully-populated entry:
 
     nginx_vhosts:
       - listen: "443 ssl http2"
@@ -40,7 +44,7 @@ A list of vhost definitions (server blocks) for Nginx virtual hosts. Each entry 
         extra_parameters: |
           location ~ \.php$ {
               fastcgi_split_path_info ^(.+\.php)(/.+)$;
-              fastcgi_pass unix:/var/run/php5-fpm.sock;
+              fastcgi_pass unix:/var/run/php-fpm.sock;
               fastcgi_index index.php;
               fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
               include fastcgi_params;
@@ -50,72 +54,80 @@ A list of vhost definitions (server blocks) for Nginx virtual hosts. Each entry 
           ssl_protocols       TLSv1.1 TLSv1.2;
           ssl_ciphers         HIGH:!aNULL:!MD5;
 
-An example of a fully-populated nginx_vhosts entry, using a `|` to declare a block of syntax for the `extra_parameters`.
+Mind the indentation: the first `extra_parameters` line is a normal 2-space indent, the
+rest indent relative to it; the whole block lands 4-space indented in the generated
+file. A secondary redirect vhost:
 
-Please take note of the indentation in the above block. The first line should be a normal 2-space indent. All other lines should be indented normally relative to that line. In the generated file, the entire block will be 4-space indented. This style will ensure the config file is indented correctly.
+    - listen: "80"
+      server_name: "example.com www.example.com"
+      return: "301 https://example.com$request_uri"
+      filename: "example.com.80.conf"
 
-      - listen: "80"
-        server_name: "example.com www.example.com"
-        return: "301 https://example.com$request_uri"
-        filename: "example.com.80.conf"
-
-An example of a secondary vhost which will redirect to the one shown above.
-
-*Note: The `filename` defaults to the first domain in `server_name`, if you have two vhosts with the same domain, eg. a redirect, you need to manually set the `filename` so the second one doesn't override the first one*
+Note: `filename` defaults to the first domain in `server_name` — two vhosts with the
+same domain (e.g. a redirect) need explicit filenames so one doesn't override the other.
 
     nginx_remove_default_vhost: false
 
-Whether to remove the 'default' virtualhost configuration supplied by Nginx. Useful if you want the base `/` URL to be directed at one of your own virtual hosts configured in a separate .conf file.
+Whether to remove the 'default' virtualhost configuration supplied by Nginx. Useful if
+you want the base `/` URL directed at one of your own vhosts.
 
     nginx_upstreams: []
 
-If you are configuring Nginx as a load balancer, you can define one or more upstream sets using this variable. In addition to defining at least one upstream, you would need to configure one of your server blocks to proxy requests through the defined upstream (e.g. `proxy_pass http://myapp1;`). See the commented example in `defaults/main.yml` for more information.
+For load balancing, define one or more upstream sets here, then point a server block at
+them (e.g. `proxy_pass http://myapp1;`). See the commented example in
+`defaults/main.yml`.
 
-    nginx_user: "nginx"
+    nginx_user: [OS-specific]
 
-The user under which Nginx will run. Defaults to `nginx` for RedHat, `www-data` for Debian and `www` on FreeBSD and OpenBSD.
+The user under which Nginx runs — `nginx` on RedHat/SUSE, `www-data` on Debian, `http`
+on Arch, `www` on FreeBSD/OpenBSD.
 
-    nginx_worker_processes: "{{ ansible_processor_vcpus|default(ansible_processor_count) }}"
+    nginx_worker_processes: "{{ ansible_processor_vcpus | default(ansible_processor_count) }}"
     nginx_worker_connections: "1024"
     nginx_multi_accept: "off"
 
-`nginx_worker_processes` should be set to the number of cores present on your machine (if the default is incorrect, find this number with `grep processor /proc/cpuinfo | wc -l`). `nginx_worker_connections` is the number of connections per process. Set this higher to handle more simultaneous connections (and remember that a connection will be used for as long as the keepalive timeout duration for every client!). You can set `nginx_multi_accept` to `on` if you want Nginx to accept all connections immediately.
+Workers should match your core count; connections is per worker (each keepalive client
+holds one for its timeout). Set `nginx_multi_accept: "on"` to accept all new connections
+at once.
 
     nginx_error_log: "/var/log/nginx/error.log warn"
     nginx_access_log: "/var/log/nginx/access.log main buffer=16k flush=2m"
 
-Configuration of the default error and access logs. Set to `off` to disable a log entirely.
+Default error and access logs. Set to `off` to disable a log entirely.
 
     nginx_sendfile: "on"
     nginx_tcp_nopush: "on"
     nginx_tcp_nodelay: "on"
 
-TCP connection options. See [this blog post](https://t37.net/nginx-optimization-understanding-sendfile-tcp_nodelay-and-tcp_nopush.html) for more information on these directives.
+TCP connection options.
 
-    nginx_keepalive_timeout: "65"
-    nginx_keepalive_requests: "100"
+    nginx_keepalive_timeout: "75"
+    nginx_keepalive_requests: "600"
 
-Nginx keepalive settings. Timeout should be set higher (10s+) if you have more polling-style traffic (AJAX-powered sites especially), or lower (<10s) if you have a site where most users visit a few pages and don't send any further requests.
+Keepalive settings. Use a higher timeout for polling-style traffic, lower for sites
+where visitors load a few pages and leave.
 
     nginx_server_tokens: "on"
 
-Nginx server_tokens settings. Controls whether nginx responds with it's version in HTTP headers. Set to `"off"` to disable.
+Whether nginx reports its version in HTTP headers. Set `"off"` to hide it.
 
     nginx_client_max_body_size: "64m"
 
-This value determines the largest file upload possible, as uploads are passed through Nginx before hitting a backend like `php-fpm`. If you get an error like `client intended to send too large body`, it means this value is set too low.
+Largest possible upload, since uploads pass through Nginx before reaching a backend
+like php-fpm. `client intended to send too large body` errors mean this is too low.
 
     nginx_server_names_hash_bucket_size: "64"
 
-If you have many server names, or have very long server names, you might get an Nginx error on startup requiring this value to be increased.
+Increase if you have many (or very long) server names.
 
     nginx_proxy_cache_path: ""
 
-Set as the `proxy_cache_path` directive in the `nginx.conf` file. By default, this will not be configured (if left as an empty string), but if you wish to use Nginx as a reverse proxy, you can set this to a valid value (e.g. `"/var/cache/nginx keys_zone=cache:32m"`) to use Nginx's cache (further proxy configuration can be done in individual server configurations).
+Set as the `proxy_cache_path` directive (e.g. `"/var/cache/nginx keys_zone=cache:32m"`)
+to use Nginx's cache as a reverse proxy; empty leaves it unconfigured.
 
     nginx_extra_http_options: ""
 
-Extra lines to be inserted in the top-level `http` block in `nginx.conf`. The value should be defined literally (as you would insert it directly in the `nginx.conf`, adhering to the Nginx configuration syntax - such as `;` for line termination, etc.), for example:
+Literal extra lines for the top-level `http` block, e.g.:
 
     nginx_extra_http_options: |
       proxy_buffering    off;
@@ -124,112 +136,86 @@ Extra lines to be inserted in the top-level `http` block in `nginx.conf`. The va
       proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
       proxy_set_header   Host $http_host;
 
-See the template in `templates/nginx.conf.j2` for more details on the placement.
-
     nginx_extra_conf_options: ""
 
-Extra lines to be inserted in the top of `nginx.conf`. The value should be defined literally (as you would insert it directly in the `nginx.conf`, adhering to the Nginx configuration syntax - such as `;` for line termination, etc.), for example:
+Literal extra lines for the top of `nginx.conf`, e.g.:
 
     nginx_extra_conf_options: |
       worker_rlimit_nofile 8192;
-
-See the template in `templates/nginx.conf.j2` for more details on the placement.
 
     nginx_log_format: |-
       '$remote_addr - $remote_user [$time_local] "$request" '
       '$status $body_bytes_sent "$http_referer" '
       '"$http_user_agent" "$http_x_forwarded_for"'
 
-Configures Nginx's [`log_format`](http://nginx.org/en/docs/http/ngx_http_log_module.html#log_format). options.
+Configures Nginx's `log_format`.
 
     nginx_default_release: ""
 
-(For Debian/Ubuntu only) Allows you to set a different repository for the installation of Nginx. As an example, if you are running Debian's wheezy release, and want to get a newer version of Nginx, you can install the `wheezy-backports` repository and set that value here, and Ansible will use that as the `-t` option while installing Nginx.
+(Debian/Ubuntu only) Repository target passed as apt's `-t` option, e.g. a backports
+release carrying a newer Nginx.
 
     nginx_ppa_use: false
     nginx_ppa_version: stable
 
-(For Ubuntu only) Allows you to use the official Nginx PPA instead of the system's package. You can set the version to `stable` or `development`.
+(Ubuntu only) Use the official Nginx PPA (`stable` or `development`) instead of the
+system package. Enabling this removes the distro nginx package first so the PPA version
+installs cleanly.
 
     nginx_yum_repo_enabled: true
 
-(For RedHat/CentOS only) Set this to `false` to disable the installation of the `nginx` yum repository. This could be necessary if you want the default OS stable packages, or if you use Satellite.
+(RedHat/CentOS only) Set `false` to skip installing the nginx yum repository (e.g. to
+use OS stable packages or Satellite).
 
     nginx_zypper_repo_enabled: true
 
-(For Suse only) Set this to `false` to disable the installation of the `nginx` zypper repository. This could be necessary if you want the default OS stable packages, or if you use Suse Manager.
+(SUSE only) Set `false` to skip installing the nginx zypper repository.
 
     nginx_service_state: started
     nginx_service_enabled: true
 
-By default, this role will ensure Nginx is running and enabled at boot after Nginx is configured. You can use these variables to override this behavior if installing in a container or further control over the service state is required.
+Service state and boot enablement — override when installing in a container or when you
+need finer control.
+
+    nginx_port_forwards: [...]
+
+Port-forward definitions consumed by the STARTcloud provisioner for the Nginx service
+(guest/host ports, bind IP, proxied flag).
 
 ## Overriding configuration templates
 
-If you can't customize via variables because an option isn't exposed, you can override the template used to generate the virtualhost configuration files or the `nginx.conf` file.
+If a needed option isn't exposed via variables, override the templates:
 
-```yaml
-nginx_conf_template: "nginx.conf.j2"
-nginx_vhost_template: "vhost.j2"
-```
+    nginx_conf_template: "nginx.conf.j2"
+    nginx_vhost_template: "vhost.j2"
 
-If necessary you can also set the template on a per vhost basis.
+Templates can also be set per vhost:
 
-```yaml
-nginx_vhosts:
-  - listen: "80 default_server"
-    server_name: "site1.example.com"
-    root: "/var/www/site1.example.com"
-    index: "index.php index.html index.htm"
-    template: "{{ playbook_dir }}/templates/site1.example.com.vhost.j2"
-  - server_name: "site2.example.com"
-    root: "/var/www/site2.example.com"
-    index: "index.php index.html index.htm"
-    template: "{{ playbook_dir }}/templates/site2.example.com.vhost.j2"
-```
+    nginx_vhosts:
+      - listen: "80 default_server"
+        server_name: "site1.example.com"
+        root: "/var/www/site1.example.com"
+        index: "index.php index.html index.htm"
+        template: "{{ playbook_dir }}/templates/site1.example.com.vhost.j2"
 
-You can either copy and modify the provided template, or extend it with [Jinja2 template inheritance](http://jinja.pocoo.org/docs/2.9/templates/#template-inheritance) and override the specific template block you need to change.
+You can copy and modify the provided templates, or extend them with Jinja2 template
+inheritance and override only the block you need. Example — enabling gzip:
 
-### Example: Configure gzip in nginx configuration
+    nginx_conf_template: "{{ playbook_dir }}/templates/nginx.conf.j2"
 
-Set the `nginx_conf_template` to point to a template file in your playbook directory.
+Then in that child template:
 
-```yaml
-nginx_conf_template: "{{ playbook_dir }}/templates/nginx.conf.j2"
-```
+    {% extends 'roles/startcloud.startcloud_roles.nginx/templates/nginx.conf.j2' %}
 
-Create the child template in the path you configured above and extend `startcloud.startcloud_roles.nginx` template file relative to your `playbook.yml`.
-
-```
-{% extends 'roles/startcloud.startcloud_roles.nginx/templates/nginx.conf.j2' %}
-
-{% block http_gzip %}
-    gzip on;
-    gzip_proxied any;
-    gzip_static on;
-    gzip_http_version 1.0;
-    gzip_disable "MSIE [1-6]\.";
-    gzip_vary on;
-    gzip_comp_level 6;
-    gzip_types
-        text/plain
-        text/css
-        text/xml
-        text/javascript
-        application/javascript
-        application/x-javascript
-        application/json
-        application/xml
-        application/xml+rss
-        application/xhtml+xml
-        application/x-font-ttf
-        application/x-font-opentype
-        image/svg+xml
-        image/x-icon;
-    gzip_buffers 16 8k;
-    gzip_min_length 512;
-{% endblock %}
-```
+    {% block http_gzip %}
+        gzip on;
+        gzip_proxied any;
+        gzip_static on;
+        gzip_vary on;
+        gzip_comp_level 6;
+        gzip_buffers 16 8k;
+        gzip_min_length 512;
+    {% endblock %}
 
 ## Dependencies
 
@@ -243,8 +229,4 @@ None.
 
 ## License
 
-MIT / BSD
-
-## Author Information
-
-This role was created in 2014 by [Jeff Geerling](https://www.jeffgeerling.com/), author of [Ansible for DevOps](https://www.ansiblefordevops.com/).
+GPL-2.0-or-later

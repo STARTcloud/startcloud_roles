@@ -1,7 +1,5 @@
 ---
-# tasks file for sbaerlocher.snmp
-
-- name: "linux : installing snmp"
+- name: "Linux : installing snmp"
   become: true
   ansible.builtin.package:
     name: "{{ item }}"
@@ -11,7 +9,7 @@
   tags:
     - packages
 
-- name: "linux : creating snmp extension directory"
+- name: "Linux : creating snmp extension directory"
   become: true
   ansible.builtin.file:
     path: "{{ snmp_extension_scripts }}"
@@ -26,7 +24,7 @@
   tags:
     - configuration
 
-- name: "linux : installing snmp extension"
+- name: "Linux : installing snmp extension"
   become: true
   ansible.builtin.get_url:
     url: "{{ item.url }}"
@@ -43,7 +41,7 @@
   tags:
     - configuration
 
-- name: "linux : installing snmp extension proxmox"
+- name: "Linux : installing snmp extension proxmox"
   become: true
   ansible.builtin.get_url:
     url: "https://raw.githubusercontent.com/librenms/librenms-agent/master/agent-local/proxmox"
@@ -59,7 +57,7 @@
   tags:
     - configuration
 
-- name: "linux : configuring snmpd daemon"
+- name: "Linux : configuring snmpd daemon"
   become: true
   ansible.builtin.template:
     src: "default/snmpd.{{ ansible_os_family }}.j2"
@@ -72,9 +70,9 @@
     setype: etc_t
     selevel: s0
   notify:
-    - restart snmp
+    - Restart snmp
 
-- name: "linux : checking snmp config"
+- name: "Linux : checking snmp config"
   become: true
   ansible.builtin.template:
     src: "snmp/snmpd.conf.j2"
@@ -86,40 +84,12 @@
     serole: object_r
     setype: etc_t
     selevel: s0
-  register: check_snmp
   check_mode: true
+  notify: Reconfigure snmp
   tags:
     - configuration
 
-- name: "Configuring SNMP"
-  when: check_snmp.changed
+- name: "Applying SNMP configuration changes"
+  ansible.builtin.meta: flush_handlers
   tags:
     - configuration
-  block:
-    - name: "linux : stopping snmp"
-      become: true
-      ansible.builtin.service:
-        name: "{{ snmp_service_name }}"
-        state: stopped
-
-    - name: "linux : creating snmp config"
-      become: true
-      ansible.builtin.template:
-        src: "snmp/snmpd.conf.j2"
-        dest: "{{ snmp_config }}"
-        owner: root
-        group: root
-        mode: "0600"
-        seuser: system_u
-        serole: object_r
-        setype: etc_t
-        selevel: s0
-      notify:
-        - restart snmp
-        - enabled snmp
-
-    - name: "linux : starting snmp"
-      become: true
-      ansible.builtin.service:
-        name: "{{ snmp_service_name }}"
-        state: started

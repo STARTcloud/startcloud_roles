@@ -1,0 +1,7 @@
+---
+- name: "Purging php-common package after version purge"
+  ansible.builtin.apt:
+    name: php-common
+    state: absent
+    purge: true
+    force: true

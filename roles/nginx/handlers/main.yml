@@ -13,3 +13,8 @@
     name: nginx
     state: reloaded
   when: nginx_service_state == "started"
+
+- name: Remove nginx for PPA reinstall
+  ansible.builtin.apt:
+    name: "{{ nginx_package_name }}"
+    state: absent

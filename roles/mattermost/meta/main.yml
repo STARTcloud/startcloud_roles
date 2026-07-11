@@ -5,7 +5,7 @@ galaxy_info:
   description: Installs a single-node Mattermost team server backed by MySQL, fronted by nginx, and managed as a systemd service on Debian-family systems.
   company: STARTcloud
   issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
-  license: Apache-2.0
+  license: GPL-2.0-or-later
   min_ansible_version: "2.15"
   platforms:
     - name: Debian
@@ -20,8 +20,6 @@ galaxy_info:
     - collaboration
     - nginx
     - mysql
-dependencies:
-  - pylabs.percona # for ngram support
-  - pylabs.letsencrypt_auth
+dependencies: []
 collections:
   - startcloud.startcloud_roles

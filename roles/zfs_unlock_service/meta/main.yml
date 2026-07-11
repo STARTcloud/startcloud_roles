@@ -5,7 +5,7 @@ galaxy_info:
   description: Installs and enables a systemd service that imports and unlocks an encrypted ZFS user_data pool at boot using a key partition.
   company: STARTcloud
   issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
-  license: Apache-2.0
+  license: GPL-2.0-or-later
   min_ansible_version: "2.15"
   platforms:
     - name: Debian

@@ -5,7 +5,7 @@ galaxy_info:
   description: Installs GPIO/LCD Python dependencies and deploys a systemd service that drives an HD44780 I2C LCD showing host, battery, temperature, IP, and provisioning status on Raspberry Pi.
   company: STARTcloud
   issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
-  license: Apache-2.0
+  license: GPL-2.0-or-later
   min_ansible_version: "2.15"
   platforms:
     - name: Debian

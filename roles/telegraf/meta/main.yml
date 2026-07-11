@@ -5,7 +5,7 @@ galaxy_info:
   description: Installs and configures the Telegraf metrics agent on Linux, FreeBSD, macOS, Windows, and Docker.
   company: STARTcloud
   issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
-  license: Apache-2.0
+  license: GPL-2.0-or-later
   min_ansible_version: "2.15"
   platforms:
     - name: Debian

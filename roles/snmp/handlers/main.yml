@@ -1,17 +1,48 @@
 ---
-- name: restart snmp
+- name: Stop snmp before writing config
+  become: true
+  listen: Reconfigure snmp
+  ansible.builtin.service:
+    name: "{{ snmp_service_name }}"
+    state: stopped
+
+- name: Write snmp config
+  become: true
+  listen: Reconfigure snmp
+  ansible.builtin.template:
+    src: "snmp/snmpd.conf.j2"
+    dest: "{{ snmp_config }}"
+    owner: root
+    group: root
+    mode: "0600"
+    seuser: system_u
+    serole: object_r
+    setype: etc_t
+    selevel: s0
+  notify:
+    - Restart snmp
+    - Enabled snmp
+
+- name: Start snmp after writing config
+  become: true
+  listen: Reconfigure snmp
+  ansible.builtin.service:
+    name: "{{ snmp_service_name }}"
+    state: started
+
+- name: Restart snmp
   become: true
   ansible.builtin.service:
     name: "{{ snmp_service_name }}"
     state: restarted
 
-- name: enabled snmp
+- name: Enabled snmp
   become: true
   ansible.builtin.service:
     name: "{{ snmp_service_name }}"
     enabled: true
 
-- name: start snmp
+- name: Start snmp
   become: true
   ansible.builtin.service:
     name: "{{ snmp_service_name }}"

@@ -24,6 +24,7 @@
       ansible.builtin.git:
         repo: https://github.com/whotwagner/nfc-daemon
         dest: /src/nfc-daemon
+        version: main
 
     - name: "Making nfc-daemon"
       community.general.make:

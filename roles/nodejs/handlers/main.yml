@@ -1,0 +1,4 @@
+---
+- name: "Updating package cache after NodeSource repository change"
+  ansible.builtin.dnf:
+    update_cache: true

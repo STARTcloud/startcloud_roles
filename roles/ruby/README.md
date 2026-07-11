@@ -1,8 +1,8 @@
 # Ansible Role: Ruby
 
-[![CI](https://github.com/geerlingguy/ansible-role-ruby/workflows/CI/badge.svg?event=push)](https://github.com/geerlingguy/ansible-role-ruby/actions?query=workflow%3ACI)
-
-Installs Ruby and bundler gem on Linux.
+Installs Ruby on Debian/Ubuntu or RHEL-family systems — from system packages by default,
+or built from a source tarball — plus Bundler and any configured gems. The user RubyGems
+bin directory is added to the global `$PATH` via `/etc/profile.d/rubygems.sh`.
 
 ## Requirements
 
@@ -12,51 +12,57 @@ None.
 
 Available variables are listed below, along with default values (see `defaults/main.yml`):
 
+    run_tasks: true
+
+Master gate — when false the role loads its variables but runs no tasks.
+
     workspace: /root
 
-The location where temporary files will be downloaded in preparation for Ruby installation.
+The location where temporary files will be downloaded in preparation for a source build.
 
     ruby_install_bundler: true
 
-Whether this role should install [Bundler](http://bundler.io/).
+Whether this role should install [Bundler](https://bundler.io/).
 
     ruby_install_gems: []
 
-A list of Ruby gems to install (just the name of the gem to be installed). This is meant as a simple convenience, and will only install the latest version of the gem. If you need to install gems with more options or specificity, you can do so elsewhere in your playbook.
-
-You can also use a dictionary for each gem that allows setting the `version` and
-`user_install` keys for the `gem` Ansible module.  For example:
+A list of Ruby gems to install. Each entry is either just the gem name (installs the
+latest version) or a dictionary allowing `version` and `user_install` keys for the `gem`
+module. The two syntaxes can be mixed:
 
     ruby_install_gems:
       - name: bundler
         version: '< 2'
         user_install: false
+      - rake
 
-You can mix the two syntaxes, using either a dict or a string (the gem name) for each gem.
+    ruby_install_gems_user: "{{ ansible_user }}"
 
-    ruby_install_gems_user: username
-
-The user account under which Ruby gems will be installed. Defaults to the `ansible_ssh_user` if not set.
+The user account under which the configured gems are installed.
 
     ruby_install_from_source: false
 
-By default, this role will install whatever version of ruby is available through your system's package manager (`apt` or `yum`). You can install whatever version you like (including the latest release) by setting this to `true` and/or updating the `ruby_download_url` and `ruby_version`.
+By default the role installs whatever Ruby version your system's package manager
+provides. Set this to `true` (and adjust the three variables below) to build a specific
+version from source instead. A version marker in `/var/cache/ansible/` skips the build
+when the requested version is already installed.
 
     ruby_download_url: http://cache.ruby-lang.org/pub/ruby/3.0/ruby-3.0.0.tar.gz
 
-The URL from which Ruby will be downloaded (only used if `ruby_install_from_source` is `true`).
+The URL from which the Ruby source tarball is downloaded (source installs only).
 
     ruby_version: 3.0.0
 
-The version of ruby that will be installed (only used if `ruby_install_from_source` is `true`).
+The version of Ruby that will be built (source installs only).
 
     ruby_source_configure_command: ./configure --enable-shared
 
-The `configure` command that will be run (only used if `ruby_install_from_source` is `true`).
+The `configure` command run during the source build.
 
     ruby_rubygems_package_name: rubygems
 
-The name of the `rubygems` package. Generally, the default should work; but it will be set to `rubygems-integration` automatically on Ubuntu Trusty (14.04).
+The name of the rubygems package. The default generally works; it is switched to
+`rubygems-integration` automatically on Ubuntu Trusty (14.04).
 
 ## Dependencies
 
@@ -70,8 +76,4 @@ None.
 
 ## License
 
-MIT / BSD
-
-## Author Information
-
-This role was created in 2014 by [Jeff Geerling](https://www.jeffgeerling.com/), author of [Ansible for DevOps](https://www.ansiblefordevops.com/).
+GPL-2.0-or-later

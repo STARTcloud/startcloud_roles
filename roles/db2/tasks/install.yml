@@ -1,8 +1,8 @@
 ---
 - name: "Updating System"
-  ansible.builtin.dnf:
-    name: "*"
-    state: latest
+  ansible.builtin.command: dnf -y upgrade
+  register: db2_dnf_upgrade
+  changed_when: "'Nothing to do' not in db2_dnf_upgrade.stdout"
 
 - name: "Installing the 'Development tools' package group"
   ansible.builtin.dnf:

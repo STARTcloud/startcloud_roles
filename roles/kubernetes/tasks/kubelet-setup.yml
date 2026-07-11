@@ -30,12 +30,8 @@
     regexp: "{{ kubelet_args_regexp }}"
     state: present
     mode: "0644"
-  register: kubelet_extra_args
+  notify: "Restarting kubelet"
   when: kubernetes_kubelet_extra_args | length > 0
 
-- name: "Reloading systemd unit if args were changed (deprecated)"
-  ansible.builtin.systemd:
-    state: restarted
-    daemon_reload: true
-    name: kubelet
-  when: kubelet_extra_args is changed
+- name: "Applying kubelet configuration changes immediately (deprecated)"
+  ansible.builtin.meta: flush_handlers

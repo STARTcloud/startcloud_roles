@@ -13,6 +13,11 @@
     restart: true
   when: telegraf_agent_docker
 
+- name: "Creating Telegraf install marker"
+  ansible.windows.win_file:
+    path: "{{ telegraf_win_install_dir }}\\.installed"
+    state: touch
+
 - name: "Restarting Windows Telegraf"
   ansible.windows.win_service:
     name: Telegraf

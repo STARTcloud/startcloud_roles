@@ -5,7 +5,7 @@ galaxy_info:
   description: Installs the BigBlueButton web conferencing platform on Ubuntu with optional firewall, NAT, SSL, SIP and Greenlight.
   company: STARTcloud
   issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
-  license: Apache-2.0
+  license: GPL-2.0-or-later
   min_ansible_version: "2.15"
   platforms:
     - name: Ubuntu
@@ -16,7 +16,7 @@ galaxy_info:
     - webrtc
     - video
 dependencies:
-  - role: geerlingguy.certbot
+  - role: startcloud.startcloud_roles.certbot
     vars:
       certbot_install_method: package
       certbot_create_if_missing: true
@@ -31,7 +31,7 @@ dependencies:
           webroot: "{{ bbb_ssl_webroot_path }}"
           domains: "{{ bbb_server_names }}"
     when: bbb_configure_ssl == True
-  - role: geerlingguy.docker
+  - role: startcloud.startcloud_roles.docker
     vars:
       docker_install_compose: true
 collections:

@@ -59,16 +59,12 @@
 
 - name: "Windows | Registering Service"
   ansible.windows.win_command: '{{ telegraf_win_install_dir }}\telegraf\telegraf.exe {{ telegraf_win_service_args | join(" ") }}'
-  register: telegraf_windows_install
+  notify: "Creating Telegraf install marker"
   args:
     creates: "{{ telegraf_win_install_dir }}\\.installed"
 
-- name: "Windows | Creating done file so it won't register itself again"
-  ansible.windows.win_file:
-    path: "{{ telegraf_win_install_dir }}\\.installed"
-    state: touch
-  when:
-    - telegraf_windows_install is changed
+- name: "Windows | Flushing handlers to record the service registration"
+  ansible.builtin.meta: flush_handlers
 
 - name: "Windows | Setting service startup mode to auto and ensuring it is started"
   ansible.windows.win_service:

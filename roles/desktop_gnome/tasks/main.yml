@@ -144,6 +144,7 @@
           ansible.builtin.git:
             repo: https://github.com/home-sweet-gnome/dash-to-panel.git
             dest: /usr/local/src/dash-to-panel
+            version: master
 
         - name: "Installing dash-to-panel Gnome Extension Plus for all users"
           community.general.make:
@@ -156,6 +157,7 @@
           ansible.builtin.git:
             repo: https://github.com/kgshank/gse-sound-output-device-chooser.git
             dest: /usr/share/gnome-shell/extensions/gse-sound-output-device-chooser
+            version: master
 
         - name: "Correcting Directory Structure for Sound Output Chooser"
           changed_when: false
@@ -168,6 +170,7 @@
           ansible.builtin.git:
             repo: https://github.com/Tudmotu/gnome-shell-extension-clipboard-indicator.git
             dest: /usr/share/gnome-shell/extensions/clipboard-indicator@tudmotu.com
+            version: master
 
         - name: "Enabling Extensions"
           changed_when: false

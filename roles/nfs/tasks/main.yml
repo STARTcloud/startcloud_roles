@@ -18,6 +18,7 @@
       ansible.builtin.file:
         path: "{{ item.strip().split()[0] }}"
         state: directory
+        mode: "0755"
       with_items: "{{ nfs_exports }}"
 
     - name: "Copying exports file"

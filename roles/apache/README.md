@@ -1,162 +1,142 @@
 # Ansible Role: Apache 2.x
 
-[![CI](https://github.com/geerlingguy/ansible-role-apache/workflows/CI/badge.svg?event=push)](https://github.com/geerlingguy/ansible-role-apache/actions?query=workflow%3ACI)
-
-An Ansible Role that installs Apache 2.x on RHEL/CentOS, Debian/Ubuntu, SLES and Solaris.
+Installs Apache 2.x on RHEL/CentOS, Debian/Ubuntu, SLES, or Solaris, detects the running
+Apache version (2.2 vs 2.4) to render matching directives, and manages listen ports,
+enabled/disabled mods, and plain plus SSL virtual hosts.
 
 ## Requirements
 
-If you are using SSL/TLS, you will need to provide your own certificate and key files. You can generate a self-signed certificate with a command like `openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout example.key -out example.crt`.
+If you are using SSL/TLS, provide your own certificate and key files. A self-signed
+certificate can be generated with a command like
+`openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout example.key -out example.crt`.
 
-If you are using Apache with PHP, I recommend using the `startcloud.startcloud_roles.php` role to install PHP, and you can either use mod_php (by adding the proper package, e.g. `libapache2-mod-php5` for Ubuntu, to `php_packages`), or by also using `startcloud.startcloud_roles.apache-php-fpm` to connect Apache to PHP via FPM. See that role's README for more info.
+If you are using Apache with PHP, the `startcloud.startcloud_roles.php` role installs
+PHP; use mod_php (add the proper package, e.g. `libapache2-mod-php`, to `php_packages`)
+or connect Apache to PHP-FPM.
 
 ## Role Variables
 
 Available variables are listed below, along with default values (see `defaults/main.yml`):
 
-```yaml
-apache_enablerepo: ""
-```
+    run_tasks: true
 
-The repository to use when installing Apache (only used on RHEL/CentOS systems). If you'd like later versions of Apache than are available in the OS's core repositories, use a repository like EPEL (which can be installed with the `startcloud.startcloud_roles.repo-epel` role).
+Master gate — when false the role loads its variables but runs no tasks.
 
-```yaml
-apache_listen_ip: "*"
-apache_listen_port: 80
-apache_listen_port_ssl: 443
-```
+    apache_enablerepo: ""
 
-The IP address and ports on which apache should be listening. Useful if you have another service (like a reverse proxy) listening on port 80 or 443 and need to change the defaults.
+The repository to use when installing Apache (RHEL/CentOS only), e.g. EPEL for later
+versions than the core repositories carry.
 
-```yaml
-apache_create_vhosts: true
-apache_vhosts_filename: "vhosts.conf"
-apache_vhosts_template: "vhosts.conf.j2"
-```
+    apache_listen_ip: "*"
+    apache_listen_port: 80
+    apache_listen_port_ssl: 443
 
-If set to true, a vhosts file, managed by this role's variables (see below), will be created and placed in the Apache configuration folder. If set to false, you can place your own vhosts file into Apache's configuration folder and skip the convenient (but more basic) one added by this role. You can also override the template used and set a path to your own template, if you need to further customize the layout of your VirtualHosts.
+The IP address and ports Apache listens on. Useful when another service (like a reverse
+proxy) occupies port 80 or 443.
 
-```yaml
-apache_remove_default_vhost: false
-```
+    apache_create_vhosts: true
+    apache_vhosts_filename: "vhosts.conf"
+    apache_vhosts_template: "vhosts.conf.j2"
 
-On Debian/Ubuntu, a default virtualhost is included in Apache's configuration. Set this to `true` to remove that default virtualhost configuration file.
+If true, a vhosts file managed by this role's variables is placed in the Apache
+configuration folder. If false, place your own vhosts file there instead. The template
+path can be overridden for a fully customized VirtualHost layout.
 
-```yaml
-apache_global_vhost_settings: |
-  DirectoryIndex index.php index.html
-  # Add other global settings on subsequent lines.
-```
+    apache_remove_default_vhost: false
 
-You can add or override global Apache configuration settings in the role-provided vhosts file (assuming `apache_create_vhosts` is true) using this variable. By default it only sets the DirectoryIndex configuration.
+On Debian/Ubuntu, a default virtualhost ships with Apache's configuration. Set `true`
+to remove it.
 
-```yaml
-apache_vhosts:
-  # Additional optional properties: 'serveradmin, serveralias, extra_parameters'.
-  - servername: "local.dev"
-    documentroot: "/var/www/html"
-```
+    apache_global_vhost_settings: |
+      DirectoryIndex index.php index.html
+      # Add other global settings on subsequent lines.
 
-Add a set of properties per virtualhost, including `servername` (required), `documentroot` (required), `allow_override` (optional: defaults to the value of `apache_allow_override`), `options` (optional: defaults to the value of `apache_options`), `serveradmin` (optional), `serveralias` (optional) and `extra_parameters` (optional: you can add whatever additional configuration lines you'd like in here).
+Global Apache settings placed at the top of the role-provided vhosts file.
 
-Here's an example using `extra_parameters` to add a RewriteRule to redirect all requests to the `www.` site:
+    apache_vhosts:
+      # Additional optional properties: 'serveradmin, serveralias, extra_parameters'.
+      - servername: "local.dev"
+        documentroot: "/var/www/html"
 
-```yaml
-- servername: "www.local.dev"
-  serveralias: "local.dev"
-  documentroot: "/var/www/html"
-  extra_parameters: |
-    RewriteCond %{HTTP_HOST} !^www\. [NC]
-    RewriteRule ^(.*)$ http://www.%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
-```
+One entry per virtualhost: `servername` (required), `documentroot` (required),
+`allow_override` / `options` (optional, default to the `apache_allow_override` and
+`apache_options` values), `serveradmin`, `serveralias`, and `extra_parameters` (any
+additional configuration lines). Example redirect to the `www.` site via
+`extra_parameters`:
 
-The `|` denotes a multiline scalar block in YAML, so newlines are preserved in the resulting configuration file output.
+    - servername: "www.local.dev"
+      serveralias: "local.dev"
+      documentroot: "/var/www/html"
+      extra_parameters: |
+        RewriteCond %{HTTP_HOST} !^www\. [NC]
+        RewriteRule ^(.*)$ http://www.%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
 
-```yaml
-apache_vhosts_ssl: []
-```
+The `|` denotes a multiline scalar block in YAML, so newlines are preserved.
 
-No SSL vhosts are configured by default, but you can add them using the same pattern as `apache_vhosts`, with a few additional directives, like the following example:
+    apache_vhosts_ssl: []
 
-```yaml
-apache_vhosts_ssl:
-  - servername: "local.dev"
-    documentroot: "/var/www/html"
-    certificate_file: "/home/vagrant/example.crt"
-    certificate_key_file: "/home/vagrant/example.key"
-    certificate_chain_file: "/path/to/certificate_chain.crt"
-    extra_parameters: |
-      RewriteCond %{HTTP_HOST} !^www\. [NC]
-      RewriteRule ^(.*)$ http://www.%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
-```
+No SSL vhosts are configured by default. Use the same pattern as `apache_vhosts` plus
+certificate directives:
 
-Other SSL directives can be managed with other SSL-related role variables.
+    apache_vhosts_ssl:
+      - servername: "local.dev"
+        documentroot: "/var/www/html"
+        certificate_file: "/home/vagrant/example.crt"
+        certificate_key_file: "/home/vagrant/example.key"
+        certificate_chain_file: "/path/to/certificate_chain.crt"
 
-```yaml
-apache_ssl_no_log: true
-```
+    apache_ignore_missing_ssl_certificate: true
 
-Whether to print SSL-related task output to the console when running the playbook.
+To only create SSL vhosts whose certificate file already exists (e.g. with Let's
+Encrypt), set this to `false` — you may then need multiple playbook runs so certs can be
+generated before the vhosts are written.
 
-```yaml
-apache_ssl_protocol: "All -SSLv2 -SSLv3"
-apache_ssl_cipher_suite: "AES256+EECDH:AES256+EDH"
-```
+    apache_ssl_no_log: true
 
-The SSL protocols and cipher suites that are used/allowed when clients make secure connections to your server. These are secure/sane defaults, but for maximum security, performand, and/or compatibility, you may need to adjust these settings.
+Whether to suppress SSL-related task output (certificate paths) during the run.
 
-```yaml
-apache_allow_override: "All"
-apache_options: "-Indexes +FollowSymLinks"
-```
+    apache_ssl_protocol: "All -SSLv2 -SSLv3"
+    apache_ssl_cipher_suite: "AES256+EECDH:AES256+EDH"
 
-The default values for the `AllowOverride` and `Options` directives for the `documentroot` directory of each vhost.  A vhost can overwrite these values by specifying `allow_override` or `options`.
+SSL protocols and cipher suites for secure connections — sane defaults, adjustable for
+compatibility or hardening.
 
-```yaml
-apache_mods_enabled:
-  - rewrite
-  - ssl
-apache_mods_disabled: []
-```
+    apache_allow_override: "All"
+    apache_options: "-Indexes +FollowSymLinks"
 
-Which Apache mods to enable or disable (these will be symlinked into the appropriate location). See the `mods-available` directory inside the apache configuration directory (`/etc/apache2/mods-available` on Debian/Ubuntu) for all the available mods.
+Defaults for the `AllowOverride` and `Options` directives of each vhost's documentroot
+directory; individual vhosts can override via `allow_override` / `options`.
 
-```yaml
-apache_packages:
-  - [platform-specific]
-```
+    apache_mods_enabled:
+      - rewrite
+      - ssl
+    apache_mods_disabled: []
 
-The list of packages to be installed. This defaults to a set of platform-specific packages for RedHat or Debian-based systems (see `vars/RedHat.yml` and `vars/Debian.yml` for the default values).
+Apache mods to enable or disable (Debian/Ubuntu symlinks in `mods-enabled`, RHEL drop-in
+LoadModule files). See `mods-available` in the Apache config directory for options.
 
-```yaml
-apache_state: started
-```
+    apache_packages: [platform-specific]
 
-Set initial Apache daemon state to be enforced when this role is run. This should generally remain `started`, but you can set it to `stopped` if you need to fix the Apache config during a playbook run or otherwise would not like Apache started at the time this role is run.
+Packages installed per platform — see the files under `vars/` for defaults.
 
-```yaml
-apache_enabled: true
-```
+    apache_state: started
 
-Set the Apache service boot time status. This should generally remain `yes`, but you can set it to `no` if you need to run Ansible while leaving the service disabled.
+Initial Apache daemon state enforced by the role. Generally `started`; use `stopped` if
+Apache must stay down while configuration is being repaired.
 
-```yaml
-apache_packages_state: present
-```
+    apache_enabled: true
 
-If you have enabled any additional repositories such as _ondrej/apache2_, [startcloud.startcloud_roles.repo-epel](https://github.com/geerlingguy/ansible-role-repo-epel), or [startcloud.startcloud_roles.repo-remi](https://github.com/geerlingguy/ansible-role-repo-remi), you may want an easy way to upgrade versions. You can set this to `latest` (combined with `apache_enablerepo` on RHEL) and can directly upgrade to a different Apache version from a different repo (instead of uninstalling and reinstalling Apache).
+Whether the Apache service starts at boot.
 
-```yaml
-apache_ignore_missing_ssl_certificate: true
-```
+    apache_packages_state: present
 
-If you would like to only create SSL vhosts when the vhost certificate is present (e.g. when using Let’s Encrypt), set `apache_ignore_missing_ssl_certificate` to `false`. When doing this, you might need to run your playbook more than once so all the vhosts are configured (if another part of the playbook generates the SSL certificates).
+Set to `latest` (combined with `apache_enablerepo` on RHEL) to upgrade Apache from an
+additional repository in place.
 
 ## .htaccess-based Basic Authorization
 
-If you require Basic Auth support, you can add it either through a custom template, or by adding `extra_parameters` to a VirtualHost configuration, like so:
+For Basic Auth, use a custom template or `extra_parameters`:
 
-```yaml
     extra_parameters: |
       <Directory "/var/www/password-protected-directory">
         Require valid-user
@@ -164,18 +144,9 @@ If you require Basic Auth support, you can add it either through a custom templa
         AuthName "Please authenticate"
         AuthUserFile /var/www/password-protected-directory/.htpasswd
       </Directory>
-```
 
-To password protect everything within a VirtualHost directive, use the `Location` block instead of `Directory`:
-
-```
-<Location "/">
-  Require valid-user
-  ....
-</Location>
-```
-
-You would need to generate/upload your own `.htpasswd` file in your own playbook. There may be other roles that support this functionality in a more integrated way.
+To protect everything within a VirtualHost, use a `Location` block instead of
+`Directory`. Generate and upload your own `.htpasswd` file in your playbook.
 
 ## Dependencies
 
@@ -183,26 +154,15 @@ None.
 
 ## Example Playbook
 
-```yaml
-- hosts: webservers
-  vars_files:
-    - vars/main.yml
-  roles:
-    - { role: startcloud.startcloud_roles.apache }
-```
-
-*Inside `vars/main.yml`*:
-
-```yaml
-apache_listen_port: 8080
-apache_vhosts:
-  - {servername: "example.com", documentroot: "/var/www/vhosts/example_com"}
-```
+    - hosts: webservers
+      vars:
+        apache_listen_port: 8080
+        apache_vhosts:
+          - servername: "example.com"
+            documentroot: "/var/www/vhosts/example_com"
+      roles:
+        - startcloud.startcloud_roles.apache
 
 ## License
 
-MIT / BSD
-
-## Author Information
-
-This role was created in 2014 by [Jeff Geerling](https://www.jeffgeerling.com/), author of [Ansible for DevOps](https://www.ansiblefordevops.com/).
+GPL-2.0-or-later

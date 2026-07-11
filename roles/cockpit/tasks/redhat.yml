@@ -7,9 +7,9 @@
     update_cache: true
 
 - name: "Upgrading all yum packages"
-  ansible.builtin.dnf:
-    name: "*"
-    state: latest
+  ansible.builtin.command: dnf -y upgrade
+  register: cockpit_dnf_upgrade
+  changed_when: "'Nothing to do' not in cockpit_dnf_upgrade.stdout"
 
 - name: "Installing EPEL repo"
   ansible.builtin.dnf:

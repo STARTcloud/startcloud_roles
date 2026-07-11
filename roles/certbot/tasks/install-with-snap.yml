@@ -3,7 +3,6 @@
   ansible.builtin.package:
     name: snapd
     state: present
-  register: snapd_install
 
 - name: "Ensuring snapd is enabled"
   ansible.builtin.systemd:
@@ -18,11 +17,10 @@
     state: link
   when: ansible_os_family != "Debian"
 
-- name: "Updating snap after install"
+- name: "Ensuring snap core is installed and current"
   ansible.builtin.shell: snap install core; snap refresh core
   changed_when: true
   failed_when: false
-  when: snapd_install is changed
 
 - name: "Installing certbot via snap"
   community.general.snap:
