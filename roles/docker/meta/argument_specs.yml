@@ -134,4 +134,7 @@ argument_specs:
       docker_containerd_root:
         type: str
         default: ""
-        description: containerd root directory where the containerd snapshotter stores image content (Docker CE 28+ keeps images here, not under the Docker data-root). Empty leaves the containerd package default.
+        description: >-
+          containerd root directory where the containerd snapshotter stores image content
+          (Docker CE 28+ keeps images here, not under the Docker data-root). Empty leaves
+          the containerd package default.
