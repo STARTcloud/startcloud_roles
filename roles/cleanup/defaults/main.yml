@@ -1,6 +1,11 @@
 ---
 run_tasks: true
 
+# User whose home directory gets its shell history scrubbed. Derived from the
+# provisioner's settings block when present; box-build playbooks that define
+# vagrant_user as a play var override this default automatically.
+vagrant_user: "{{ (settings | default({})).vagrant_user | default(ansible_user | default('vagrant')) }}"
+
 verify: true
 cleanup_proxy: true
 

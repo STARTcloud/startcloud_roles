@@ -4,41 +4,41 @@
 # Image tags are pinned via the greenbone_image_tag variable.
 services:
   vulnerability-tests:
-    image: "{{ greenbone_registry }}/vulnerability-tests:{{ greenbone_image_tag }}"
+    image: "{{ greenbone_registry }}/vulnerability-tests:{{ greenbone_feed_tag }}"
     environment:
       STORAGE_PATH: /var/lib/openvas/22.04/vt-data/nasl
     volumes:
       - vt_data_vol:/mnt
 
   notus-data:
-    image: "{{ greenbone_registry }}/notus-data:{{ greenbone_image_tag }}"
+    image: "{{ greenbone_registry }}/notus-data:{{ greenbone_feed_tag }}"
     volumes:
       - notus_data_vol:/mnt
 
   scap-data:
-    image: "{{ greenbone_registry }}/scap-data:{{ greenbone_image_tag }}"
+    image: "{{ greenbone_registry }}/scap-data:{{ greenbone_feed_tag }}"
     volumes:
       - scap_data_vol:/mnt
 
   cert-bund-data:
-    image: "{{ greenbone_registry }}/cert-bund-data:{{ greenbone_image_tag }}"
+    image: "{{ greenbone_registry }}/cert-bund-data:{{ greenbone_feed_tag }}"
     volumes:
       - cert_data_vol:/mnt
 
   dfn-cert-data:
-    image: "{{ greenbone_registry }}/dfn-cert-data:{{ greenbone_image_tag }}"
+    image: "{{ greenbone_registry }}/dfn-cert-data:{{ greenbone_feed_tag }}"
     volumes:
       - cert_data_vol:/mnt
     depends_on:
       - cert-bund-data
 
   data-objects:
-    image: "{{ greenbone_registry }}/data-objects:{{ greenbone_image_tag }}"
+    image: "{{ greenbone_registry }}/data-objects:{{ greenbone_feed_tag }}"
     volumes:
       - data_objects_vol:/mnt
 
   report-formats:
-    image: "{{ greenbone_registry }}/report-formats:{{ greenbone_image_tag }}"
+    image: "{{ greenbone_registry }}/report-formats:{{ greenbone_feed_tag }}"
     volumes:
       - data_objects_vol:/mnt
     depends_on:
@@ -143,20 +143,9 @@ services:
           - mqtt-broker
           - broker
 
-  notus-scanner:
-    image: "{{ greenbone_registry }}/notus-scanner:{{ greenbone_image_tag }}"
-    restart: on-failure
-    volumes:
-      - notus_data_vol:/var/lib/notus
-      - gpg_data_vol:/etc/openvas/gnupg
-    environment:
-      NOTUS_SCANNER_MQTT_BROKER_ADDRESS: mqtt-broker
-      NOTUS_SCANNER_PRODUCTS_DIRECTORY: /var/lib/notus/products
-    depends_on:
-      - mqtt-broker
-      - gpg-data
-      - vulnerability-tests
-
+  # The dedicated notus-scanner container was retired upstream — notus
+  # scanning moved into ospd-openvas, which mounts the notus data volume and
+  # talks to the MQTT broker directly.
   gvm-tools:
     image: "{{ greenbone_registry }}/gvm-tools:{{ greenbone_image_tag }}"
     volumes:
@@ -165,6 +154,13 @@ services:
     depends_on:
       - gvmd
       - ospd-openvas
+
+networks:
+  default:
+    ipam:
+      driver: default
+      config:
+        - subnet: "{{ greenbone_network_subnet }}"
 
 volumes:
   gpg_data_vol:

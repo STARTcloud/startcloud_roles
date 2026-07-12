@@ -1,0 +1,35 @@
+---
+## Docker CE's containerd.io package ships with the CRI plugin disabled and
+## without cgroup configuration; kubeadm requires both. Only applied when a
+## containerd configuration exists — other CRI runtimes are left untouched.
+- name: "Checking for a containerd configuration"
+  ansible.builtin.stat:
+    path: /etc/containerd/config.toml
+  register: kubernetes_containerd_config
+
+- name: "Configuring containerd for Kubernetes"
+  when: kubernetes_containerd_config.stat.exists
+  block:
+    - name: "Enabling the containerd CRI plugin"
+      ansible.builtin.lineinfile:
+        path: /etc/containerd/config.toml
+        regexp: '^disabled_plugins\s*='
+        line: "disabled_plugins = []"
+      register: kubernetes_containerd_cri
+
+    - name: "Configuring containerd to use systemd cgroups for CRI pods"
+      ansible.builtin.blockinfile:
+        path: /etc/containerd/config.toml
+        marker: "# {mark} ANSIBLE MANAGED BLOCK (kubernetes cri runc options)"
+        block: |
+          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+            runtime_type = "io.containerd.runc.v2"
+          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+            SystemdCgroup = true
+      register: kubernetes_containerd_cgroup
+
+    - name: "Restarting containerd after CRI configuration changes"
+      ansible.builtin.service:
+        name: containerd
+        state: restarted
+      when: kubernetes_containerd_cri is changed or kubernetes_containerd_cgroup is changed

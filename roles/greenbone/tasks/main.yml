@@ -21,17 +21,41 @@
         state: "{{ greenbone_compose_state }}"
         pull: "{{ greenbone_compose_pull }}"
 
-    - name: "Creating the initial Greenbone administrator account"
-      community.docker.docker_container_exec:
-        container: "{{ greenbone_project_name }}-gvmd-1"
-        user: "gvmd"
-        command: "gvmd --create-user={{ greenbone_admin_user }} --password={{ greenbone_admin_password }}"
-      register: greenbone_create_admin
-      changed_when: "'User created' in (greenbone_create_admin.stdout | default(''))"
-      failed_when:
-        - greenbone_create_admin.rc | default(0) != 0
-        - "'already exists' not in (greenbone_create_admin.stderr | default(''))"
-      retries: 30
-      delay: 10
-      until: greenbone_create_admin is not failed
+    ## gvmd's first boot spends 15-30 minutes loading the SCAP/CERT feeds
+    ## into postgres before it can service CLI requests, so the administrator
+    ## account is created by a self-disabling systemd timer instead of
+    ## blocking the provision run. Outcome is logged to admin-setup.log.
+    - name: "Recording the Greenbone administrator credentials"
+      ansible.builtin.copy:
+        content: |
+          username: {{ greenbone_admin_user }}
+          password: {{ greenbone_admin_password }}
+        dest: "{{ greenbone_install_dir }}/admin-credentials"
+        mode: "0600"
       no_log: true
+
+    - name: "Installing the Greenbone administrator creation script"
+      ansible.builtin.template:
+        src: greenbone-admin.sh.j2
+        dest: "{{ greenbone_install_dir }}/greenbone-admin.sh"
+        mode: "0700"
+      no_log: true
+
+    - name: "Installing the Greenbone administrator creation service"
+      ansible.builtin.template:
+        src: greenbone-admin.service.j2
+        dest: /etc/systemd/system/greenbone-admin.service
+        mode: "0644"
+
+    - name: "Enabling the Greenbone administrator creation timer"
+      ansible.builtin.template:
+        src: greenbone-admin.timer.j2
+        dest: /etc/systemd/system/greenbone-admin.timer
+        mode: "0644"
+
+    - name: "Starting the Greenbone administrator creation timer"
+      ansible.builtin.systemd:
+        name: greenbone-admin.timer
+        enabled: true
+        state: started
+        daemon_reload: true

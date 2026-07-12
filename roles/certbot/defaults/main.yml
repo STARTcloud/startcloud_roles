@@ -31,15 +31,15 @@ certbot_certs: []
 certbot_create_extra_args: ""
 
 certbot_create_command: >-
-  {{ certbot_script | default('/usr/bin/certbot') }} certonly --{{ certbot_create_method  }}
+  {{ certbot_script | default('/usr/bin/certbot') }} certonly --{{ certbot_create_method }}
   {{ '--hsts' if certbot_hsts else '' }}
   {{ '--test-cert' if certbot_testmode else '' }}
   --noninteractive --agree-tos
-  --email {{ cert_item.email | default(certbot_admin_email) }}
+  --email {{ (cert_item | default({})).email | default(certbot_admin_email) }}
   {{ '--webroot-path ' if certbot_create_method == 'webroot'  else '' }}
-  {{ cert_item.webroot | default(certbot_webroot) if certbot_create_method == 'webroot' else '' }}
+  {{ (cert_item | default({})).webroot | default(certbot_webroot) if certbot_create_method == 'webroot' else '' }}
   {{ certbot_create_extra_args }}
-  -d {{ cert_item.domains | default([]) | join(',') }}
+  -d {{ (cert_item | default({})).domains | default([]) | join(',') }}
   {{ '--pre-hook /etc/letsencrypt/renewal-hooks/pre/stop_services'
     if certbot_create_standalone_stop_services and certbot_create_method == 'standalone'
   else '' }}

@@ -1,0 +1,20 @@
+#!/bin/bash
+# Creates the initial Greenbone administrator once gvmd is able to service
+# CLI requests (its first boot spends 15-30 minutes loading the SCAP/CERT
+# feeds into postgres first). Fired by greenbone-admin.timer until it
+# succeeds, then disables the timer.
+set -u
+
+LOG="{{ greenbone_install_dir }}/admin-setup.log"
+
+output=$(docker exec --user gvmd {{ greenbone_project_name }}-gvmd-1 gvmd --create-user='{{ greenbone_admin_user }}' --password='{{ greenbone_admin_password }}' 2>&1)
+rc=$?
+
+if [ $rc -eq 0 ] || echo "$output" | grep -q "already exists"; then
+    echo "$(date -Is) administrator '{{ greenbone_admin_user }}' ready (credentials in {{ greenbone_install_dir }}/admin-credentials)" >> "$LOG"
+    systemctl disable --now greenbone-admin.timer
+    exit 0
+fi
+
+echo "$(date -Is) gvmd not ready yet: $output" >> "$LOG"
+exit 1

@@ -13,4 +13,8 @@ argument_specs:
       grafana_packages:
         type: list
         elements: str
-        description: Packages installed before configuring Grafana (defaults to the grafana package).
+        description: Prerequisite packages installed before the Grafana APT repository is added.
+      grafana_package:
+        type: str
+        default: grafana
+        description: Package name installed from the Grafana repository once it is configured.

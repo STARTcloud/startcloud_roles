@@ -11,6 +11,9 @@ argument_specs:
         type: bool
         default: true
         description: Master gate — when false the role loads its vars but runs no tasks.
+      vagrant_user:
+        type: str
+        description: User whose home directory shell history is scrubbed. Defaults to settings.vagrant_user, then ansible_user, then vagrant.
       verify:
         type: bool
         default: true

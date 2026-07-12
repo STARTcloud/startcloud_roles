@@ -36,11 +36,39 @@
             group: "{{ authelia_group }}"
             mode: "0750"
 
-        - name: "Downloading the Authelia release binary"
+        - name: "Fetching the Authelia release checksum"
+          ansible.builtin.uri:
+            url: "{{ authelia_checksum_url }}"
+            return_content: true
+          register: authelia_checksum_remote
+          when: authelia_checksum | length == 0
+
+        - name: "Downloading the Authelia release tarball"
           ansible.builtin.get_url:
-            url: "{{ authelia_binary_url }}"
+            url: "{{ authelia_tarball_url }}"
+            dest: "/tmp/{{ authelia_tarball_url | basename }}"
+            checksum: "{{ authelia_checksum if authelia_checksum | length > 0 else 'sha256:' ~ (authelia_checksum_remote.content.split() | first) }}"
+            mode: "0644"
+            timeout: 120
+
+        - name: "Creating the Authelia extraction directory"
+          ansible.builtin.file:
+            path: "/tmp/authelia-v{{ authelia_version }}"
+            state: directory
+            mode: "0755"
+
+        - name: "Extracting the Authelia release"
+          ansible.builtin.unarchive:
+            src: "/tmp/{{ authelia_tarball_url | basename }}"
+            dest: "/tmp/authelia-v{{ authelia_version }}"
+            remote_src: true
+            creates: "/tmp/authelia-v{{ authelia_version }}/authelia-linux-{{ authelia_arch }}"
+
+        - name: "Installing the Authelia binary"
+          ansible.builtin.copy:
+            src: "/tmp/authelia-v{{ authelia_version }}/authelia-linux-{{ authelia_arch }}"
             dest: "{{ authelia_binary_path }}"
-            checksum: "{{ authelia_checksum }}"
+            remote_src: true
             owner: "root"
             group: "root"
             mode: "0755"

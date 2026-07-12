@@ -46,7 +46,7 @@
 
         - name: "Installing Grafana"
           ansible.builtin.apt:
-            name: grafana
+            name: "{{ grafana_package }}"
             state: present
 
         - name: "Configuring Grafana"

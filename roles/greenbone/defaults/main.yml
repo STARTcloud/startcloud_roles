@@ -14,9 +14,13 @@ greenbone_install_dir: /opt/greenbone
 # Compose project name (also used to derive the container names)
 greenbone_project_name: greenbone-community-edition
 
-# Container registry and pinned image tag for the community images
+# Container registry and pinned image tags for the community images. The
+# application images publish "stable"; the feed/data images (scap, cert,
+# vulnerability-tests, notus, data-objects, report-formats) only publish
+# "community"/"latest".
 greenbone_registry: registry.community.greenbone.net/community
 greenbone_image_tag: stable
+greenbone_feed_tag: community
 
 # Greenbone Security Assistant (web UI) host binding
 greenbone_web_bind: 127.0.0.1
@@ -25,6 +29,11 @@ greenbone_web_port: 9392
 # MQTT broker host binding (used internally by the scanner services)
 greenbone_mqtt_bind: 127.0.0.1
 greenbone_mqtt_port: 1883
+
+# Explicit subnet for the compose network. The stack runs ~16 containers on
+# one network, more than fits in the small per-network subnets a restrictive
+# daemon default-address-pools policy hands out.
+greenbone_network_subnet: "172.30.100.0/24"
 
 # Desired state of the compose stack (present, absent, stopped, restarted)
 greenbone_compose_state: present

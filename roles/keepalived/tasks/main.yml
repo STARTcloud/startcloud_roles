@@ -12,7 +12,7 @@
       changed_when: false
       ansible.builtin.shell: |
         set -o pipefail
-        ls /sys/class/net | grep -v ^lo$
+        ls /sys/class/net | grep -vE '^(lo$|docker|veth|br-|virbr|tap|tun)'
       args:
         executable: /bin/bash
       register: sorted_interfaces_output

@@ -1,4 +1,7 @@
 ---
 run_tasks: true
+# Prerequisite packages installed BEFORE the Grafana APT repository is added.
+# The grafana package itself is installed afterwards via grafana_package.
 grafana_packages:
-  - grafana
+  - apt-transport-https
+grafana_package: grafana

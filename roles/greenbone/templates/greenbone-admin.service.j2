@@ -1,0 +1,8 @@
+[Unit]
+Description=Create the initial Greenbone administrator account
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart={{ greenbone_install_dir }}/greenbone-admin.sh

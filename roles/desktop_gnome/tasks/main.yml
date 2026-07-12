@@ -145,6 +145,10 @@
             repo: https://github.com/home-sweet-gnome/dash-to-panel.git
             dest: /usr/local/src/dash-to-panel
             version: master
+          register: dash_to_panel_clone
+          retries: 5
+          delay: 10
+          until: dash_to_panel_clone is success
 
         - name: "Installing dash-to-panel Gnome Extension Plus for all users"
           community.general.make:
@@ -158,6 +162,10 @@
             repo: https://github.com/kgshank/gse-sound-output-device-chooser.git
             dest: /usr/share/gnome-shell/extensions/gse-sound-output-device-chooser
             version: master
+          register: sound_chooser_clone
+          retries: 5
+          delay: 10
+          until: sound_chooser_clone is success
 
         - name: "Correcting Directory Structure for Sound Output Chooser"
           changed_when: false
@@ -171,6 +179,10 @@
             repo: https://github.com/Tudmotu/gnome-shell-extension-clipboard-indicator.git
             dest: /usr/share/gnome-shell/extensions/clipboard-indicator@tudmotu.com
             version: master
+          register: clipboard_indicator_clone
+          retries: 5
+          delay: 10
+          until: clipboard_indicator_clone is success
 
         - name: "Enabling Extensions"
           changed_when: false

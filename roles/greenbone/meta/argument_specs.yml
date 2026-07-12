@@ -26,7 +26,11 @@ argument_specs:
       greenbone_image_tag:
         type: str
         default: stable
-        description: Pinned image tag applied to every Greenbone community image.
+        description: Pinned image tag applied to the Greenbone application images.
+      greenbone_feed_tag:
+        type: str
+        default: community
+        description: Image tag for the feed/data images (scap, cert, vulnerability-tests, notus, data-objects, report-formats), which do not publish a stable tag.
       greenbone_web_bind:
         type: str
         default: 127.0.0.1
@@ -43,6 +47,10 @@ argument_specs:
         type: int
         default: 1883
         description: Host port the internal MQTT broker is published on.
+      greenbone_network_subnet:
+        type: str
+        default: "172.30.100.0/24"
+        description: Explicit subnet for the compose network — the stack's ~16 containers need more addresses than restrictive daemon default-address-pools policies allocate per network.
       greenbone_compose_state:
         type: str
         default: present

@@ -28,11 +28,15 @@
         owner: root
         group: root
         mode: "0644"
-      notify: Reloading NFS
 
     - name: "Ensuring NFS is running"
       ansible.builtin.service:
         name: "{{ nfs_server_daemon }}"
         state: "started"
         enabled: "yes"
+      when: nfs_exports | length | bool
+
+    - name: "Activating exports so mounts later in the same play succeed"
+      ansible.builtin.command: exportfs -ra
+      changed_when: false
       when: nfs_exports | length | bool

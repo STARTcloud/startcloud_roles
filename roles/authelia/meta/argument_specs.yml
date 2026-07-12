@@ -21,12 +21,15 @@ argument_specs:
         description: CPU architecture suffix of the Authelia release binary.
       authelia_checksum:
         type: str
-        default: "sha256:{{ authelia_binary_url }}.sha256"
-        description: Checksum verified against the downloaded binary — defaults to the .sha256 file published beside the GitHub release; override with a literal sha256:<hash> to pin content.
-      authelia_binary_url:
+        default: ""
+        description: Literal "sha256:<hash>" pinning the tarball content; empty fetches the hash from authelia_checksum_url at run time.
+      authelia_checksum_url:
         type: str
-        default: "https://github.com/authelia/authelia/releases/download/v{{ authelia_version }}/authelia-linux-{{ authelia_arch }}"
-        description: URL the Authelia release binary is downloaded from.
+        description: URL of the .sha256 file published beside the release tarball (used when authelia_checksum is empty).
+      authelia_tarball_url:
+        type: str
+        default: "https://github.com/authelia/authelia/releases/download/v{{ authelia_version }}/authelia-v{{ authelia_version }}-linux-{{ authelia_arch }}.tar.gz"
+        description: URL of the Authelia release tarball containing the binary.
       authelia_binary_path:
         type: str
         default: "/usr/local/bin/authelia"

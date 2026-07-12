@@ -13,6 +13,9 @@
       ansible.builtin.include_tasks: setup-Debian.yml
       when: ansible_os_family == 'Debian'
 
+    - name: "Including containerd setup tasks"
+      ansible.builtin.include_tasks: containerd-setup.yml
+
     - name: "Ensuring dependencies are installed"
       ansible.builtin.package:
         name: curl
