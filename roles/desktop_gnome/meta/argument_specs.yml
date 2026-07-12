@@ -12,6 +12,7 @@ argument_specs:
         description: Master gate — when false the role loads its vars but runs no tasks.
       desktop_update_polkit:
         type: bool
+        default: false
         description: When true, install the desktop polkit rules that permit common actions (wifi scan, colord, universal) for all users.
       desktop_extensions_enabled:
         type: bool

@@ -10,6 +10,14 @@ qemu_ga_msi: "guest-agent\\qemu-ga-x86_64.msi"
 # Windows service name registered by the QEMU Guest Agent MSI
 qemu_ga_service_name: "QEMU-GA"
 
+## Second qemu-ga service on an ISA serial port so the same image also
+## serves VirtualBox hosts (which have no virtio-serial device). COM2 =
+## 0x2F8/IRQ3, mapped host-side to a named pipe via --uart2.
+qemu_ga_com_enabled: true
+qemu_ga_com_service_name: "QEMU-GA-COM"
+qemu_ga_com_port: "COM2"
+qemu_ga_exe: 'C:\Program Files\Qemu-ga\qemu-ga.exe'
+
 # Fallback source used ONLY if the virtio-win CD-ROM is not attached/found.
 # Public mirror, pinned to 0.1.271 (0.1.285/0.1.292 have a Server 2025 IO regression).
 # Override (e.g. to a BoxVault URL) via extra_arguments if desired.

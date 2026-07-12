@@ -25,7 +25,7 @@ argument_specs:
         description: Docker restart policy for the container.
       frigate_shm_size:
         type: str
-        default: "256mb"
+        default: "256MB"
         description: Shared memory size for the container (raise for more cameras).
       frigate_config_dir:
         type: str

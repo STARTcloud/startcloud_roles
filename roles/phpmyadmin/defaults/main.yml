@@ -1,7 +1,9 @@
 ---
 run_tasks: true
-python_simple_web_server_path: "{{ service_home_dir }}"
-startcloud_quick_start_port_forwards:
-  - guest: 8000
-    url: "demo"
-startcloud_quick_start_proxy_url: "{{ startcloud_quick_start_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"
+
+phpmyadmin_version: "5.2.2"
+phpmyadmin_download_url: "https://files.phpmyadmin.net/phpMyAdmin/{{ phpmyadmin_version }}/phpMyAdmin-{{ phpmyadmin_version }}-all-languages.tar.gz"
+phpmyadmin_install_dir: /usr/share/phpmyadmin
+
+## php-fpm socket the nginx location proxies to
+phpmyadmin_php_fpm_socket: "unix:/var/run/php/php{{ php_version | default('8.4') }}-fpm.sock"

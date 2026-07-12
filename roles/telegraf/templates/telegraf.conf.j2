@@ -1,247 +1,74 @@
+### MANAGED BY {{ role_path | basename }} ANSIBLE ROLE ###
+
 [global_tags]
-[agent] 
-  interval = "10s"
-  round_interval = true
-  metric_buffer_limit = 1000
-  flush_buffer_when_full = true
-  collection_jitter = "0s"
-  flush_interval = "10s"
-  flush_jitter = "0s"
-  debug = false
-  quiet = false
-  logfile = "/opt/telegraf/telegraf.log"
-  hostname = ""
+{% if telegraf_global_tags is defined and telegraf_global_tags is iterable %}
+{% for item in telegraf_global_tags %}
+  {{ item.tag_name }} = "{{ item.tag_value }}"
+{% endfor %}
+{% endif %}
+
+[agent]
+  interval = "{{ telegraf_agent_interval }}s"
+  round_interval = {{ telegraf_agent_round_interval | bool | lower }}
+  metric_batch_size = {{ telegraf_agent_metric_batch_size }}
+  metric_buffer_limit = {{ telegraf_agent_metric_buffer_limit }}
+  collection_jitter = "{{ telegraf_agent_collection_jitter }}s"
+  flush_interval = "{{ telegraf_agent_flush_interval }}s"
+  flush_jitter = "{{ telegraf_agent_flush_jitter }}s"
+  precision = ""
+  debug = {{ telegraf_agent_debug | bool | lower }}
+  quiet = {{ telegraf_agent_quiet | bool | lower }}
+{% if telegraf_agent_logfile | length > 0 %}
+  logfile = "{{ telegraf_agent_logfile }}"
+{% endif %}
+  hostname = "{{ telegraf_agent_hostname }}"
+  omit_hostname = {{ telegraf_agent_omit_hostname | bool | lower }}
 
 ###############################################################################
 #                                  OUTPUTS                                    #
 ###############################################################################
-[[outputs.influxdb]]
-  urls = ["http://0.0.0.0:8086"] # required
-  database = "MyDatbase" # required
-  username="admin"
-  password="PaSsWoRd"
-  precision = "s"
-  timeout = "5s"
+{% for item in telegraf_agent_output %}
+[[outputs.{{ item.type }}]]
+{% for items in item.config %}
+  {{ items }}
+{% endfor %}
+{% if item.tagpass is defined and item.tagpass is iterable %}
+  [outputs.{{ item.type }}.tagpass]
+{% for items in item.tagpass %}
+    {{ items }}
+{% endfor %}
+{% endif %}
+{% if item.tagdrop is defined and item.tagdrop is iterable %}
+  [outputs.{{ item.type }}.tagdrop]
+{% for items in item.tagdrop %}
+    {{ items }}
+{% endfor %}
+{% endif %}
+{% endfor %}
+
 ###############################################################################
 #                                  INPUTS                                     #
 ###############################################################################
-[[inputs.win_perf_counters]]
-  [[inputs.win_perf_counters.object]]
-    # Processor usage, alternative to native, reports on a per core.
-    ObjectName = "Processor"
-    Instances = ["*"]
-    Counters = [
-      "% Idle Time",
-      "% Interrupt Time",
-      "% Privileged Time",
-      "% User Time",
-      "% Processor Time",
-      "% DPC Time",
-    ]
-    Measurement = "win_cpu"
-    # Set to true to include _Total instance when querying for all (*).
-    IncludeTotal=true
-
-	[[inputs.win_perf_counters.object]]
-    # Disk times and queues
-    ObjectName = "LogicalDisk"
-    Instances = ["C:"]
-    Counters = [
-      "% Idle Time",
-      "% Disk Time",
-      "% Disk Read Time",
-      "% Disk Write Time",
-      "Current Disk Queue Length",
-      "% Free Space",
-      "Free Megabytes",
-    ]
-    Measurement = "win_disk"
-
-  [[inputs.win_perf_counters.object]]
-    ObjectName = "PhysicalDisk"
-    Instances = ["*"]
-    Counters = [
-      "Disk Read Bytes/sec",
-      "Disk Write Bytes/sec",
-      "Current Disk Queue Length",
-      "Disk Reads/sec",
-      "Disk Writes/sec",
-      "% Disk Time",
-      "% Disk Read Time",
-      "% Disk Write Time",
-    ]
-    Measurement = "win_diskio"
-
-  [[inputs.win_perf_counters.object]]
-    ObjectName = "Network Interface"
-    Instances = ["*"]
-    Counters = [
-      "Bytes Received/sec",
-      "Bytes Sent/sec",
-      "Packets Received/sec",
-      "Packets Sent/sec",
-      "Packets Received Discarded",
-      "Packets Outbound Discarded",
-      "Packets Received Errors",
-      "Packets Outbound Errors",
-    ]
-    Measurement = "win_net"
-
-  [[inputs.win_perf_counters.object]]
-    ObjectName = "System"
-    Counters = [
-      "Context Switches/sec",
-      "System Calls/sec",
-      "Processor Queue Length",
-      "System Up Time",
-    ]
-    Instances = ["------"]
-    Measurement = "win_system"
-    # Set to true to include _Total instance when querying for all (*).
-    #IncludeTotal=false
-
-  [[inputs.win_perf_counters.object]]
-    # Example query where the Instance portion must be removed to get data back,
-    # such as from the Memory object.
-    ObjectName = "Memory"
-    Counters = [
-      "Available Bytes",
-      "Cache Faults/sec",
-      "Demand Zero Faults/sec",
-      "Page Faults/sec",
-      "Pages/sec",
-      "Transition Faults/sec",
-      "Pool Nonpaged Bytes",
-      "Pool Paged Bytes",
-      "Standby Cache Reserve Bytes",
-      "Standby Cache Normal Priority Bytes",
-      "Standby Cache Core Bytes",
-
-    ]
-    # Use 6 x - to remove the Instance bit from the query.
-    Instances = ["------"]
-    Measurement = "win_mem"
-    # Set to true to include _Total instance when querying for all (*).
-    #IncludeTotal=false
-
-  [[inputs.win_perf_counters.object]]
-    # Example query where the Instance portion must be removed to get data back,
-    # such as from the Paging File object.
-    ObjectName = "Paging File"
-    Counters = [
-      "% Usage",
-    ]
-    Instances = ["_Total"]
-    Measurement = "win_swap"
-
-  [[inputs.win_perf_counters.object]]
-    ObjectName = "Network Interface"
-    Instances = ["*"]
-    Counters = [
-      "Bytes Sent/sec",
-      "Bytes Received/sec",
-      "Packets Sent/sec",
-      "Packets Received/sec",
-      "Packets Received Discarded",
-      "Packets Received Errors",
-      "Packets Outbound Discarded",
-      "Packets Outbound Errors",
-    ]
-
-[[inputs.win_perf_counters]]
-  [[inputs.win_perf_counters.object]]
-    # Processor usage, alternative to native, reports on a per core.
-    ObjectName = "Processor"
-    Instances = ["*"]
-    Counters = [
-      "% Idle Time",
-      "% Interrupt Time",
-      "% Privileged Time",
-      "% User Time",
-      "% Processor Time"
-    ]
-    Measurement = "win_cpu"
-    # Set to true to include _Total instance when querying for all (*).
-    #IncludeTotal=false
-
-
-  [[inputs.win_perf_counters.object]]
-    ObjectName = "System"
-    Counters = [
-      "Context Switches/sec",
-      "System Calls/sec",
-      "Processor Queue Length",
-      "Threads",
-      "System Up Time",
-      "Processes"
-    ]
-    Instances = ["------"]
-    Measurement = "win_system"
-    # Set to true to include _Total instance when querying for all (*).
-    #IncludeTotal=false
-
-  [[inputs.win_perf_counters.object]]
-    # Example query where the Instance portion must be removed to get data back,
-    # such as from the Memory object.
-    ObjectName = "Memory"
-    Counters = [
-      "Available Bytes",
-      "Cache Faults/sec",
-      "Demand Zero Faults/sec",
-      "Page Faults/sec",
-      "Pages/sec",
-      "Transition Faults/sec",
-      "Pool Nonpaged Bytes",
-      "Pool Paged Bytes"
-    ]
-    # Use 6 x - to remove the Instance bit from the query.
-    Instances = ["------"]
-    Measurement = "win_mem"
-    # Set to true to include _Total instance when querying for all (*).
-    #IncludeTotal=false
-
-  [[inputs.win_perf_counters.object]]
-    # more counters for the Network Interface Object can be found at
-    # https://msdn.microsoft.com/en-us/library/ms803962.aspx
-    ObjectName = "Network Interface"
-    Counters = [
-      "Bytes Received/sec",
-      "Bytes Sent/sec",
-      "Packets Received/sec",
-      "Packets Sent/sec"
-    ]
-    Instances = ["*"] # Use 6 x - to remove the Instance bit from the query.
-    Measurement = "win_net"
-    #IncludeTotal=false #Set to true to include _Total instance when querying for all (*).
-
-  [[inputs.win_perf_counters.object]]
-    # Process metrics
-    ObjectName = "Process"
-    Counters = [
-      "% Processor Time",
-      "Handle Count",
-      "Private Bytes",
-      "Thread Count",
-      "Virtual Bytes",
-      "Working Set"
-      ]
-    Instances = ["*"]
-    Measurement = "win_proc"
-    #IncludeTotal=false #Set to true to include _Total instance when querying for all (*).
-
-[[inputs.win_perf_counters.object]]
-    ObjectName = "Terminal Services"
-    Measurement = "Terminal_Service"
-    Instances = ["------"]
-    Counters = [
-      "Active Sessions",
-      "Inactive Sessions",
-      "Total Sessions"
-    ]
-
-[[inputs.exec]]
-    commands = [ 
-	  "c:/opt/telegraf/nstatreport.bat" 
-	]
-    timeout = "5s"
-	data_format = "influx"
+{% for item in telegraf_plugins_default %}
+[[inputs.{{ item.plugin }}]]
+{% if item.interval is defined %}
+  interval = "{{ item.interval }}s"
+{% endif %}
+{% if item.config is defined and item.config is iterable %}
+{% for items in item.config %}
+  {{ items }}
+{% endfor %}
+{% endif %}
+{% if item.tagpass is defined and item.tagpass is iterable %}
+  [inputs.{{ item.plugin }}.tagpass]
+{% for items in item.tagpass %}
+    {{ items }}
+{% endfor %}
+{% endif %}
+{% if item.tagdrop is defined and item.tagdrop is iterable %}
+  [inputs.{{ item.plugin }}.tagdrop]
+{% for items in item.tagdrop %}
+    {{ items }}
+{% endfor %}
+{% endif %}
+{% endfor %}

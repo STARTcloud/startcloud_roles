@@ -3,10 +3,10 @@ argument_specs:
   main:
     short_description: Package repository server
     description:
-      - Builds and serves OS package repositories — OmniOS IPS pkg server instances and a PGP-signed Debian APT repository.
+      - Builds and serves OS package repositories — OmniOS IPS pkg server instances and the STARTcloud Debian package
+        server (mirror, public, and mTLS-gated private APT repositories behind nginx).
         Additional structures (pkg_server, storage_disk) are supplied externally by the calling play.
-        main.yml always runs the OS base tasks, then the archive tasks selected by pkg_server.type
-        (core/extra mirror via pkgrecv, public/private build from source via buildctl).
+        main.yml always runs the OS base tasks, then the archive tasks selected by pkg_server.type.
     author: Mark Gilbert
     options:
       run_tasks:
@@ -16,3 +16,83 @@ argument_specs:
       package_server_email:
         type: str
         description: Email address embedded in the generated PGP signing key.
+      pkg_server_base_dir:
+        type: str
+        default: /local
+        description: Base directory holding the mirror, public, private, ca, clients and pgp trees.
+      pkg_server_ssl_enabled:
+        type: bool
+        default: true
+        description: Render the port-443 nginx server blocks (requires the referenced certificates to exist).
+      pkg_server_local_dir:
+        type: str
+        description: Directory holding the local signed demonstration repository (defaults to <base_dir>/startcloud).
+      pkg_server_local_port:
+        type: int
+        default: 8008
+        description: Localhost port the demonstration repository vhost listens on.
+      pkg_server_deb_source:
+        type: str
+        description: Path of the deb (built by the debian_packager role) published into the demonstration repository.
+      pkg_server_public_domains:
+        type: list
+        elements: str
+        description: Server names for the public repository vhost (first entry names the vhost file).
+      pkg_server_public_ssl_certificate:
+        type: str
+        description: TLS certificate path for the public repository vhost.
+      pkg_server_public_ssl_certificate_key:
+        type: str
+        description: TLS key path for the public repository vhost.
+      pkg_server_private_domains:
+        type: list
+        elements: str
+        description: Server names for the private repository vhost (first entry names the vhost file).
+      pkg_server_private_ssl_certificate:
+        type: str
+        description: TLS certificate path for the private repository vhost.
+      pkg_server_private_ssl_certificate_key:
+        type: str
+        description: TLS key path for the private repository vhost.
+      pkg_server_mirror_domains:
+        type: list
+        elements: str
+        description: Server names for the mirror vhost (first entry names the vhost file).
+      pkg_server_mirror_ssl_certificate:
+        type: str
+        description: TLS certificate path for the mirror vhost.
+      pkg_server_mirror_ssl_certificate_key:
+        type: str
+        description: TLS key path for the mirror vhost.
+      pkg_server_ca_cn:
+        type: str
+        default: STARTcloud Package Repository CA
+        description: Common name of the private repository client-certificate CA.
+      pkg_server_ca_days:
+        type: int
+        default: 3650
+        description: Validity in days of the generated CA certificate.
+      pkg_server_mirror_source_host:
+        type: str
+        default: mirrors.ocf.berkeley.edu
+        description: Upstream Debian mirror debmirror pulls from.
+      pkg_server_mirror_dists:
+        type: str
+        default: bullseye,bookworm,trixie
+        description: Comma-separated Debian distributions to mirror.
+      pkg_server_mirror_sections:
+        type: str
+        default: main,contrib,non-free,non-free-firmware,main/debian-installer
+        description: Comma-separated repository sections to mirror.
+      pkg_server_mirror_arches:
+        type: str
+        default: amd64,arm64
+        description: Comma-separated architectures to mirror.
+      pkg_server_mirror_cron_minute:
+        type: str
+        default: "30"
+        description: Cron minute for the nightly mirror synchronisation.
+      pkg_server_mirror_cron_hour:
+        type: str
+        default: "2"
+        description: Cron hour for the nightly mirror synchronisation.

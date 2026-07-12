@@ -13,6 +13,4 @@ argument_specs:
       softphone_packages:
         type: list
         elements: str
-        default:
-          - linphone
-        description: Softphone package(s) to install via apt.
+        description: Softphone package(s) to install via apt. Defaults to linphone (linphone-cli on Debian 13+, which dropped the GUI package).

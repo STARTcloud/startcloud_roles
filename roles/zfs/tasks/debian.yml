@@ -2,10 +2,22 @@
 - name: "Including OS-specific vars"
   ansible.builtin.include_vars: "{{ ansible_os_family | lower }}.yml"
 
+- name: "Enabling the Debian contrib component which provides the ZFS packages"
+  ansible.builtin.apt_repository:
+    repo: "{{ item }}"
+    state: present
+    filename: zfs-contrib
+  with_items:
+    - "deb http://deb.debian.org/debian {{ ansible_distribution_release }} contrib"
+    - "deb http://deb.debian.org/debian {{ ansible_distribution_release }}-updates contrib"
+    - "deb http://security.debian.org/debian-security {{ ansible_distribution_release }}-security contrib"
+  when: ansible_distribution == "Debian"
+
 - name: "Installing packages"
   ansible.builtin.apt:
-    name: "{{ packages }}"
+    name: "{{ zfs_packages }}"
     state: present
+    update_cache: true
 
 - name: "Removing zfs-auto-snapshot file from under /etc/cron.d"
   ansible.builtin.file:
@@ -40,7 +52,7 @@
       path: cron.hourly/
     - dest: /etc/
       file: zfs-auto-snapshot
-      path: cron.daily/
+      path: cron.weekly/
     - dest: /etc/
       file: zfs-auto-snapshot
       path: cron.d/

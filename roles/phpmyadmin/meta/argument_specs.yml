@@ -10,14 +10,17 @@ argument_specs:
         type: bool
         default: true
         description: Master gate — when false the role loads its vars but runs no tasks.
-      python_simple_web_server_path:
+      phpmyadmin_version:
         type: str
-        default: "{{ service_home_dir }}"
-        description: Filesystem path used as the document root for the simple web server.
-      startcloud_quick_start_port_forwards:
-        type: list
-        elements: dict
-        description: Guest port forwards advertised for the quick-start demo entry point.
-      startcloud_quick_start_proxy_url:
+        default: "5.2.2"
+        description: phpMyAdmin release to download and install.
+      phpmyadmin_download_url:
         type: str
-        description: Fully qualified proxy URL derived from the first quick-start port forward.
+        description: Full URL of the phpMyAdmin all-languages tarball; derived from phpmyadmin_version by default.
+      phpmyadmin_install_dir:
+        type: str
+        default: /usr/share/phpmyadmin
+        description: Directory phpMyAdmin is extracted into and served from.
+      phpmyadmin_php_fpm_socket:
+        type: str
+        description: php-fpm socket the nginx location proxies PHP requests to. Defaults to the php_version fpm socket (8.4 when php_version is unset).

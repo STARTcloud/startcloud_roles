@@ -1,1 +1,112 @@
 ---
+## Private APT repository (mTLS client-certificate gated) — mirrors the
+## production layout on packages.debian.startcloud.com: /local/private served
+## by nginx with ssl_verify_client against the repository CA, plus per-client
+## certificate distribution under /certs/ restricted by certificate CN.
+- name: "Installing nginx"
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+
+- name: "Creating the private repository directories"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: "{{ item.mode }}"
+  with_items:
+    - path: "{{ pkg_server_base_dir }}/private/debian"
+      mode: "0755"
+    - path: "{{ pkg_server_base_dir }}/ca"
+      mode: "0755"
+    - path: "{{ pkg_server_base_dir }}/clients"
+      mode: "0750"
+
+- name: "Installing the client certificate generation script"
+  ansible.builtin.copy:
+    src: generate_client_cert.sh
+    dest: "{{ pkg_server_base_dir }}/generate_client_cert.sh"
+    mode: "0755"
+
+- name: "Seeding the private repository index page"
+  ansible.builtin.copy:
+    src: private-index.html
+    dest: "{{ pkg_server_base_dir }}/private/index.html"
+    force: false
+    mode: "0644"
+
+- name: "Seeding the private repository assets"
+  ansible.builtin.copy:
+    src: private-assets/
+    dest: "{{ pkg_server_base_dir }}/private/assets/"
+    force: false
+    mode: "0644"
+    directory_mode: "0755"
+
+- name: "Generating the repository CA key"
+  ansible.builtin.command: "openssl genrsa -out {{ pkg_server_base_dir }}/ca/ca.key 4096"
+  args:
+    creates: "{{ pkg_server_base_dir }}/ca/ca.key"
+
+- name: "Generating the repository CA certificate"
+  ansible.builtin.command: >-
+    openssl req -new -x509 -days {{ pkg_server_ca_days }}
+    -key {{ pkg_server_base_dir }}/ca/ca.key
+    -out {{ pkg_server_base_dir }}/ca/ca.crt
+    -subj "/C=US/ST=Illinois/L=Chicago/O=STARTcloud/OU=Package Repository/CN={{ pkg_server_ca_cn }}"
+  args:
+    creates: "{{ pkg_server_base_dir }}/ca/ca.crt"
+
+- name: "Securing the repository CA key"
+  ansible.builtin.file:
+    path: "{{ pkg_server_base_dir }}/ca/ca.key"
+    mode: "0600"
+
+## Production carries this map inline in nginx.conf's http block; shipping it
+## as a conf.d drop-in is equivalent. nginx errors on a duplicate map for the
+## same variable, so remove the inline copy if adopting the role on a server
+## that already has it.
+- name: "Installing the client certificate CN map"
+  ansible.builtin.copy:
+    content: |
+      map $ssl_client_s_dn $ssl_client_cn {
+          default "";
+          ~CN=(?<CN>[^,]+) $CN;
+      }
+    dest: /etc/nginx/conf.d/ssl-client-cn.conf
+    mode: "0644"
+  notify: "Reloading nginx"
+
+- name: "Creating the no-certificate error page directory"
+  ansible.builtin.file:
+    path: /var/www/no-cert
+    state: directory
+    mode: "0755"
+
+- name: "Installing the no-certificate error page"
+  ansible.builtin.copy:
+    content: |
+      <!DOCTYPE html>
+      <html>
+      <head><title>Client certificate required</title></head>
+      <body>
+      <h1>Client certificate required</h1>
+      <p>A valid client certificate is required to access this repository.
+      Please contact the repository administrator.</p>
+      </body>
+      </html>
+    dest: /var/www/no-cert/no-cert.html
+    mode: "0644"
+
+- name: "Templating the private repository nginx vhost"
+  ansible.builtin.template:
+    src: nginx-private.conf.j2
+    dest: "/etc/nginx/sites-available/{{ pkg_server_private_domains | first }}"
+    mode: "0644"
+  notify: "Reloading nginx"
+
+- name: "Enabling the private repository nginx vhost"
+  ansible.builtin.file:
+    src: "/etc/nginx/sites-available/{{ pkg_server_private_domains | first }}"
+    dest: "/etc/nginx/sites-enabled/{{ pkg_server_private_domains | first }}"
+    state: link
+  notify: "Reloading nginx"

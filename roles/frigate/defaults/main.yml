@@ -5,7 +5,7 @@ run_tasks: true
 frigate_image: "ghcr.io/blakeblackshear/frigate:stable"
 frigate_container_name: frigate
 frigate_restart_policy: unless-stopped
-frigate_shm_size: "256mb"
+frigate_shm_size: "256MB"
 
 # Host directories (bind-mounted into the container)
 frigate_config_dir: /opt/frigate/config

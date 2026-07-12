@@ -21,8 +21,12 @@
         - name: "Downloading the InfluxData APT Signing Key"
           ansible.builtin.get_url:
             url: "{{ influxdb_apt_key_url }}"
-            dest: "{{ influxdb_apt_keyring_path }}"
+            dest: /tmp/influxdata-archive.key
             mode: "0644"
+            timeout: 60
+        - name: "Installing the InfluxData APT Signing Key"
+          ansible.builtin.command: "gpg --batch --yes --dearmor -o {{ influxdb_apt_keyring_path }} /tmp/influxdata-archive.key"
+          changed_when: true
         - name: "Adding the InfluxData APT Repository"
           ansible.builtin.apt_repository:
             repo: "{{ influxdb_apt_repo }}"

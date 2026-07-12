@@ -35,6 +35,11 @@
         executable: /bin/bash
       register: first_ip
 
+    - name: "Deriving a virtual IP on the first adapter's subnet when none is configured"
+      ansible.builtin.set_fact:
+        startcloud_keepalived_virtual_ipaddress: "{{ (first_ip.stdout_lines | first).split('/') | first | regex_replace('[0-9]+$', '250') }}"
+      when: startcloud_keepalived_virtual_ipaddress | default('') | length == 0
+
     - name: "Configuring keepalived"
       become: true
       ansible.builtin.template:

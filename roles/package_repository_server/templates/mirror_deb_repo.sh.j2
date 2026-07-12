@@ -1,0 +1,41 @@
+#!/bin/bash
+# Author: Mark Gilbert
+# Description: Mirror a Linux Distribution
+
+# Source host: choose a mirror in your proximity!
+HOST={{ pkg_server_mirror_source_host }}
+
+# Destination directory
+DEST={{ pkg_server_base_dir }}/mirror/debian
+
+# Debian version(s) to mirror
+DIST={{ pkg_server_mirror_dists }}
+
+# Architecture
+ARCH={{ pkg_server_mirror_arches }}
+
+# Log file with date
+LOGFILE="/var/log/mirror_deb_repo_$(date +'%Y-%m-%d').log"
+
+# Log timestamp
+logger -t mirror[$] updating Debian mirror
+
+# Run the debmirror command and log output
+su mirror -c \
+ "debmirror ${DEST} \
+ --nosource \
+ --host=${HOST} \
+ --root=/debian \
+ --dist=${DIST} \
+ --section={{ pkg_server_mirror_sections }} \
+ --i18n \
+ --arch=${ARCH} \
+ --passive --cleanup \
+ --method=rsync \
+ -v" >> ${LOGFILE} 2>&1
+
+logger -t mirror[$] finished updating Debian mirror
+
+# Update the last update time in index.html
+LAST_UPDATE=$(date +'%Y-%m-%d %H:%M:%S')
+sed -i "s/<p><strong>Last update:<\/strong>.*<\/p>/<p><strong>Last update:<\/strong> ${LAST_UPDATE}<\/p>/g" {{ pkg_server_base_dir }}/mirror/index.html

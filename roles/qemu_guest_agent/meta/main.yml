@@ -1,0 +1,27 @@
+---
+galaxy_info:
+  role_name: qemu_guest_agent
+  author: Mark Gilbert
+  description: Installs the QEMU Guest Agent with simultaneous virtio-serial and ISA-serial transports so one image serves bhyve and VirtualBox hosts.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: GPL-2.0-or-later
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions: ["bookworm", "trixie"]
+    - name: Ubuntu
+      versions: ["jammy", "noble"]
+    - name: EL
+      versions: ["8", "9"]
+    - name: FreeBSD
+      versions: ["all"]
+  galaxy_tags:
+    - qemu
+    - guestagent
+    - bhyve
+    - virtualbox
+    - virtio
+dependencies: []
+collections:
+  - startcloud.startcloud_roles

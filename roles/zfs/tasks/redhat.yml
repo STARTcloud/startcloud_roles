@@ -4,7 +4,7 @@
 
 - name: "Installing packages"
   ansible.builtin.dnf:
-    name: "{{ packages }}"
+    name: "{{ zfs_packages }}"
     state: present
 
 - name: "Removing zfs-auto-snapshot file from under /etc/cron.d"
@@ -40,7 +40,7 @@
       path: cron.hourly/
     - dest: /etc/
       file: zfs-auto-snapshot
-      path: cron.daily/
+      path: cron.weekly/
     - dest: /etc/
       file: zfs-auto-snapshot
       path: cron.d/

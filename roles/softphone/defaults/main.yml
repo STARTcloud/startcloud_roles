@@ -1,4 +1,4 @@
 ---
 run_tasks: true
-softphone_packages:
-  - linphone
+## Debian 13+ dropped the linphone GUI package; the console client remains.
+softphone_packages: "{{ ['linphone-cli'] if (ansible_distribution == 'Debian' and ansible_distribution_major_version | int >= 13) else ['linphone'] }}"

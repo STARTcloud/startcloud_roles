@@ -31,7 +31,7 @@ certbot_certs: []
 certbot_create_extra_args: ""
 
 certbot_create_command: >-
-  {{ certbot_script }} certonly --{{ certbot_create_method  }}
+  {{ certbot_script | default('/usr/bin/certbot') }} certonly --{{ certbot_create_method  }}
   {{ '--hsts' if certbot_hsts else '' }}
   {{ '--test-cert' if certbot_testmode else '' }}
   --noninteractive --agree-tos
@@ -39,7 +39,7 @@ certbot_create_command: >-
   {{ '--webroot-path ' if certbot_create_method == 'webroot'  else '' }}
   {{ cert_item.webroot | default(certbot_webroot) if certbot_create_method == 'webroot' else '' }}
   {{ certbot_create_extra_args }}
-  -d {{ cert_item.domains | join(',') }}
+  -d {{ cert_item.domains | default([]) | join(',') }}
   {{ '--pre-hook /etc/letsencrypt/renewal-hooks/pre/stop_services'
     if certbot_create_standalone_stop_services and certbot_create_method == 'standalone'
   else '' }}

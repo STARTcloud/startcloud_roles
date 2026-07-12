@@ -1,0 +1,47 @@
+---
+- name: "Including OS-specific vars"
+  ansible.builtin.include_vars: "{{ ansible_os_family | lower }}.yml"
+
+- name: "Installing the QEMU Guest Agent"
+  ansible.builtin.dnf:
+    name: "{{ qemu_ga_package }}"
+    state: present
+
+## The stock unit hard-binds to the virtio device and cannot start without
+## it; the per-transport units below replace it so one image serves both
+## bhyve (virtio-serial) and VirtualBox (ISA serial) hosts simultaneously.
+- name: "Disabling the stock qemu-guest-agent unit"
+  ansible.builtin.systemd:
+    name: qemu-guest-agent
+    enabled: false
+    state: stopped
+
+- name: "Installing the virtio-serial transport unit"
+  ansible.builtin.template:
+    src: qemu-ga-virtio.service.j2
+    dest: /etc/systemd/system/qemu-ga-virtio.service
+    mode: "0644"
+  when: qemu_ga_virtio_enabled
+
+- name: "Installing the ISA serial transport unit"
+  ansible.builtin.template:
+    src: qemu-ga-serial.service.j2
+    dest: /etc/systemd/system/qemu-ga-serial.service
+    mode: "0644"
+  when: qemu_ga_serial_enabled
+
+- name: "Enabling and starting the virtio-serial transport"
+  ansible.builtin.systemd:
+    name: qemu-ga-virtio
+    enabled: true
+    state: started
+    daemon_reload: true
+  when: qemu_ga_virtio_enabled
+
+- name: "Enabling and starting the ISA serial transport"
+  ansible.builtin.systemd:
+    name: qemu-ga-serial
+    enabled: true
+    state: started
+    daemon_reload: true
+  when: qemu_ga_serial_enabled

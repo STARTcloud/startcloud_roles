@@ -21,3 +21,7 @@ extra_repos:
     repo: "deb [arch={{ deb_architecture.stdout }} signed-by=/etc/apt/keyrings/startcloud-archive-keyring.gpg]
       https://public.debian.packages.startcloud.com/debian/ {{ ansible_distribution_release }} main"
     needs_dearmor: true
+    ## apt_repository used to auto-derive this filename from the repo URL; boxes
+    ## built before the filename was pinned to startcloud.list still carry it.
+    stale_source_files:
+      - /etc/apt/sources.list.d/public_debian_packages_startcloud_com_debian.list

@@ -1,0 +1,32 @@
+server {
+{% for domain in pkg_server_public_domains %}
+    if ($host = {{ domain }}) {
+        return 301 https://$host$request_uri;
+    }
+{% endfor %}
+
+    listen 80;
+    server_name {{ pkg_server_public_domains | join(' ') }};
+    root {{ pkg_server_base_dir }}/public/;
+    autoindex on;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}
+{% if pkg_server_ssl_enabled %}
+
+server {
+    listen 443 ssl;
+    add_header Access-Control-Allow-Origin "*" always;
+    server_name {{ pkg_server_public_domains | join(' ') }};
+    root {{ pkg_server_base_dir }}/public/;
+    autoindex on;
+    ssl_certificate {{ pkg_server_public_ssl_certificate }};
+    ssl_certificate_key {{ pkg_server_public_ssl_certificate_key }};
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}
+{% endif %}

@@ -1,5 +1,5 @@
 ---
-packages:
+asterisk_packages:
   - htop
   - lynx
   - lshw

@@ -131,3 +131,7 @@ argument_specs:
       docker_daemon_options:
         type: dict
         description: Options written to /etc/docker/daemon.json as the dockerd configuration.
+      docker_containerd_root:
+        type: str
+        default: ""
+        description: containerd root directory where the containerd snapshotter stores image content (Docker CE 28+ keeps images here, not under the Docker data-root). Empty leaves the containerd package default.

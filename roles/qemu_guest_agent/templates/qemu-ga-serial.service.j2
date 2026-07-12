@@ -1,0 +1,12 @@
+[Unit]
+Description=QEMU Guest Agent (ISA serial transport)
+ConditionPathExists={{ qemu_ga_serial_device }}
+After=local-fs.target
+
+[Service]
+ExecStart={{ qemu_ga_bin }} -m isa-serial -p {{ qemu_ga_serial_device }}
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

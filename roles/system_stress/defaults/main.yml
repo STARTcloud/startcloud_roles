@@ -6,6 +6,5 @@ stress_packages:
   - stress-ng
   - stress
   - fio
-  - software-properties-common
   - python3-cpuinfo
 #  - sysbench

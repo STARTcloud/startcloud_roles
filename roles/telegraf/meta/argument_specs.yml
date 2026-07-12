@@ -27,6 +27,10 @@ argument_specs:
         type: str
         default: telegraf
         description: Package name used when installing Telegraf.
+      telegraf_agent_package_arch:
+        type: str
+        default: "{{ 'amd64' if ansible_architecture == 'x86_64' else ('armhf' if ansible_architecture == 'arm64' else ansible_architecture) }}"
+        description: Debian package architecture used in the deb package filename.
       telegraf_agent_package_file_deb:
         type: str
         description: Filename of the Debian package to download for the online install method.

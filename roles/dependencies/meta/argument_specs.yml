@@ -29,4 +29,4 @@ argument_specs:
       extra_repos:
         type: list
         elements: dict
-        description: Extra APT repositories to add (name, gpg_key_url, gpg_keyring_path, repo, needs_dearmor).
+        description: Extra APT repositories to add (name, gpg_key_url, gpg_keyring_path, repo, needs_dearmor, optional filename defaulting to name, optional stale_source_files listing old duplicate source files to remove).

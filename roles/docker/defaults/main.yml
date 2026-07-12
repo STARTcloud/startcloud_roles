@@ -56,5 +56,10 @@ docker_yum_gpg_key: "{{ docker_repo_url }}/centos/gpg"
 
 # A list of users who will be added to the docker group.
 docker_users: []
+
+## containerd root directory, where the containerd snapshotter stores image
+## content (Docker CE 28+ keeps images here, NOT under the Docker data-root).
+## Empty = leave the containerd package default (/var/lib/containerd).
+docker_containerd_root: ""
 # Docker daemon options as a dict
 docker_daemon_options: { "log-driver": "journald", "log-level": "warn", "debug": false, "default-address-pools": [{ "base": "172.17.0.0/24", "size": 28 }] }

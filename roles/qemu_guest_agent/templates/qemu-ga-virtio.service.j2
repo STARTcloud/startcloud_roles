@@ -1,0 +1,12 @@
+[Unit]
+Description=QEMU Guest Agent (virtio-serial transport)
+ConditionPathExists={{ qemu_ga_virtio_device }}
+After=local-fs.target
+
+[Service]
+ExecStart={{ qemu_ga_bin }} -m virtio-serial -p {{ qemu_ga_virtio_device }}
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

@@ -60,7 +60,7 @@
           become: true
           become_user: "{{ nextcloud_web_user }}"
           ansible.builtin.command: >
-            php occ maintenance:install
+            {{ nextcloud_php_bin }} occ maintenance:install
             --database "{{ nextcloud_db_type }}"
             --database-host "{{ nextcloud_db_host }}"
             --database-name "{{ nextcloud_db_name }}"
@@ -77,7 +77,7 @@
           become: true
           become_user: "{{ nextcloud_web_user }}"
           ansible.builtin.command: >
-            php occ config:system:set trusted_domains 1
+            {{ nextcloud_php_bin }} occ config:system:set trusted_domains 1
             --value="{{ nextcloud_server_name }}"
           args:
             chdir: "{{ nextcloud_webroot }}"

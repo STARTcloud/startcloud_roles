@@ -1,4 +1,12 @@
 ---
+- name: "Restarting containerd"
+  ansible.builtin.service:
+    name: containerd
+    state: restarted
+  ignore_errors: "{{ ansible_check_mode }}"
+  when: docker_service_manage | bool
+  notify: "Restarting Docker"
+
 - name: "Restarting Docker"
   ansible.builtin.service:
     name: docker

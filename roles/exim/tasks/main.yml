@@ -35,7 +35,7 @@
         state: present
         mode: "0644"
       notify: Restarting exim
-      when: exim_primary_hostname is defined and exim_primary_hostname
+      when: exim_primary_hostname | default('') | length > 0
 
     - name: "Ensuring exim is running"
       ansible.builtin.service:

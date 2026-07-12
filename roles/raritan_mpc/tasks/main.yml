@@ -10,7 +10,19 @@
             cache_valid_time: 3600
             update_cache: true
 
+        - name: "Enabling the Debian non-free component which provides snmp-mibs-downloader"
+          ansible.builtin.apt_repository:
+            repo: "{{ item }}"
+            state: present
+            filename: raritan-mpc-non-free
+          with_items:
+            - "deb http://deb.debian.org/debian {{ ansible_distribution_release }} non-free"
+            - "deb http://deb.debian.org/debian {{ ansible_distribution_release }}-updates non-free"
+            - "deb http://security.debian.org/debian-security {{ ansible_distribution_release }}-security non-free"
+          when: ansible_distribution == "Debian"
+
         - name: "Installing Raritan PDU SNMP management packages"
           ansible.builtin.apt:
             name: "{{ raritan_mpc_packages }}"
             state: present
+            update_cache: true

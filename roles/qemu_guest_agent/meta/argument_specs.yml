@@ -1,0 +1,30 @@
+---
+argument_specs:
+  main:
+    short_description: QEMU Guest Agent with dual transports
+    description:
+      - Installs the QEMU Guest Agent and runs one instance per transport — virtio-serial (bhyve/QEMU) and ISA serial
+        (VirtualBox COM2) — simultaneously, so a single image provides the guest control channel on every hypervisor.
+        Units guard on their device with ConditionPathExists, so a missing transport stays quietly inactive.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      qemu_ga_virtio_enabled:
+        type: bool
+        default: true
+        description: Install and enable the virtio-serial transport unit.
+      qemu_ga_serial_enabled:
+        type: bool
+        default: true
+        description: Install and enable the ISA serial transport unit.
+      qemu_ga_virtio_device:
+        type: str
+        default: /dev/virtio-ports/org.qemu.guest_agent.0
+        description: virtio-serial channel device the virtio transport binds to.
+      qemu_ga_serial_device:
+        type: str
+        default: /dev/ttyS1
+        description: ISA serial device the serial transport binds to (ttyS1 = COM2, mapped host-side by VirtualBox --uart2).

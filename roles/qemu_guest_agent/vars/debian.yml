@@ -1,0 +1,3 @@
+---
+qemu_ga_package: qemu-guest-agent
+qemu_ga_bin: /usr/sbin/qemu-ga

@@ -1,2 +1,9 @@
 ---
 run_tasks: true
+
+## zfs-auto-snapshot retention counts (--keep) per schedule, upstream defaults
+zfs_frequent_cron_rtn: 4
+zfs_hourly_cron_rtn: 24
+zfs_daily_cron_rtn: 31
+zfs_weekly_cron_rtn: 8
+zfs_monthly_cron_rtn: 12

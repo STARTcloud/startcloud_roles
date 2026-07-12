@@ -13,11 +13,11 @@ argument_specs:
         description: Master gate — when false the role loads its vars but runs no tasks.
       nextcloud_version:
         type: str
-        default: "30.0.2"
-        description: Nextcloud server release version to download and install.
+        default: "31"
+        description: Nextcloud major release to install (Nextcloud prunes old point releases, so the latest-<major> alias is used).
       nextcloud_download_url:
         type: str
-        default: "https://download.nextcloud.com/server/releases/nextcloud-{{ nextcloud_version }}.zip"
+        default: "https://download.nextcloud.com/server/releases/latest-{{ nextcloud_version }}.zip"
         description: URL of the Nextcloud release archive to fetch and extract.
       nextcloud_webroot:
         type: str
@@ -41,8 +41,12 @@ argument_specs:
         description: Server name for the nginx virtual host and Nextcloud trusted domain.
       nextcloud_php_fpm_socket:
         type: str
-        default: "/run/php/php-fpm.sock"
+        default: "unix:/run/php/php-fpm.sock"
         description: PHP-FPM listen socket nginx passes PHP requests to.
+      nextcloud_php_bin:
+        type: str
+        default: "php"
+        description: PHP CLI binary used for occ commands; override (e.g. php8.4) when the system default php is newer than the Nextcloud release supports.
       nextcloud_db_type:
         type: str
         default: "mysql"

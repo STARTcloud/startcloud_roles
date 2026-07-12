@@ -6,7 +6,8 @@
       when: "ansible_os_family == 'Debian'"
       block:
         - name: "Including additional vars"
-          ansible.builtin.include_vars: vars/debian12.yml
+          ansible.builtin.include_vars:
+            file: "vars/debian{{ '13' if ansible_distribution_major_version | int >= 13 else '12' }}.yml"
 
         - name: "Gathering DEB architecture"
           ansible.builtin.command: dpkg --print-architecture
@@ -29,7 +30,7 @@
 
         - name: "Adding Additional Dependencies"
           ansible.builtin.apt:
-            name: "{{ packages }}"
+            name: "{{ asterisk_packages }}"
             state: present
 
 - name: "Asterisk User and Directory Setup"
@@ -75,6 +76,8 @@
         - "{{ asterisk_source_dir }}"
         - "{{ asterisk_config_dir }}"
 
+    ## Only fetched when Asterisk still needs to be built — the source tree is
+    ## about a gigabyte and the compile block below is skipped once installed.
     - name: "Downloading and Extracting Asterisk"
       ansible.builtin.unarchive:
         src: "{{ asterisk_package }}"
@@ -82,10 +85,12 @@
         remote_src: true
         list_files: true
       register: asterisk_archive_contents
+      when: not asterisk_bin_path.stat.exists
 
     - name: "Checking if Asterisk is installed (Post-Download)"
       ansible.builtin.debug:
         msg: "Asterisk directory path is {{ asterisk_source_dir }}/{{ asterisk_archive_contents.files[0] }}, installed: {{ asterisk_bin_path.stat.exists }}"
+      when: not asterisk_bin_path.stat.exists
 
 - name: "Asterisk Compilation and Installation"
   when: run_tasks and (ansible_os_family == 'Debian') and not asterisk_bin_path.stat.exists

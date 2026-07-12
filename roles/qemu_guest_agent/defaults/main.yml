@@ -1,0 +1,18 @@
+---
+run_tasks: true
+
+## Transports to serve. Both run as independent systemd units so ONE image
+## works on every hypervisor: bhyve/QEMU connect over the virtio-serial
+## channel, VirtualBox (no virtio-serial device) over a plain ISA serial
+## port. A unit whose device is absent stays inactive via ConditionPathExists.
+qemu_ga_virtio_enabled: true
+qemu_ga_serial_enabled: true
+
+## virtio-serial channel device (bhyve/QEMU expose this when a
+## virtio-console/org.qemu.guest_agent.0 port is attached).
+qemu_ga_virtio_device: /dev/virtio-ports/org.qemu.guest_agent.0
+
+## ISA serial device qemu-ga listens on when no virtio channel exists.
+## ttyS1 = COM2 (0x2F8/IRQ3), which the VirtualBox host agent maps to a
+## host-side named pipe via --uart2.
+qemu_ga_serial_device: /dev/ttyS1

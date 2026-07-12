@@ -4,7 +4,7 @@
 
 - name: "Installing packages"
   ansible.builtin.apt:
-    name: "{{ packages }}"
+    name: "{{ zrepl_packages }}"
     state: present
 
 - name: "Downloading and Installing APT Key"

@@ -24,7 +24,8 @@ argument_specs:
         description: Authentication password value written into the VRRP instance authentication block.
       startcloud_keepalived_virtual_ipaddress:
         type: str
-        description: Virtual IP address advertised by the VRRP instance.
+        default: ""
+        description: Virtual IP address advertised by the VRRP instance. Empty derives host .250 on the first adapter's subnet at runtime.
       startcloud_keepalived_priority:
         type: int
         default: 101

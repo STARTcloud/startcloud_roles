@@ -21,8 +21,8 @@ argument_specs:
         description: CPU architecture suffix of the Authelia release binary.
       authelia_checksum:
         type: str
-        default: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
-        description: Checksum (algorithm-prefixed) verified against the downloaded Authelia binary.
+        default: "sha256:{{ authelia_binary_url }}.sha256"
+        description: Checksum verified against the downloaded binary — defaults to the .sha256 file published beside the GitHub release; override with a literal sha256:<hash> to pin content.
       authelia_binary_url:
         type: str
         default: "https://github.com/authelia/authelia/releases/download/v{{ authelia_version }}/authelia-linux-{{ authelia_arch }}"

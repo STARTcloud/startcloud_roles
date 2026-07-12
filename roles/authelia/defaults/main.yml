@@ -1,11 +1,13 @@
 ---
 run_tasks: true
 
-# Authelia release binary (pinned) — override the checksum to match the version.
+# Authelia release binary (pinned). The checksum defaults to the .sha256
+# file GitHub publishes beside the binary; override with a literal
+# "sha256:<hash>" to pin the content itself.
 authelia_version: "4.38.17"
 authelia_arch: "amd64"
-authelia_checksum: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
 authelia_binary_url: "https://github.com/authelia/authelia/releases/download/v{{ authelia_version }}/authelia-linux-{{ authelia_arch }}"
+authelia_checksum: "sha256:{{ authelia_binary_url }}.sha256"
 authelia_binary_path: "/usr/local/bin/authelia"
 
 # System account that owns and runs the service.

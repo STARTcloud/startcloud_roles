@@ -12,44 +12,56 @@
         cache_valid_time: 3600
         update_cache: true
 
-    - name: "Adding firefox apt repository key"
-      ansible.builtin.get_url:
-        url: "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x9BDB3D89CE49EC21"
-        dest: /etc/apt/trusted.gpg.d/mozilla.asc
-        mode: "0644"
-        force: true
+    - name: "Installing Firefox from the Mozilla Team PPA (Ubuntu)"
+      when: ansible_distribution == "Ubuntu"
+      block:
+        - name: "Adding firefox apt repository key"
+          ansible.builtin.get_url:
+            url: "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x9BDB3D89CE49EC21"
+            dest: /etc/apt/trusted.gpg.d/mozilla.asc
+            mode: "0644"
+            force: true
 
-    - name: "Setting up Firefox PPA repo as we hates snaps"
-      ansible.builtin.apt_repository:
-        repo: "deb [arch={{ deb_architecture.stdout }} signed-by=/etc/apt/trusted.gpg.d/mozilla.asc] http://ppa.launchpad.net/mozillateam/ppa/ubuntu {{ ansible_distribution_release }} main"
-        state: present
+        - name: "Setting up Firefox PPA repo as we hates snaps"
+          ansible.builtin.apt_repository:
+            repo: "deb [arch={{ deb_architecture.stdout }} signed-by=/etc/apt/trusted.gpg.d/mozilla.asc] http://ppa.launchpad.net/mozillateam/ppa/ubuntu {{ ansible_distribution_release }} main"
+            state: present
 
-    - name: "Adding Firefox Apt preferences"
-      ansible.builtin.template:
-        src: "templates/mozilla-firefox.j2"
-        dest: "/etc/apt/preferences.d/mozilla-firefox"
-        owner: "root"
-        group: "root"
-        mode: "0644"
+        - name: "Adding Firefox Apt preferences"
+          ansible.builtin.template:
+            src: "templates/mozilla-firefox.j2"
+            dest: "/etc/apt/preferences.d/mozilla-firefox"
+            owner: "root"
+            group: "root"
+            mode: "0644"
 
-    - name: "Using the PPA on every Update"
-      ansible.builtin.template:
-        src: "templates/unattended-upgrades-firefox.j2"
-        dest: "/etc/apt/apt.conf.d/51unattended-upgrades-firefox"
-        owner: "root"
-        group: "root"
-        mode: "0644"
+        - name: "Using the PPA on every Update"
+          ansible.builtin.template:
+            src: "templates/unattended-upgrades-firefox.j2"
+            dest: "/etc/apt/apt.conf.d/51unattended-upgrades-firefox"
+            owner: "root"
+            group: "root"
+            mode: "0644"
 
-    - name: "Installing Firefox"
-      ansible.builtin.apt:
-        name:
-          - firefox
-        state: present
+        - name: "Installing Firefox"
+          ansible.builtin.apt:
+            name:
+              - firefox
+            state: present
 
-    - name: "Pinning firefox"
-      ansible.builtin.dpkg_selections:
-        name: firefox
-        selection: hold
+        - name: "Pinning firefox"
+          ansible.builtin.dpkg_selections:
+            name: firefox
+            selection: hold
+
+    - name: "Installing Firefox ESR from the Debian repositories (Debian)"
+      when: ansible_distribution == "Debian"
+      block:
+        - name: "Installing Firefox ESR"
+          ansible.builtin.apt:
+            name:
+              - firefox-esr
+            state: present
 
     - name: "Creating Firefox Policies Directory"
       ansible.builtin.file:

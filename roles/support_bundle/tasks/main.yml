@@ -58,10 +58,10 @@
 
     - name: "Checking if Domino has been autoconfigured"
       register: autoconfigure
+      when: domino_home_dir is defined
       ansible.builtin.stat:
         path: "{{ domino_home_dir }}/IBM_TECHNICAL_SUPPORT/autoconfigure.log"
         checksum_algorithm: sha256
-      ignore_errors: true
 
     - name: "Including Domino One Touch autoconfigure to /vagrant/support-bundle/autoconfigure.log"
       become: true

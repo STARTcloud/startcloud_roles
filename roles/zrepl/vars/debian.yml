@@ -1,5 +1,5 @@
 ---
-packages:
+zrepl_packages:
   - curl
   - gnupg
   - lsb-release

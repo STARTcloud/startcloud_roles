@@ -27,7 +27,7 @@
 
 - name: "Windows | Configuring Telegraf"
   ansible.windows.win_template:
-    src: telegraf.conf.j2
+    src: telegraf-windows.conf.j2
     dest: "{{ telegraf_win_install_dir }}\\telegraf\\telegraf.conf"
   notify: "Restarting Windows Telegraf"
 

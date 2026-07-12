@@ -6,13 +6,19 @@
       - gnupg2
     state: present
 
-- name: "Adding Elasticsearch APT key"
-  ansible.builtin.apt_key:
+- name: "Downloading the Elasticsearch signing key"
+  ansible.builtin.get_url:
     url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
-    state: present
+    dest: /tmp/elasticsearch-signing-key.asc
+    mode: "0644"
+    timeout: 60
+
+- name: "Installing the Elasticsearch signing key"
+  ansible.builtin.command: gpg --batch --yes --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg /tmp/elasticsearch-signing-key.asc
+  changed_when: true
 
 - name: "Adding Elasticsearch repository"
   ansible.builtin.apt_repository:
-    repo: "deb https://artifacts.elastic.co/packages/{{ elasticsearch_version }}/apt stable main"
+    repo: "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/{{ elasticsearch_version }}/apt stable main"
     state: present
     update_cache: true

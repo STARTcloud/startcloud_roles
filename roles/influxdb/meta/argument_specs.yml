@@ -69,15 +69,15 @@ argument_specs:
         description: Whether the InfluxDB service is enabled to start at boot.
       influxdb_apt_key_url:
         type: str
-        default: "https://repos.influxdata.com/influxdata-archive_compat.key"
+        default: "https://repos.influxdata.com/influxdata-archive.key"
         description: URL of the InfluxData APT signing key.
       influxdb_apt_keyring_path:
         type: str
-        default: "/etc/apt/keyrings/influxdata-archive_compat.gpg"
-        description: Filesystem path where the InfluxData APT signing key is stored.
+        default: "/usr/share/keyrings/influxdata-archive.gpg"
+        description: Filesystem path where the InfluxData APT signing key is stored. Must match the telegraf role's keyring path since both roles share the InfluxData repository.
       influxdb_apt_repo:
         type: str
-        default: "deb [signed-by=/etc/apt/keyrings/influxdata-archive_compat.gpg] https://repos.influxdata.com/debian stable main"
+        default: "deb [signed-by=/usr/share/keyrings/influxdata-archive.gpg] https://repos.influxdata.com/debian stable main"
         description: Full APT repository line for the InfluxData repository.
       influxdb_yum_baseurl:
         type: str
@@ -85,7 +85,7 @@ argument_specs:
         description: Base URL of the InfluxData YUM/DNF repository on Enterprise Linux.
       influxdb_yum_gpgkey:
         type: str
-        default: "https://repos.influxdata.com/influxdata-archive_compat.key"
+        default: "https://repos.influxdata.com/influxdata-archive.key"
         description: URL of the InfluxData YUM/DNF GPG signing key.
       influxdb_setup:
         type: bool

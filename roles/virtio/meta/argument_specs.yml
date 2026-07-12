@@ -23,6 +23,22 @@ argument_specs:
         type: str
         default: "QEMU-GA"
         description: Windows service name registered by the QEMU Guest Agent MSI.
+      qemu_ga_com_enabled:
+        type: bool
+        default: true
+        description: Register a second qemu-ga service on an ISA serial port so the image also serves VirtualBox hosts.
+      qemu_ga_com_service_name:
+        type: str
+        default: "QEMU-GA-COM"
+        description: Name of the serial-port qemu-ga Windows service.
+      qemu_ga_com_port:
+        type: str
+        default: "COM2"
+        description: Serial port the second qemu-ga service listens on (COM2 = 0x2F8/IRQ3, VirtualBox --uart2).
+      qemu_ga_exe:
+        type: str
+        default: 'C:\Program Files\Qemu-ga\qemu-ga.exe'
+        description: Path to qemu-ga.exe as installed by the guest-agent MSI.
       virtio_iso_url:
         type: str
         default: "https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.271-1/virtio-win-0.1.271.iso"

@@ -3,5 +3,6 @@ run_tasks: true
 startcloud_keepalived_state: master
 startcloud_keepalived_virtual_router_id: 60
 startcloud_keepalived_auth_pass: true
-startcloud_keepalived_virtual_ipaddress:
+## Empty = derived at runtime from the first adapter's subnet (host part .250)
+startcloud_keepalived_virtual_ipaddress: ""
 startcloud_keepalived_priority: 101

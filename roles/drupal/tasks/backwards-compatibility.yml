@@ -3,24 +3,24 @@
 - name: "Applying Build Makefile Shim"
   ansible.builtin.set_fact:
     drupal_build_makefile: "{{ build_makefile }}"
-  when: build_makefile | default('')
+  when: build_makefile is defined
 
 - name: "Applying Build Composer Shim"
   ansible.builtin.set_fact:
     drupal_build_composer: "{{ build_composer }}"
-  when: build_composer | default('')
+  when: build_composer is defined
 
 - name: "Applying Build Composer Project Shim"
   ansible.builtin.set_fact:
     drupal_build_composer_project: "{{ build_composer_project }}"
-  when: build_composer_project | default('')
+  when: build_composer_project is defined
 
 - name: "Applying Install Site Shim"
   ansible.builtin.set_fact:
     drupal_install_site: "{{ install_site }}"
-  when: install_site | default('')
+  when: install_site is defined
 
 - name: "Applying Database Backend Shim"
   ansible.builtin.set_fact:
     drupal_db_backend: "{{ drupalvm_database }}"
-  when: drupalvm_database | default('')
+  when: drupalvm_database is defined

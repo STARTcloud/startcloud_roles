@@ -1,1 +1,103 @@
 ---
+## Public APT repository (https, PGP-signed) — mirrors the production layout on
+## packages.debian.startcloud.com: /local/public served by nginx with autoindex.
+- name: "Installing nginx"
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+
+- name: "Creating the public repository directories"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  with_items:
+    - "{{ pkg_server_base_dir }}/public/debian"
+    - "{{ pkg_server_base_dir }}/public/css"
+    - "{{ pkg_server_base_dir }}/pgp"
+
+- name: "Seeding the public repository index page"
+  ansible.builtin.copy:
+    src: public-index.html
+    dest: "{{ pkg_server_base_dir }}/public/index.html"
+    force: false
+    mode: "0644"
+
+- name: "Seeding the public repository stylesheet"
+  ansible.builtin.copy:
+    src: public-css/STARTcloud.css
+    dest: "{{ pkg_server_base_dir }}/public/css/STARTcloud.css"
+    force: false
+    mode: "0644"
+
+- name: "Installing the Release generation script"
+  ansible.builtin.copy:
+    src: generate-release.sh
+    dest: "{{ pkg_server_base_dir }}/generate-release.sh"
+    mode: "0755"
+
+- name: "Checking for an existing PGP signing key"
+  ansible.builtin.stat:
+    path: "{{ pkg_server_base_dir }}/pgp/pgp-key.public"
+  register: pkg_server_pgp_public_key
+
+- name: "Generating the repository PGP key pair"
+  when: not pkg_server_pgp_public_key.stat.exists
+  block:
+    - name: "Creating temporary GNUPGHOME directory"
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: pgpkeys
+      register: pkg_server_gnupghome_tmp
+
+    - name: "Writing PGP key generation batch file"
+      ansible.builtin.copy:
+        content: |
+          %echo Generating a startcloud PGP key
+          Key-Type: RSA
+          Key-Length: 4096
+          Name-Real: startcloud
+          Name-Email: {{ package_server_email }}
+          Expire-Date: 0
+          %no-ask-passphrase
+          %no-protection
+          %commit
+        dest: /tmp/startcloud-pgp-key.batch
+        mode: "0600"
+
+    - name: "Generating PGP key pair"
+      ansible.builtin.command: gpg --no-tty --batch --gen-key /tmp/startcloud-pgp-key.batch
+      changed_when: true
+      environment:
+        GNUPGHOME: "{{ pkg_server_gnupghome_tmp.path }}"
+
+    - name: "Removing PGP key generation batch file"
+      ansible.builtin.file:
+        path: /tmp/startcloud-pgp-key.batch
+        state: absent
+
+    - name: "Exporting public PGP key"
+      ansible.builtin.shell: "gpg --armor --export startcloud > {{ pkg_server_base_dir }}/pgp/pgp-key.public"
+      changed_when: true
+      environment:
+        GNUPGHOME: "{{ pkg_server_gnupghome_tmp.path }}"
+
+    - name: "Exporting private PGP key"
+      ansible.builtin.shell: "gpg --armor --export-secret-keys startcloud > {{ pkg_server_base_dir }}/pgp/pgp-key.private"
+      changed_when: true
+      environment:
+        GNUPGHOME: "{{ pkg_server_gnupghome_tmp.path }}"
+
+- name: "Templating the public repository nginx vhost"
+  ansible.builtin.template:
+    src: nginx-public.conf.j2
+    dest: "/etc/nginx/sites-available/{{ pkg_server_public_domains | first }}"
+    mode: "0644"
+  notify: "Reloading nginx"
+
+- name: "Enabling the public repository nginx vhost"
+  ansible.builtin.file:
+    src: "/etc/nginx/sites-available/{{ pkg_server_public_domains | first }}"
+    dest: "/etc/nginx/sites-enabled/{{ pkg_server_public_domains | first }}"
+    state: link
+  notify: "Reloading nginx"

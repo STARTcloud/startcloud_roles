@@ -29,7 +29,8 @@
             name: "{{ softphone_packages }}"
             state: present
 
-        - name: "Pinning linphone"
+        - name: "Pinning {{ softphone_packages }}"
           ansible.builtin.dpkg_selections:
-            name: linphone
+            name: "{{ item }}"
             selection: hold
+          with_items: "{{ softphone_packages }}"

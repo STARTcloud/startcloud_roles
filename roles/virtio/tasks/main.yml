@@ -76,6 +76,20 @@
             start_mode: auto
             state: started
 
+        ## Second qemu-ga service on the ISA serial port so the same image
+        ## also serves VirtualBox hosts (no virtio-serial device there). The
+        ## stock QEMU-GA service stays untouched for the bhyve/virtio path;
+        ## on any given boot the service whose device is absent simply fails
+        ## to start and the other one serves. Not started here — the serial
+        ## device may not exist on the build hypervisor.
+        - name: "Registering the QEMU Guest Agent serial-port service"
+          ansible.windows.win_service:
+            name: "{{ qemu_ga_com_service_name }}"
+            display_name: "QEMU Guest Agent ({{ qemu_ga_com_port }})"
+            path: '"{{ qemu_ga_exe }}" -m isa-serial -p {{ qemu_ga_com_port }} -d'
+            start_mode: auto
+          when: qemu_ga_com_enabled
+
         - name: "Dismounting and removing the downloaded VirtIO ISO (fallback path only)"
           when: virtio_media.result.mounted | default(false)
           ansible.windows.win_powershell:

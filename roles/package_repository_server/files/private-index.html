@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="x-client-dn" content="">
+    <title>STARTcloud Private Package Repository</title>
+    <link rel="shortcut icon" type="image/png"
+        href="https://startcloud.com/assets/images/logos/startcloud-logo40-dark.png?v=1" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,600;1,700&family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=Raleway:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" href="https://startcloud.com/assets/scss/styles.css" />
+    <link href="assets/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://startcloud.com/assets/css/bootstrap-custom.css" />
+    <link href="https://startcloud.com/assets/css/impact.css" rel="stylesheet">
+    <link href="https://startcloud.com/assets/libs/startcloud/startcloud.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://public.debian.startcloud.com/css/STARTcloud.css" />
+</head>
+
+<body>
+    <header class="p-3 sticky-top">
+        <div class="container">
+            <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
+                <a class="navbar-brand p-0 me-0 me-lg-2" href="https://startcloud.com/" aria-label="Bootstrap">
+                    <img src="https://startcloud.com/assets/images/logos/startcloud-logo40.png" width="40" alt="" />
+                </a>
+                <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
+                    <li><a href="https://public.debian.packages.startcloud.com/" class="nav-link px-2">Public Repo</a>
+                    </li>
+                    <li><a href="https://mirror.debian.packages.startcloud.com/" class="nav-link px-2">Mirror</a></li>
+                    <li><a href="https://github.com/STARTcloud/" class="nav-link px-2">GitHub</a></li>
+                    <li><a href="https://startcloud.com/#contact" class="nav-link px-2">Contact</a></li>
+                </ul>
+                <button type="button" class="theme-toggle btn btn-link p-0 text-decoration-none"
+                    aria-label="Toggle theme">
+                    <i class="bi bi-moon-fill fs-5"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section id="page-nav" class="sections-bg py-2">
+            <div class="container">
+                <div class="row">
+                    <div class="col-12">
+                        <nav class="nav nav-pills nav-fill">
+                            <a class="nav-link" href="#info">Repository Information</a>
+                            <a class="nav-link" href="#packages">Available Packages</a>
+                            <a class="nav-link" href="#gpg-key">APT Configuration</a>
+                            <a class="nav-link" href="#client-cert">Client Certificate</a>
+                            <a class="nav-link" href="#my-certificates">My Certificates</a>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="hero" class="services">
+            <div class="container aos-init aos-animate" data-aos="fade-up">
+                <div class="section-header section-header col-lg-6 col-md-8 mx-auto">
+                    <div class="row d-flex">
+                        <img src="https://startcloud.com/assets/images/logos/startCloud-logo-big.svg"
+                            class="logo-big img-fluid mx-auto mt-4" alt="STARTCloud logo" />
+                    </div>
+                    <p class="lead">Welcome to the STARTcloud <span class="repo-private">Private</span> Package Repository.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section id="info" class="sections-bg">
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-6">
+                        <h2>Repository Information</h2>
+                        <p><strong>Update schedule:</strong> This repository is updated daily at 2:30 AM (Chicago time).
+                        </p>
+                        <p><strong>Last update:</strong> <span id="last-update">2025-05-02 03:40:00</span></p>
+                    </div>
+                    <div class="col-lg-6">
+                        <h2>Useful Links</h2>
+                        <ul>
+                            <li><a href="https://private.debian.startcloud.com/debian/" target="_blank">View the
+                                    Repository Directory</a></li>
+                            <li><a href="https://public.packages.startcloud.com/debian" target="_blank">Public
+                                    Repository</a></li>
+                            <li><a href="https://mirror.packages.startcloud.com/debian" target="_blank">Mirror
+                                    Repository</a></li>
+                            <li><a href="https://github.com/STARTcloud/" target="_blank">GitHub Page</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="packages" class="sections-bg">
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-12">
+                        <h2>Available Packages</h2>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="arch-select" class="form-label">Select Architecture:</label>
+                                <select id="arch-select" class="form-select">
+                                    <option value="all">All Architectures</option>
+                                    <option value="amd64">amd64</option>
+                                    <option value="arm64">arm64</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="version-select" class="form-label">Select Version:</label>
+                                <select id="version-select" class="form-select"></select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="package-search" class="form-label">Search Packages:</label>
+                                <input type="text" id="package-search" class="form-control"
+                                    placeholder="Enter package name...">
+                            </div>
+                        </div>
+
+                        <div id="loading-indicator" class="text-center my-5 d-none">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading packages...</p>
+                        </div>
+
+                        <div id="package-count" class="mb-3 text-muted"></div>
+
+                        <table id="package-table" class="table table-striped mt-3">
+                            <thead>
+                                <tr>
+                                    <th>Package</th>
+                                    <th>Version</th>
+                                    <th>Architecture</th>
+                                    <th>Size</th>
+                                    <th>Maintainer</th>
+                                    <th>Homepage</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+
+                        <nav aria-label="Package navigation">
+                            <ul class="pagination justify-content-center" id="pagination"></ul>
+                        </nav>
+
+                        <div class="text-center mt-3 mb-4">
+                            <button id="load-more" class="btn btn-primary d-none">Load More Packages</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="gpg-key" class="sections-bg">
+            <div class="container">
+                <h2>Repository Signing Key</h2>
+                <p>For security, our repository is signed with a GPG key. To properly add this repository to your
+                    system, follow these steps:</p>
+
+                <div class="mb-3">
+                    <label for="arch-select-key" class="form-label">Select Architecture:</label>
+                    <select id="arch-select-key" class="form-select">
+                        <option value="amd64">amd64 (x86_64)</option>
+                        <option value="arm64">arm64 (aarch64)</option>
+                    </select>
+                </div>
+
+                <h4>1. Create a directory for keyring files (if it doesn't exist)</h4>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="mkdir-command" value="sudo mkdir -p /etc/apt/keyrings"
+                        readonly>
+                    <button class="btn btn-outline-secondary copy-btn" type="button" data-target="mkdir-command">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                </div>
+
+                <h4>2. Download the GPG key</h4>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="gpg-key-command"
+                        value="curl -fsSL https://private.debian.startcloud.com/debian/startcloud-archive-keyring.asc | sudo gpg --dearmor -o /etc/apt/keyrings/startcloud-archive-keyring.gpg"
+                        readonly>
+                    <button class="btn btn-outline-secondary copy-btn" type="button" data-target="gpg-key-command">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                </div>
+
+                <h4>3. Set proper permissions for the key</h4>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="permissions-command"
+                        value="sudo chmod 644 /etc/apt/keyrings/startcloud-archive-keyring.gpg" readonly>
+                    <button class="btn btn-outline-secondary copy-btn" type="button" data-target="permissions-command">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                </div>
+
+                <h4>4. Add the repository with reference to the key</h4>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="repo-command"
+                        value="echo &quot;deb [arch=amd64 signed-by=/etc/apt/keyrings/startcloud-archive-keyring.gpg] https://private.debian.startcloud.com/debian/ stable main&quot; | sudo tee /etc/apt/sources.list.d/startcloud-private.list"
+                        readonly>
+                    <button class="btn btn-outline-secondary copy-btn" type="button" data-target="repo-command">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                </div>
+
+                <h4>5. Update your package index</h4>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="update-command" value="sudo apt update" readonly>
+                    <button class="btn btn-outline-secondary copy-btn" type="button" data-target="update-command">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                </div>
+
+                <h4>6. Now you can install packages</h4>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="install-command" value="sudo apt install startcloud"
+                        readonly>
+                    <button class="btn btn-outline-secondary copy-btn" type="button" data-target="install-command">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                </div>
+
+                <div class="mt-5">
+                    <h4 id="instructions-legacy">
+                        <button class="btn btn-link text-decoration-none p-0 text-danger" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#legacyMethodCollapse" aria-expanded="false"
+                            aria-controls="legacyMethodCollapse">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>APT Configuration (deprecated)
+                        </button>
+                    </h4>
+                    <div class="collapse" id="legacyMethodCollapse">
+                        <div class="card card-body mt-2 mb-3">
+                            <p>The following method uses the deprecated <code>[trusted=yes]</code> option and is not
+                                recommended for security reasons. Please use the method above instead.</p>
+
+                            <h5>1. Add the repository to your sources list (NOT RECOMMENDED)</h5>
+                            <div class="input-group mb-3">
+                                <input type="text" class="form-control" id="legacy-repo-command"
+                                    value="echo &quot;deb [trusted=yes] https://private.debian.startcloud.com/debian/ stable main&quot; | sudo tee /etc/apt/sources.list.d/startcloud-private.list"
+                                    readonly>
+                                <button class="btn btn-outline-secondary copy-btn" type="button"
+                                    data-target="legacy-repo-command">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </div>
+
+                            <h5>2. Update your package index</h5>
+                            <div class="input-group mb-3">
+                                <input type="text" class="form-control" id="legacy-update-command"
+                                    value="sudo apt update" readonly>
+                                <button class="btn btn-outline-secondary copy-btn" type="button"
+                                    data-target="legacy-update-command">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </div>
+
+                            <h5>3. Install a package</h5>
+                            <div class="input-group mb-3">
+                                <input type="text" class="form-control" id="legacy-install-command"
+                                    value="sudo apt install startcloud" readonly>
+                                <button class="btn btn-outline-secondary copy-btn" type="button"
+                                    data-target="legacy-install-command">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="client-cert" class="sections-bg">
+            <div class="container">
+                <h2>Client Certificate Authentication</h2>
+                <p>This private repository requires client certificate authentication. Follow these steps to set up your
+                    system for access:</p>
+
+                <div class="alert alert-info">
+                    <strong>Note:</strong> You must first obtain a client certificate from the repository administrator.
+                </div>
+
+                <h4>1. Create a directory for your certificates</h4>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="cert-dir-command" value="sudo mkdir -p /etc/apt/certs"
+                        readonly>
+                    <button class="btn btn-outline-secondary copy-btn" type="button" data-target="cert-dir-command">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                </div>
+
+                <h4>2. Copy your certificate file to the certs directory</h4>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="cert-copy-command"
+                        value="sudo cp your_client_name.pem /etc/apt/certs/" readonly>
+                    <button class="btn btn-outline-secondary copy-btn" type="button" data-target="cert-copy-command">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                </div>
+
+                <h4>3. Set proper permissions</h4>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="cert-perm-command"
+                        value="sudo chmod 600 /etc/apt/certs/your_client_name.pem" readonly>
+                    <button class="btn btn-outline-secondary copy-btn" type="button" data-target="cert-perm-command">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                </div>
+
+                <h4>4. Create APT configuration for SSL certificates</h4>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="apt-conf-command"
+                        value="sudo nano /etc/apt/apt.conf.d/90ssl-certs" readonly>
+                    <button class="btn btn-outline-secondary copy-btn" type="button" data-target="apt-conf-command">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                </div>
+
+                <h4>5. Add the following lines to the configuration file</h4>
+                <div class="input-group mb-3">
+                    <textarea class="form-control" id="apt-conf-content" rows="2" readonly>Acquire::https::private.debian.startcloud.com::SslCert "/etc/apt/certs/your_client_name.pem";
+Acquire::https::private.debian.startcloud.com::SslKey "/etc/apt/certs/your_client_name.pem";</textarea>
+                    <button class="btn btn-outline-secondary copy-btn" type="button" data-target="apt-conf-content">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                </div>
+
+                <h4>6. Update your package index</h4>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="cert-update-command" value="sudo apt update" readonly>
+                    <button class="btn btn-outline-secondary copy-btn" type="button" data-target="cert-update-command">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                </div>
+
+                <h4>Browser Access</h4>
+                <p>To access the repository through your web browser:</p>
+                <ol>
+                    <li>Import the <code id="browser-cert-filename">your_client_name.p12</code> file into your browser's
+                        certificate store:
+                        <ul>
+                            <li><strong>Chrome:</strong> Settings → Privacy and security → Security → Manage
+                                certificates → Import</li>
+                            <li><strong>Firefox:</strong> Settings → Privacy & Security → Certificates → View
+                                Certificates → Import</li>
+                        </ul>
+                    </li>
+                    <li>When prompted, enter the password provided with your certificate</li>
+                    <li>Your browser will now automatically authenticate when accessing the repository</li>
+                </ol>
+            </div>
+        </section>
+
+        <section id="my-certificates" class="sections-bg">
+            <div class="container">
+                <h2>My Certificates</h2>
+                <div class="alert alert-info">
+                    <strong>Welcome!</strong> You are authenticated as <span id="client-cn"
+                        class="fw-bold">Loading...</span>
+                </div>
+
+                <p>These certificate files are specific to your account and should be kept secure:</p>
+
+                <div class="list-group mb-4">
+                    <a href="#" class="list-group-item list-group-item-action" id="pem-link">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1"><i class="bi bi-save save-icon"></i>APT Certificate (PEM)</h5>
+                            <small>Required for APT</small>
+                        </div>
+                        <p class="mb-1">Combined certificate and key file for APT configuration</p>
+                    </a>
+
+                    <a href="#" class="list-group-item list-group-item-action" id="p12-link">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1"><i class="bi bi-save save-icon"></i>Browser Certificate (P12)</h5>
+                            <small>Required for browsers</small>
+                        </div>
+                        <p class="mb-1">PKCS#12 bundle for browser import (password: changeit)</p>
+                    </a>
+
+                    <a href="#" class="list-group-item list-group-item-action" id="readme-link">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1"><i class="bi bi-save save-icon"></i>Installation Instructions</h5>
+                            <small>How-to guide</small>
+                        </div>
+                        <p class="mb-1">Step-by-step instructions for setting up your certificates</p>
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="py-3">
+        <div class="container">
+            <div class="text-center">
+                <span class="mb-3 mb-md-0">© <span>2025</span> STARTCloud, Inc</span>
+            </div>
+        </div>
+    </footer>
+
+    <div class="modal fade" id="installModal" tabindex="-1" aria-labelledby="installModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="installModalLabel">Install Package</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>To install this package, run one of the following commands:</p>
+
+                    <h6 class="mt-3 mb-2">Basic Installation:</h6>
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" id="basicInstallCommand" readonly>
+                        <button class="btn btn-outline-secondary copy-btn" type="button"
+                            data-target="basicInstallCommand">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                    </div>
+
+                    <h6 class="mt-3 mb-2">Install Specific Version for Specific Architecture:</h6>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="advancedInstallCommand" readonly>
+                        <button class="btn btn-outline-secondary copy-btn" type="button"
+                            data-target="advancedInstallCommand">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                    </div>
+
+                    <div id="downloadLinkContainer" class="mb-3 mt-3 text-center"></div>
+
+                    <div class="mt-3 small text-muted">
+                        <p class="mb-1"><strong>Note:</strong> For more control over package installation:</p>
+                        <ul class="ps-3">
+                            <li>Use <code>:architecture</code> to specify the architecture</li>
+                            <li>Use <code>=version</code> to specify the version</li>
+                            <li>Run <code>apt-cache policy package_name</code> to see available versions</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://startcloud.com/assets/libs/jquery/dist/jquery.min.js"></script>
+    <script src="https://startcloud.com/assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.0.4/pako.min.js"></script>
+    <script>
+        function calculateSettingAsThemeString({ localStorageTheme, systemSettingDark }) {
+            if (localStorageTheme !== null) return localStorageTheme;
+            if (systemSettingDark.matches) return "dark";
+            return "light";
+        }
+
+        function updateThemeIcon(theme) {
+            const themeToggleIcon = document.querySelector('.theme-toggle i');
+            themeToggleIcon.className = theme === 'dark' ? 'bi bi-sun-fill fs-5' : 'bi bi-moon-fill fs-5';
+        }
+
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            updateThemeIcon(theme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            setTheme(currentTheme === 'dark' ? 'light' : 'dark');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const localStorageTheme = localStorage.getItem('theme');
+            const systemSettingDark = window.matchMedia("(prefers-color-scheme: dark)");
+            setTheme(calculateSettingAsThemeString({ localStorageTheme, systemSettingDark }));
+            document.querySelector('.theme-toggle').addEventListener('click', toggleTheme);
+        });
+    </script>
+    <script>
+        const packageCache = {};
+        const PACKAGES_PER_PAGE = 20;
+        let currentPage = 1;
+        let filteredPackages = [];
+
+        async function fetchVersions() {
+            const url = `${window.location.origin}/debian/dists/`;
+            const response = await fetch(url);
+            const text = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(text, 'text/html');
+            const links = doc.querySelectorAll('a');
+            return Array.from(links)
+                .map(link => link.textContent.replace('/', ''))
+                .filter(v => v && v !== '..');
+        }
+
+        async function fetchPackages(arch, version) {
+            const cacheKey = `${arch}-${version}`;
+            if (packageCache[cacheKey]) return packageCache[cacheKey];
+
+            document.getElementById('loading-indicator').classList.remove('d-none');
+            document.getElementById('package-table').classList.add('d-none');
+            document.getElementById('pagination').innerHTML = '';
+
+            try {
+                let decompressed = '';
+
+                if (arch === 'all') {
+                    const amd64Url = `${window.location.origin}/debian/dists/${version}/main/binary-amd64/Packages.gz`;
+                    const amd64Response = await fetch(amd64Url);
+                    if (amd64Response.ok) {
+                        const amd64ArrayBuffer = await amd64Response.arrayBuffer();
+                        const amd64Uint8Array = new Uint8Array(amd64ArrayBuffer);
+                        decompressed += pako.ungzip(amd64Uint8Array, { to: 'string' });
+                        decompressed += '\n\n';
+                    }
+
+                    const arm64Url = `${window.location.origin}/debian/dists/${version}/main/binary-arm64/Packages.gz`;
+                    const arm64Response = await fetch(arm64Url);
+                    if (arm64Response.ok) {
+                        const arm64ArrayBuffer = await arm64Response.arrayBuffer();
+                        const arm64Uint8Array = new Uint8Array(arm64ArrayBuffer);
+                        decompressed += pako.ungzip(arm64Uint8Array, { to: 'string' });
+                    }
+                } else {
+                    const url = `${window.location.origin}/debian/dists/${version}/main/binary-${arch}/Packages.gz`;
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(`Failed to fetch packages: ${response.statusText}`);
+                    const arrayBuffer = await response.arrayBuffer();
+                    const uint8Array = new Uint8Array(arrayBuffer);
+                    decompressed = pako.ungzip(uint8Array, { to: 'string' });
+                }
+
+                packageCache[cacheKey] = decompressed;
+                document.getElementById('loading-indicator').classList.add('d-none');
+                document.getElementById('package-table').classList.remove('d-none');
+                return decompressed;
+            } catch (error) {
+                console.error('Error fetching packages:', error);
+                document.getElementById('loading-indicator').classList.add('d-none');
+                document.getElementById('package-table').classList.remove('d-none');
+                return '';
+            }
+        }
+
+        function formatSize(sizeInBytes) {
+            if (!sizeInBytes || isNaN(parseInt(sizeInBytes))) return 'Unknown';
+            const size = parseInt(sizeInBytes);
+            if (size < 1024) return size + ' B';
+            if (size < 1024 * 1024) return (size / 1024).toFixed(1) + ' KB';
+            if (size < 1024 * 1024 * 1024) return (size / (1024 * 1024)).toFixed(1) + ' MB';
+            return (size / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+        }
+
+        function parsePackages(data, selectedArch) {
+            const packages = [];
+            data.split('\n\n').forEach(entry => {
+                const pkg = {};
+                entry.split('\n').forEach(line => {
+                    const [key, value] = line.split(': ');
+                    if (key && value) pkg[key.toLowerCase()] = value;
+                });
+                if (pkg.package && (selectedArch === 'all' || pkg.architecture === selectedArch)) {
+                    packages.push({
+                        package: pkg.package,
+                        version: pkg.version,
+                        architecture: pkg.architecture,
+                        size: formatSize(pkg.size),
+                        maintainer: pkg.maintainer || 'Unknown',
+                        homepage: pkg.homepage || '',
+                        filename: pkg.filename || '',
+                        description: pkg.description ? pkg.description.split('\n')[0] : 'No description available'
+                    });
+                }
+            });
+            return packages;
+        }
+
+        function filterPackages(packages, searchTerm) {
+            if (!searchTerm) return packages;
+            searchTerm = searchTerm.toLowerCase();
+            return packages.filter(pkg =>
+                pkg.package.toLowerCase().includes(searchTerm) ||
+                (pkg.description && pkg.description.toLowerCase().includes(searchTerm))
+            );
+        }
+
+        function displayPagination(totalPages) {
+            const pagination = document.getElementById('pagination');
+            pagination.innerHTML = '';
+            if (totalPages <= 1) return;
+
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+            prevLi.innerHTML = `<a class="page-link" href="#" aria-label="Previous"><span aria-hidden="true">&laquo;</span></a>`;
+            pagination.appendChild(prevLi);
+
+            const maxPages = Math.min(totalPages, 7);
+            let startPage = Math.max(1, currentPage - 3);
+            let endPage = Math.min(totalPages, startPage + maxPages - 1);
+            if (endPage - startPage + 1 < maxPages) startPage = Math.max(1, endPage - maxPages + 1);
+
+            for (let i = startPage; i <= endPage; i++) {
+                const pageLi = document.createElement('li');
+                pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                pageLi.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+                pagination.appendChild(pageLi);
+            }
+
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+            nextLi.innerHTML = `<a class="page-link" href="#" aria-label="Next"><span aria-hidden="true">&raquo;</span></a>`;
+            pagination.appendChild(nextLi);
+
+            pagination.querySelectorAll('.page-link').forEach((link, index) => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (index === 0) {
+                        if (currentPage > 1) { currentPage--; renderPackages(); }
+                    } else if (index === pagination.querySelectorAll('.page-link').length - 1) {
+                        if (currentPage < totalPages) { currentPage++; renderPackages(); }
+                    } else {
+                        currentPage = startPage + index - 1;
+                        renderPackages();
+                    }
+                });
+            });
+        }
+
+        function renderPackages() {
+            const packageTableBody = document.querySelector('#package-table tbody');
+            packageTableBody.innerHTML = '';
+
+            const startIndex = (currentPage - 1) * PACKAGES_PER_PAGE;
+            const endIndex = Math.min(startIndex + PACKAGES_PER_PAGE, filteredPackages.length);
+            const packagesToShow = filteredPackages.slice(startIndex, endIndex);
+
+            document.getElementById('package-count').textContent =
+                `Showing ${startIndex + 1}-${endIndex} of ${filteredPackages.length} packages`;
+
+            packagesToShow.forEach(pkg => {
+                const row = document.createElement('tr');
+                const homepageLink = pkg.homepage ? `<a href="${pkg.homepage}" target="_blank">${pkg.homepage}</a>` : 'N/A';
+                row.innerHTML = `
+        <td><span class="package-link" data-package="${pkg.package}" data-version="${pkg.version}" data-arch="${pkg.architecture}" data-filename="${pkg.filename}">${pkg.package}</span></td>
+        <td>${pkg.version}</td>
+        <td>${pkg.architecture}</td>
+        <td class="nowrap">${pkg.size}</td>
+        <td>${pkg.maintainer}</td>
+        <td>${homepageLink}</td>
+        <td>${pkg.description || 'No description available'}</td>
+      `;
+                packageTableBody.appendChild(row);
+            });
+
+            document.querySelectorAll('.package-link').forEach(link => {
+                link.addEventListener('click', function () {
+                    const packageName = this.getAttribute('data-package');
+                    const version = this.getAttribute('data-version');
+                    const architecture = this.getAttribute('data-arch');
+                    const filename = this.getAttribute('data-filename');
+
+                    const downloadUrl = filename ?
+                        `${window.location.origin}/debian/${filename}` :
+                        `${window.location.origin}/debian/pool/main/${packageName.charAt(0)}/${packageName}/${packageName}_${version}_${architecture}.deb`;
+
+                    document.getElementById('basicInstallCommand').value = `sudo apt install ${packageName}`;
+                    document.getElementById('advancedInstallCommand').value = `sudo apt install ${packageName}:${architecture}=${version}`;
+
+                    const downloadLinkContainer = document.getElementById('downloadLinkContainer');
+                    if (downloadLinkContainer) {
+                        downloadLinkContainer.innerHTML = `<a href="${downloadUrl}" class="btn btn-primary" target="_blank">Download .deb Package</a>`;
+                    }
+
+                    const installModal = new bootstrap.Modal(document.getElementById('installModal'));
+                    installModal.show();
+                });
+            });
+
+            const totalPages = Math.ceil(filteredPackages.length / PACKAGES_PER_PAGE);
+            displayPagination(totalPages);
+        }
+
+        async function displayPackages() {
+            const archSelect = document.getElementById('arch-select');
+            const versionSelect = document.getElementById('version-select');
+            const searchInput = document.getElementById('package-search');
+
+            const versions = await fetchVersions();
+            versions.forEach(version => {
+                const option = document.createElement('option');
+                option.value = version;
+                option.textContent = version;
+                versionSelect.appendChild(option);
+            });
+            versionSelect.value = 'stable';
+
+            async function updatePackages() {
+                currentPage = 1;
+                const arch = archSelect.value;
+                const version = versionSelect.value;
+                const searchTerm = searchInput.value.trim();
+
+                const data = await fetchPackages(arch, version);
+                const allPackages = parsePackages(data, arch);
+                filteredPackages = filterPackages(allPackages, searchTerm);
+                renderPackages();
+            }
+
+            archSelect.addEventListener('change', updatePackages);
+            versionSelect.addEventListener('change', updatePackages);
+
+            let searchTimeout;
+            searchInput.addEventListener('input', () => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(updatePackages, 300);
+            });
+
+            await updatePackages();
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            displayPackages();
+
+            document.addEventListener('click', function (e) {
+                if (e.target.closest('.copy-btn')) {
+                    const btn = e.target.closest('.copy-btn');
+                    const targetId = btn.getAttribute('data-target');
+                    const textToCopy = document.getElementById(targetId).value;
+                    copyToClipboard(textToCopy);
+                    const originalIcon = btn.innerHTML;
+                    btn.innerHTML = '<i class="bi bi-check"></i>';
+                    setTimeout(() => { btn.innerHTML = originalIcon; }, 1500);
+                }
+            });
+        });
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                console.log('Text copied to clipboard');
+            }, (err) => {
+                console.error('Could not copy text: ', err);
+            });
+        }
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const archSelectKey = document.getElementById('arch-select-key');
+            const repoCommand = document.getElementById('repo-command');
+
+            archSelectKey.addEventListener('change', function () {
+                const arch = this.value;
+                repoCommand.value = `echo "deb [arch=${arch} signed-by=/etc/apt/keyrings/startcloud-archive-keyring.gpg] ${window.location.origin}/debian/ stable main" | sudo tee /etc/apt/sources.list.d/startcloud-private.list`;
+            });
+        });
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.location.hash === '#instructions-legacy') {
+                const legacyCollapse = document.getElementById('legacyMethodCollapse');
+                if (legacyCollapse) {
+                    new bootstrap.Collapse(legacyCollapse, { toggle: true });
+                    document.getElementById('instructions-legacy').scrollIntoView();
+                }
+            }
+
+            const clientDN = document.querySelector('meta[name="x-client-dn"]')?.getAttribute('content') || '';
+            const testClientDN = "CN=mark,OU=Package Repository,O=STARTcloud,L=Chicago,ST=Illinois,C=US";
+
+            let clientCN = '';
+            const cnMatch = testClientDN.match(/CN=([^,]+)/);
+            if (cnMatch && cnMatch[1]) clientCN = cnMatch[1];
+
+            const clientCnElement = document.getElementById('client-cn');
+            if (clientCnElement) clientCnElement.textContent = clientCN || 'Unknown';
+
+            if (clientCN) {
+                const pemLink = document.getElementById('pem-link');
+                const p12Link = document.getElementById('p12-link');
+                const readmeLink = document.getElementById('readme-link');
+
+                if (pemLink) pemLink.href = `/certs/${clientCN}/${clientCN}.pem`;
+                if (p12Link) p12Link.href = `/certs/${clientCN}/${clientCN}.p12`;
+                if (readmeLink) readmeLink.href = `/certs/${clientCN}/README.txt`;
+
+                const certCopyCommand = document.getElementById('cert-copy-command');
+                const certPermCommand = document.getElementById('cert-perm-command');
+                const aptConfContent = document.getElementById('apt-conf-content');
+                const browserCertFilename = document.getElementById('browser-cert-filename');
+
+                if (certCopyCommand) certCopyCommand.value = `sudo cp ${clientCN}.pem /etc/apt/certs/`;
+                if (certPermCommand) certPermCommand.value = `sudo chmod 600 /etc/apt/certs/${clientCN}.pem`;
+                if (aptConfContent) aptConfContent.value = `Acquire::https::${window.location.host}::SslCert "/etc/apt/certs/${clientCN}.pem";\nAcquire::https::${window.location.host}::SslKey "/etc/apt/certs/${clientCN}.pem";`;
+                if (browserCertFilename) browserCertFilename.textContent = `${clientCN}.p12`;
+            }
+        });
+    </script>
+</body>
+
+</html>
+

@@ -47,6 +47,26 @@
       ignore_errors: "{{ ansible_check_mode }}"
       when: docker_install_compose_plugin | bool
 
+    ## Docker CE 28+ stores images via the containerd snapshotter under the
+    ## containerd root rather than the Docker data-root, so relocating image
+    ## storage requires moving this as well.
+    - name: "Configuring the containerd root directory"
+      when: docker_containerd_root | default('') | length > 0
+      block:
+        - name: "Ensuring the containerd root directory exists"
+          ansible.builtin.file:
+            path: "{{ docker_containerd_root }}"
+            state: directory
+            mode: "0711"
+
+        - name: "Setting the containerd root directory"
+          ansible.builtin.lineinfile:
+            path: /etc/containerd/config.toml
+            regexp: '^root\s*='
+            line: 'root = "{{ docker_containerd_root }}"'
+            insertbefore: BOF
+          notify: "Restarting containerd"
+
     - name: "Ensuring /etc/docker/ directory exists"
       ansible.builtin.file:
         path: /etc/docker

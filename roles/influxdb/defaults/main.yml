@@ -23,14 +23,15 @@ influxdb_service_name: "influxdb"
 influxdb_service_state: "started"
 influxdb_service_enabled: true
 
-# Debian / Ubuntu repository definition
-influxdb_apt_key_url: "https://repos.influxdata.com/influxdata-archive_compat.key"
-influxdb_apt_keyring_path: "/etc/apt/keyrings/influxdata-archive_compat.gpg"
+# Debian / Ubuntu repository definition (key path and repo line must stay
+# identical to the telegraf role's, both roles share this repository)
+influxdb_apt_key_url: "https://repos.influxdata.com/influxdata-archive.key"
+influxdb_apt_keyring_path: "/usr/share/keyrings/influxdata-archive.gpg"
 influxdb_apt_repo: "deb [signed-by={{ influxdb_apt_keyring_path }}] https://repos.influxdata.com/debian {{ influxdb_channel }} main"
 
 # Enterprise Linux repository definition
 influxdb_yum_baseurl: "https://repos.influxdata.com/{{ influxdb_channel }}/$basearch/main"
-influxdb_yum_gpgkey: "https://repos.influxdata.com/influxdata-archive_compat.key"
+influxdb_yum_gpgkey: "https://repos.influxdata.com/influxdata-archive.key"
 
 # Optional initial onboarding (org / bucket / admin user)
 influxdb_setup: false

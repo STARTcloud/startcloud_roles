@@ -91,8 +91,8 @@
               Package: {{ package_name }}
               Version: {{ package_version }}
               Maintainer: {{ package_maintainer_email }}
-              Depends: {{ package_dependencies }}
-              Architecture: {{ package_arch }}
+              Depends: {{ package_dependencies | join(', ') }}
+              Architecture: {{ item }}
               Homepage: {{ package_maintainer_address }}
               Description: {{ package_description }}
           loop: "{{ package_arch }}"
@@ -100,5 +100,5 @@
         - name: "Building deb package"
           ansible.builtin.command:
             cmd: "dpkg --build {{ service_home_dir }}/{{ package_org }}/{{ package_name }}_{{ package_version }}-1_{{ item }}"
-            creates: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}_{{ package_version }}.deb"
+            creates: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}_{{ package_version }}-1_{{ item }}.deb"
           loop: "{{ package_arch }}"

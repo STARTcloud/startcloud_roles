@@ -90,7 +90,7 @@
         - name: "Identifying available disks"
           ansible.builtin.shell: |
             set -o pipefail
-            lsblk -no NAME -x NAME | grep -v {{ root_disk }}
+            lsblk -dno NAME,TYPE -x NAME | awk '$2 == "disk" && $1 != "{{ root_disk }}" {print $1}'
           args:
             executable: /bin/bash
           register: lsblk_output

@@ -18,5 +18,5 @@
 
 - name: "Installing zrepl package"
   ansible.builtin.dnf:
-    name: "{{ packages }}"
+    name: "{{ zrepl_packages }}"
     state: present

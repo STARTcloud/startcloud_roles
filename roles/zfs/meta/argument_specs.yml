@@ -10,3 +10,23 @@ argument_specs:
         type: bool
         default: true
         description: Master gate — when false the role loads its vars but runs no tasks.
+      zfs_frequent_cron_rtn:
+        type: int
+        default: 4
+        description: Number of frequent (15-minute) zfs-auto-snapshot snapshots to keep.
+      zfs_hourly_cron_rtn:
+        type: int
+        default: 24
+        description: Number of hourly zfs-auto-snapshot snapshots to keep.
+      zfs_daily_cron_rtn:
+        type: int
+        default: 31
+        description: Number of daily zfs-auto-snapshot snapshots to keep.
+      zfs_weekly_cron_rtn:
+        type: int
+        default: 8
+        description: Number of weekly zfs-auto-snapshot snapshots to keep.
+      zfs_monthly_cron_rtn:
+        type: int
+        default: 12
+        description: Number of monthly zfs-auto-snapshot snapshots to keep.

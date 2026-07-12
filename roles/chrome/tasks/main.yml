@@ -10,17 +10,23 @@
       with_items:
         - "{{ installer_dir }}/chrome/archives"
 
-    - name: "Adding Chrome source Apt signing key"
-      ansible.builtin.apt_key:
-        state: present
+    - name: "Downloading the Chrome signing key"
+      ansible.builtin.get_url:
         url: "{{ chrome_signing_key_url }}"
+        dest: /tmp/google-chrome-signing-key.asc
+        mode: "0644"
+        timeout: 60
+
+    - name: "Installing the Chrome signing key"
+      ansible.builtin.command: gpg --batch --yes --dearmor -o /usr/share/keyrings/google-chrome.gpg /tmp/google-chrome-signing-key.asc
+      changed_when: true
 
     - name: "Adding Chrome repository for {{ ansible_distribution_release }}"
       ansible.builtin.lineinfile:
-        mode: "0755"
+        mode: "0644"
         create: true
         dest: "/etc/apt/sources.list.d/google-chrome.list"
-        line: "deb [arch=amd64]  http://dl.google.com/linux/chrome/deb/ stable main"
+        line: "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main"
         state: present
 
     - name: "Ensuring apt cache is updated"

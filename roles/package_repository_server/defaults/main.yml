@@ -1,3 +1,47 @@
 ---
 run_tasks: true
 package_server_email: "{{ email | default('support@startcloud.com') }}"
+
+## Debian package server layout (pkg_server.type: mirror / public / private).
+## Defaults reflect the production server packages.debian.startcloud.com.
+pkg_server_base_dir: /local
+
+## When false only the port-80 server blocks are rendered (for hosts without
+## certificates yet — production certs are issued by certbot outside this role).
+pkg_server_ssl_enabled: true
+
+## Local signed demonstration repository (debian base tasks): built from the
+## deb the debian_packager role produces, served on a localhost nginx vhost.
+pkg_server_local_dir: "{{ pkg_server_base_dir }}/startcloud"
+pkg_server_local_port: 8008
+pkg_server_deb_source: "{{ service_home_dir }}/startcloud/startcloud_0.0.1-1_amd64.deb"
+
+pkg_server_public_domains:
+  - public.debian.packages.startcloud.com
+  - public.debian.startcloud.com
+pkg_server_public_ssl_certificate: /etc/letsencrypt/live/public.debian.packages.startcloud.com/fullchain.pem
+pkg_server_public_ssl_certificate_key: /etc/letsencrypt/live/public.debian.packages.startcloud.com/privkey.pem
+
+pkg_server_private_domains:
+  - private.debian.startcloud.com
+  - private.debian.packages.startcloud.com
+pkg_server_private_ssl_certificate: /etc/letsencrypt/live/private.debian.packages.startcloud.com/fullchain.pem
+pkg_server_private_ssl_certificate_key: /etc/letsencrypt/live/private.debian.packages.startcloud.com/privkey.pem
+
+pkg_server_mirror_domains:
+  - mirror.debian.packages.startcloud.com
+  - mirror.debian.startcloud.com
+pkg_server_mirror_ssl_certificate: /etc/letsencrypt/live/mirror.debian.packages.startcloud.com-0001/fullchain.pem
+pkg_server_mirror_ssl_certificate_key: /etc/letsencrypt/live/mirror.debian.packages.startcloud.com-0001/privkey.pem
+
+## Private repository client-certificate CA
+pkg_server_ca_cn: STARTcloud Package Repository CA
+pkg_server_ca_days: 3650
+
+## Debian mirror synchronisation (debmirror)
+pkg_server_mirror_source_host: mirrors.ocf.berkeley.edu
+pkg_server_mirror_dists: bullseye,bookworm,trixie
+pkg_server_mirror_sections: main,contrib,non-free,non-free-firmware,main/debian-installer
+pkg_server_mirror_arches: amd64,arm64
+pkg_server_mirror_cron_minute: "30"
+pkg_server_mirror_cron_hour: "2"

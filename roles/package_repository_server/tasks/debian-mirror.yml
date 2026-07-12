@@ -1,0 +1,61 @@
+---
+## Debian mirror — mirrors the production layout on
+## packages.debian.startcloud.com: debmirror into /local/mirror/debian nightly,
+## served by nginx with autoindex.
+- name: "Installing debmirror and nginx"
+  ansible.builtin.apt:
+    name:
+      - debmirror
+      - nginx
+    state: present
+
+- name: "Creating the mirror service account"
+  ansible.builtin.user:
+    name: mirror
+    system: true
+    shell: /usr/sbin/nologin
+    create_home: false
+
+- name: "Creating the mirror directory"
+  ansible.builtin.file:
+    path: "{{ pkg_server_base_dir }}/mirror"
+    state: directory
+    owner: mirror
+    mode: "0755"
+
+- name: "Installing the mirror synchronisation script"
+  ansible.builtin.template:
+    src: mirror_deb_repo.sh.j2
+    dest: "{{ pkg_server_base_dir }}/mirror_deb_repo.sh"
+    mode: "0755"
+
+- name: "Seeding the mirror index page"
+  ansible.builtin.copy:
+    src: mirror-index.html
+    dest: "{{ pkg_server_base_dir }}/mirror/index.html"
+    force: false
+    mode: "0644"
+
+- name: "Scheduling the nightly mirror synchronisation"
+  ansible.builtin.cron:
+    name: "Debian mirror sync"
+    cron_file: local-debmirror
+    user: root
+    minute: "{{ pkg_server_mirror_cron_minute }}"
+    hour: "{{ pkg_server_mirror_cron_hour }}"
+    weekday: "1-7"
+    job: "{{ pkg_server_base_dir }}/mirror_deb_repo.sh"
+
+- name: "Templating the mirror nginx vhost"
+  ansible.builtin.template:
+    src: nginx-mirror.conf.j2
+    dest: "/etc/nginx/sites-available/{{ pkg_server_mirror_domains | first }}"
+    mode: "0644"
+  notify: "Reloading nginx"
+
+- name: "Enabling the mirror nginx vhost"
+  ansible.builtin.file:
+    src: "/etc/nginx/sites-available/{{ pkg_server_mirror_domains | first }}"
+    dest: "/etc/nginx/sites-enabled/{{ pkg_server_mirror_domains | first }}"
+    state: link
+  notify: "Reloading nginx"

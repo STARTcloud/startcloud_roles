@@ -1,0 +1,30 @@
+---
+## UNTESTED on VirtualBox FreeBSD guests — bhyve (virtio default) is the
+## proven path. Verify the serial fallback before shipping FreeBSD images.
+- name: "Installing the QEMU Guest Agent"
+  community.general.pkgng:
+    name: qemu-guest-agent
+    state: present
+
+- name: "Enabling the QEMU Guest Agent service"
+  ansible.builtin.lineinfile:
+    path: /etc/rc.conf
+    regexp: "^qemu_guest_agent_enable="
+    line: 'qemu_guest_agent_enable="YES"'
+
+- name: "Checking for the virtio guest agent channel"
+  ansible.builtin.stat:
+    path: /dev/vtcon/org.qemu.guest_agent.0
+  register: qemu_ga_vtcon
+
+- name: "Falling back to the ISA serial transport when no virtio channel exists"
+  ansible.builtin.lineinfile:
+    path: /etc/rc.conf
+    regexp: "^qemu_guest_agent_flags="
+    line: 'qemu_guest_agent_flags="-m isa-serial -p /dev/cuau1"'
+  when: not qemu_ga_vtcon.stat.exists
+
+- name: "Starting the QEMU Guest Agent service"
+  ansible.builtin.service:
+    name: qemu_guest_agent
+    state: started

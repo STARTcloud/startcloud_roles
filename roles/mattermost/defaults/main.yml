@@ -1,5 +1,9 @@
 ---
 run_tasks: true
+mattermost_version: "10.5.1"
+mattermost_team_name: team
+mattermost_domain_name: chat.example.com
+mattermost_db_password: "mattermost24@!"
 mattermost_user: mattermost
 mattermost_group: mattermost
 mattermost_db_user: "{{ mattermost_team_name }}_mattermost"

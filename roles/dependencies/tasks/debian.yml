@@ -72,9 +72,18 @@
     - extra_repos | default([]) | length > 0
     - not (item.needs_dearmor | default(false))
 
+- name: "Removing stale duplicate source files for extra repositories"
+  ansible.builtin.file:
+    path: "{{ item.1 }}"
+    state: absent
+  loop: "{{ extra_repos | default([]) | subelements('stale_source_files', skip_missing=True) }}"
+  loop_control:
+    label: "{{ item.1 }}"
+
 - name: "Adding extra APT repositories"
   ansible.builtin.apt_repository:
     repo: "{{ item.repo }}"
+    filename: "{{ item.filename | default(item.name) }}"
     state: present
     update_cache: false
   loop: "{{ extra_repos | default([]) }}"
