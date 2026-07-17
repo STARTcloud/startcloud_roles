@@ -108,7 +108,7 @@
                 <Certificate 
                      certificateFile="{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt"
                      certificateKeyFile="{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}-self-signed.key"
-                     certificateChainFile="{{ cert_dir }}/ca/ca-certificate.pem" />
+                     certificateChainFile="{{ cert_dir }}/ca/ca-certificate.crt" />
             </SSLHostConfig>
           </Connector>
         {% else %}

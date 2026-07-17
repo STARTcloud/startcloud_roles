@@ -82,7 +82,11 @@
             {% endif %}
             {% if selfsigned_enabled %}
             <p>You used the Self Signed Option, please add this Root CA to your Local OS to get rid of SSL warnings. This will vary based on your Local OS</p>
+            {% if generate_self_signed_certificate_authority | default(false) %}
             <p><a href="https://{{ startcloud_quick_start_proxy_url }}/ca-certificate.crt" target="_blank">Root CA Certificate</a></p>
+            {% else %}
+            <p><a href="https://{{ startcloud_quick_start_proxy_url }}/root-ca.crt" target="_blank">Root CA Certificate</a></p>
+            {% endif %}
             {% endif %}
         </div>
         <hr>
