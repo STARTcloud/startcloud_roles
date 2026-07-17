@@ -13,7 +13,8 @@ letsencrypt_staging_enabled: false
 
 # Certificate passwords
 cert_pass: ThisNeedstoBeSecure!
-ca_cert_pass: STARTSecure25@!
+# Matches the encrypted intermediate key shipped in the driver's ssls/ca
+ca_cert_pass: STARTcloud24@!
 
 # Certificate properties
 countrycode: US

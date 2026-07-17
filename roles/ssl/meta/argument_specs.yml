@@ -41,8 +41,8 @@ argument_specs:
         description: Password protecting generated PKCS12/JKS bundles; change for production.
       ca_cert_pass:
         type: str
-        default: STARTSecure25@!
-        description: Passphrase protecting the CA private key; change for production.
+        default: STARTcloud24@!
+        description: Passphrase protecting the CA private key (matches the driver's encrypted intermediate key); change for production.
       countrycode:
         type: str
         default: US

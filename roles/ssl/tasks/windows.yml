@@ -126,15 +126,28 @@
     - name: "Generating Certificate Authority"
       when: not generate_self_signed_certificate_authority
       block:
-        - name: "Copying root CA private key"
+        - name: "Copying intermediate CA private key"
           ansible.windows.win_copy:
             src: "ssls/ca/ca-certificate.key"
             dest: "{{ win_cert_dir }}\\ca\\ca-certificate.key"
 
-        - name: "Copying root CA certificate"
+        - name: "Copying intermediate CA certificate"
           ansible.windows.win_copy:
             src: "ssls/ca/ca-certificate.crt"
             dest: "{{ win_cert_dir }}\\ca\\ca-certificate.crt"
+
+        - name: "Copying STARTcloud Dev Root CA certificate"
+          ansible.windows.win_copy:
+            src: "ssls/ca/root-ca.crt"
+            dest: "{{ win_cert_dir }}\\ca\\root-ca.crt"
+
+        - name: "Installing STARTcloud Dev Root CA into the Windows Root store"
+          ansible.windows.win_certificate_store:
+            path: "{{ win_cert_dir }}\\ca\\root-ca.crt"
+            file_type: pem
+            store_location: LocalMachine
+            store_name: Root
+            state: present
 
     - name: "Generating Certificate Authority"
       when: generate_self_signed_certificate_authority
