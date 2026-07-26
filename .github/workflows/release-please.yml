@@ -25,7 +25,7 @@ jobs:
       full_version: ${{ steps.compose.outputs.version }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Release Please
         uses: googleapis/release-please-action@v4
@@ -53,7 +53,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install ansible-core
         run: pip install ansible-core
