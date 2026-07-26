@@ -1,0 +1,60 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Stat the callback stub request log
+      ansible.builtin.stat:
+        path: /var/log/callback-stub.log
+      register: callback_log_stat
+
+    - name: Assert the callback stub received and logged a request
+      ansible.builtin.assert:
+        that:
+          - callback_log_stat.stat.exists
+          - callback_log_stat.stat.size | int > 0
+        fail_msg: "The callback role posted nothing to the stub listener"
+
+    - name: Read the callback stub request log
+      ansible.builtin.slurp:
+        src: /var/log/callback-stub.log
+      register: callback_log_raw
+
+    - name: Parse the recorded callback requests
+      ansible.builtin.set_fact:
+        callback_records: >-
+          {{ (callback_log_raw.content | b64decode).splitlines()
+             | reject('equalto', '')
+             | map('from_json') | list }}
+
+    - name: Assert the callback POST carried the exact provisioning payload
+      ansible.builtin.assert:
+        that:
+          - callback_records | length >= 1
+          - callback_records[-1].method == 'POST'
+          - callback_records[-1].path == '/wp-admin/admin-ajax.php'
+          - "'application/x-www-form-urlencoded' in callback_records[-1].content_type"
+          - "'action=spinupupdate' in callback_records[-1].body"
+          - "'token=CHANGEME' in callback_records[-1].body"
+          - "'instanceurl=startcloud-callback-debian12.molecule.local' in callback_records[-1].body"
+          - "'trackerid=molecule-tracker-0001' in callback_records[-1].body"
+          - "'iscomplete=yes' in callback_records[-1].body"
+        fail_msg: "Callback payload did not match the role's documented request body"
+
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Assert the callback stub listener stayed up for the whole run
+      ansible.builtin.assert:
+        that:
+          - "'callback-stub.service' in ansible_facts.services"
+          - ansible_facts.services['callback-stub.service'].state == 'running'
+        fail_msg: "Callback stub listener was not running during verification"
+
+    - name: Confirm the callback endpoint port is still reachable
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 8099
+        state: started
+        timeout: 15

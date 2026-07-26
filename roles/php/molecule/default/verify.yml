@@ -1,0 +1,132 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Gather package facts
+      ansible.builtin.package_facts:
+        manager: apt
+
+    - name: Assert the PHP packages from vars/Debian.yml are installed
+      ansible.builtin.assert:
+        that:
+          - "'php8.2-cli' in ansible_facts.packages"
+          - "'php8.2-fpm' in ansible_facts.packages"
+          - "'php8.2-apcu' in ansible_facts.packages"
+          - "'php8.2-opcache' in ansible_facts.packages"
+        fail_msg: "Expected php8.2-cli, php8.2-fpm, php8.2-apcu and php8.2-opcache to be installed"
+
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Assert php8.2-fpm is running and enabled at boot
+      ansible.builtin.assert:
+        that:
+          - "'php8.2-fpm.service' in ansible_facts.services"
+          - ansible_facts.services['php8.2-fpm.service'].state == 'running'
+          - ansible_facts.services['php8.2-fpm.service'].status == 'enabled'
+        fail_msg: "php8.2-fpm.service is not running and enabled"
+
+    - name: Stat the configuration files the role manages
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: php_managed_files
+      loop:
+        - /etc/php/8.2/cli/php.ini
+        - /etc/php/8.2/fpm/php.ini
+        - /etc/php/8.2/cli/conf.d/20-apcu.ini
+        - /etc/php/8.2/cli/conf.d/10-opcache.ini
+        - /etc/php/8.2/fpm/pool.d/www.conf
+
+    - name: Assert every managed configuration file exists
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.isreg
+        fail_msg: "Missing managed PHP configuration file {{ item.item }}"
+      loop: "{{ php_managed_files.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Read the rendered CLI php.ini
+      ansible.builtin.slurp:
+        src: /etc/php/8.2/cli/php.ini
+      register: php_ini_cli
+
+    - name: Assert php.ini carries the values supplied by converge
+      ansible.builtin.assert:
+        that:
+          - "'memory_limit = 512M' in php_ini_content"
+          - "'max_execution_time = 90' in php_ini_content"
+          - "'upload_max_filesize = 128M' in php_ini_content"
+          - "'post_max_size = 128M' in php_ini_content"
+          - "'date.timezone = UTC' in php_ini_content"
+          - "'expose_php = Off' in php_ini_content"
+        fail_msg: "Rendered php.ini does not contain the converge values"
+      vars:
+        php_ini_content: "{{ php_ini_cli.content | b64decode }}"
+
+    - name: Read the rendered APCu extension configuration
+      ansible.builtin.slurp:
+        src: /etc/php/8.2/cli/conf.d/20-apcu.ini
+      register: php_apcu_ini
+
+    - name: Assert the APCu extension configuration is correct
+      ansible.builtin.assert:
+        that:
+          - "'extension=apcu.so' in php_apcu_content"
+          - "'apc.shm_size=128M' in php_apcu_content"
+        fail_msg: "APCu configuration was not rendered as expected"
+      vars:
+        php_apcu_content: "{{ php_apcu_ini.content | b64decode }}"
+
+    - name: Read the rendered OpCache extension configuration
+      ansible.builtin.slurp:
+        src: /etc/php/8.2/cli/conf.d/10-opcache.ini
+      register: php_opcache_ini
+
+    - name: Assert the OpCache extension configuration is correct
+      ansible.builtin.assert:
+        that:
+          - "'zend_extension=opcache.so' in php_opcache_content"
+          - "'opcache.enable=1' in php_opcache_content"
+          - "'opcache.memory_consumption=128' in php_opcache_content"
+        fail_msg: "OpCache configuration was not rendered as expected"
+      vars:
+        php_opcache_content: "{{ php_opcache_ini.content | b64decode }}"
+
+    - name: Read the rendered PHP-FPM www pool
+      ansible.builtin.slurp:
+        src: /etc/php/8.2/fpm/pool.d/www.conf
+      register: php_fpm_pool
+
+    - name: Assert the PHP-FPM www pool is configured from the role template
+      ansible.builtin.assert:
+        that:
+          - "'[www]' in php_fpm_pool_content"
+          - "'listen = 127.0.0.1:9000' in php_fpm_pool_content"
+          - "'user = www-data' in php_fpm_pool_content"
+          - "'group = www-data' in php_fpm_pool_content"
+          - "'pm.max_children = 10' in php_fpm_pool_content"
+        fail_msg: "PHP-FPM www pool was not rendered as expected"
+      vars:
+        php_fpm_pool_content: "{{ php_fpm_pool.content | b64decode }}"
+
+    - name: Look up the PHP-FPM pool user
+      ansible.builtin.getent:
+        database: passwd
+        key: www-data
+
+    - name: Assert the PHP-FPM pool user exists
+      ansible.builtin.assert:
+        that:
+          - "'www-data' in ansible_facts.getent_passwd"
+        fail_msg: "The www-data pool user does not exist"
+
+    - name: Wait for PHP-FPM to listen on the configured port
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 9000
+        state: started
+        timeout: 30

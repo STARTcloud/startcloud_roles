@@ -1,0 +1,53 @@
+---
+- name: "Detecting pfSense Appliance"
+  ansible.builtin.stat:
+    path: /etc/inc/globals.inc
+  register: firewall_watchdog_pfsense_check
+
+- name: "Configuring the Service Watchdog"
+  when: "firewall_watchdog_pfsense_check.stat.exists and firewall_watchdog_services | length > 0"
+  block:
+    - name: "Stripping Previous Watchdog Configuration from config.xml"
+      ansible.builtin.replace:
+        path: /conf/config.xml
+        regexp: '[\s\S]'
+        replace: ''
+        after: '<servicewatchdog>.*?\n'
+        before: '\s*<\/servicewatchdog>'
+
+    - name: "Writing Watchdog Service Entries"
+      ansible.builtin.blockinfile:
+        path: /conf/config.xml
+        marker: "                  <!-- {mark} ANSIBLE WATCHDOG MANAGED BLOCK -->"
+        insertafter: '<servicewatchdog>'
+        state: present
+        content: |2
+          {% for service in firewall_watchdog_services %}
+                      <item>
+                          <name>{{ service.name }}</name>
+                          <rcfile>{{ service.rcfile }}</rcfile>
+                          <custom_php_service_status_command>{{ service.status_command }}</custom_php_service_status_command>
+                          <executable>{{ service.executable }}</executable>
+                          <description><![CDATA[{{ service.description }}]]></description>
+                          <notify>{{ service.notify | default('') }}</notify>
+                      </item>
+          {% endfor %}
+
+    - name: "Removing the blockinfile Markers"
+      ansible.builtin.lineinfile:
+        path: /conf/config.xml
+        state: absent
+        regexp: '.*MANAGED BLOCK.*'
+
+    - name: "Invalidating pfSense Configuration Cache"
+      ansible.builtin.file:
+        path: /tmp/config.cache
+        state: absent
+
+    - name: "Reloading pfSense Configuration"
+      ansible.builtin.command: /etc/rc.reload_all
+      changed_when: true
+
+    - name: "Waiting for pfSense Cache to Regenerate"
+      ansible.builtin.wait_for:
+        path: /tmp/config.cache

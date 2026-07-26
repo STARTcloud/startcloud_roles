@@ -8,6 +8,14 @@ librenms_install_dir: "/opt/librenms"
 librenms_user: "librenms"
 librenms_group: "librenms"
 
+# Runtime directories that must stay group-writable for the web and CLI
+# processes to share them, both now and for files created later.
+librenms_acl_directories:
+  - "{{ librenms_install_dir }}/rrd"
+  - "{{ librenms_install_dir }}/logs"
+  - "{{ librenms_install_dir }}/bootstrap/cache"
+  - "{{ librenms_install_dir }}/storage"
+
 # PHP runtime
 librenms_php_version: "8.2"
 librenms_php_timezone: "Etc/UTC"

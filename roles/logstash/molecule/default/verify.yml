@@ -1,0 +1,130 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  tasks:
+    - name: Gather installed package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Assert the logstash package was installed from the Elastic repository
+      ansible.builtin.assert:
+        that:
+          - "'logstash' in ansible_facts.packages"
+        fail_msg: "logstash package is not installed"
+        success_msg: "logstash package is installed"
+
+    - name: Stat the Elastic APT keyring fetched by the role
+      ansible.builtin.stat:
+        path: /usr/share/keyrings/elasticsearch-keyring.asc
+      register: logstash_keyring
+
+    - name: Assert the Elastic APT keyring exists with mode 0644
+      ansible.builtin.assert:
+        that:
+          - logstash_keyring.stat.exists
+          - logstash_keyring.stat.mode == '0644'
+          - logstash_keyring.stat.size > 0
+        fail_msg: "Elastic APT keyring missing or has the wrong permissions"
+        success_msg: "Elastic APT keyring present at /usr/share/keyrings/elasticsearch-keyring.asc"
+
+    - name: Stat the Elastic APT repository source file
+      ansible.builtin.stat:
+        path: /etc/apt/sources.list.d/elastic-8.x.list
+      register: logstash_apt_source
+
+    - name: Assert the Elastic APT repository file was created
+      ansible.builtin.assert:
+        that:
+          - logstash_apt_source.stat.exists
+        fail_msg: "/etc/apt/sources.list.d/elastic-8.x.list was not created"
+        success_msg: "Elastic APT repository file is present"
+
+    - name: Look up the logstash group created by the package
+      ansible.builtin.getent:
+        database: group
+        key: logstash
+
+    - name: Assert the logstash group exists
+      ansible.builtin.assert:
+        that:
+          - "'logstash' in ansible_facts.getent_group"
+        fail_msg: "logstash group does not exist, config file ownership could not be correct"
+        success_msg: "logstash group exists"
+
+    - name: Stat the rendered logstash.yml
+      ansible.builtin.stat:
+        path: /etc/logstash/logstash.yml
+      register: logstash_main_config
+
+    - name: Assert logstash.yml ownership and permissions match the role
+      ansible.builtin.assert:
+        that:
+          - logstash_main_config.stat.exists
+          - logstash_main_config.stat.pw_name == 'root'
+          - logstash_main_config.stat.gr_name == 'logstash'
+          - logstash_main_config.stat.mode == '0640'
+        fail_msg: "/etc/logstash/logstash.yml missing or not root:logstash 0640"
+        success_msg: "/etc/logstash/logstash.yml is root:logstash 0640"
+
+    - name: Read the rendered logstash.yml
+      ansible.builtin.slurp:
+        src: /etc/logstash/logstash.yml
+      register: logstash_main_config_raw
+
+    - name: Assert logstash.yml carries the converge values
+      ansible.builtin.assert:
+        that:
+          - "'node.name: startcloud-logstash-molecule' in logstash_main_config_content"
+          - "'pipeline.workers: 1' in logstash_main_config_content"
+          - "'path.config: /etc/logstash/conf.d/*.conf' in logstash_main_config_content"
+          - "'path.data: /var/lib/logstash' in logstash_main_config_content"
+        fail_msg: "logstash.yml was not rendered with the node name, worker count and paths"
+        success_msg: "logstash.yml rendered with the expected node name, worker count and paths"
+      vars:
+        logstash_main_config_content: "{{ logstash_main_config_raw.content | b64decode }}"
+
+    - name: Stat the rendered pipeline configuration
+      ansible.builtin.stat:
+        path: /etc/logstash/conf.d/main.conf
+      register: logstash_pipeline_config
+
+    - name: Assert the pipeline file ownership and permissions match the role
+      ansible.builtin.assert:
+        that:
+          - logstash_pipeline_config.stat.exists
+          - logstash_pipeline_config.stat.pw_name == 'root'
+          - logstash_pipeline_config.stat.gr_name == 'logstash'
+          - logstash_pipeline_config.stat.mode == '0640'
+        fail_msg: "/etc/logstash/conf.d/main.conf missing or not root:logstash 0640"
+        success_msg: "/etc/logstash/conf.d/main.conf is root:logstash 0640"
+
+    - name: Read the rendered pipeline configuration
+      ansible.builtin.slurp:
+        src: /etc/logstash/conf.d/main.conf
+      register: logstash_pipeline_config_raw
+
+    - name: Assert the pipeline defines the beats input and elasticsearch output
+      ansible.builtin.assert:
+        that:
+          - "'beats {' in logstash_pipeline_content"
+          - "'port => 5044' in logstash_pipeline_content"
+          - "'elasticsearch {' in logstash_pipeline_content"
+          - "'http://localhost:9200' in logstash_pipeline_content"
+          - "'logstash-%{+YYYY.MM.dd}' in logstash_pipeline_content"
+        fail_msg: "pipeline main.conf is missing the beats input or elasticsearch output"
+        success_msg: "pipeline main.conf defines the beats input on 5044 and the elasticsearch output"
+      vars:
+        logstash_pipeline_content: "{{ logstash_pipeline_config_raw.content | b64decode }}"
+
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Assert the logstash service is enabled and running
+      ansible.builtin.assert:
+        that:
+          - "'logstash.service' in ansible_facts.services"
+          - ansible_facts.services['logstash.service'].status == 'enabled'
+          - ansible_facts.services['logstash.service'].state == 'running'
+        fail_msg: "logstash.service is not enabled and running"
+        success_msg: "logstash.service is enabled and running"

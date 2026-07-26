@@ -11,11 +11,6 @@
             update_cache: true
             cache_valid_time: 3600
 
-        - name: "Upgrading all apt packages"
-          ansible.builtin.apt:
-            force_apt_get: true
-            upgrade: dist
-
         - name: "Installing some helpful utilities"
           ansible.builtin.apt:
             name:

@@ -1,0 +1,60 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    run_tasks: true
+    telegraf_enabled: true
+    telegraf_agent_docker: false
+    telegraf_agent_package_method: repo
+    telegraf_agent_package_state: present
+    telegraf_agent_config_path: /etc/telegraf
+    telegraf_agent_hostname: startcloud-telegraf-debian12
+    telegraf_agent_interval: 15
+    telegraf_agent_round_interval: true
+    telegraf_agent_flush_interval: 20
+    telegraf_agent_flush_jitter: 2
+    telegraf_agent_collection_jitter: 1
+    telegraf_agent_metric_batch_size: 500
+    telegraf_agent_metric_buffer_limit: 5000
+    telegraf_agent_debug: false
+    telegraf_agent_quiet: false
+    telegraf_agent_logfile: ""
+    telegraf_agent_omit_hostname: false
+    telegraf_agent_aws_tags: false
+    telegraf_global_tags:
+      - tag_name: environment
+        tag_value: molecule
+      - tag_name: role
+        tag_value: startcloud
+    telegraf_agent_output:
+      - type: influxdb
+        config:
+          - urls = ["http://localhost:8086"]
+          - database = "telegraf"
+          - username = "telegraf"
+          - password = "CHANGEME"
+          - precision = "s"
+          - timeout = "5s"
+    telegraf_plugins_default:
+      - plugin: cpu
+        config:
+          - percpu = true
+          - totalcpu = true
+      - plugin: mem
+      - plugin: disk
+      - plugin: system
+      - plugin: processes
+    telegraf_plugins_extra_exclusive: false
+    telegraf_plugins_extra:
+      net_response:
+        interval: 30
+        config:
+          - protocol = "tcp"
+          - address = "localhost:8086"
+      internal:
+        config:
+          - collect_memstats = true
+  roles:
+    - role: telegraf

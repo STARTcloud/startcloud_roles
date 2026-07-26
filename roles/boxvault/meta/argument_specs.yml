@@ -4,6 +4,7 @@ argument_specs:
     short_description: BoxVault installation
     description:
       - Installs BoxVault from the STARTcloud APT repository (default) or builds it from the GitHub source via git clone and npm (backend + frontend).
+      - The APT path also configures the NodeSource repository because the boxvault package depends on nodejs (>= 22).
     author: Mark Gilbert
     options:
       run_tasks:
@@ -16,16 +17,32 @@ argument_specs:
         description: Build from source (git clone + npm) instead of installing the STARTcloud apt package.
       boxvault_apt_key_url:
         type: str
-        default: "https://public.debian.packages.startcloud.com/debian/startcloud-archive-keyring.asc"
+        default: "https://debian.startcloud.com/public/debian/startcloud-archive-keyring.asc"
         description: URL of the armored STARTcloud APT signing key.
       boxvault_apt_repo_url:
         type: str
-        default: "https://public.debian.packages.startcloud.com/debian/"
+        default: "https://debian.startcloud.com/public/debian/"
         description: Base URL of the STARTcloud APT repository.
+      boxvault_apt_keyring_path:
+        type: str
+        default: /etc/apt/keyrings/startcloud-archive-keyring.gpg
+        description: Path of the dearmored STARTcloud keyring the APT source is signed by.
       boxvault_package:
         type: str
         default: boxvault
         description: Package name of the BoxVault frontend.
+      boxvault_nodejs_version:
+        type: str
+        default: "22.x"
+        description: NodeSource distribution branch installed to satisfy the boxvault package's nodejs (>= 22) dependency.
+      boxvault_nodejs_key_url:
+        type: str
+        default: "https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key"
+        description: URL of the armored NodeSource APT signing key.
+      boxvault_nodejs_keyring_path:
+        type: str
+        default: /etc/apt/keyrings/nodesource.gpg
+        description: Path of the dearmored NodeSource keyring the NodeSource source is signed by.
       boxvault_path:
         type: str
         default: /opt/boxvault

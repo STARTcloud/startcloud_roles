@@ -8,13 +8,34 @@
     - name: "Installing Web Terminal from the STARTcloud APT repository"
       when: not web_terminal_build_from_source
       block:
+        - name: "Ensuring gnupg is present for key dearmoring"
+          ansible.builtin.apt:
+            name: gnupg
+            state: present
+            update_cache: true
+            cache_valid_time: 3600
+
+        - name: "Gathering DEB architecture"
+          ansible.builtin.command: dpkg --print-architecture
+          register: web_terminal_deb_architecture
+          changed_when: false
+
         - name: "Creating keyrings directory for repository GPG keys"
           ansible.builtin.file:
             path: /etc/apt/keyrings
             state: directory
             mode: "0755"
 
+        # The download/cleanup pair is gated on the keyring the flow produces,
+        # otherwise every rerun re-downloads and re-deletes the temp key and
+        # reports two changes forever (same gate as roles/boxvault).
+        - name: "Checking for the dearmored STARTcloud keyring"
+          ansible.builtin.stat:
+            path: "{{ web_terminal_apt_keyring_path }}"
+          register: web_terminal_startcloud_keyring
+
         - name: "Downloading armored STARTcloud GPG key"
+          when: not web_terminal_startcloud_keyring.stat.exists
           ansible.builtin.get_url:
             url: "{{ web_terminal_apt_key_url }}"
             dest: /tmp/startcloud-archive-keyring.asc
@@ -22,48 +43,88 @@
 
         - name: "Dearmoring STARTcloud GPG key"
           ansible.builtin.command:
-            cmd: "gpg --dearmor -o /etc/apt/keyrings/startcloud-archive-keyring.gpg /tmp/startcloud-archive-keyring.asc"
-            creates: /etc/apt/keyrings/startcloud-archive-keyring.gpg
+            cmd: "gpg --dearmor -o {{ web_terminal_apt_keyring_path }} /tmp/startcloud-archive-keyring.asc"
+            creates: "{{ web_terminal_apt_keyring_path }}"
+
+        - name: "Setting permissions on the dearmored STARTcloud keyring"
+          ansible.builtin.file:
+            path: "{{ web_terminal_apt_keyring_path }}"
+            mode: "0644"
+
+        - name: "Cleaning up the temporary armored STARTcloud key"
+          when: not web_terminal_startcloud_keyring.stat.exists
+          ansible.builtin.file:
+            path: /tmp/startcloud-archive-keyring.asc
+            state: absent
 
         - name: "Adding STARTcloud APT repository"
           ansible.builtin.apt_repository:
-            repo: "deb [signed-by=/etc/apt/keyrings/startcloud-archive-keyring.gpg] {{ web_terminal_apt_repo_url }} {{ ansible_distribution_release }} main"
+            repo: "deb [signed-by={{ web_terminal_apt_keyring_path }}] {{ web_terminal_apt_repo_url }} {{ ansible_distribution_release }} main"
             state: present
             filename: startcloud
+            update_cache: false
+
+        # The web-terminal package depends on nodejs (>= 22); no Debian or
+        # Ubuntu release in meta/main.yml ships one, so the role supplies
+        # NodeSource itself rather than depending on roles/nodejs having run
+        # first. Keyring path and pin match roles/nodejs and roles/boxvault, so
+        # the roles are no-ops for each other.
+        - name: "Checking for the dearmored NodeSource keyring"
+          ansible.builtin.stat:
+            path: "{{ web_terminal_nodejs_keyring_path }}"
+          register: web_terminal_nodesource_keyring
+
+        - name: "Downloading armored NodeSource GPG key"
+          when: not web_terminal_nodesource_keyring.stat.exists
+          ansible.builtin.get_url:
+            url: "{{ web_terminal_nodejs_key_url }}"
+            dest: /tmp/nodesource-key.asc
+            mode: "0644"
+
+        - name: "Dearmoring NodeSource GPG key"
+          ansible.builtin.command:
+            cmd: "gpg --dearmor -o {{ web_terminal_nodejs_keyring_path }} /tmp/nodesource-key.asc"
+            creates: "{{ web_terminal_nodejs_keyring_path }}"
+
+        - name: "Setting permissions on the dearmored NodeSource keyring"
+          ansible.builtin.file:
+            path: "{{ web_terminal_nodejs_keyring_path }}"
+            mode: "0644"
+
+        - name: "Cleaning up the temporary armored NodeSource key"
+          when: not web_terminal_nodesource_keyring.stat.exists
+          ansible.builtin.file:
+            path: /tmp/nodesource-key.asc
+            state: absent
+
+        - name: "Adding NodeSource repository for Node.js"
+          ansible.builtin.apt_repository:
+            repo: "deb [arch={{ web_terminal_deb_architecture.stdout }} signed-by={{ web_terminal_nodejs_keyring_path }}]
+              https://deb.nodesource.com/node_{{ web_terminal_nodejs_version }} nodistro main"
+            state: present
+            filename: nodesource
+            update_cache: false
+
+        - name: "Creating APT preferences for the nodejs package"
+          ansible.builtin.copy:
+            dest: /etc/apt/preferences.d/nodejs
+            content: |
+              Package: nodejs
+              Pin: origin deb.nodesource.com
+              Pin-Priority: 600
+            mode: "0644"
+
+        - name: "Installing Node.js from NodeSource"
+          ansible.builtin.apt:
+            name: nodejs
+            state: present
+            update_cache: true
 
         - name: "Installing web-terminal"
           ansible.builtin.apt:
             name: "{{ web_terminal_package }}"
             state: present
             update_cache: true
-
-        - name: "Placing Configuration file"
-          become: true
-          ansible.builtin.template:
-            src: "{{ item.src }}"
-            dest: "{{ item.dest }}"
-            mode: "0755"
-          loop:
-            - { src: "config.yaml.j2", dest: "/etc/web-terminal/config.yaml" }
-            - { src: "config.yaml.j2", dest: "/etc/web-terminal/dev-config.yaml" }
-            - { src: "config.yaml.j2", dest: "/opt/web-terminal/dev-config.yaml" }
-            - { src: "config.yaml.j2", dest: "/opt/web-terminal/config.yaml" }
-
-        - name: "Starting Web Terminal Service"
-          when: not ansible_module_running_in_container
-          ansible.builtin.service:
-            name: web-terminal
-            state: started
-            enabled: true
-
-        - name: "Copying Web Terminal supervisord configuration file"
-          when: ansible_module_running_in_container
-          ansible.builtin.template:
-            src: supervisord.webterminal.conf.j2
-            dest: /etc/supervisor/conf.d/supervisord.webterminal.conf
-            owner: root
-            group: root
-            mode: "0644"
 
     - name: "Building Web Terminal from source"
       when: web_terminal_build_from_source
@@ -118,47 +179,142 @@
         - name: "Placing Web Terminal Service file"
           become: true
           ansible.builtin.template:
-            owner: "{{ item.owner }}"
-            src: "{{ item.src }}"
-            dest: "{{ item.dest }}"
-            mode: "0644"
-          loop:
-            - { src: "web-terminal.service.j2", dest: "/etc/systemd/system/web-terminal.service", owner: "{{ service_user }}" }
-
-        - name: "Placing Configuration file"
-          become: true
-          ansible.builtin.template:
-            owner: "{{ item.owner }}"
-            src: "{{ item.src }}"
-            dest: "{{ item.dest }}"
-            mode: "0644"
-          loop:
-            - { src: "config.yaml.j2", dest: "{{ web_terminal_path }}/config.yaml", owner: "{{ service_user }}" }
-            - { src: "config.yaml.j2", dest: "{{ web_terminal_path }}/dev-config.yaml", owner: "{{ service_user }}" }
-
-        - name: "Starting Web Terminal Service"
-          when: not ansible_module_running_in_container
-          ansible.builtin.service:
-            name: web-terminal
-            state: started
-            enabled: true
-            daemon_reload: true
-
-        - name: "Checking if Web Terminal Service is listening on port {{ startcloud_web_terminal_port_forwards[0].guest }}"
-          when: not ansible_module_running_in_container
-          ansible.builtin.wait_for:
-            port: "{{ startcloud_web_terminal_port_forwards[0].guest }}"
-            delay: 5
-            timeout: 60
-            msg: "Timeout waiting for {{ startcloud_web_terminal_port_forwards[0].guest }} to respond"
-          register: port_check_web_terminal
-          ignore_errors: true
-
-        - name: "Copying Web Terminal supervisord configuration file"
-          when: ansible_module_running_in_container
-          ansible.builtin.template:
-            src: supervisord.webterminal.conf.j2
-            dest: /etc/supervisor/conf.d/supervisord.webterminal.conf
+            src: web-terminal.service.j2
+            dest: /etc/systemd/system/web-terminal.service
             owner: root
             group: root
             mode: "0644"
+
+        # Only the source path ships its own unit, so only it has to make
+        # systemd aware of the file before the service is started below.
+        - name: "Reloading systemd so the templated web-terminal unit is known"
+          when: not (ansible_module_running_in_container | default(false))
+          ansible.builtin.systemd_service:
+            daemon_reload: true
+
+    # Secrets are generated once on the target and reused forever after: the
+    # files are written with `creates`, read back with slurp, and only then fed
+    # to the template, so a rerun renders byte-identical config. Callers that
+    # supply web_terminal_jwt_secret / web_terminal_users skip all of it.
+    - name: "Ensuring the web-terminal configuration directory exists"
+      ansible.builtin.file:
+        path: "{{ web_terminal_secret_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: "Ensuring openssl is present for one-time secret generation"
+      when: not web_terminal_jwt_secret or not web_terminal_users
+      ansible.builtin.apt:
+        name: openssl
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: "Generating the web-terminal JWT secret once"
+      when: not web_terminal_jwt_secret
+      ansible.builtin.shell:
+        cmd: "umask 077 && openssl rand -hex 32 > {{ web_terminal_jwt_secret_file }}"
+        creates: "{{ web_terminal_jwt_secret_file }}"
+
+    - name: "Reading the persisted JWT secret"
+      when: not web_terminal_jwt_secret
+      ansible.builtin.slurp:
+        src: "{{ web_terminal_jwt_secret_file }}"
+      register: web_terminal_jwt_secret_slurp
+
+    - name: "Using the persisted JWT secret for the rendered configuration"
+      when: not web_terminal_jwt_secret
+      ansible.builtin.set_fact:
+        web_terminal_jwt_secret: "{{ web_terminal_jwt_secret_slurp.content | b64decode | trim }}"
+
+    - name: "Generating the web-terminal admin password once"
+      when: not web_terminal_users
+      ansible.builtin.shell:
+        cmd: "umask 077 && openssl rand -hex 10 > {{ web_terminal_admin_password_file }}"
+        creates: "{{ web_terminal_admin_password_file }}"
+
+    - name: "Reading the persisted admin password"
+      when: not web_terminal_users
+      ansible.builtin.slurp:
+        src: "{{ web_terminal_admin_password_file }}"
+      register: web_terminal_admin_password_slurp
+
+    - name: "Using the persisted admin password for the rendered configuration"
+      when: not web_terminal_users
+      ansible.builtin.set_fact:
+        web_terminal_users: "{{ {web_terminal_admin_user: (web_terminal_admin_password_slurp.content | b64decode | trim)} }}"
+
+    - name: "Placing Configuration file"
+      when: not web_terminal_build_from_source
+      become: true
+      ansible.builtin.template:
+        src: config.yaml.j2
+        dest: "{{ item }}"
+        owner: root
+        group: root
+        mode: "0640"
+      loop:
+        - "{{ web_terminal_config_path }}"
+        - "{{ web_terminal_config_path | dirname }}/dev-config.yaml"
+        - "{{ web_terminal_path }}/config.yaml"
+        - "{{ web_terminal_path }}/dev-config.yaml"
+      notify: "Restarting web-terminal"
+
+    - name: "Placing Configuration file for the source build"
+      when: web_terminal_build_from_source
+      become: true
+      ansible.builtin.template:
+        src: config.yaml.j2
+        dest: "{{ item }}"
+        owner: "{{ service_user }}"
+        group: "{{ service_group }}"
+        mode: "0640"
+      loop:
+        - "{{ web_terminal_path }}/config.yaml"
+        - "{{ web_terminal_path }}/dev-config.yaml"
+      notify: "Restarting web-terminal"
+
+    # In a container the role writes a supervisord program file, so it also has
+    # to make sure supervisor and its include directory exist. Package name and
+    # directory mode match roles/supervisord, which owns supervisord.conf
+    # itself, so the two roles stay no-ops for each other.
+    - name: "Installing supervisor for the container-mode program file"
+      when: ansible_module_running_in_container | default(false)
+      ansible.builtin.apt:
+        name: supervisor
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: "Creating supervisord configuration directory"
+      when: ansible_module_running_in_container | default(false)
+      ansible.builtin.file:
+        path: /etc/supervisor/conf.d
+        state: directory
+        mode: "0755"
+
+    - name: "Copying Web Terminal supervisord configuration file"
+      when: ansible_module_running_in_container | default(false)
+      ansible.builtin.template:
+        src: supervisord.webterminal.conf.j2
+        dest: /etc/supervisor/conf.d/supervisord.webterminal.conf
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: "Starting Web Terminal Service"
+      when: not (ansible_module_running_in_container | default(false))
+      ansible.builtin.service:
+        name: web-terminal
+        state: started
+        enabled: true
+
+    - name: "Checking if Web Terminal Service is listening on port {{ startcloud_web_terminal_port_forwards[0].guest }}"
+      when: web_terminal_build_from_source and not (ansible_module_running_in_container | default(false))
+      ansible.builtin.wait_for:
+        port: "{{ startcloud_web_terminal_port_forwards[0].guest }}"
+        delay: 5
+        timeout: 60
+        msg: "Timeout waiting for {{ startcloud_web_terminal_port_forwards[0].guest }} to respond"
+      register: port_check_web_terminal
+      ignore_errors: true

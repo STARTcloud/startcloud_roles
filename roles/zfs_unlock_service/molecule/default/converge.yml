@@ -1,0 +1,8 @@
+---
+- name: "Converge zfs_unlock_service"
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+  roles:
+    - role: zfs_unlock_service

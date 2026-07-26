@@ -2,11 +2,38 @@
 - name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    - name: "Ensuring /etc/openvpn/client Exists"
+    - name: "Asserting the OpenVPN Server Endpoint is Configured"
+      ansible.builtin.assert:
+        that:
+          - openvpn_client_server | length > 0
+        fail_msg: "openvpn_client_server must be set to the hostname or address of the OpenVPN server this client connects to."
+
+    - name: "Installing OpenVPN Client Packages"
+      ansible.builtin.package:
+        name: "{{ openvpn_client_packages }}"
+        state: present
+
+    - name: "Statting the Server PKI Material Required by this Client"
+      ansible.builtin.stat:
+        path: "{{ openvpn_client_pki_directory }}/{{ item }}"
+      register: openvpn_client_pki_material
+      loop: "{{ openvpn_client_pki_files }}"
+
+    - name: "Failing when the Server PKI Material is Absent from this Host"
+      ansible.builtin.fail:
+        msg: >-
+          openvpn_client expects the OpenVPN server PKI to be present on this host under
+          {{ openvpn_client_pki_directory }}, but these files are missing:
+          {{ openvpn_client_pki_material.results | rejectattr('stat.exists') | map(attribute='item') | join(', ') }}.
+          Stage the CA, client certificate, client key and tls-auth secret there, or point
+          openvpn_client_pki_directory at the directory that holds them, before running this role.
+      when: openvpn_client_pki_material.results | rejectattr('stat.exists') | list | count > 0
+
+    - name: "Ensuring the Client Configuration Directory Exists"
       ansible.builtin.file:
-        path: /etc/openvpn/client
+        path: "{{ openvpn_configuration_directory }}"
         state: directory
-        owner: root
+        owner: "root"
         group: "{{ openvpn_group }}"
         mode: "0750"
 
@@ -14,24 +41,21 @@
       ansible.builtin.template:
         src: client.conf.j2
         dest: "{{ openvpn_configuration_directory }}/client.conf"
-        owner: root
+        owner: "root"
         group: "{{ openvpn_group }}"
         mode: "0640"
 
-    - name: "Copying Certificates and Keys from the Server to the Client"
+    - name: "Copying Certificates and Keys from the Server PKI to the Client"
       ansible.builtin.copy:
-        src: /etc/openvpn/easy-rsa/pki/{{ item }}
-        dest: /etc/openvpn/client/{{ item | basename }}
+        src: "{{ openvpn_client_pki_directory }}/{{ item }}"
+        dest: "{{ openvpn_configuration_directory }}/{{ item | basename }}"
+        owner: "root"
+        group: "{{ openvpn_group }}"
         mode: "0640"
         remote_src: true
-      loop:
-        - ca.crt
-        - issued/client.crt
-        - private/client.key
-        - ta.key
+      loop: "{{ openvpn_client_pki_files }}"
 
     - name: "Enabling OpenVPN"
-      when: "ansible_os_family == 'Debian'"
       ansible.builtin.service:
         name: openvpn
         enabled: true

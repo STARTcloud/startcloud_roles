@@ -1,0 +1,13 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    flatpak_repos:
+      - name: flathub
+        url: "https://flathub.org/repo/flathub.flatpakrepo"
+  tasks:
+    - name: "Applying the flatpak Role"
+      ansible.builtin.include_role:
+        name: flatpak

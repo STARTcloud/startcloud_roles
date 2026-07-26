@@ -2,14 +2,41 @@
 - name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
+    - name: "Creating the APT keyring directory"
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
     - name: "Installing Required Jenkins Dependencies -- Takes about 5 Mins"
       ansible.builtin.apt:
         name: "{{ packages }}"
+        update_cache: true
       vars:
         packages:
           - gnupg
           - xmlstarlet
-          - git-core
+          - git
+          - fontconfig
+
+    # Current Jenkins releases will not run on an old JVM. The runtime is not
+    # this role's to install: the collection ships sdkman_install and
+    # sdkman_java, which put the JDK in the service account's SDKMAN candidates
+    # tree and register it system-wide with update-alternatives. Both must have
+    # run before this role.
+    - name: "Locating the SDKMAN Java runtime Jenkins is to run on"
+      ansible.builtin.stat:
+        path: "{{ jenkins_java_home }}/bin/java"
+      register: jenkins_java_binary
+
+    - name: "Asserting the SDKMAN Java runtime is in place before Jenkins is installed"
+      ansible.builtin.assert:
+        that:
+          - jenkins_java_binary.stat.exists
+          - jenkins_java_binary.stat.xusr
+        fail_msg: "No Java runtime at {{ jenkins_java_home }}/bin/java -- run the sdkman_install and sdkman_java roles for {{ vagrant_user }} first"
 
     - name: "Creating Backup Directory for Script outputs"
       ansible.builtin.file:
@@ -18,193 +45,269 @@
         group: "{{ group }}"
         mode: "0755"
         state: directory
-    - name: "Installing Jenkins Apt Key"
-      ansible.builtin.apt_key:
-        state: present
-        url: "https://pkg.jenkins.io/debian/jenkins.io.key"
-    - name: "Creating Jenkins Sources.list folder"
-      ansible.builtin.file:
-        path: /etc/apt/sources.list.d/jenkins.list
-        state: touch
-        mode: "0644"
-    - name: "Adding Jenkins to Sources.list"
 
-      ansible.builtin.lineinfile:
-        line: "deb http://pkg.jenkins.io/debian-stable binary/"
-        path: /etc/apt/sources.list.d/jenkins.list
+    - name: "Installing the Jenkins APT signing key"
+      ansible.builtin.get_url:
+        url: "https://pkg.jenkins.io/debian-stable/jenkins.io-2026.key"
+        dest: /etc/apt/keyrings/jenkins.asc
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: "Adding Jenkins to Sources.list"
+      ansible.builtin.copy:
+        dest: /etc/apt/sources.list.d/jenkins.list
+        content: "deb [signed-by=/etc/apt/keyrings/jenkins.asc] https://pkg.jenkins.io/debian-stable binary/\n"
+        owner: root
+        group: root
+        mode: "0644"
+
     - name: "Installing Jenkins -- Takes about 3 Minutes"
       ansible.builtin.apt:
-        name: "{{ packages }}"
+        name: jenkins
         install_recommends: false
         update_cache: true
-      vars:
-        packages:
-          - jenkins
-    - name: "Starting Jenkins Service"
-      ansible.builtin.service:
-        enabled: false
-        name: jenkins
-        state: restarted
-    - name: "Stopping Jenkins Service"
-      ansible.builtin.service:
-        enabled: false
-        name: jenkins
-        state: stopped
-    - name: "Preparing Jenkins Cache folder permissions for user setup"
-      ansible.builtin.file:
-        group: "{{ group }}"
-        mode: "0751"
-        owner: "{{ vagrant_user }}"
-        path: /var/cache/jenkins
-        recurse: true
-    - name: "Preparing Jenkins Library folder permissions for user setup"
-      ansible.builtin.file:
-        group: "{{ group }}"
-        owner: "{{ vagrant_user }}"
-        path: /var/lib/jenkins
-        recurse: true
-    - name: "Preparing Jenkins run folder permissions for user setup"
-      ansible.builtin.file:
-        group: "{{ group }}"
-        owner: "{{ vagrant_user }}"
-        path: /var/run/jenkins
-        recurse: true
-    - name: "Preparing Jenkins log folder permissions for user setup"
-      ansible.builtin.file:
-        group: "{{ group }}"
-        owner: "{{ vagrant_user }}"
-        path: /var/log/jenkins
-        recurse: true
-    - name: "Skipping Initial Configuration"
 
-      ansible.builtin.lineinfile:
-        regexp: "^JAVA_ARGS="
-        line: 'JAVA_ARGS="-Djava.awt.headless=true -Djenkins.install.runSetupWizard=false"'
-        path: /etc/default/jenkins
-    - name: "Setting Jenkins to start as user"
-      ansible.builtin.lineinfile:
-        insertafter: "^# user and group"
-        line: JENKINS_USER="{{ vagrant_user }}"
-        path: /etc/default/jenkins
-        regexp: ^JENKINS_USER=
-    - name: "Setting Jenkins to start as user"
-      ansible.builtin.lineinfile:
-        insertafter: "^# user and group"
-        line: JENKINS_GROUP="{{ group }}"
-        path: /etc/default/jenkins
-        regexp: ^JENKINS_GROUP=
-    - name: "Starting Jenkins Service"
-      ansible.builtin.service:
-        enabled: false
-        name: jenkins
-        state: started
-    - name: "Waiting for Jenkins Config.XML to generate before stopping service."
-      ansible.builtin.pause:
-        minutes: 1
-    - name: "Stopping Jenkins Service"
-      ansible.builtin.service:
-        enabled: false
-        name: jenkins
-        state: stopped
-    - name: "Backing up Config.XML to Config.XML.orig"
+    - name: "Creating the Jenkins systemd drop-in directory"
+      ansible.builtin.file:
+        path: /etc/systemd/system/jenkins.service.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
 
-      ansible.builtin.copy:
-        dest: /var/lib/jenkins/config.xml.orig
-        src: /var/lib/jenkins/config.xml
-        remote_src: true
+    - name: "Configuring the Jenkins service through a systemd drop-in"
+      ansible.builtin.template:
+        src: jenkins-override.conf.j2
+        dest: /etc/systemd/system/jenkins.service.d/override.conf
+        owner: root
+        group: root
         mode: "0644"
-    - name: "Configuring Jenkins"
-      become: true
-      ansible.builtin.shell: "cd /var/lib/jenkins && tail -n +2 config.xml.orig >config.xml &&
-        xmlstarlet edit --inplace -u '/hudson/useSecurity' -v 'false' config.xml &&
-        xmlstarlet edit --inplace -d '/hudson/authorizationStrategy' config.xml &&
-        xmlstarlet edit --inplace -d '/hudson/securityRealm' config.xml &&
-        xmlstarlet edit --inplace -u '/hudson/installStateName' -v 'RUNNING' config.xml &&
-        diff -u config.xml{.orig,} ||
-        true"
-      changed_when: true
+      notify: "Reloading systemd unit files"
 
-    - name: "Checking if /var/lib/jenkins/init.groovy.d exists"
+    - name: "Applying the systemd drop-in before the service is driven"
+      ansible.builtin.meta: flush_handlers
+
+    - name: "Creating the Jenkins state directories the package does not ship"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ vagrant_user }}"
+        group: "{{ group }}"
+        mode: "0755"
+      loop:
+        - /var/cache/jenkins
+        - /var/lib/jenkins
+        - /var/run/jenkins
+        - /var/log/jenkins
+
+    # config.xml.orig is only ever written by the bootstrap below, so its
+    # presence is the honest marker that this host has already been through it.
+    # Re-running the bootstrap would not merely be noisy: it would rebuild
+    # config.xml from a backup Jenkins has since superseded, putting the
+    # security realm it strips straight back on disk.
+    - name: "Checking whether the Jenkins configuration has already been bootstrapped"
       ansible.builtin.stat:
-        path: /var/lib/jenkins/init.groovy.d
-      register: output_folder
+        path: /var/lib/jenkins/config.xml.orig
+      register: jenkins_bootstrap_marker
 
-    - name: "Creating output directory if not exists"
+    - name: "Bootstrapping the Jenkins configuration on first provision"
+      when: not jenkins_bootstrap_marker.stat.exists
+      block:
+        - name: "Stopping Jenkins Service to take ownership of its state directories"
+          ansible.builtin.systemd_service:
+            name: jenkins
+            state: stopped
+
+        - name: "Preparing Jenkins folder permissions for user setup"
+          ansible.builtin.file:
+            path: "{{ item }}"
+            owner: "{{ vagrant_user }}"
+            group: "{{ group }}"
+            recurse: true
+          loop:
+            - /var/cache/jenkins
+            - /var/lib/jenkins
+            - /var/run/jenkins
+            - /var/log/jenkins
+
+        - name: "Starting Jenkins Service so it generates its initial configuration"
+          ansible.builtin.systemd_service:
+            name: jenkins
+            state: started
+
+        - name: "Waiting for Jenkins Config.XML to generate before stopping service."
+          ansible.builtin.wait_for:
+            path: /var/lib/jenkins/config.xml
+            timeout: 300
+
+        - name: "Stopping Jenkins Service before rewriting its configuration"
+          ansible.builtin.systemd_service:
+            name: jenkins
+            state: stopped
+
+        - name: "Backing up Config.XML to Config.XML.orig"
+          ansible.builtin.copy:
+            dest: /var/lib/jenkins/config.xml.orig
+            src: /var/lib/jenkins/config.xml
+            remote_src: true
+            owner: "{{ vagrant_user }}"
+            group: "{{ group }}"
+            mode: "0644"
+
+        # The leading XML declaration is stripped because xmlstarlet refuses the
+        # 1.1 version Jenkins writes. The closing diff is the change report: it
+        # prints nothing when the edits were no-ops, which is what changed_when
+        # reads.
+        - name: "Configuring Jenkins"
+          ansible.builtin.shell: >-
+            cd /var/lib/jenkins &&
+            tail -n +2 config.xml.orig >config.xml &&
+            xmlstarlet edit --inplace -u '/hudson/useSecurity' -v 'false' config.xml &&
+            xmlstarlet edit --inplace -d '/hudson/authorizationStrategy' config.xml &&
+            xmlstarlet edit --inplace -d '/hudson/securityRealm' config.xml &&
+            xmlstarlet edit --inplace -u '/hudson/installStateName' -v 'RUNNING' config.xml &&
+            diff -u config.xml.orig config.xml || true
+          args:
+            executable: /bin/bash
+          register: jenkins_config_rewrite
+          changed_when: jenkins_config_rewrite.stdout | length > 0
+
+        - name: "Restoring ownership of the rewritten Jenkins configuration"
+          ansible.builtin.file:
+            path: "{{ item }}"
+            owner: "{{ vagrant_user }}"
+            group: "{{ group }}"
+            mode: "0644"
+          loop:
+            - /var/lib/jenkins/config.xml
+            - /var/lib/jenkins/config.xml.orig
+
+    # Jenkins rejects every CLI handshake with 403 "Jenkins URL is not
+    # configured" until the root URL is set, so it has to be on disk before the
+    # instance comes back up and the CLI is used to install plugins.
+    - name: "Configuring the Jenkins root URL"
+      ansible.builtin.template:
+        src: jenkins.model.JenkinsLocationConfiguration.xml.j2
+        dest: /var/lib/jenkins/jenkins.model.JenkinsLocationConfiguration.xml
+        owner: "{{ vagrant_user }}"
+        group: "{{ group }}"
+        mode: "0644"
+
+    - name: "Creating the Groovy startup directory"
       ansible.builtin.file:
         path: /var/lib/jenkins/init.groovy.d
         state: directory
         owner: "{{ vagrant_user }}"
         group: "{{ group }}"
         mode: "0775"
-      when: not output_folder.stat.exists
 
+    # Only the first provision needs the install-state bypass; afterwards
+    # config.xml already carries installStateName RUNNING, so re-deploying and
+    # re-deleting the script would be pure churn.
     - name: "Disabling the Security Check so we can download Plugins"
       become: true
       ansible.builtin.template:
-        src: "{{ item.src }}"
-        dest: "{{ item.dest }}"
+        src: basic-security.groovy.j2
+        dest: /var/lib/jenkins/init.groovy.d/basic-security.groovy
         owner: "{{ vagrant_user }}"
         group: "{{ group }}"
         mode: "0644"
-      with_items:
-        - { src: basic-security.groovy.j2, dest: "/var/lib/jenkins/init.groovy.d/basic-security.groovy" }
+      when: not jenkins_bootstrap_marker.stat.exists
+
     - name: "Starting Jenkins Service"
-      ansible.builtin.service:
-        enabled: true
+      ansible.builtin.systemd_service:
         name: jenkins
+        enabled: true
         state: started
-    - name: "Downloading  Jenkins CLI from localhost"
-      delay: 5
-      ansible.builtin.get_url:
-        dest: "/home/{{ vagrant_user }}/jenkins-cli.jar"
-        url: "http://localhost:8080/jnlpJars/jenkins-cli.jar"
-        mode: "0644"
-      register: jenkinscli_source
-      retries: 5
-      until: "jenkinscli_source is success"
+
     - name: "Waiting until Jenkins web API is available"
       ansible.builtin.uri:
         url: "http://localhost:8080/cli/"
         status_code: 200
-      register: result
-      until: result.status == 200
-      retries: 600
-      delay: 2
+      register: jenkins_api
+      until: jenkins_api.status == 200
+      retries: 60
+      delay: 5
+
+    - name: "Downloading Jenkins CLI from localhost"
+      ansible.builtin.get_url:
+        url: "http://localhost:8080/jnlpJars/jenkins-cli.jar"
+        dest: "/home/{{ vagrant_user }}/jenkins-cli.jar"
+        owner: "{{ vagrant_user }}"
+        group: "{{ group }}"
+        mode: "0644"
+      register: jenkins_cli_source
+      until: "jenkins_cli_source is success"
+      retries: 5
+      delay: 5
+
     - name: "Adding Xvfb Plugin details"
       ansible.builtin.template:
         src: org.jenkinsci.plugins.xvfb.Xvfb.xml
-        dest: /var/lib/jenkins/
+        dest: /var/lib/jenkins/org.jenkinsci.plugins.xvfb.Xvfb.xml
         owner: "{{ vagrant_user }}"
         group: "{{ group }}"
-        mode: u=rwX,g=rX,o=rX
+        mode: "0644"
+
+    # Jenkins refreshes the update centre itself during boot; the CLI cannot
+    # resolve a plugin name until that catalogue has landed on disk.
+    - name: "Waiting for the Jenkins update centre catalogue to be cached"
+      ansible.builtin.wait_for:
+        path: /var/lib/jenkins/updates/default.json
+        timeout: 300
+
+    # The CLI drops each plugin into the plugins directory as <shortName>.jpi,
+    # so that file is the real "already installed" test -- including for the
+    # entries another plugin has already pulled in as a dependency.
     - name: "Installing Jenkins Plugins"
       become: true
-      ansible.builtin.shell: "cd /home/{{ vagrant_user }} && java -jar jenkins-cli.jar -s http://localhost:8080/ install-plugin xvfb xunit workflow-step-api scm-api structs junit
-        script-security git email-ext email-ext-recipients-column
-        mailer"
-      changed_when: true
-      retries: 5
-      delay: 5
+      ansible.builtin.command:
+        cmd: >-
+          java -jar /home/{{ vagrant_user }}/jenkins-cli.jar -s http://localhost:8080/
+          install-plugin {{ item }}
+        creates: "/var/lib/jenkins/plugins/{{ item }}.jpi"
+      register: jenkins_plugin_install
+      until: "jenkins_plugin_install is success"
+      retries: 3
+      delay: 10
+      loop:
+        - xvfb
+        - xunit
+        - workflow-step-api
+        - scm-api
+        - structs
+        - junit
+        - script-security
+        - git
+        - email-ext
+        - email-ext-recipients-column
+        - mailer
+
     - name: "Configuring git Email"
       community.general.git_config:
         name: user.email
         scope: global
         value: "{{ certbot_admin_email }}"
+
     - name: "Configuring git User Name"
       community.general.git_config:
         name: user.name
         scope: global
         value: "{{ jenkins_git_user }}"
+
     - name: "Configuring git Push"
       community.general.git_config:
         name: push.default
         scope: global
         value: simple
+
     - name: "Configuring git AutoCRLF"
       community.general.git_config:
         name: core.autocrlf
         scope: global
         value: false
+
     - name: "Finding Java accessibility.properties files"
       ansible.builtin.find:
         paths: /etc
@@ -214,51 +317,103 @@
       register: java_accessibility_files
 
     - name: "Fixing Java Assistive Tech"
-      ansible.builtin.lineinfile:
-        insertafter: "^#assistive_technologi"
-        line: "#"
+      ansible.builtin.replace:
         path: "{{ item.path }}"
-        regexp: "^assistive_technologi"
+        regexp: "^assistive_technologies"
+        replace: "#assistive_technologies"
       loop: "{{ java_accessibility_files.files }}"
       loop_control:
         label: "{{ item.path }}"
+
     - name: "Setting permissions for {{ vagrant_user }}"
       ansible.builtin.file:
         group: "{{ group }}"
         owner: "{{ vagrant_user }}"
         path: "/home/{{ vagrant_user }}"
         recurse: true
+
     - name: "Removing Groovy Startup Bypass"
       ansible.builtin.file:
         path: /var/lib/jenkins/init.groovy.d/basic-security.groovy
         state: absent
+
+    - name: "Checking for the system application launcher directory"
+      ansible.builtin.stat:
+        path: /usr/share/applications
+      register: jenkins_applications_dir
+
+    - name: "Checking for the Desktop directory of {{ vagrant_user }}"
+      ansible.builtin.stat:
+        path: "/home/{{ vagrant_user }}/Desktop"
+      register: jenkins_user_desktop
+
+    - name: "Selecting the launcher destinations that exist on this image"
+      ansible.builtin.set_fact:
+        jenkins_launcher_paths: >-
+          {{
+            (['/usr/share/applications/jenkins.desktop'] if jenkins_applications_dir.stat.isdir | default(false) else [])
+            +
+            (['/home/' ~ vagrant_user ~ '/Desktop/jenkins.desktop'] if jenkins_user_desktop.stat.isdir | default(false) else [])
+          }}
+
     - name: "Adding Jenkins Desktop Icon"
       become: true
       ansible.builtin.template:
-        src: "{{ item.src }}"
-        dest: "{{ item.dest }}"
+        src: jenkins.desktop
+        dest: "{{ item }}"
         owner: "{{ vagrant_user }}"
         group: "{{ group }}"
         mode: "0755"
-      with_items:
-        - { src: "jenkins.desktop", dest: "/usr/share/applications/jenkins.desktop" }
-        - { src: "jenkins.desktop", dest: "/home/{{ vagrant_user }}/Desktop/jenkins.desktop" }
+      loop: "{{ jenkins_launcher_paths }}"
+
+    - name: "Reading the current trust metadata on the Desktop Icons"
+      ansible.builtin.command:
+        argv:
+          - dbus-launch
+          - gio
+          - info
+          - "--attributes=metadata::trusted"
+          - "{{ item }}"
+      register: jenkins_launcher_trust
+      changed_when: false
+      failed_when: false
+      loop: "{{ jenkins_launcher_paths }}"
 
     - name: "Ensuring that Desktop Icons are Launchable"
-      ansible.builtin.command: "dbus-launch gio set {{ item }}  \"metadata::trusted\" true"
-      changed_when: false
-      with_items:
-        - "/home/{{ vagrant_user }}/Desktop/jenkins.desktop"
-        - "/usr/share/applications/jenkins.desktop"
+      ansible.builtin.command:
+        argv:
+          - dbus-launch
+          - gio
+          - set
+          - "{{ item.item }}"
+          - "metadata::trusted"
+          - "true"
+      register: jenkins_launcher_trust_set
+      changed_when: jenkins_launcher_trust_set.rc == 0
+      failed_when:
+        - jenkins_launcher_trust_set.rc != 0
+        - "'not supported' not in (jenkins_launcher_trust_set.stderr | default(''))"
+      when:
+        - item.rc | default(1) == 0
+        - "'metadata::trusted: true' not in (item.stdout | default(''))"
+      loop: "{{ jenkins_launcher_trust.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "Checking for the Vagrant synced folder that carries the Jenkins jobs"
+      ansible.builtin.stat:
+        path: /vagrant/jobs
+      register: jenkins_synced_jobs
 
     - name: "Adding Jenkins Jobs to Desktop"
       become: true
       ansible.builtin.copy:
-        src: "{{ item.src }}"
-        dest: "{{ item.dest }}"
+        src: /vagrant/jobs
+        dest: "/home/{{ vagrant_user }}/Desktop"
         owner: "{{ vagrant_user }}"
-        group: "{{ vagrant_user }}"
+        group: "{{ group }}"
         mode: "0755"
         remote_src: true
-      with_items:
-        - { src: /vagrant/jobs, dest: "/home/{{ vagrant_user }}/Desktop" }
+      when:
+        - jenkins_synced_jobs.stat.isdir | default(false)
+        - jenkins_user_desktop.stat.isdir | default(false)

@@ -1,0 +1,104 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    maven_service_user: startcloud
+    maven_service_group: startcloud
+    maven_service_home: /home/startcloud
+    maven_sdkman_dir: /home/startcloud/.sdkman
+    maven_expected_version: 3.6.3
+    maven_profile_file: /etc/profile.d/maven.sh
+  tasks:
+    - name: Look up the service user in passwd
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ maven_service_user }}"
+
+    - name: Assert the service user owning the SDKMAN install exists
+      ansible.builtin.assert:
+        that:
+          - maven_service_user in ansible_facts.getent_passwd
+          - ansible_facts.getent_passwd[maven_service_user][4] == maven_service_home
+        fail_msg: "{{ maven_service_user }} is missing or does not own {{ maven_service_home }}"
+
+    - name: Stat the Maven binary SDKMAN installed for the service user
+      ansible.builtin.stat:
+        path: "{{ maven_sdkman_dir }}/candidates/maven/current/bin/mvn"
+      register: maven_current_bin
+
+    - name: Assert sdk install maven produced an executable owned by the service user
+      ansible.builtin.assert:
+        that:
+          - maven_current_bin.stat.exists
+          - maven_current_bin.stat.xusr
+          - maven_current_bin.stat.pw_name == maven_service_user
+        fail_msg: "{{ maven_sdkman_dir }}/candidates/maven/current/bin/mvn is missing or wrongly owned"
+
+    - name: Stat the versioned Maven candidate directory
+      ansible.builtin.stat:
+        path: "{{ maven_sdkman_dir }}/candidates/maven/{{ maven_expected_version }}/bin/mvn"
+      register: maven_versioned_bin
+
+    - name: Assert the maven_version requested by the role was the version installed
+      ansible.builtin.assert:
+        that:
+          - maven_versioned_bin.stat.exists
+          - maven_versioned_bin.stat.isreg
+        fail_msg: "Maven {{ maven_expected_version }} was not installed under {{ maven_sdkman_dir }}/candidates/maven"
+
+    - name: Stat the profile drop-in the role writes
+      ansible.builtin.stat:
+        path: "{{ maven_profile_file }}"
+      register: maven_profile_stat
+
+    - name: Assert the profile drop-in exists with the mode the role sets
+      ansible.builtin.assert:
+        that:
+          - maven_profile_stat.stat.exists
+          - maven_profile_stat.stat.isreg
+          - maven_profile_stat.stat.mode == '0755'
+        fail_msg: "{{ maven_profile_file }} is missing or not mode 0755"
+
+    - name: Read the profile drop-in
+      ansible.builtin.slurp:
+        src: "{{ maven_profile_file }}"
+      register: maven_profile_content
+
+    - name: Assert the profile drop-in puts the SDKMAN Maven bin dir on PATH
+      ansible.builtin.assert:
+        that:
+          - maven_path_line in maven_profile_text
+        fail_msg: "{{ maven_profile_file }} does not export the SDKMAN Maven bin directory"
+      vars:
+        maven_profile_text: "{{ maven_profile_content.content | b64decode }}"
+        maven_path_line: "PATH=$PATH:{{ maven_service_home }}/.sdkman/candidates/maven/current/bin"
+
+    - name: Stat the update-alternatives link without following it
+      ansible.builtin.stat:
+        path: /usr/bin/mvn
+        follow: false
+      register: maven_alternative_link
+
+    - name: Assert update-alternatives registered mvn system-wide
+      ansible.builtin.assert:
+        that:
+          - maven_alternative_link.stat.exists
+          - maven_alternative_link.stat.islnk
+          - "'/candidates/maven/' in maven_alternative_link.stat.lnk_source"
+        fail_msg: "/usr/bin/mvn was not linked to the SDKMAN Maven candidate"
+
+    - name: Stat the update-alternatives link with the symlink chain resolved
+      ansible.builtin.stat:
+        path: /usr/bin/mvn
+        follow: true
+      register: maven_alternative_target
+
+    - name: Assert the alternatives chain resolves to an executable Maven binary
+      ansible.builtin.assert:
+        that:
+          - maven_alternative_target.stat.exists
+          - maven_alternative_target.stat.isreg
+          - maven_alternative_target.stat.xusr
+        fail_msg: "/usr/bin/mvn does not resolve to an executable mvn binary"

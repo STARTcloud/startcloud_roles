@@ -1,0 +1,12 @@
+---
+# handlers file for dante
+- name: "Restart danted"
+  ansible.builtin.systemd_service:
+    name: danted
+    state: restarted
+
+- name: "Restart microsocks"
+  ansible.builtin.systemd_service:
+    name: microsocks
+    state: restarted
+    daemon_reload: true

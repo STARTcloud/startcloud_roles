@@ -1,0 +1,21 @@
+---
+galaxy_info:
+  role_name: ipsec
+  author: Mark Gilbert
+  description: Sets up site-to-site IPsec tunnels with strongSwan swanctl and routed xfrm interfaces.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: GPL-2.0-or-later
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions: ["bookworm", "trixie"]
+  galaxy_tags:
+    - startcloud
+    - ipsec
+    - strongswan
+    - vpn
+    - networking
+dependencies: []
+collections:
+  - startcloud.startcloud_roles

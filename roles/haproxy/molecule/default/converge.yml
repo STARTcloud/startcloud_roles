@@ -1,0 +1,62 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    haproxy_http_port: 80
+    haproxy_https_port: 443
+    haproxy_cfg: "haproxy.cfg.j2"
+    haproxy_ssl_redirect: true
+    haproxy_default_backend: "letsencrypt_80"
+    haproxy_cert_bot_port: 8181
+    startcloud_haproxy_port_forwards:
+      - guest: 80
+        url: "demo"
+      - guest: 443
+        url: "demo"
+      - guest: 444
+        url: "stats"
+    # Minimal provisioner-context stand-ins so the role runs standalone.
+    # ansible_module_running_in_container is deliberately NOT supplied here: the
+    # role now gathers it itself with community.docker.current_container_facts,
+    # and the scenario really is a container, so self-resolution has to land on
+    # the supervisord path for the container-mode assertions in verify.yml to
+    # hold.
+    selfsigned_enabled: false
+    cert_dir: "/secure"
+    settings:
+      hostname: "startcloud-haproxy"
+      domain: "molecule.test"
+  pre_tasks:
+    - name: "Installing the supervisord and TLS prerequisites the role expects"
+      ansible.builtin.apt:
+        name:
+          - openssl
+          - supervisor
+        state: present
+        update_cache: true
+
+    - name: "Creating the certificate directory the rendered config binds against"
+      ansible.builtin.file:
+        path: "{{ cert_dir }}/combined"
+        state: directory
+        mode: "0755"
+
+    - name: "Generating the bind certificate haproxy.cfg points at"
+      ansible.builtin.shell: >
+        openssl req -x509 -nodes -newkey rsa:2048 -days 365
+        -subj "/CN={{ settings.hostname }}.{{ settings.domain }}"
+        -keyout /tmp/default-signed.key -out /tmp/default-signed.crt &&
+        cat /tmp/default-signed.crt /tmp/default-signed.key
+        > {{ cert_dir }}/combined/default-signed.pem
+      args:
+        creates: "{{ cert_dir }}/combined/default-signed.pem"
+      # `creates` short-circuits the re-run, but ansible-core's command module no
+      # longer returns a `skipped` key for that path, so changed_when must not be
+      # true or the idempotence step sees a change on every converge.
+      changed_when: false
+  tasks:
+    - name: "Applying the haproxy role"
+      ansible.builtin.include_role:
+        name: haproxy

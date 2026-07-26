@@ -1,0 +1,170 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Looking up the mattermost system user"
+      ansible.builtin.getent:
+        database: passwd
+        key: mattermost
+
+    - name: "Asserting the mattermost service account was created"
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.getent_passwd['mattermost'] is defined
+          - "'/usr/sbin/nologin' in ansible_facts.getent_passwd['mattermost'][5]"
+        fail_msg: "the mattermost system user was not created by the role"
+
+    - name: "Statting the unpacked Mattermost server binary"
+      ansible.builtin.stat:
+        path: /opt/startcloud_mattermost/bin/mattermost
+      register: mattermost_binary
+
+    - name: "Asserting the server was unpacked into the team install directory"
+      ansible.builtin.assert:
+        that:
+          - mattermost_binary.stat.exists
+          - mattermost_binary.stat.executable
+        fail_msg: "/opt/startcloud_mattermost/bin/mattermost missing — download/rename tasks did not land"
+
+    - name: "Statting the Mattermost config.json"
+      ansible.builtin.stat:
+        path: /opt/startcloud_mattermost/config/config.json
+      register: mattermost_config
+
+    - name: "Asserting config.json is owned by the service account and locked down"
+      ansible.builtin.assert:
+        that:
+          - mattermost_config.stat.exists
+          - mattermost_config.stat.mode == '0600'
+          - mattermost_config.stat.pw_name == 'mattermost'
+          - mattermost_config.stat.gr_name == 'mattermost'
+        fail_msg: "config.json missing or not 0600 mattermost:mattermost"
+
+    - name: "Reading the Mattermost config.json"
+      ansible.builtin.slurp:
+        src: /opt/startcloud_mattermost/config/config.json
+      register: mattermost_config_content
+
+    - name: "Asserting the role rewrote the database, site URL and listen settings"
+      vars:
+        mattermost_config_json: "{{ mattermost_config_content.content | b64decode | from_json }}"
+      ansible.builtin.assert:
+        that:
+          - mattermost_config_json.SqlSettings.DriverName == 'mysql'
+          - "'startcloud_mattermost:CHANGEME@tcp(localhost:3306)/startcloud_mattermost' in mattermost_config_json.SqlSettings.DataSource"
+          - mattermost_config_json.ServiceSettings.SiteURL == 'https://chat.startcloud.local'
+          - mattermost_config_json.ServiceSettings.ListenAddress == ':8065'
+        fail_msg: "config.json was not rewritten with the mysql driver, data source, site URL and listen address"
+
+    - name: "Statting the MySQL fulltext drop-in"
+      ansible.builtin.stat:
+        path: /etc/mysql/conf.d/mattermost.cnf
+      register: mattermost_mysql_cnf
+
+    - name: "Asserting the MySQL fulltext drop-in was installed"
+      ansible.builtin.assert:
+        that:
+          - mattermost_mysql_cnf.stat.exists
+          - mattermost_mysql_cnf.stat.mode == '0644'
+        fail_msg: "/etc/mysql/conf.d/mattermost.cnf missing or wrong mode"
+
+    - name: "Statting the templated systemd unit"
+      ansible.builtin.stat:
+        path: /lib/systemd/system/startcloud_mattermost.service
+      register: mattermost_unit
+
+    - name: "Reading the templated systemd unit"
+      ansible.builtin.slurp:
+        src: /lib/systemd/system/startcloud_mattermost.service
+      register: mattermost_unit_content
+
+    - name: "Asserting the unit points at the install directory and service account"
+      vars:
+        mattermost_unit_text: "{{ mattermost_unit_content.content | b64decode }}"
+      ansible.builtin.assert:
+        that:
+          - mattermost_unit.stat.exists
+          - "'ExecStart=/opt/startcloud_mattermost/bin/mattermost' in mattermost_unit_text"
+          - "'WorkingDirectory=/opt/startcloud_mattermost' in mattermost_unit_text"
+          - "'User=mattermost' in mattermost_unit_text"
+          - "'Group=mattermost' in mattermost_unit_text"
+        fail_msg: "the systemd unit was not templated with the converge values"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting the Mattermost service is running and enabled"
+      ansible.builtin.assert:
+        that:
+          - "'startcloud_mattermost.service' in ansible_facts.services"
+          - ansible_facts.services['startcloud_mattermost.service'].state == 'running'
+          - ansible_facts.services['startcloud_mattermost.service'].status == 'enabled'
+        fail_msg: "startcloud_mattermost.service is not running and enabled"
+
+    - name: "Waiting for Mattermost to accept connections on its configured port"
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 8065
+        state: started
+        timeout: 30
+
+    - name: "Statting the templated nginx vhost"
+      ansible.builtin.stat:
+        path: /etc/nginx/sites-available/chat.startcloud.local
+      register: mattermost_vhost
+
+    - name: "Reading the templated nginx vhost"
+      ansible.builtin.slurp:
+        src: /etc/nginx/sites-available/chat.startcloud.local
+      register: mattermost_vhost_content
+
+    - name: "Asserting the vhost proxies to the Mattermost upstream"
+      vars:
+        mattermost_vhost_text: "{{ mattermost_vhost_content.content | b64decode }}"
+      ansible.builtin.assert:
+        that:
+          - mattermost_vhost.stat.exists
+          - "'upstream startcloud_mattermost_backend' in mattermost_vhost_text"
+          - "'server localhost:8065;' in mattermost_vhost_text"
+          - "'server_name chat.startcloud.local;' in mattermost_vhost_text"
+        fail_msg: "the nginx vhost was not templated with the converge values"
+
+    - name: "Listing databases"
+      ansible.builtin.command: mysql -NBe "SHOW DATABASES"
+      register: mattermost_databases
+      changed_when: false
+
+    - name: "Asserting the Mattermost database was created"
+      ansible.builtin.assert:
+        that:
+          - "'startcloud_mattermost' in mattermost_databases.stdout_lines"
+        fail_msg: "the role did not create the startcloud_mattermost database"
+
+    - name: "Listing MySQL accounts"
+      ansible.builtin.command: mysql -NBe "SELECT CONCAT(User, '@', Host) FROM mysql.user"
+      register: mattermost_accounts
+      changed_when: false
+
+    - name: "Asserting the Mattermost database user was created"
+      ansible.builtin.assert:
+        that:
+          - "'startcloud_mattermost@localhost' in mattermost_accounts.stdout_lines"
+        fail_msg: "the role did not create the startcloud_mattermost@localhost account"
+
+    - name: "Listing the fulltext indexes Mattermost's migrations created on Posts"
+      ansible.builtin.command:
+        cmd: >-
+          mysql -NBe "SELECT DISTINCT INDEX_NAME FROM information_schema.STATISTICS
+          WHERE TABLE_SCHEMA='startcloud_mattermost' AND TABLE_NAME='Posts'
+          AND INDEX_TYPE='FULLTEXT'"
+      register: mattermost_post_indexes
+      changed_when: false
+
+    - name: "Asserting the ngram fulltext indexes were rebuilt by the role's script"
+      ansible.builtin.assert:
+        that:
+          - "'idx_posts_message_txt' in mattermost_post_indexes.stdout_lines"
+          - "'idx_posts_hashtags_txt' in mattermost_post_indexes.stdout_lines"
+        fail_msg: "alter_db_index.sh did not leave the ngram fulltext indexes on Posts"

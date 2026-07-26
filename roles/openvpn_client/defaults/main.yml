@@ -1,2 +1,13 @@
 ---
 run_tasks: true
+openvpn_client_packages:
+  - openvpn
+openvpn_client_server: ""
+openvpn_configuration_directory: /etc/openvpn/client
+openvpn_group: nogroup
+openvpn_client_pki_directory: /etc/openvpn/easy-rsa/pki
+openvpn_client_pki_files:
+  - ca.crt
+  - issued/client.crt
+  - private/client.key
+  - ta.key

@@ -1,0 +1,120 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    sdkman_service_user: startcloud
+    sdkman_service_group: startcloud
+    sdkman_service_home: /home/startcloud
+    sdkman_install_dir: /home/startcloud/.sdkman
+  tasks:
+    - name: Gather installed package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Assert the system packages SDKMAN needs were installed
+      ansible.builtin.assert:
+        that:
+          - "'curl' in ansible_facts.packages"
+          - "'zip' in ansible_facts.packages"
+          - "'unzip' in ansible_facts.packages"
+          - "'tar' in ansible_facts.packages"
+        fail_msg: "vars/Debian.yml system_packages were not installed"
+
+    - name: Look up the service user in passwd
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ sdkman_service_user }}"
+
+    - name: Assert the service user exists with the expected home directory
+      ansible.builtin.assert:
+        that:
+          - sdkman_service_user in ansible_facts.getent_passwd
+          - ansible_facts.getent_passwd[sdkman_service_user][4] == sdkman_service_home
+        fail_msg: "{{ sdkman_service_user }} is missing or does not own {{ sdkman_service_home }}"
+
+    - name: Stat the SDKMAN init script
+      ansible.builtin.stat:
+        path: "{{ sdkman_install_dir }}/bin/sdkman-init.sh"
+      register: sdkman_init_script
+
+    - name: Assert SDKMAN was installed into the service user home and is owned by it
+      ansible.builtin.assert:
+        that:
+          - sdkman_init_script.stat.exists
+          - sdkman_init_script.stat.isreg
+          - sdkman_init_script.stat.pw_name == sdkman_service_user
+          - sdkman_init_script.stat.gr_name == sdkman_service_group
+        fail_msg: "{{ sdkman_install_dir }}/bin/sdkman-init.sh is missing or wrongly owned"
+
+    - name: Stat the rendered SDKMAN config file
+      ansible.builtin.stat:
+        path: "{{ sdkman_install_dir }}/etc/config"
+      register: sdkman_config_stat
+
+    - name: Assert the SDKMAN config file was written with the templated mode
+      ansible.builtin.assert:
+        that:
+          - sdkman_config_stat.stat.exists
+          - sdkman_config_stat.stat.isreg
+          - sdkman_config_stat.stat.mode == '0755'
+          - sdkman_config_stat.stat.pw_name == sdkman_service_user
+        fail_msg: "{{ sdkman_install_dir }}/etc/config was not templated correctly"
+
+    - name: Read the rendered SDKMAN config file
+      ansible.builtin.slurp:
+        src: "{{ sdkman_install_dir }}/etc/config"
+      register: sdkman_config_content
+
+    - name: Assert the config file reflects the converge variables
+      ansible.builtin.assert:
+        that:
+          - "'sdkman_auto_answer=true' in sdkman_config_text"
+          - "'sdkman_selfupdate_feature=true' in sdkman_config_text"
+          - "'sdkman_insecure_ssl=false' in sdkman_config_text"
+          - "'sdkman_curl_connect_timeout=7' in sdkman_config_text"
+          - "'sdkman_curl_max_time=10' in sdkman_config_text"
+          - "'sdkman_colour_enable=true' in sdkman_config_text"
+        fail_msg: "sdkman_config.j2 did not render the configured values"
+      vars:
+        sdkman_config_text: "{{ sdkman_config_content.content | b64decode }}"
+
+    - name: Stat the Maven candidate installed through SDKMAN
+      ansible.builtin.stat:
+        path: "{{ sdkman_install_dir }}/candidates/maven/current/bin/mvn"
+      register: sdkman_maven_bin
+
+    - name: Assert the configured SDK candidate was installed and is executable
+      ansible.builtin.assert:
+        that:
+          - sdkman_maven_bin.stat.exists
+          - sdkman_maven_bin.stat.xusr
+        fail_msg: "sdk install maven did not produce {{ sdkman_install_dir }}/candidates/maven/current/bin/mvn"
+
+    - name: Stat the update-alternatives link created for the candidate
+      ansible.builtin.stat:
+        path: /usr/local/bin/mvn
+        follow: false
+      register: sdkman_mvn_alternative
+
+    - name: Assert update-alternatives linked the candidate system-wide
+      ansible.builtin.assert:
+        that:
+          - sdkman_mvn_alternative.stat.exists
+          - sdkman_mvn_alternative.stat.islnk
+        fail_msg: "/usr/local/bin/mvn was not registered by community.general.alternatives"
+
+    - name: Read the service user bashrc
+      ansible.builtin.slurp:
+        src: "{{ sdkman_service_home }}/.bashrc"
+      register: sdkman_bashrc
+
+    - name: Assert SDKMAN sourcing and the offline-mode export were persisted
+      ansible.builtin.assert:
+        that:
+          - "'sdkman-init.sh' in sdkman_bashrc_text"
+          - "'export SDKMAN_OFFLINE_MODE=false' in sdkman_bashrc_text"
+        fail_msg: "{{ sdkman_service_home }}/.bashrc is missing the SDKMAN shell wiring"
+      vars:
+        sdkman_bashrc_text: "{{ sdkman_bashrc.content | b64decode }}"

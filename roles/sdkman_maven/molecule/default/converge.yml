@@ -1,0 +1,70 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    # Minimal provisioner-context stand-ins so the role runs standalone.
+    settings:
+      hostname: startcloud-sdkman-maven-debian12
+      domain: startcloud.test
+    # Service account context the role expects from the provisioner.
+    service_user: startcloud
+    service_group: startcloud
+    service_home_dir: /home/startcloud
+    # tasks/debian.yml consumes sdkman_dir but never sets it (only the Windows
+    # task file does), so the provisioner/sdkman_install context supplies it.
+    sdkman_dir: /home/startcloud/.sdkman
+    # Role variables (defaults/main.yml + meta/argument_specs.yml).
+    run_tasks: true
+    maven_version: 3.6.3
+    sdkman_update_alternatives:
+      - candidate: maven
+        name: mvn
+        link: /usr/bin/mvn
+  pre_tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install SDKMAN prerequisites and acl for unprivileged become
+      ansible.builtin.apt:
+        name:
+          - acl
+          - ca-certificates
+          - curl
+          - tar
+          - unzip
+          - zip
+        state: present
+
+    - name: Create the service group
+      ansible.builtin.group:
+        name: "{{ service_group }}"
+        state: present
+
+    - name: Create the service user Maven is installed for
+      ansible.builtin.user:
+        name: "{{ service_user }}"
+        group: "{{ service_group }}"
+        home: "{{ service_home_dir }}"
+        shell: /bin/bash
+        create_home: true
+        state: present
+
+    # sdkman_maven assumes SDKMAN is already present (sdkman_install runs first
+    # in the real play); bootstrap it here so the role under test is isolated.
+    - name: Bootstrap SDKMAN for the service user
+      ansible.builtin.shell: |
+        set -o pipefail
+        curl -fsSL "https://get.sdkman.io?rcupdate=false" | bash
+      args:
+        executable: /bin/bash
+        creates: "{{ sdkman_dir }}/bin/sdkman-init.sh"
+      become: true
+      become_user: "{{ service_user }}"
+      environment:
+        SDKMAN_DIR: "{{ sdkman_dir }}"
+  roles:
+    - role: sdkman_maven

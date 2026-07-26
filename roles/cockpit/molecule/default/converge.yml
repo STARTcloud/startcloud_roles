@@ -1,0 +1,13 @@
+---
+- name: "Converge"
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    cockpit_enabled: true
+    cockpit_motd: false
+    settings:
+      hostname: startcloud-cockpit-debian12
+      domain: startcloud.test
+  roles:
+    - role: cockpit

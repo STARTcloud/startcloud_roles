@@ -1,0 +1,83 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: apt
+
+    - name: "Asserting the exim4 package from vars/Debian.yml is installed"
+      ansible.builtin.assert:
+        that:
+          - "'exim4' in ansible_facts.packages"
+          - "'exim4-config' in ansible_facts.packages"
+        fail_msg: "exim4 / exim4-config were not installed by the role"
+        success_msg: "exim4 and exim4-config are installed"
+
+    - name: "Stating the exim configuration file the role edits"
+      ansible.builtin.stat:
+        path: /etc/exim4/update-exim4.conf.conf
+      register: exim_conf_stat
+
+    - name: "Asserting the exim configuration file exists"
+      ansible.builtin.assert:
+        that:
+          - exim_conf_stat.stat.exists
+          - exim_conf_stat.stat.isreg
+        fail_msg: "/etc/exim4/update-exim4.conf.conf is missing"
+        success_msg: "/etc/exim4/update-exim4.conf.conf is present"
+
+    - name: "Slurping the exim configuration file"
+      ansible.builtin.slurp:
+        src: /etc/exim4/update-exim4.conf.conf
+      register: exim_conf_raw
+
+    - name: "Asserting every directive the role manages was written"
+      ansible.builtin.assert:
+        that:
+          - "\"dc_eximconfig_configtype='internet'\" in exim_conf_content"
+          - "\"dc_localdelivery='mail_spool'\" in exim_conf_content"
+          - "'primary_hostname=mail.startcloud.test' in exim_conf_content"
+        fail_msg: "Managed directives missing from update-exim4.conf.conf: {{ exim_conf_content }}"
+        success_msg: "configtype, localdelivery and primary_hostname directives are all present"
+      vars:
+        exim_conf_content: "{{ exim_conf_raw.content | b64decode }}"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting the exim4 daemon is running"
+      ansible.builtin.assert:
+        that:
+          - "'exim4.service' in ansible_facts.services"
+          - ansible_facts.services['exim4.service'].state == 'running'
+        fail_msg: "exim4.service is not running: {{ ansible_facts.services['exim4.service'] | default('unit absent') }}"
+        success_msg: "exim4.service is running"
+
+    - name: "Reading the systemd unit file state for exim4"
+      ansible.builtin.systemd_service:
+        name: exim4
+      register: exim_unit
+
+    - name: "Looking for the SysV boot symlink exim4 would use when it has no native unit"
+      ansible.builtin.find:
+        paths: /etc/rc2.d
+        patterns: "S*exim4"
+        file_type: link
+      register: exim_rc_links
+
+    - name: "Asserting exim4 is enabled to start at boot"
+      ansible.builtin.assert:
+        that:
+          - exim_unit.status.UnitFileState in ['enabled', 'enabled-runtime'] or exim_rc_links.matched > 0
+        fail_msg: "exim4 is not enabled at boot (UnitFileState={{ exim_unit.status.UnitFileState }}, rc2.d links={{ exim_rc_links.matched }})"
+        success_msg: "exim4 is enabled at boot (UnitFileState={{ exim_unit.status.UnitFileState }}, rc2.d links={{ exim_rc_links.matched }})"
+
+    - name: "Waiting for the exim SMTP listener on the loopback interface"
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 25
+        state: started
+        timeout: 30

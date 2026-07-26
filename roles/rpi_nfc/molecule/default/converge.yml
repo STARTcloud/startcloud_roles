@@ -1,0 +1,13 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    run_tasks: true
+    service_user: startcloud
+    settings:
+      hostname: rpi-nfc
+      domain: startcloud.test
+  roles:
+    - role: rpi_nfc

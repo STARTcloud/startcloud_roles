@@ -1,0 +1,15 @@
+# Managed by Ansible - startcloud.startcloud_roles jenkins role.
+# Jenkins 2.332.1 and newer no longer ship /etc/default/jenkins; the service is
+# configured exclusively through systemd unit settings, so every override the
+# role needs lives in this drop-in.
+#
+# The unit's ExecStart calls /usr/bin/java, which sdkman_java points at the
+# SDKMAN candidate through update-alternatives. JAVA_HOME and PATH are exported
+# here as well so the JVM and everything Jenkins forks resolve that same
+# runtime rather than any distribution JRE apt dragged in as a dependency.
+[Service]
+User={{ vagrant_user }}
+Group={{ group }}
+Environment="JAVA_HOME={{ jenkins_java_home }}"
+Environment="PATH={{ jenkins_java_home }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="JAVA_OPTS=-Djava.awt.headless=true -Djenkins.install.runSetupWizard=false"

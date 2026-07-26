@@ -10,3 +10,10 @@
     path: "/vagrant/support-bundle"
     dest: "{{ python_simple_web_server_path }}/support-bundle.zip"
     format: zip
+
+- name: "Restarting Cockpit"
+  become: true
+  ansible.builtin.systemd_service:
+    name: cockpit
+    state: restarted
+    daemon_reload: true

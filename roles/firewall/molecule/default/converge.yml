@@ -1,0 +1,17 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    settings:
+      hostname: startcloud-firewall-debian12
+      domain: example.test
+  pre_tasks:
+    - name: "Updating apt cache so the role's apt install can resolve ufw"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+      changed_when: false
+  roles:
+    - role: firewall

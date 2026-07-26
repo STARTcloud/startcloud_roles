@@ -2,3 +2,5 @@
 run_tasks: true
 squid_packages:
   - squid
+## TCP port squid listens on; rendered into http_port in squid.conf.
+proxy_port: 3128

@@ -1,0 +1,13 @@
+---
+- name: "Converge"
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    mdns_packages:
+      - avahi-daemon
+    settings:
+      hostname: startcloud-mdns-debian12
+      domain: startcloud.test
+  roles:
+    - role: mdns

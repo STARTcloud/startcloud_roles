@@ -1,0 +1,286 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting the LibreNMS runtime packages were installed"
+      ansible.builtin.assert:
+        that:
+          - "'mariadb-server' in ansible_facts.packages"
+          - "'nginx-full' in ansible_facts.packages"
+          - "'php8.2-fpm' in ansible_facts.packages"
+          - "'php8.2-snmp' in ansible_facts.packages"
+          - "'rrdcached' in ansible_facts.packages"
+          - "'snmpd' in ansible_facts.packages"
+          - "'fping' in ansible_facts.packages"
+          - "'acl' in ansible_facts.packages"
+        fail_msg: "librenms_packages were not all installed by the role"
+
+    - name: "Looking up the librenms system user"
+      ansible.builtin.getent:
+        database: passwd
+        key: librenms
+
+    - name: "Asserting the librenms system user owns the install directory"
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.getent_passwd['librenms'] is defined
+          - ansible_facts.getent_passwd['librenms'][4] == '/opt/librenms'
+        fail_msg: "librenms system user missing or its home is not the install dir"
+
+    - name: "Statting the cloned LibreNMS entrypoint"
+      ansible.builtin.stat:
+        path: /opt/librenms/lnms
+      register: librenms_lnms
+
+    - name: "Statting the Composer autoloader"
+      ansible.builtin.stat:
+        path: /opt/librenms/vendor/autoload.php
+      register: librenms_autoload
+
+    - name: "Asserting the git clone and the Composer install both landed"
+      ansible.builtin.assert:
+        that:
+          - librenms_lnms.stat.exists
+          - librenms_lnms.stat.pw_name == 'librenms'
+          - librenms_autoload.stat.exists
+        fail_msg: "LibreNMS source tree or its Composer dependencies are missing"
+
+    - name: "Statting the lnms symlink"
+      ansible.builtin.stat:
+        path: /usr/bin/lnms
+      register: librenms_lnms_link
+
+    - name: "Asserting lnms was linked onto PATH"
+      ansible.builtin.assert:
+        that:
+          - librenms_lnms_link.stat.exists
+          - librenms_lnms_link.stat.islnk
+          - librenms_lnms_link.stat.lnk_target == '/opt/librenms/lnms'
+        fail_msg: "/usr/bin/lnms is not a symlink to the install dir"
+
+    - name: "Statting the rendered config.php"
+      ansible.builtin.stat:
+        path: /opt/librenms/config.php
+      register: librenms_config
+
+    - name: "Asserting config.php is present, owned by librenms, and private"
+      ansible.builtin.assert:
+        that:
+          - librenms_config.stat.exists
+          - librenms_config.stat.mode == '0640'
+          - librenms_config.stat.pw_name == 'librenms'
+          - librenms_config.stat.gr_name == 'librenms'
+        fail_msg: "/opt/librenms/config.php missing or wrong ownership/mode"
+
+    - name: "Reading config.php"
+      ansible.builtin.slurp:
+        src: /opt/librenms/config.php
+      register: librenms_config_content
+
+    - name: "Asserting config.php carries the values supplied to the role"
+      vars:
+        librenms_config_text: "{{ librenms_config_content.content | b64decode }}"
+      ansible.builtin.assert:
+        that:
+          - "\"$config['db_user'] = 'librenms';\" in librenms_config_text"
+          - "\"$config['db_pass'] = 'CHANGEME';\" in librenms_config_text"
+          - "\"$config['db_name'] = 'librenms';\" in librenms_config_text"
+          - "\"$config['base_url'] = 'http://librenms.molecule.test/';\" in librenms_config_text"
+          - "\"$config['snmp']['community'] = ['CHANGEME'];\" in librenms_config_text"
+          - "\"$config['rrdcached'] = 'unix:/run/rrdcached.sock';\" in librenms_config_text"
+        fail_msg: "config.php does not reflect the converge variables"
+
+    - name: "Reading the FPM CLI php.ini"
+      ansible.builtin.slurp:
+        src: /etc/php/8.2/cli/php.ini
+      register: librenms_php_cli_ini
+
+    - name: "Asserting the PHP CLI timezone was set"
+      ansible.builtin.assert:
+        that:
+          - "'date.timezone = Etc/UTC' in (librenms_php_cli_ini.content | b64decode)"
+        fail_msg: "date.timezone was not written into the PHP CLI ini"
+
+    - name: "Statting the dedicated PHP-FPM pool"
+      ansible.builtin.stat:
+        path: /etc/php/8.2/fpm/pool.d/librenms.conf
+      register: librenms_fpm_pool_file
+
+    - name: "Statting the default PHP-FPM pool"
+      ansible.builtin.stat:
+        path: /etc/php/8.2/fpm/pool.d/www.conf
+      register: librenms_fpm_default_pool
+
+    - name: "Asserting the LibreNMS pool replaced the default pool"
+      ansible.builtin.assert:
+        that:
+          - librenms_fpm_pool_file.stat.exists
+          - not librenms_fpm_default_pool.stat.exists
+        fail_msg: "PHP-FPM pool layout does not match the role's tasks"
+
+    - name: "Reading the LibreNMS PHP-FPM pool"
+      ansible.builtin.slurp:
+        src: /etc/php/8.2/fpm/pool.d/librenms.conf
+      register: librenms_fpm_pool_content
+
+    - name: "Asserting the pool listens on the configured socket as the librenms user"
+      vars:
+        librenms_pool_text: "{{ librenms_fpm_pool_content.content | b64decode }}"
+      ansible.builtin.assert:
+        that:
+          - "'[librenms]' in librenms_pool_text"
+          - "'user = librenms' in librenms_pool_text"
+          - "'listen = /run/php-fpm-librenms.sock' in librenms_pool_text"
+        fail_msg: "PHP-FPM pool was not templated with the role's variables"
+
+    - name: "Statting the PHP-FPM listen socket"
+      ansible.builtin.stat:
+        path: /run/php-fpm-librenms.sock
+      register: librenms_fpm_socket_stat
+
+    - name: "Asserting PHP-FPM actually created its socket"
+      ansible.builtin.assert:
+        that:
+          - librenms_fpm_socket_stat.stat.exists
+        fail_msg: "php8.2-fpm did not create /run/php-fpm-librenms.sock"
+
+    - name: "Statting the enabled nginx site"
+      ansible.builtin.stat:
+        path: /etc/nginx/sites-enabled/librenms.conf
+      register: librenms_site_link
+
+    - name: "Statting the default nginx site"
+      ansible.builtin.stat:
+        path: /etc/nginx/sites-enabled/default
+      register: librenms_default_site
+
+    - name: "Asserting the LibreNMS site is enabled and the default one is gone"
+      ansible.builtin.assert:
+        that:
+          - librenms_site_link.stat.exists
+          - librenms_site_link.stat.islnk
+          - librenms_site_link.stat.lnk_target == '/etc/nginx/sites-available/librenms.conf'
+          - not librenms_default_site.stat.exists
+        fail_msg: "nginx site layout does not match the role's tasks"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting the LibreNMS services are running and enabled"
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['mariadb.service'].state == 'running'
+          - ansible_facts.services['mariadb.service'].status == 'enabled'
+          - ansible_facts.services['php8.2-fpm.service'].state == 'running'
+          - ansible_facts.services['php8.2-fpm.service'].status == 'enabled'
+          - ansible_facts.services['nginx.service'].state == 'running'
+          - ansible_facts.services['nginx.service'].status == 'enabled'
+          - ansible_facts.services['snmpd.service'].state == 'running'
+          - ansible_facts.services['rrdcached.service'].state == 'running'
+        fail_msg: "one of mariadb/php-fpm/nginx/snmpd/rrdcached is not running and enabled"
+
+    - name: "Waiting for nginx to accept connections"
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 80
+        state: started
+        timeout: 30
+
+    - name: "Statting the root MariaDB credentials file"
+      ansible.builtin.stat:
+        path: /root/.my.cnf
+      register: librenms_root_cnf
+
+    - name: "Asserting the root credentials file is present and private"
+      ansible.builtin.assert:
+        that:
+          - librenms_root_cnf.stat.exists
+          - librenms_root_cnf.stat.mode == '0600'
+        fail_msg: "/root/.my.cnf missing or not 0600"
+
+    - name: "Querying MariaDB for the databases and accounts the role created"
+      community.mysql.mysql_info:
+        login_unix_socket: /run/mysqld/mysqld.sock
+        config_file: ""
+        # The role creates the database but never migrates a schema into it, and
+        # mysql_info drops table-less databases from its output by default.
+        return_empty_dbs: true
+        filter:
+          - databases
+          - users
+      register: librenms_mysql_info
+
+    - name: "Asserting the LibreNMS database and grant exist"
+      ansible.builtin.assert:
+        that:
+          - "'librenms' in librenms_mysql_info.databases"
+          - "'librenms' in librenms_mysql_info.users['localhost']"
+        fail_msg: "the LibreNMS database or its localhost user was not created"
+
+    - name: "Reading the MariaDB drop-in the role writes"
+      ansible.builtin.slurp:
+        src: /etc/mysql/mariadb.conf.d/60-librenms.cnf
+      register: librenms_mariadb_cnf
+
+    - name: "Asserting the MariaDB drop-in carries the LibreNMS settings"
+      vars:
+        librenms_mariadb_text: "{{ librenms_mariadb_cnf.content | b64decode }}"
+      ansible.builtin.assert:
+        that:
+          - "'innodb_file_per_table=1' in librenms_mariadb_text"
+          - "'lower_case_table_names=0' in librenms_mariadb_text"
+        fail_msg: "60-librenms.cnf does not contain the role's mysqld settings"
+
+    - name: "Reading the generated snmpd configuration"
+      ansible.builtin.slurp:
+        src: /etc/snmp/snmpd.conf
+      register: librenms_snmpd_conf
+
+    - name: "Asserting the community string placeholder was substituted"
+      vars:
+        librenms_snmpd_text: "{{ librenms_snmpd_conf.content | b64decode }}"
+      ansible.builtin.assert:
+        that:
+          - "'RANDOMSTRINGGOESHERE' not in librenms_snmpd_text"
+          - "'CHANGEME' in librenms_snmpd_text"
+        fail_msg: "snmpd.conf still carries the LibreNMS example placeholder"
+
+    - name: "Reading the rrdcached defaults"
+      ansible.builtin.slurp:
+        src: /etc/default/rrdcached
+      register: librenms_rrdcached_defaults
+
+    - name: "Asserting rrdcached was pointed at the LibreNMS rrd tree"
+      vars:
+        librenms_rrdcached_text: "{{ librenms_rrdcached_defaults.content | b64decode }}"
+      ansible.builtin.assert:
+        that:
+          - "'BASE_PATH=/opt/librenms/rrd/' in librenms_rrdcached_text"
+          - "'JOURNAL_PATH=/var/lib/rrdcached/journal/' in librenms_rrdcached_text"
+          - "'DAEMON_USER=librenms' in librenms_rrdcached_text"
+        fail_msg: "/etc/default/rrdcached was not templated from the role's variables"
+
+    - name: "Statting the cron and logrotate drop-ins"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: librenms_dropins
+      loop:
+        - /etc/cron.d/librenms
+        - /etc/logrotate.d/librenms
+        - /etc/bash_completion.d/lnms
+
+    - name: "Asserting the cron, logrotate, and completion files were installed"
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.mode == '0644'
+        fail_msg: "{{ item.item }} was not installed with mode 0644"
+      loop: "{{ librenms_dropins.results }}"
+      loop_control:
+        label: "{{ item.item }}"

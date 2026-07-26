@@ -1,0 +1,123 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Gather package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Assert the MongoDB, OpenSearch and Graylog packages are installed
+      ansible.builtin.assert:
+        that:
+          - "'mongodb-org' in ansible_facts.packages"
+          - "'opensearch' in ansible_facts.packages"
+          - "'graylog-server' in ansible_facts.packages"
+          - "'openjdk-17-jre-headless' in ansible_facts.packages"
+        fail_msg: "Expected mongodb-org, opensearch, graylog-server and openjdk-17-jre-headless to be installed"
+
+    - name: Stat the rendered Graylog server configuration
+      ansible.builtin.stat:
+        path: /etc/graylog/server/server.conf
+      register: graylog_server_conf
+
+    - name: Stat the rendered OpenSearch configuration
+      ansible.builtin.stat:
+        path: /etc/opensearch/opensearch.yml
+      register: graylog_opensearch_conf
+
+    - name: Stat the rendered OpenSearch heap options
+      ansible.builtin.stat:
+        path: /etc/opensearch/jvm.options.d/heap.options
+      register: graylog_heap_options
+
+    - name: Stat the rendered MongoDB configuration
+      ansible.builtin.stat:
+        path: /etc/mongod.conf
+      register: graylog_mongod_conf
+
+    - name: Assert the configuration files exist with the modes the role sets
+      ansible.builtin.assert:
+        that:
+          - graylog_server_conf.stat.exists
+          - graylog_server_conf.stat.mode == '0640'
+          - graylog_server_conf.stat.gr_name == 'graylog'
+          - graylog_opensearch_conf.stat.exists
+          - graylog_opensearch_conf.stat.mode == '0640'
+          - graylog_heap_options.stat.exists
+          - graylog_mongod_conf.stat.exists
+          - graylog_mongod_conf.stat.mode == '0644'
+        fail_msg: "Rendered configuration files are missing or have unexpected ownership/permissions"
+
+    - name: Slurp the rendered Graylog server configuration
+      ansible.builtin.slurp:
+        src: /etc/graylog/server/server.conf
+      register: graylog_server_conf_content
+
+    - name: Slurp the rendered OpenSearch configuration
+      ansible.builtin.slurp:
+        src: /etc/opensearch/opensearch.yml
+      register: graylog_opensearch_conf_content
+
+    - name: Slurp the Graylog systemd defaults file
+      ansible.builtin.slurp:
+        src: /etc/default/graylog-server
+      register: graylog_defaults_content
+
+    - name: Assert the templated values landed in the configuration files
+      vars:
+        server_conf: "{{ graylog_server_conf_content.content | b64decode }}"
+        opensearch_conf: "{{ graylog_opensearch_conf_content.content | b64decode }}"
+        graylog_defaults: "{{ graylog_defaults_content.content | b64decode }}"
+      ansible.builtin.assert:
+        that:
+          - "'password_secret = CHANGEMECHANGEMECHANGEMECHANGEMECHANGEMECHANGEMECHANGEMECHANGEME' in server_conf"
+          - "'http_bind_address = 0.0.0.0:9000' in server_conf"
+          - "'elasticsearch_hosts = http://127.0.0.1:9200' in server_conf"
+          - "'mongodb_uri = mongodb://127.0.0.1:27017/graylog' in server_conf"
+          - "'message_journal_dir = /var/lib/graylog-server/journal' in server_conf"
+          - "'cluster.name: graylog' in opensearch_conf"
+          - "'network.host: 127.0.0.1' in opensearch_conf"
+          - "'discovery.type: single-node' in opensearch_conf"
+          - "'plugins.security.disabled: true' in opensearch_conf"
+          - "'-Xms512m -Xmx512m' in graylog_defaults"
+        fail_msg: "Templated Graylog/OpenSearch settings are not present in the rendered files"
+
+    - name: Look up the graylog service account
+      ansible.builtin.getent:
+        database: passwd
+        key: graylog
+
+    - name: Assert the graylog service account exists
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.getent_passwd['graylog'] is defined
+        fail_msg: "The graylog-server package did not create the graylog service account"
+
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Assert the stack services are enabled and MongoDB is running
+      ansible.builtin.assert:
+        that:
+          - "'mongod.service' in ansible_facts.services"
+          - ansible_facts.services['mongod.service'].state == 'running'
+          - ansible_facts.services['mongod.service'].status == 'enabled'
+          - "'opensearch.service' in ansible_facts.services"
+          - ansible_facts.services['opensearch.service'].status == 'enabled'
+          - "'graylog-server.service' in ansible_facts.services"
+          - ansible_facts.services['graylog-server.service'].status == 'enabled'
+        fail_msg: "Expected mongod running and mongod/opensearch/graylog-server enabled at boot"
+
+    - name: Wait for the MongoDB port to accept connections
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 27017
+        timeout: 30
+
+    - name: Wait for the OpenSearch HTTP port to accept connections
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 9200
+        timeout: 30

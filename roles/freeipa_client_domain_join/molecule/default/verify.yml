@@ -1,0 +1,175 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting every FreeIPA client and SSSD package the role installs is present"
+      ansible.builtin.assert:
+        that:
+          - "'freeipa-client' in ansible_facts.packages"
+          - "'adcli' in ansible_facts.packages"
+          - "'krb5-user' in ansible_facts.packages"
+          - "'realmd' in ansible_facts.packages"
+          - "'sssd-ad' in ansible_facts.packages"
+          - "'sssd-krb5' in ansible_facts.packages"
+          - "'sssd-tools' in ansible_facts.packages"
+          - "'chrony' in ansible_facts.packages"
+        fail_msg: "Role did not install the full FreeIPA client package set"
+
+    - name: "Checking the ipa-client-install binary shipped by freeipa-client"
+      ansible.builtin.stat:
+        path: /usr/sbin/ipa-client-install
+      register: ipa_client_install_bin
+
+    - name: "Checking the realm binary shipped by realmd"
+      ansible.builtin.stat:
+        path: /usr/sbin/realm
+      register: realm_bin
+
+    - name: "Asserting the domain join tooling is executable on disk"
+      ansible.builtin.assert:
+        that:
+          - ipa_client_install_bin.stat.exists
+          - ipa_client_install_bin.stat.executable
+          - realm_bin.stat.exists
+          - realm_bin.stat.executable
+        fail_msg: "FreeIPA/realmd domain join binaries are missing or not executable"
+
+    - name: "Checking both Firefox installation directories the role knows about"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: firefox_dir_stat
+      loop:
+        - /usr/lib/firefox-esr
+        - /usr/lib/firefox
+
+    - name: "Recording the Firefox installation directory present on this target"
+      ansible.builtin.set_fact:
+        firefox_dir: >-
+          {{
+            firefox_dir_stat.results
+            | selectattr('stat.isdir', 'defined')
+            | selectattr('stat.isdir')
+            | map(attribute='item')
+            | list | first | default('', true)
+          }}
+
+    - name: "Asserting the browserless host resolved no Firefox directory and was left untouched"
+      ansible.builtin.assert:
+        that:
+          - firefox_dir == ''
+        fail_msg: "The browserless host unexpectedly has a Firefox installation directory"
+      when: "'browserless_hosts' in group_names"
+
+    - name: "Verifying the Firefox NSS trust store repoint on the browser host"
+      when: "'firefox_hosts' in group_names"
+      block:
+        - name: "Asserting the prepared Firefox ESR installation directory was resolved"
+          ansible.builtin.assert:
+            that:
+              - firefox_dir == '/usr/lib/firefox-esr'
+            fail_msg: "Expected the Debian firefox-esr directory to be the resolved Firefox installation directory"
+
+        - name: "Locating the p11-kit trust module in this target's multiarch library path"
+          ansible.builtin.find:
+            paths:
+              - /usr/lib
+              - /usr/lib64
+            patterns: "p11-kit-trust.so"
+            file_type: any
+            recurse: true
+            depth: 3
+            get_checksum: true
+          register: p11_kit_find
+
+        - name: "Asserting the p11-kit trust module was found outside any hardcoded triplet"
+          ansible.builtin.assert:
+            that:
+              - p11_kit_find.files | length > 0
+            fail_msg: "p11-kit-trust.so was not found under /usr/lib or /usr/lib64"
+
+        - name: "Recording the p11-kit trust module path and checksum"
+          ansible.builtin.set_fact:
+            p11_kit_module: "{{ (p11_kit_find.files | sort(attribute='path') | first).path }}"
+            p11_kit_checksum: "{{ (p11_kit_find.files | sort(attribute='path') | first).checksum }}"
+
+        - name: "Asserting the discovered p11-kit module sits under this host's own multiarch directory"
+          ansible.builtin.assert:
+            that:
+              - p11_kit_module.endswith('/pkcs11/p11-kit-trust.so')
+              - ansible_facts['architecture'] in p11_kit_module or p11_kit_module.startswith('/usr/lib64/')
+            fail_msg: "p11-kit module path {{ p11_kit_module }} does not match this host's architecture"
+
+        - name: "Checking the backup the role takes of the stock Firefox NSS trust module"
+          ansible.builtin.stat:
+            path: "{{ firefox_dir }}/libnssckbi.so.bak"
+            follow: false
+          register: nssckbi_backup
+
+        - name: "Checking the link the role puts in place of libnssckbi.so"
+          ansible.builtin.stat:
+            path: "{{ firefox_dir }}/libnssckbi.so"
+            follow: false
+          register: nssckbi_link
+
+        - name: "Checking that the replaced libnssckbi.so resolves to a real file"
+          ansible.builtin.stat:
+            path: "{{ firefox_dir }}/libnssckbi.so"
+            follow: true
+          register: nssckbi_resolved
+
+        - name: "Asserting Firefox libnssckbi.so is a symlink to the discovered p11-kit trust module"
+          ansible.builtin.assert:
+            that:
+              - nssckbi_link.stat.exists
+              - nssckbi_link.stat.islnk
+              - nssckbi_link.stat.lnk_target == p11_kit_module
+              - nssckbi_resolved.stat.exists
+              - nssckbi_resolved.stat.isreg
+            fail_msg: "Firefox NSS trust store was not repointed at the system p11-kit trust module"
+
+        - name: "Reading back the stock Firefox NSS trust module state prepare recorded before converge"
+          ansible.builtin.slurp:
+            src: /var/tmp/molecule-stock-nssckbi.json
+          register: stock_nssckbi_raw
+
+        - name: "Decoding the recorded stock Firefox NSS trust module state"
+          ansible.builtin.set_fact:
+            stock_nssckbi: "{{ stock_nssckbi_raw.content | b64decode | from_json }}"
+
+        - name: "Asserting the backup still holds the module as shipped, unchanged by the idempotence rerun"
+          ansible.builtin.assert:
+            that:
+              - nssckbi_backup.stat.exists
+              - nssckbi_backup.stat.isreg
+              - not nssckbi_backup.stat.islnk
+              - nssckbi_backup.stat.size > 0
+              - nssckbi_backup.stat.checksum == stock_nssckbi.checksum
+              - nssckbi_backup.stat.checksum != p11_kit_checksum
+            fail_msg: >-
+              {{ firefox_dir }}/libnssckbi.so.bak is not the module Firefox shipped; a rerun overwrote the backup with
+              the p11-kit trust module
+          when: stock_nssckbi.exists
+
+        - name: "Asserting no backup was invented when Firefox shipped no NSS trust module of its own"
+          ansible.builtin.assert:
+            that:
+              - not nssckbi_backup.stat.exists
+            fail_msg: >-
+              Firefox shipped no {{ firefox_dir }}/libnssckbi.so, yet the role produced a
+              {{ firefox_dir }}/libnssckbi.so.bak — the backup captured something that was never the original
+          when: not stock_nssckbi.exists
+
+    - name: "Reading the sssd package file list to confirm the sssd service unit landed"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting the sssd service unit is known to systemd"
+      ansible.builtin.assert:
+        that:
+          - "'sssd.service' in ansible_facts.services"
+        fail_msg: "sssd.service is not registered with systemd after installing the sssd packages"

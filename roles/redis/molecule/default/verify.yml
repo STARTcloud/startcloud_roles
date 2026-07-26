@@ -1,0 +1,85 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    redis_config_file: /etc/redis/redis.conf
+    redis_port: 6379
+  tasks:
+    - name: "Gather package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Assert the redis-server package is installed"
+      ansible.builtin.assert:
+        that:
+          - "'redis-server' in ansible_facts.packages"
+        fail_msg: "redis-server package is not installed"
+        success_msg: "redis-server package is installed"
+
+    - name: "Gather service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Assert the redis-server service is running and enabled"
+      ansible.builtin.assert:
+        that:
+          - "'redis-server.service' in ansible_facts.services"
+          - ansible_facts.services['redis-server.service'].state == 'running'
+          - ansible_facts.services['redis-server.service'].status == 'enabled'
+        fail_msg: "redis-server.service is not running and enabled"
+        success_msg: "redis-server.service is running and enabled"
+
+    - name: "Stat the rendered redis configuration file"
+      ansible.builtin.stat:
+        path: "{{ redis_config_file }}"
+      register: redis_conf_stat
+
+    - name: "Assert the configuration file exists with the expected ownership and mode"
+      ansible.builtin.assert:
+        that:
+          - redis_conf_stat.stat.exists
+          - redis_conf_stat.stat.pw_name == 'redis'
+          - redis_conf_stat.stat.gr_name == 'redis'
+          - redis_conf_stat.stat.mode == '0640'
+        fail_msg: "{{ redis_config_file }} is missing or has unexpected ownership/mode"
+        success_msg: "{{ redis_config_file }} exists as redis:redis 0640"
+
+    - name: "Slurp the rendered redis configuration file"
+      ansible.builtin.slurp:
+        src: "{{ redis_config_file }}"
+      register: redis_conf_slurp
+
+    - name: "Assert the template rendered the converge variables"
+      ansible.builtin.assert:
+        that:
+          - "'bind 127.0.0.1' in redis_conf_content"
+          - "'port 6379' in redis_conf_content"
+          - "'databases 24' in redis_conf_content"
+          - "'maxmemory 512mb' in redis_conf_content"
+          - "'maxmemory-policy allkeys-lru' in redis_conf_content"
+          - "'requirepass CHANGEME' in redis_conf_content"
+          - "'dir /var/lib/redis' in redis_conf_content"
+        fail_msg: "Rendered redis.conf does not contain the expected directives"
+        success_msg: "Rendered redis.conf contains all expected directives"
+      vars:
+        redis_conf_content: "{{ redis_conf_slurp.content | b64decode }}"
+
+    - name: "Look up the redis system user"
+      ansible.builtin.getent:
+        database: passwd
+        key: redis
+
+    - name: "Assert the redis system user exists"
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.getent_passwd['redis'] is defined
+        fail_msg: "The redis system user does not exist"
+        success_msg: "The redis system user exists"
+
+    - name: "Assert redis is listening on its configured port"
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: "{{ redis_port }}"
+        state: started
+        timeout: 30

@@ -1,0 +1,12 @@
+---
+run_tasks: true
+## This file stores the lowest precedence of variables.
+## These can be overridden by variables in vars/main.yml, playbook variables, and Ansible environment variables.
+## If you are confused about how variable precedence works,
+## please see this article: https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_variables.html
+## Credentials belong in vault — the CHANGEME defaults are dummies.
+firewall_notifications_smtp_server: changeme.example.com
+firewall_notifications_smtp_port: 465
+firewall_notifications_user: changeme@example.com
+firewall_notifications_pass: "{{ vault_firewall_notifications_pass | default('CHANGEME') }}"
+firewall_notifications_notify_address: changeme@example.com

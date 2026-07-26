@@ -1,2 +1,29 @@
 ---
 run_tasks: true
+
+## Account the nfc-daemon unit runs as. Normally supplied by the service_user
+## role in the provisioner; declared here so the role is standalone-safe and so
+## nfc-daemon.service.j2 never renders an empty User= line.
+service_user: startcloud
+
+## Upstream nfc-daemon source and the checkout it is built from.
+rpi_nfc_repo: https://github.com/whotwagner/nfc-daemon
+rpi_nfc_version: main
+rpi_nfc_source_dir: /src/nfc-daemon
+
+## The artifact `make install` produces. The build/install pair is gated on this
+## path so a converge that has nothing to build touches nothing.
+rpi_nfc_binary: /usr/local/bin/nfc-daemon
+
+## Where nfc-daemon looks for its card-detected / card-removed hook scripts.
+## `make install` drops the upstream samples here, so the role renders its own
+## copies over them after the install has run.
+rpi_nfc_script_dir: /usr/local/share/nfc-daemon
+
+## Badge roster libnfc-auth.py matches scanned card IDs against. The role seeds
+## an empty roster when the file is absent; a populated file is left untouched.
+rpi_nfc_user_source: /data/users.yml
+
+## Python modules imported by libnfc-auth.py. RPi.GPIO is only packaged for the
+## Pi's own architecture, so the GPIO binding is requested on arm hosts only.
+rpi_nfc_python_packages: "{{ ['python3-yaml', 'python3-smbus'] + (['python3-rpi.gpio'] if ansible_architecture is search('arm|aarch64') else []) }}"

@@ -1,0 +1,188 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting the MongoDB 8.0 server package is installed"
+      ansible.builtin.assert:
+        that:
+          - "'mongodb-org-server' in ansible_facts.packages"
+          - ansible_facts.packages['mongodb-org-server'][0].version is match('^8\\.0\\.')
+        fail_msg: "mongodb-org-server 8.0.x was not installed by the role"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting the mongod service is running and enabled"
+      ansible.builtin.assert:
+        that:
+          - "'mongod.service' in ansible_facts.services"
+          - ansible_facts.services['mongod.service'].state == 'running'
+          - ansible_facts.services['mongod.service'].status == 'enabled'
+        fail_msg: "mongod.service is not running and enabled"
+
+    - name: "Statting the templated mongod.conf"
+      ansible.builtin.stat:
+        path: /etc/mongod.conf
+      register: mongodb_conf_stat
+
+    - name: "Asserting mongod.conf was written by the role"
+      ansible.builtin.assert:
+        that:
+          - mongodb_conf_stat.stat.exists
+          - mongodb_conf_stat.stat.mode == '0644'
+        fail_msg: "/etc/mongod.conf missing or wrong mode"
+
+    - name: "Reading mongod.conf"
+      ansible.builtin.slurp:
+        src: /etc/mongod.conf
+      register: mongodb_conf_content
+
+    - name: "Asserting mongod.conf carries the values supplied to the role"
+      vars:
+        mongodb_conf_text: "{{ mongodb_conf_content.content | b64decode }}"
+      ansible.builtin.assert:
+        that:
+          - "'bindIp: 127.0.0.1' in mongodb_conf_text"
+          - "'port: 27017' in mongodb_conf_text"
+          - "'dbPath: /var/lib/mongodb' in mongodb_conf_text"
+          - "'engine: wiredTiger' in mongodb_conf_text"
+          - "'authorization: disabled' in mongodb_conf_text"
+          # Options removed from modern mongod; emitting either is fatal at startup.
+          - "'cloud:' not in mongodb_conf_text"
+          - "'journal:' not in mongodb_conf_text"
+        fail_msg: "mongod.conf does not contain the values supplied to the role"
+
+    - name: "Asserting mongod.conf carries the net.tls stanza written by the side effect"
+      vars:
+        mongodb_conf_text: "{{ mongodb_conf_content.content | b64decode }}"
+      ansible.builtin.assert:
+        that:
+          - "'tls:' in mongodb_conf_text"
+          - "'mode: requireTLS' in mongodb_conf_text"
+          - "'certificateKeyFile: /etc/ssl/mongodb/mongodb.pem' in mongodb_conf_text"
+          - "'CAFile: /etc/ssl/mongodb/ca.crt' in mongodb_conf_text"
+          - "'allowConnectionsWithoutCertificates: true' in mongodb_conf_text"
+          # net.ssl was removed in MongoDB 7.0; emitting any of it is fatal at startup.
+          - "'ssl:' not in mongodb_conf_text"
+          - "'PEMKeyFile' not in mongodb_conf_text"
+          - "'SSL' not in mongodb_conf_text"
+        fail_msg: "mongod.conf does not carry a modern net.tls stanza"
+
+    - name: "Asking mongod to re-parse the rendered config"
+      ansible.builtin.command: /usr/bin/mongod --config /etc/mongod.conf --outputConfig
+      register: mongodb_conf_parse
+      changed_when: false
+
+    - name: "Asserting mongod accepts every key the role wrote"
+      ansible.builtin.assert:
+        that:
+          - mongodb_conf_parse.rc == 0
+          - "'Unrecognized option' not in mongodb_conf_parse.stderr"
+        fail_msg: "mongod rejects the config the role rendered: {{ mongodb_conf_parse.stderr }}"
+
+    - name: "Statting the signed-by keyring the role installed"
+      ansible.builtin.stat:
+        path: /etc/apt/keyrings/mongodb-server-8.0.gpg
+      register: mongodb_keyring_stat
+
+    - name: "Asserting the MongoDB APT keyring is in place"
+      ansible.builtin.assert:
+        that:
+          - mongodb_keyring_stat.stat.exists
+          - mongodb_keyring_stat.stat.mode == '0644'
+        fail_msg: "/etc/apt/keyrings/mongodb-server-8.0.gpg missing or wrong mode"
+
+    - name: "Statting the templated systemd unit"
+      ansible.builtin.stat:
+        path: /lib/systemd/system/mongod.service
+      register: mongodb_unit_stat
+
+    - name: "Asserting the systemd unit was templated by the role"
+      ansible.builtin.assert:
+        that:
+          - mongodb_unit_stat.stat.exists
+        fail_msg: "/lib/systemd/system/mongod.service was not created by the role"
+
+    - name: "Looking up the mongodb system user"
+      ansible.builtin.getent:
+        database: passwd
+        key: mongodb
+
+    - name: "Looking up the mongodb system group"
+      ansible.builtin.getent:
+        database: group
+        key: mongodb
+
+    - name: "Asserting the mongodb user and group exist"
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.getent_passwd['mongodb'] is defined
+          - ansible_facts.getent_group['mongodb'] is defined
+        fail_msg: "mongodb system user/group was not created"
+
+    - name: "Statting the log file created by the role"
+      ansible.builtin.stat:
+        path: /var/log/mongodb/mongod.log
+      register: mongodb_log_stat
+
+    - name: "Asserting the log file exists and is owned by mongodb"
+      ansible.builtin.assert:
+        that:
+          - mongodb_log_stat.stat.exists
+          - mongodb_log_stat.stat.pw_name == 'mongodb'
+        fail_msg: "/var/log/mongodb/mongod.log missing or not owned by mongodb"
+
+    - name: "Waiting for mongod to accept connections on its port"
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 27017
+        state: started
+        timeout: 30
+
+    - name: "Pinging mongod over TLS with mongosh"
+      ansible.builtin.command:
+        argv:
+          - mongosh
+          - --quiet
+          - --tls
+          - --tlsCAFile
+          - /etc/ssl/mongodb/ca.crt
+          - --host
+          - "127.0.0.1"
+          - --port
+          - "27017"
+          - --eval
+          - "db.runCommand({ ping: 1 })"
+      register: mongodb_tls_ping
+      changed_when: false
+
+    - name: "Asserting the TLS ping reached the server"
+      ansible.builtin.assert:
+        that:
+          - mongodb_tls_ping.rc == 0
+          - "'ok: 1' in mongodb_tls_ping.stdout"
+        fail_msg: "mongosh could not ping mongod over TLS: {{ mongodb_tls_ping.stdout }} {{ mongodb_tls_ping.stderr }}"
+
+    - name: "Attempting a plaintext connection against the TLS-only listener"
+      ansible.builtin.command:
+        argv:
+          - mongosh
+          - --quiet
+          - "mongodb://127.0.0.1:27017/?serverSelectionTimeoutMS=5000"
+          - --eval
+          - "db.runCommand({ ping: 1 })"
+      register: mongodb_plain_ping
+      changed_when: false
+      failed_when: false
+
+    - name: "Asserting requireTLS actually rejects plaintext clients"
+      ansible.builtin.assert:
+        that:
+          - mongodb_plain_ping.rc != 0
+        fail_msg: "mongod answered a plaintext client while net.tls.mode is requireTLS"

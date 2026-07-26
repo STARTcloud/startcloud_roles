@@ -1,0 +1,84 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  vars:
+    service_user: java_user
+    service_group: java_group
+    service_home_dir: /local/notesjava
+  tasks:
+    - name: "Gathering the service group from getent"
+      ansible.builtin.getent:
+        database: group
+        key: "{{ service_group }}"
+
+    - name: "Asserting the service group exists and contains the vagrant user"
+      ansible.builtin.assert:
+        that:
+          - service_group in ansible_facts.getent_group
+          - "'startcloud' in ansible_facts.getent_group[service_group][2]"
+        fail_msg: "Group {{ service_group }} missing or does not contain startcloud"
+
+    - name: "Gathering the service user from getent"
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ service_user }}"
+
+    - name: "Asserting the service user exists with the expected home and shell"
+      ansible.builtin.assert:
+        that:
+          - service_user in ansible_facts.getent_passwd
+          - ansible_facts.getent_passwd[service_user][4] == service_home_dir
+          - ansible_facts.getent_passwd[service_user][5] == '/bin/bash'
+        fail_msg: "User {{ service_user }} missing or has wrong home/shell"
+
+    - name: "Stat-ing the sudoers drop-in for the service user"
+      ansible.builtin.stat:
+        path: "/etc/sudoers.d/{{ service_user }}"
+      register: service_user_sudoers
+
+    - name: "Asserting the sudoers drop-in exists with mode 0644"
+      ansible.builtin.assert:
+        that:
+          - service_user_sudoers.stat.exists
+          - service_user_sudoers.stat.mode == '0644'
+        fail_msg: "/etc/sudoers.d/{{ service_user }} missing or wrong mode"
+
+    - name: "Reading the sudoers drop-in"
+      ansible.builtin.slurp:
+        src: "/etc/sudoers.d/{{ service_user }}"
+      register: service_user_sudoers_content
+
+    - name: "Asserting the passwordless sudo line is present"
+      ansible.builtin.assert:
+        that:
+          - >-
+            service_user ~ ' ALL=(ALL:ALL) NOPASSWD:ALL'
+            in (service_user_sudoers_content.content | b64decode)
+        fail_msg: "NOPASSWD sudo line missing for {{ service_user }}"
+
+    - name: "Reading the pam limits configuration"
+      ansible.builtin.slurp:
+        src: /etc/security/limits.conf
+      register: service_user_limits
+
+    - name: "Asserting the soft and hard nofile limits were written"
+      ansible.builtin.assert:
+        that:
+          - "'60000' in (service_user_limits.content | b64decode)"
+          - "'80000' in (service_user_limits.content | b64decode)"
+          - service_user in (service_user_limits.content | b64decode)
+        fail_msg: "nofile limits for {{ service_user }} missing from limits.conf"
+
+    - name: "Stat-ing the ansible tmp directory in the service home"
+      ansible.builtin.stat:
+        path: "{{ service_home_dir }}/.ansible/tmp"
+      register: service_user_tmp_dir
+
+    - name: "Asserting the ansible tmp directory exists and is owned by the service user"
+      ansible.builtin.assert:
+        that:
+          - service_user_tmp_dir.stat.exists
+          - service_user_tmp_dir.stat.isdir
+          - service_user_tmp_dir.stat.pw_name == service_user
+        fail_msg: "{{ service_home_dir }}/.ansible/tmp missing or not owned by {{ service_user }}"

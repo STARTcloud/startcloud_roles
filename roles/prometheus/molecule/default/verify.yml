@@ -1,0 +1,111 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  vars:
+    prometheus_user: prometheus
+    prometheus_group: prometheus
+    prometheus_install_dir: /usr/local/bin
+    prometheus_config_dir: /etc/prometheus
+    prometheus_data_dir: /var/lib/prometheus
+  tasks:
+    - name: "Gathering the prometheus system user"
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ prometheus_user }}"
+
+    - name: "Gathering the prometheus system group"
+      ansible.builtin.getent:
+        database: group
+        key: "{{ prometheus_group }}"
+
+    - name: "Asserting the prometheus system user has the nologin shell"
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.getent_passwd[prometheus_user] is defined
+          - ansible_facts.getent_passwd[prometheus_user][5] == '/usr/sbin/nologin'
+          - ansible_facts.getent_group[prometheus_group] is defined
+        fail_msg: "The prometheus system user or group was not created as expected"
+
+    - name: "Stating the installed prometheus and promtool binaries"
+      ansible.builtin.stat:
+        path: "{{ prometheus_install_dir }}/{{ item }}"
+      register: prometheus_binary_stats
+      loop:
+        - prometheus
+        - promtool
+
+    - name: "Asserting the prometheus binaries are installed and executable"
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.mode == '0755'
+          - item.stat.pw_name == 'root'
+        fail_msg: "Binary {{ item.item }} is missing or has the wrong mode/owner"
+      loop: "{{ prometheus_binary_stats.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "Stating the prometheus data directory"
+      ansible.builtin.stat:
+        path: "{{ prometheus_data_dir }}"
+      register: prometheus_data_dir_stat
+
+    - name: "Asserting the prometheus data directory is owned by the service user"
+      ansible.builtin.assert:
+        that:
+          - prometheus_data_dir_stat.stat.exists
+          - prometheus_data_dir_stat.stat.isdir
+          - prometheus_data_dir_stat.stat.pw_name == prometheus_user
+          - prometheus_data_dir_stat.stat.gr_name == prometheus_group
+        fail_msg: "The prometheus data directory is missing or wrongly owned"
+
+    - name: "Slurping the generated prometheus configuration"
+      ansible.builtin.slurp:
+        src: "{{ prometheus_config_dir }}/prometheus.yml"
+      register: prometheus_config_slurp
+
+    - name: "Asserting the prometheus configuration carries the templated values"
+      ansible.builtin.assert:
+        that:
+          - "'scrape_interval: 15s' in prometheus_config_content"
+          - "'evaluation_interval: 15s' in prometheus_config_content"
+          - "'job_name: prometheus' in prometheus_config_content"
+          - "'0.0.0.0:9090' in prometheus_config_content"
+        fail_msg: "The templated prometheus.yml does not contain the expected settings"
+      vars:
+        prometheus_config_content: "{{ prometheus_config_slurp.content | b64decode }}"
+
+    - name: "Slurping the generated prometheus systemd unit"
+      ansible.builtin.slurp:
+        src: /etc/systemd/system/prometheus.service
+      register: prometheus_unit_slurp
+
+    - name: "Asserting the systemd unit runs prometheus as the service user"
+      ansible.builtin.assert:
+        that:
+          - "'User=' ~ prometheus_user in prometheus_unit_content"
+          - "'--storage.tsdb.retention.time=15d' in prometheus_unit_content"
+          - "'--web.listen-address=0.0.0.0:9090' in prometheus_unit_content"
+          - "prometheus_install_dir ~ '/prometheus' in prometheus_unit_content"
+        fail_msg: "The templated prometheus.service unit is not as expected"
+      vars:
+        prometheus_unit_content: "{{ prometheus_unit_slurp.content | b64decode }}"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting the prometheus service is enabled and running"
+      ansible.builtin.assert:
+        that:
+          - "'prometheus.service' in ansible_facts.services"
+          - ansible_facts.services['prometheus.service'].state == 'running'
+          - ansible_facts.services['prometheus.service'].status == 'enabled'
+        fail_msg: "The prometheus service is not enabled and running"
+
+    - name: "Waiting for the prometheus web listener on port 9090"
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 9090
+        state: started
+        timeout: 30

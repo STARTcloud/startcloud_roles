@@ -1,0 +1,59 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    expected_fqdn: startcloud-hostname-test.example.com
+  tasks:
+    - name: "Stat the persistent hostname file"
+      ansible.builtin.stat:
+        path: /etc/hostname
+      register: hostname_file
+
+    - name: "Assert /etc/hostname exists"
+      ansible.builtin.assert:
+        that:
+          - hostname_file.stat.exists
+          - hostname_file.stat.isreg
+        fail_msg: "/etc/hostname is missing after the role ran"
+
+    - name: "Read the persistent hostname file"
+      ansible.builtin.slurp:
+        src: /etc/hostname
+      register: hostname_content
+
+    - name: "Assert the persistent hostname is the configured FQDN"
+      ansible.builtin.assert:
+        that:
+          - (hostname_content.content | b64decode).strip() == expected_fqdn
+        fail_msg: >-
+          /etc/hostname is
+          '{{ (hostname_content.content | b64decode).strip() }}',
+          expected '{{ expected_fqdn }}'
+
+    # The LIVE (kernel/UTS) hostname is deliberately NOT asserted. Without
+    # systemd running, ansible.builtin.hostname selects its FileStrategy, whose
+    # set_current_hostname() is a documented no-op - it only rewrites
+    # /etc/hostname. On a real systemd VM the SystemdStrategy shells out to
+    # hostnamectl and the live name follows, but hostnamectl cannot rewrite
+    # docker's bind-mounted /etc/hostname ("Device or resource busy"), so this
+    # scenario cannot exercise that path. Asserting `hostname` output here would
+    # test the container's UTS namespace, not the role.
+
+    - name: "Read /etc/hosts"
+      ansible.builtin.slurp:
+        src: /etc/hosts
+      register: etc_hosts_content
+
+    - name: "Assert /etc/hosts was left alone inside a container"
+      # The role guards its /etc/hosts rewrite with
+      # `when: not (ansible_module_running_in_container | default(false))`, and
+      # community.docker.current_container_facts detects this container, so the
+      # rewrite must be skipped and the FQDN must be absent from /etc/hosts.
+      ansible.builtin.assert:
+        that:
+          - expected_fqdn not in (etc_hosts_content.content | b64decode)
+        fail_msg: >-
+          /etc/hosts contains '{{ expected_fqdn }}'; the role's container guard
+          should have skipped the /etc/hosts rewrite

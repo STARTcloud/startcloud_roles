@@ -6,16 +6,16 @@ vrrp_script chk_haproxy {
 
 vrrp_instance VI_1 {
   interface {{ first_adapter }}
-  state {{ startcloud_keepalived_state }} #MASTER
-  virtual_router_id {{  startcloud_keepalived_virtual_router_id }}
-  priority {{  startcloud_keepalived_priority }}
+  state {{ startcloud_keepalived_state }}
+  virtual_router_id {{ startcloud_keepalived_virtual_router_id }}
+  priority {{ startcloud_keepalived_priority }}
   advert_int 1
   authentication {
       auth_type PASS
-      auth_pass {{  startcloud_keepalived_auth_pass }}
+      auth_pass {{ startcloud_keepalived_auth_pass }}
     }
   virtual_ipaddress {
-    {{  startcloud_keepalived_virtual_ipaddress }}
+    {{ startcloud_keepalived_virtual_ipaddress }}
   }
   track_script {
     chk_haproxy

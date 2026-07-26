@@ -1,0 +1,76 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  vars:
+    expected_stress_packages:
+      - stress-ng
+      - stress
+      - fio
+      - python3-cpuinfo
+  tasks:
+    - name: "Gather package facts"
+      ansible.builtin.package_facts:
+        manager: apt
+
+    - name: "Assert every stress package from stress_packages is installed"
+      ansible.builtin.assert:
+        that:
+          - item in ansible_facts.packages
+        fail_msg: "Package {{ item }} was not installed by the system_stress role"
+        success_msg: "Package {{ item }} is installed"
+      loop: "{{ expected_stress_packages }}"
+
+    - name: "Stat the stress-ng binary"
+      ansible.builtin.stat:
+        path: /usr/bin/stress-ng
+      register: stress_ng_bin
+
+    - name: "Stat the fio binary"
+      ansible.builtin.stat:
+        path: /usr/bin/fio
+      register: fio_bin
+
+    - name: "Stat the stress binary"
+      ansible.builtin.stat:
+        path: /usr/bin/stress
+      register: stress_bin
+
+    - name: "Assert the stress tool binaries exist and are executable"
+      ansible.builtin.assert:
+        that:
+          - stress_ng_bin.stat.exists
+          - stress_ng_bin.stat.executable
+          - fio_bin.stat.exists
+          - fio_bin.stat.executable
+          - stress_bin.stat.exists
+          - stress_bin.stat.executable
+        fail_msg: "Expected executable binaries /usr/bin/stress-ng, /usr/bin/fio and /usr/bin/stress"
+        success_msg: "stress-ng, stress and fio binaries are present and executable"
+
+    - name: "Run a short stress-ng workload to prove the tool functions"
+      ansible.builtin.command:
+        cmd: stress-ng --cpu 1 --timeout 2s --metrics-brief
+      register: stress_ng_run
+      changed_when: false
+
+    - name: "Assert stress-ng executed the workload successfully"
+      ansible.builtin.assert:
+        that:
+          - stress_ng_run.rc == 0
+        fail_msg: "stress-ng failed to run a CPU workload: {{ stress_ng_run.stderr | default('') }}"
+        success_msg: "stress-ng ran a CPU workload successfully"
+
+    - name: "Import the cpuinfo python module installed by python3-cpuinfo"
+      ansible.builtin.command:
+        cmd: python3 -c "import cpuinfo; print(cpuinfo.__name__)"
+      register: cpuinfo_import
+      changed_when: false
+
+    - name: "Assert the cpuinfo python module is importable"
+      ansible.builtin.assert:
+        that:
+          - cpuinfo_import.rc == 0
+          - "'cpuinfo' in cpuinfo_import.stdout"
+        fail_msg: "python3-cpuinfo did not provide an importable cpuinfo module"
+        success_msg: "cpuinfo python module is importable"

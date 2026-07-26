@@ -1,4 +1,13 @@
 ---
+- name: "Ensuring the packages needed to add the MySQL APT repository are installed"
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - gnupg
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
 - name: "Downloading MySQL APT configuration package"
   ansible.builtin.get_url:
     url: "https://repo.mysql.com/mysql-apt-config_{{ mysql_apt_config_version }}_all.deb"
@@ -9,48 +18,61 @@
 - name: "Pre-configuring MySQL APT configuration options"
   ansible.builtin.shell: |
     set -o pipefail
-    echo "mysql-apt-config mysql-apt-config/select-server select {{ mysql_apt_series }}" | sudo debconf-set-selections
-    echo "mysql-apt-config mysql-apt-config/select-product select Ok" | sudo debconf-set-selections
+    echo "mysql-apt-config mysql-apt-config/select-server select {{ mysql_apt_series }}" | debconf-set-selections
+    echo "mysql-apt-config mysql-apt-config/select-product select Ok" | debconf-set-selections
   args:
     executable: /bin/bash
   changed_when: false
 
-- name: "Checking installed mysql-apt-config version"
-  ansible.builtin.shell: "dpkg-query -W -f '${Version}' mysql-apt-config 2>/dev/null || true"
-  register: mysql_apt_config_installed
-  changed_when: false
-
-# Version-gated instead of "creates: mysql.list" so signing-key refreshes shipped
-# in newer mysql-apt-config releases actually get installed on existing machines.
+# Installed with apt rather than `dpkg -i`: apt resolves mysql-apt-config's
+# Pre-Depends on lsb-release instead of aborting on a minimal system, and it
+# reports ok when the pinned version is already installed.
 - name: "Installing MySQL APT configuration"
-  ansible.builtin.command: dpkg -i /tmp/mysql-apt-config.deb
-  changed_when: true
-  when: mysql_apt_config_installed.stdout != mysql_apt_config_version
+  ansible.builtin.apt:
+    deb: /tmp/mysql-apt-config.deb
   environment:
     DEBIAN_FRONTEND: noninteractive
 
+- name: "Creating the APT keyring directory"
+  ansible.builtin.file:
+    path: /usr/share/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
 # mysql-apt-config bundles a copy of Oracle's signing key that has gone stale
-# before (expired 2025-10-22 while still shipping in the latest .deb). Always
-# install the live key Oracle publishes instead of trusting the bundled copy.
+# before (expired 2025-10-22 while still shipping in the latest .deb), so the key
+# Oracle publishes live is installed over it. The download is forced and the
+# dearmored keyring is placed with copy, so a rotated key is picked up while an
+# unchanged key leaves the keyring — and the run — unchanged. The keyring path is
+# the one mysql-apt-config's sources file points at with signed-by.
 - name: "Downloading the current MySQL repository signing key"
   ansible.builtin.get_url:
     url: https://repo.mysql.com/RPM-GPG-KEY-mysql-2025
     dest: /tmp/mysql-signing-key.asc
+    force: true
     timeout: 60
     mode: "0644"
 
-- name: "Installing the MySQL repository signing key"
-  ansible.builtin.command: gpg --batch --yes --dearmor -o /usr/share/keyrings/mysql-apt-config.gpg /tmp/mysql-signing-key.asc
-  changed_when: true
+- name: "Dearmoring the MySQL repository signing key"
+  ansible.builtin.command: gpg --batch --yes --dearmor -o /tmp/mysql-signing-key.gpg /tmp/mysql-signing-key.asc
+  changed_when: false
 
-- name: "Updating apt cache"
-  ansible.builtin.apt:
-    update_cache: true
+- name: "Installing the MySQL repository signing key"
+  ansible.builtin.copy:
+    src: /tmp/mysql-signing-key.gpg
+    dest: /usr/share/keyrings/mysql-apt-config.gpg
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0644"
 
 - name: "Ensuring MySQL Python libraries are installed"
   ansible.builtin.apt:
     name: "{{ mysql_python_package_debian }}"
     state: present
+    update_cache: true
 
 # No debconf root-password preseed here, deliberately: installing the server
 # without a password leaves root on auth_socket, which is what lets the
@@ -61,7 +83,7 @@
 
 - name: "Ensuring MySQL packages are installed"
   ansible.builtin.apt:
-    name: "{{ __mysql_packages }}"
+    name: "{{ mysql_packages }}"
     state: present
     policy_rc_d: 101
     update_cache: true
@@ -71,25 +93,26 @@
     DEBIAN_FRONTEND: noninteractive
   register: deb_mysql_install_packages
 
-# Because MySQL starts as part of the install process, we need to stop
-# mysql and remove the logfiles in case the user set a custom log file size.
-- name: "Ensuring MySQL is stopped after initial install"
-  ansible.builtin.service:
-    name: "{{ mysql_daemon }}"
-    state: stopped
+- name: "Recording whether this run installed the MySQL server packages"
+  ansible.builtin.set_fact:
+    deb_mysql_first_install: "{{ deb_mysql_install_packages is changed }}"
 
-- name: "Deleting innodb log files created by apt package after initial install"
-  ansible.builtin.file:
-    path: "{{ mysql_datadir }}/{{ item }}"
-    state: absent
-  with_items:
-    - ib_logfile0
-    - ib_logfile1
+# The packaged install lays down its own innodb log files, which have to go
+# before the server first starts with this role's innodb_log_file_size. That is
+# only true on the run that installed the server: stopping a healthy server on
+# every rerun (configure.yml starts it again) is a permanent change report.
+- name: "Resetting the packaged MySQL install"
+  when: deb_mysql_first_install | bool
+  block:
+    - name: "Ensuring MySQL is stopped after initial install"
+      ansible.builtin.service:
+        name: "{{ mysql_daemon }}"
+        state: stopped
 
-- name: "Configuring MySQL to allow remote connections"
-  ansible.builtin.lineinfile:
-    path: /etc/mysql/mysql.conf.d/mysqld.cnf
-    regexp: "^bind-address\\s+"
-    line: "bind-address = 0.0.0.0"
-    state: present
-  notify: Restart mysql
+    - name: "Deleting innodb log files created by apt package after initial install"
+      ansible.builtin.file:
+        path: "{{ mysql_datadir }}/{{ item }}"
+        state: absent
+      with_items:
+        - ib_logfile0
+        - ib_logfile1

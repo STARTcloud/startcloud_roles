@@ -1,0 +1,30 @@
+---
+- name: "Converge"
+  hosts: all
+  become: true
+  vars:
+    # Provisioner-context variable referenced by defaults/main.yml
+    service_user: root
+    settings:
+      hostname: startcloud-ruby
+      domain: local.dev
+
+    run_tasks: true
+    workspace: /root
+
+    # Install from the distribution packages rather than building from source.
+    ruby_install_from_source: false
+
+    # Debian 12 ships RubyGems through rubygems-integration; there is no
+    # package literally named "rubygems" on bookworm.
+    ruby_rubygems_package_name: rubygems-integration
+
+    ruby_install_bundler: true
+    ruby_install_gems_user: root
+    ruby_install_gems:
+      - name: rake
+        user_install: false
+  tasks:
+    - name: "Including the ruby role"
+      ansible.builtin.include_role:
+        name: ruby

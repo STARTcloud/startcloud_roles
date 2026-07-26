@@ -1,0 +1,43 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    postgresql_auth_method: scram-sha-256
+    postgresql_service_state: started
+    postgresql_service_enabled: true
+    postgresql_restarted_state: restarted
+    postgresql_user: postgres
+    postgresql_group: postgres
+    postgresql_unix_socket_directories:
+      - /var/run/postgresql
+    postgresql_locales:
+      - en_US.UTF-8
+    postgresql_global_config_options:
+      - option: unix_socket_directories
+        value: '{{ postgresql_unix_socket_directories | join(",") }}'
+      - option: log_directory
+        value: "log"
+      - option: max_connections
+        value: "120"
+    postgresql_hba_entries:
+      - {type: local, database: all, user: postgres, auth_method: peer}
+      - {type: local, database: all, user: all, auth_method: peer}
+      - {type: host, database: all, user: all, address: "127.0.0.1/32", auth_method: "{{ postgresql_auth_method }}"}
+      - {type: host, database: all, user: all, address: "::1/128", auth_method: "{{ postgresql_auth_method }}"}
+    postgresql_databases:
+      - name: startclouddb
+    postgresql_users:
+      - name: startclouduser
+        password: CHANGEME
+        role_attr_flags: LOGIN,NOSUPERUSER
+    postgres_users_no_log: false
+    # Minimal provisioner-context stand-ins so the role runs standalone
+    settings:
+      hostname: startcloud-postgresql
+      domain: startcloud.test
+  tasks:
+    - name: "Include the postgresql role"
+      ansible.builtin.include_role:
+        name: postgresql

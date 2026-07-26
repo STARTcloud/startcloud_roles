@@ -28,7 +28,7 @@ http_access allow localnet
 http_access allow localhost
 http_access deny all
 http_port {{ proxy_port }}
- maximum_object_size 5000 MB
+maximum_object_size 5000 MB
 coredump_dir /var/spool/squid
 refresh_pattern ^ftp:           1440    20%     10080
 refresh_pattern ^gopher:        1440    0%      1440
@@ -36,4 +36,4 @@ refresh_pattern -i (/cgi-bin/|\?) 0     0%      0
 refresh_pattern .               0       20%     4320
 refresh_pattern -i \.microsoft\.com/.*\.(cab|exe|ms[i|u|f|p]|[ap]sf|wm[v|a]|dat|zip|psf) 43200 80% 129600 reload-into-ims
 refresh_pattern -i \.windowsupdate\.com/.*\.(cab|exe|ms[i|u|f|p]|[ap]sf|wm[v|a]|dat|zip|psf) 43200 80% 129600 reload-into-ims
- quick_abort_min -1
+quick_abort_min -1

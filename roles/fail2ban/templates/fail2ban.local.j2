@@ -1,0 +1,14 @@
+# Managed by the startcloud.startcloud_roles fail2ban role.
+#
+# fail2ban-server reads its own server options from the [Definition] section of
+# fail2ban.conf and then from fail2ban.local, which is read last and therefore
+# wins. The options have to live in [Definition]: the packaged fail2ban.conf
+# sets each of them explicitly there, so a value placed in [DEFAULT] would be
+# shadowed by the packaged section and would never reach the server.
+[Definition]
+loglevel = {{ fail2ban_loglevel }}
+logtarget = {{ fail2ban_logtarget }}
+socket = {{ fail2ban_socket }}
+pidfile = {{ fail2ban_pidfile }}
+dbfile = {{ fail2ban_dbfile }}
+dbpurgeage = {{ fail2ban_dbpurgeage }}

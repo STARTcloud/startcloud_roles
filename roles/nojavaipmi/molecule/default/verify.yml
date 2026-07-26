@@ -1,0 +1,95 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: apt
+
+    - name: "Asserting all Java-free IPMI console packages are installed"
+      ansible.builtin.assert:
+        that:
+          - "'ipmitool' in ansible_facts.packages"
+          - "'freeipmi-tools' in ansible_facts.packages"
+          - "'openipmi' in ansible_facts.packages"
+        fail_msg: "Expected ipmitool, freeipmi-tools and openipmi to be installed"
+        success_msg: "ipmitool, freeipmi-tools and openipmi are installed"
+
+    - name: "Stat the ipmitool binary"
+      ansible.builtin.stat:
+        path: /usr/bin/ipmitool
+      register: nojavaipmi_verify_ipmitool_bin
+
+    - name: "Asserting the ipmitool binary exists and is executable"
+      ansible.builtin.assert:
+        that:
+          - nojavaipmi_verify_ipmitool_bin.stat.exists
+          - nojavaipmi_verify_ipmitool_bin.stat.isreg
+          - nojavaipmi_verify_ipmitool_bin.stat.xusr
+        fail_msg: "/usr/bin/ipmitool is missing or not executable"
+        success_msg: "/usr/bin/ipmitool is present and executable"
+
+    - name: "Running ipmitool version query"
+      ansible.builtin.command: ipmitool -V
+      register: nojavaipmi_verify_ipmitool_version
+      changed_when: false
+      failed_when: false
+
+    - name: "Asserting ipmitool reports its version"
+      ansible.builtin.assert:
+        that:
+          - nojavaipmi_verify_ipmitool_version.rc == 0
+          - "'ipmitool version' in nojavaipmi_verify_ipmitool_version.stdout"
+        fail_msg: "ipmitool -V did not report a version: {{ nojavaipmi_verify_ipmitool_version.stdout }} {{ nojavaipmi_verify_ipmitool_version.stderr }}"
+        success_msg: "ipmitool reports {{ nojavaipmi_verify_ipmitool_version.stdout }}"
+
+    - name: "Finding freeipmi console and BMC tools"
+      ansible.builtin.find:
+        paths:
+          - /usr/sbin
+          - /usr/bin
+        patterns:
+          - "ipmiconsole"
+          - "ipmi-config"
+          - "bmc-info"
+        file_type: file
+      register: nojavaipmi_verify_freeipmi_bins
+
+    - name: "Asserting freeipmi-tools shipped its console and BMC binaries"
+      ansible.builtin.assert:
+        that:
+          - nojavaipmi_verify_freeipmi_bins.matched >= 3
+        fail_msg: >-
+          Expected ipmiconsole, ipmi-config and bmc-info from freeipmi-tools, found
+          {{ nojavaipmi_verify_freeipmi_bins.matched }}:
+          {{ nojavaipmi_verify_freeipmi_bins.files | map(attribute='path') | list }}
+        success_msg: "freeipmi-tools console and BMC binaries are present"
+
+    - name: "Finding OpenIPMI userland binaries"
+      ansible.builtin.find:
+        paths:
+          - /usr/bin
+          - /usr/sbin
+        patterns:
+          - "openipmish"
+          - "openipmicmd"
+          - "solterm"
+          - "rmcp_ping"
+        file_type: file
+      register: nojavaipmi_verify_openipmi_bins
+
+    - name: "Asserting openipmi shipped at least one userland console binary"
+      ansible.builtin.assert:
+        that:
+          - nojavaipmi_verify_openipmi_bins.matched > 0
+        fail_msg: "No OpenIPMI userland binaries found under /usr/bin or /usr/sbin"
+        success_msg: "OpenIPMI userland binaries are present"
+
+    - name: "Asserting no Java runtime was pulled in by the IPMI tooling"
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.packages.keys() | select('match', '^(default-jre|default-jdk|openjdk-.*-jre.*|openjdk-.*-jdk.*)$') | list | length == 0
+        fail_msg: "A Java runtime was installed, which defeats the purpose of the nojavaipmi role"
+        success_msg: "No Java runtime present"

@@ -2,41 +2,57 @@
 run_tasks: true
 package_server_email: "{{ email | default('support@startcloud.com') }}"
 
-## Debian package server layout (pkg_server.type: mirror / public / private).
-## Defaults reflect the production server packages.debian.startcloud.com.
+## Supplied by the provisioner play; defaulted here so the role also runs
+## standalone.
+service_home_dir: /home/startcloud
+
+## Content parent. Every published tree lives under it exactly as production
+## packages.debian.startcloud.com carries them under /local:
+## public/ mirror/ private/ clients/ ca/ pgp/ staging/.
 pkg_server_base_dir: /local
 
-## When false only the port-80 server blocks are rendered (for hosts without
-## certificates yet — production certs are issued by certbot outside this role).
-pkg_server_ssl_enabled: true
+## One path-based vhost serves the whole server: /public/, /mirror/, /private/
+## and /certs/ hang off a single server_name.
+pkg_server_domain: debian.startcloud.com
 
-## Local signed demonstration repository (debian base tasks): built from the
-## deb the debian_packager role produces, served on a localhost nginx vhost.
-pkg_server_local_dir: "{{ pkg_server_base_dir }}/startcloud"
-pkg_server_local_port: 8008
+## Hostnames the same vhost keeps answering to while consumers migrate off the
+## retired public./private./mirror. subdomains.
+pkg_server_legacy_domains: []
+
+## When false a single port-80 server block is rendered instead of the
+## redirect + TLS pair (for hosts without certificates yet — production certs
+## are issued by certbot outside this role).
+pkg_server_ssl_enabled: true
+pkg_server_ssl_certificate: "/etc/letsencrypt/live/{{ pkg_server_domain }}/fullchain.pem"
+pkg_server_ssl_certificate_key: "/etc/letsencrypt/live/{{ pkg_server_domain }}/privkey.pem"
+
+## Which trees this host provisions. The vhost renders a location for each
+## enabled tree; the signed public repository is always built.
+pkg_server_public_enabled: true
+pkg_server_mirror_enabled: false
+pkg_server_private_enabled: false
+
+## Public APT repository: built and signed from the deb the debian_packager
+## role produces, served at https://{{ pkg_server_domain }}/public/debian/.
+pkg_server_public_dir: "{{ pkg_server_base_dir }}/public/debian"
 pkg_server_deb_source: "{{ service_home_dir }}/startcloud/startcloud_0.0.1-1_amd64.deb"
 
-pkg_server_public_domains:
-  - public.debian.packages.startcloud.com
-  - public.debian.startcloud.com
-pkg_server_public_ssl_certificate: /etc/letsencrypt/live/public.debian.packages.startcloud.com/fullchain.pem
-pkg_server_public_ssl_certificate_key: /etc/letsencrypt/live/public.debian.packages.startcloud.com/privkey.pem
+## Repository indexes are rendered here and published into the served tree from
+## it, so change detection on the published files is a real checksum compare.
+pkg_server_staging_dir: "{{ pkg_server_base_dir }}/staging"
 
-pkg_server_private_domains:
-  - private.debian.startcloud.com
-  - private.debian.packages.startcloud.com
-pkg_server_private_ssl_certificate: /etc/letsencrypt/live/private.debian.packages.startcloud.com/fullchain.pem
-pkg_server_private_ssl_certificate_key: /etc/letsencrypt/live/private.debian.packages.startcloud.com/privkey.pem
+## Keyring the repository signing key is generated in and signed from.
+pkg_server_gnupg_dir: "{{ pkg_server_base_dir }}/pgp/gnupg"
 
-pkg_server_mirror_domains:
-  - mirror.debian.packages.startcloud.com
-  - mirror.debian.startcloud.com
-pkg_server_mirror_ssl_certificate: /etc/letsencrypt/live/mirror.debian.packages.startcloud.com-0001/fullchain.pem
-pkg_server_mirror_ssl_certificate_key: /etc/letsencrypt/live/mirror.debian.packages.startcloud.com-0001/privkey.pem
+## The host consumes its own published repository as the end-to-end proof that
+## it is installable; over TLS that has to go through the certificate's name.
+pkg_server_apt_source_url: >-
+  {{ ('https://' ~ pkg_server_domain) if pkg_server_ssl_enabled else 'http://127.0.0.1' }}/public/debian
 
 ## Private repository client-certificate CA
 pkg_server_ca_cn: STARTcloud Package Repository CA
 pkg_server_ca_days: 3650
+pkg_server_client_cert_days: 365
 
 ## Debian mirror synchronisation (debmirror)
 pkg_server_mirror_source_host: mirrors.ocf.berkeley.edu

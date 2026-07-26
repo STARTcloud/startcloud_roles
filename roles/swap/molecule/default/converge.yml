@@ -1,0 +1,14 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    swap_file_path: /swapfile
+    swap_file_size_mb: "128"
+    swap_swappiness: "10"
+    swap_file_state: present
+    swap_file_create_command: "dd if=/dev/zero of=/swapfile bs=1M count=128"
+    swap_test_mode: true
+  roles:
+    - role: swap

@@ -1,0 +1,76 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting the monit package is installed"
+      ansible.builtin.assert:
+        that:
+          - "'monit' in ansible_facts.packages"
+        fail_msg: "monit package is not installed"
+        success_msg: "monit package is installed"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting the monit service is running"
+      ansible.builtin.assert:
+        that:
+          - "'monit.service' in ansible_facts.services"
+          - ansible_facts.services['monit.service'].state == 'running'
+        fail_msg: "monit.service is not running"
+        success_msg: "monit.service is running"
+
+    - name: "Stating the monit control file"
+      ansible.builtin.stat:
+        path: /etc/monit/monitrc
+      register: monit_monitrc_stat
+
+    - name: "Asserting the monit control file exists"
+      ansible.builtin.assert:
+        that:
+          - monit_monitrc_stat.stat.exists
+          - monit_monitrc_stat.stat.isreg
+        fail_msg: "/etc/monit/monitrc is missing"
+        success_msg: "/etc/monit/monitrc exists"
+
+    - name: "Reading the monit control file"
+      ansible.builtin.slurp:
+        src: /etc/monit/monitrc
+      register: monit_monitrc_content
+
+    - name: "Asserting the managed nginx block was written to monitrc"
+      ansible.builtin.assert:
+        that:
+          - "'nginx BEGIN' in monit_monitrc_text"
+          - "'nginx END' in monit_monitrc_text"
+          - "'check process nginx with pidfile /var/run/nginx.pid' in monit_monitrc_lines"
+          - "'check file nginx_bin with path /usr/sbin/nginx' in monit_monitrc_lines"
+          - "'check file nginx_rc with path /etc/init.d/nginx' in monit_monitrc_lines"
+        fail_msg: "monitrc is missing the managed nginx block written by the role"
+        success_msg: "monitrc contains the managed nginx block written by the role"
+      vars:
+        monit_monitrc_text: "{{ monit_monitrc_content.content | b64decode }}"
+        monit_monitrc_lines: "{{ (monit_monitrc_content.content | b64decode).split('\n') | map('trim') | list }}"
+
+    - name: "Asserting the Monit web interface was enabled in monitrc"
+      ansible.builtin.assert:
+        that:
+          - "'set httpd port 2812 and' in monit_monitrc_lines"
+          - "'allow admin:monit' in monit_monitrc_lines"
+        fail_msg: "monitrc does not contain the uncommented web interface configuration"
+        success_msg: "monitrc contains the uncommented web interface configuration"
+      vars:
+        monit_monitrc_lines: "{{ (monit_monitrc_content.content | b64decode).split('\n') | map('trim') | list }}"
+
+    - name: "Waiting for the monit web interface on port 2812"
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 2812
+        state: started
+        timeout: 30

@@ -1,0 +1,35 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+
+    graylog_version: "6.1"
+    graylog_http_bind_address: "0.0.0.0"
+    graylog_http_port: 9000
+    graylog_http_publish_uri: "http://127.0.0.1:9000/"
+    # Graylog requires password_secret to be at least 16 characters, so the
+    # literal placeholder is repeated to a realistic length.
+    graylog_password_secret: "CHANGEMECHANGEMECHANGEMECHANGEMECHANGEMECHANGEMECHANGEMECHANGEME"
+    # SHA-256 of the literal string "admin" - the value the role documents as
+    # its override-me default. Must be valid 64-char hex or Graylog refuses to boot.
+    graylog_root_password_sha2: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918"
+    graylog_root_timezone: "UTC"
+    graylog_heap_size: "512m"
+    graylog_message_journal_dir: "/var/lib/graylog-server/journal"
+    graylog_mongodb_uri: "mongodb://127.0.0.1:27017/graylog"
+
+    graylog_mongodb_version: "7.0"
+    graylog_mongodb_bind_ip: "127.0.0.1"
+
+    graylog_opensearch_version: "2.x"
+    graylog_opensearch_heap_size: "512m"
+    graylog_opensearch_cluster_name: "graylog"
+    graylog_opensearch_network_host: "127.0.0.1"
+    # OpenSearch 2.12+ rejects weak initial admin passwords outright, so the
+    # placeholder carries the complexity the installer demands.
+    graylog_opensearch_admin_password: "CHANGEMEchangeme1!"
+    graylog_elasticsearch_hosts: "http://127.0.0.1:9200"
+  roles:
+    - role: graylog

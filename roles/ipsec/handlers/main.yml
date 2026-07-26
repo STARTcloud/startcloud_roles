@@ -1,0 +1,6 @@
+---
+- name: Restart strongswan
+  ansible.builtin.systemd:
+    name: strongswan
+    state: restarted
+    daemon_reload: true

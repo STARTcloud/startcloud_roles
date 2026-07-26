@@ -4,9 +4,75 @@ argument_specs:
     short_description: Install the Telegraf agent and deploy a performance-statistics collection configuration.
     description:
       - Installs the Telegraf metrics agent and renders a performance-statistics collection configuration on Debian-family systems.
+      - The rendered /etc/telegraf/telegraf.conf holds the agent stanza, the host input plugins and the outputs metrics are shipped to.
     author: Mark Gilbert
     options:
       run_tasks:
         type: bool
         default: true
         description: Master gate — when false the role loads its vars but runs no tasks.
+      perf_stats_hostname:
+        type: str
+        default: "{{ ansible_fqdn }}"
+        description: Hostname tag Telegraf stamps on the metrics it emits.
+      perf_stats_omit_hostname:
+        type: bool
+        default: false
+        description: Omit the hostname tag from emitted metrics.
+      perf_stats_interval:
+        type: str
+        default: "10s"
+        description: Interval at which the input plugins collect statistics.
+      perf_stats_round_interval:
+        type: bool
+        default: true
+        description: Round the collection interval to the nearest whole interval.
+      perf_stats_collection_jitter:
+        type: str
+        default: "0s"
+        description: Random jitter added to each collection interval.
+      perf_stats_flush_interval:
+        type: str
+        default: "10s"
+        description: Interval at which buffered metrics are flushed to the outputs.
+      perf_stats_flush_jitter:
+        type: str
+        default: "0s"
+        description: Random jitter added to each flush interval.
+      perf_stats_metric_batch_size:
+        type: int
+        default: 1000
+        description: Number of metrics written to an output per batch.
+      perf_stats_metric_buffer_limit:
+        type: int
+        default: 10000
+        description: Maximum number of unsent metrics buffered per output.
+      perf_stats_debug:
+        type: bool
+        default: false
+        description: Enable Telegraf debug logging.
+      perf_stats_quiet:
+        type: bool
+        default: false
+        description: Run Telegraf in quiet mode, suppressing non-error output.
+      perf_stats_logfile:
+        type: str
+        default: ""
+        description: Path to the Telegraf log file; empty logs to stderr, which systemd captures in the journal.
+      perf_stats_global_tags:
+        type: dict
+        default: {}
+        description: Tag name/value pairs stamped onto every metric via the [global_tags] stanza.
+      perf_stats_outputs:
+        type: list
+        elements: dict
+        description: >-
+          Output plugins the collected statistics are shipped to, each a mapping of type (plugin name)
+          and config (list of literal TOML lines). Telegraf refuses to start with no output, so this
+          defaults to the file output writing influx line protocol to stdout.
+      perf_stats_input_plugins:
+        type: list
+        elements: dict
+        description: >-
+          Host performance input plugins, each a mapping of plugin (plugin name), optional interval
+          and optional config (list of literal TOML lines).

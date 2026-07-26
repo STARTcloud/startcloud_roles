@@ -1,0 +1,17 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    run_tasks: true
+    settings:
+      hostname: startcloud-phpmyadmin
+      domain: molecule.local
+    service_user: startcloud
+    php_version: "8.2"
+    phpmyadmin_version: "5.2.2"
+    phpmyadmin_install_dir: /usr/share/phpmyadmin
+    phpmyadmin_php_fpm_socket: "unix:/var/run/php/php8.2-fpm.sock"
+  roles:
+    - role: phpmyadmin

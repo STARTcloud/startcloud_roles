@@ -1,0 +1,37 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    authelia_version: "4.38.17"
+    authelia_arch: "amd64"
+    authelia_checksum: ""
+    authelia_binary_path: /usr/local/bin/authelia
+    authelia_user: authelia
+    authelia_group: authelia
+    authelia_config_dir: /etc/authelia
+    authelia_data_dir: /var/lib/authelia
+    authelia_listen_address: 0.0.0.0
+    authelia_listen_port: 9091
+    authelia_log_level: info
+    # The container has no reliable time source, so skip the NTP startup probe
+    # that would otherwise exit fatal and crash-loop the unit.
+    authelia_ntp_disable_startup_check: true
+    authelia_domain: startcloud.test
+    authelia_default_redirection_url: https://www.startcloud.test
+    # Secrets: literal CHANGEME markers, padded because Authelia rejects a
+    # storage encryption key shorter than 20 characters at startup.
+    authelia_jwt_secret: CHANGEME_jwt_secret_for_molecule_only
+    authelia_session_secret: CHANGEME_session_secret_for_molecule_only
+    authelia_storage_encryption_key: CHANGEME_storage_encryption_key_for_molecule_only
+    authelia_default_policy: one_factor
+    authelia_users:
+      - username: admin
+        displayname: Administrator
+        password: "$argon2id$v=19$m=65536,t=3,p=4$BpLnfgDsc2WD8F2q$o/vzA4myCqZZ36bUGsDY//8mKUYNZZaR0t4MFFSs+iM"
+        email: admin@startcloud.test
+        groups:
+          - admins
+  roles:
+    - role: authelia

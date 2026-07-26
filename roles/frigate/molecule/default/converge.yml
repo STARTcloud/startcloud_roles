@@ -1,0 +1,59 @@
+---
+- name: "Converge"
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    ## Dependency role (startcloud.startcloud_roles.docker) settings: the nested
+    ## systemd container has no guaranteed journald socket for dockerd, and the
+    ## default address pool would collide with the outer Docker bridge network.
+    ## storage-driver vfs: the inner daemon's /var/lib/docker sits on the outer
+    ## daemon's overlayfs, and overlay2-on-overlayfs cannot register layer
+    ## whiteout entries here ("operation not permitted"). vfs has no such limit.
+    docker_daemon_options:
+      log-driver: "json-file"
+      log-level: "warn"
+      debug: false
+      storage-driver: "vfs"
+      default-address-pools:
+        - base: "172.31.0.0/16"
+          size: 28
+    docker_users: []
+    ## Stand-in image: the real ghcr.io/blakeblackshear/frigate:stable is a
+    ## multi-GB image that cannot be unpacked by the nested daemon in this test
+    ## container. A small long-running image exercises the identical role code
+    ## path (pull, ports, volumes, tmpfs, shm, restart policy, running state).
+    frigate_image: "docker.io/library/nginx:alpine"
+    frigate_container_name: frigate
+    frigate_restart_policy: unless-stopped
+    frigate_shm_size: "256MB"
+    frigate_config_dir: /opt/frigate/config
+    frigate_media_dir: /opt/frigate/media
+    frigate_web_port: 5000
+    frigate_rtsp_port: 8554
+    frigate_webrtc_port: 8555
+    ## No Coral/GPU passthrough in a container: the host devices do not exist.
+    frigate_devices: []
+    frigate_mqtt_enabled: false
+    frigate_mqtt_host: ""
+    frigate_mqtt_port: 1883
+    frigate_cameras:
+      - name: front_door
+        path: "rtsp://frigate:CHANGEME@127.0.0.1:554/stream1"
+        width: 1920
+        height: 1080
+        roles:
+          - detect
+          - record
+      ## Second camera left without width/height/roles so the template defaults
+      ## (1280x720, roles: [detect]) are exercised too.
+      - name: back_yard
+        path: "rtsp://frigate:CHANGEME@127.0.0.1:554/stream2"
+  pre_tasks:
+    - name: "Updating apt cache before the role runs"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+      changed_when: false
+  roles:
+    - role: frigate

@@ -1,0 +1,111 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    phpmyadmin_install_dir: /usr/share/phpmyadmin
+  tasks:
+    - name: Stat the phpMyAdmin install directory
+      ansible.builtin.stat:
+        path: "{{ phpmyadmin_install_dir }}"
+      register: pma_dir
+
+    - name: Assert the install directory exists and is owned by www-data
+      ansible.builtin.assert:
+        that:
+          - pma_dir.stat.exists
+          - pma_dir.stat.isdir
+          - pma_dir.stat.pw_name == 'www-data'
+          - pma_dir.stat.gr_name == 'www-data'
+          - pma_dir.stat.mode == '0755'
+        fail_msg: "phpMyAdmin install dir missing or not owned by www-data: {{ pma_dir.stat }}"
+
+    - name: Stat the extracted phpMyAdmin entrypoint
+      ansible.builtin.stat:
+        path: "{{ phpmyadmin_install_dir }}/index.php"
+      register: pma_index
+
+    - name: Stat the extracted phpMyAdmin sample config
+      ansible.builtin.stat:
+        path: "{{ phpmyadmin_install_dir }}/config.sample.inc.php"
+      register: pma_sample
+
+    - name: Assert the tarball was extracted with strip-components applied
+      ansible.builtin.assert:
+        that:
+          - pma_index.stat.exists
+          - pma_index.stat.isreg
+          - pma_sample.stat.exists
+        fail_msg: "phpMyAdmin tarball was not extracted flat into {{ phpmyadmin_install_dir }}"
+
+    - name: Stat the generated config.inc.php
+      ansible.builtin.stat:
+        path: "{{ phpmyadmin_install_dir }}/config.inc.php"
+      register: pma_config
+
+    - name: Assert config.inc.php was seeded from the sample
+      ansible.builtin.assert:
+        that:
+          - pma_config.stat.exists
+          - pma_config.stat.isreg
+        fail_msg: "config.inc.php was never created from config.sample.inc.php"
+
+    - name: Read config.inc.php
+      ansible.builtin.slurp:
+        src: "{{ phpmyadmin_install_dir }}/config.inc.php"
+      register: pma_config_raw
+
+    - name: Extract the blowfish secret line
+      ansible.builtin.set_fact:
+        pma_blowfish_lines: >-
+          {{ (pma_config_raw.content | b64decode).splitlines()
+             | select('search', 'blowfish_secret')
+             | list }}
+
+    - name: Assert exactly one blowfish secret line and it is a 32 char ascii key
+      ansible.builtin.assert:
+        that:
+          - pma_blowfish_lines | length == 1
+          - pma_blowfish_lines[0] is match("^\\$cfg\\['blowfish_secret'\\] = '[A-Za-z]{32}';$")
+        fail_msg: "blowfish secret was not replaced with a 32 char key: {{ pma_blowfish_lines }}"
+
+    - name: Stat the nginx global.d directory
+      ansible.builtin.stat:
+        path: /etc/nginx/global.d
+      register: pma_nginx_globald
+
+    - name: Read the rendered nginx snippet
+      ansible.builtin.slurp:
+        src: /etc/nginx/global.d/phpmyadmin.conf
+      register: pma_nginx_conf
+
+    - name: Assert the nginx snippet is installed and points at the configured fpm socket
+      ansible.builtin.assert:
+        that:
+          - pma_nginx_globald.stat.exists
+          - pma_nginx_globald.stat.isdir
+          - "'location /phpmyadmin' in (pma_nginx_conf.content | b64decode)"
+          - "'fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;' in (pma_nginx_conf.content | b64decode)"
+        fail_msg: "nginx snippet missing or fastcgi_pass not templated from phpmyadmin_php_fpm_socket"
+
+    - name: Collect service facts
+      ansible.builtin.service_facts:
+
+    - name: Assert nginx survived the role handler restart
+      ansible.builtin.assert:
+        that:
+          - "'nginx.service' in ansible_facts.services"
+          - ansible_facts.services['nginx.service'].state == 'running'
+        fail_msg: "nginx is not running after the role restarted it"
+
+    - name: Confirm the www-data account the role chowns to exists
+      ansible.builtin.getent:
+        database: passwd
+        key: www-data
+
+    - name: Assert www-data resolves
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.getent_passwd['www-data'] is defined
+        fail_msg: "www-data account missing"

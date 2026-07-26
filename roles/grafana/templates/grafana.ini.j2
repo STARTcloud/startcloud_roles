@@ -1,17 +1,14 @@
-# grafana.ini.j2
+{{ ansible_managed | comment }}
+# Grafana configuration rendered by the startcloud.startcloud_roles.grafana role.
+# Only the keys set here override Grafana's shipped defaults.ini.
 
-# line 35 : specify protocol ⇒ possible to change to [https], [h2], [socket]
-protocol = http
-
-# line 38 : IP address Grafana listens ⇒ listens [0.0.0.0] with the default below
-;http_addr =
-
-# line 41 : specify port ⇒ possible to change to other port
-;http_port = 3000
-
-# line 44 : specify domain name ⇒ possible to change to your domain name
-;domain = localhost
-
-# line 67 : specify your certificate if you set [https] or [h2] for protocol
-cert_file = /etc/letsencrypt/live/dlp.srv.world/fullchain.pem
-cert_key = /etc/letsencrypt/live/dlp.srv.world/privkey.pem
+[server]
+# Protocol Grafana serves with: http, https, h2 or socket.
+protocol = {{ grafana_protocol }}
+# Address Grafana binds to; empty binds every interface.
+http_addr = {{ grafana_http_addr }}
+http_port = {{ grafana_http_port }}
+domain = {{ grafana_domain }}
+# Read only when protocol is https or h2.
+cert_file = {{ grafana_cert_file }}
+cert_key = {{ grafana_cert_key }}

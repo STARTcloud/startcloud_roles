@@ -1,0 +1,27 @@
+---
+driver:
+  name: docker
+platforms:
+  - name: startcloud-hostname-debian12
+    image: geerlingguy/docker-debian12-ansible:latest
+    # Deliberately NOT booting systemd here. ansible.builtin.hostname selects
+    # SystemdStrategy whenever systemd is managing the host, and
+    # `hostnamectl set-hostname` rewrites /etc/hostname atomically (tmpfile +
+    # rename), which is impossible against docker's bind-mounted /etc/hostname
+    # ("Device or resource busy"). With no systemd the module falls back to the
+    # file strategy, which writes /etc/hostname in place and calls the hostname
+    # command - the same end state this role produces on a real VM. The role
+    # itself manages no services, so systemd buys this scenario nothing.
+    command: sleep infinity
+    # privileged is required: sethostname() needs CAP_SYS_ADMIN.
+    # cgroupns_mode host keeps /proc/self/cgroup docker-shaped so
+    # community.docker.current_container_facts still detects the container.
+    cgroupns_mode: host
+    privileged: true
+    pre_build_image: true
+provisioner:
+  name: ansible
+  env:
+    ANSIBLE_ROLES_PATH: "${MOLECULE_PROJECT_DIRECTORY}/.."
+verifier:
+  name: ansible

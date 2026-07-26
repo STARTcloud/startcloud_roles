@@ -23,11 +23,6 @@
             cache_valid_time: 3600
             update_cache: true
 
-        - name: "Upgrading all apt packages"
-          ansible.builtin.apt:
-            upgrade: dist
-            update_cache: true
-
         - name: "Adding Additional Dependencies"
           ansible.builtin.apt:
             name: "{{ asterisk_packages }}"
@@ -46,12 +41,16 @@
         name: "{{ asterisk_group }}"
         state: present
 
+    ## password_hash('sha512') salts randomly, so the hash differs on every
+    ## run and the module reports changed forever. The password only has to be
+    ## seeded when the account is created, so compare nothing on later runs.
     - name: "Adding the user asterisk"
       ansible.builtin.user:
         comment: Asterisk SIP User
         shell: /bin/bash
         name: "{{ asterisk_user }}"
         password: "{{ asterisk_user_pass | password_hash('sha512') }}"
+        update_password: on_create
         groups:
           - "{{ asterisk_group }}"
           - audio
@@ -113,12 +112,37 @@
 - name: "Asterisk Final Configuration"
   when: run_tasks and (ansible_os_family == 'Debian')
   block:
-    - name: "Changing file ownership, group and permissions"
+    ## Only the directories themselves carry a mode. Recursing 0755 into these
+    ## trees is what made the role non-convergent: the daemon recreates its
+    ## control socket, pid file, astdb and log files on every start with their
+    ## own modes, and the config copy further down deliberately lands 0644
+    ## files in /etc/asterisk - a recursive chmod flips all of that back on
+    ## every run, and the copy flips it again on the next one.
+    - name: "Creating Asterisk runtime directories"
       ansible.builtin.file:
         path: "{{ item }}"
         owner: "{{ asterisk_user }}"
         group: "{{ asterisk_group }}"
         mode: "0755"
+        state: directory
+      loop:
+        - "{{ asterisk_lib_dir }}"
+        - "{{ asterisk_log_dir }}"
+        - "{{ asterisk_run_dir }}"
+        - "{{ asterisk_spool_dir }}"
+        - "{{ asterisk_lib64_dir }}"
+        - "{{ asterisk_user_lib_dir }}"
+        - "{{ asterisk_config_dir }}"
+
+    ## Ownership only, and only on the pass that actually builds Asterisk:
+    ## `make install` lays these trees down as root, so they have to be handed
+    ## to the asterisk account once. Everything the daemon writes afterwards it
+    ## writes as asterisk, so there is nothing left for a rerun to repair.
+    - name: "Changing file ownership, group and permissions"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        owner: "{{ asterisk_user }}"
+        group: "{{ asterisk_group }}"
         state: directory
         recurse: true
       loop:
@@ -129,6 +153,7 @@
         - "{{ asterisk_lib64_dir }}"
         - "{{ asterisk_user_lib_dir }}"
         - "{{ asterisk_config_dir }}"
+      when: not asterisk_bin_path.stat.exists
 
     - name: "Setting Asterisk ACLs"
       ansible.builtin.file:
@@ -143,18 +168,16 @@
         path: /etc/init.d/asterisk
         state: absent
 
+    ## Every task that writes a file Asterisk reads at startup notifies the
+    ## "Restarting asterisk" handler, and the daemon is only started once the
+    ## whole config set is on disk. Starting it before the config deploy left
+    ## the daemon running against whatever `make config` shipped.
     - name: "Copying Asterisk Templates"
       ansible.builtin.template:
         src: asterisk.service.j2
         dest: /etc/systemd/system/asterisk.service
         mode: "0644"
-
-    - name: "Restarting Asterisk server"
-      ansible.builtin.systemd_service:
-        name: asterisk.service
-        state: restarted
-        enabled: true
-        daemon_reload: true
+      notify: "Restarting asterisk"
 
     - name: "Copying Asterisk configuration to remote"
       ansible.builtin.copy:
@@ -163,6 +186,7 @@
         owner: "{{ asterisk_user }}"
         group: "{{ asterisk_group }}"
         mode: "0644"
+      notify: "Restarting asterisk"
 
     - name: "Copying Config files to Asterisk Box"
       ansible.builtin.template:
@@ -171,27 +195,41 @@
         mode: "+x"
         owner: "{{ asterisk_user }}"
         group: "{{ asterisk_group }}"
+      notify: "Restarting asterisk"
 
     - name: "Loading Asterisk Security module"
       ansible.builtin.lineinfile:
         path: "{{ asterisk_config_dir }}/modules.conf"
         search_string: "load => res_security_log.so"
         line: load => res_security_log.so
+      notify: "Restarting asterisk"
 
     - name: "Enabling Asterisk Security logs"
       ansible.builtin.lineinfile:
         path: "{{ asterisk_config_dir }}/logger.conf"
         search_string: "security = security"
         line: security = security
+      notify: "Restarting asterisk"
 
+    - name: "Starting and Enabling Asterisk server"
+      ansible.builtin.systemd_service:
+        name: asterisk.service
+        state: started
+        enabled: true
+        daemon_reload: true
+
+    ## fail2ban only has to be bounced when this jail actually changes, so the
+    ## restart hangs off the template. An unconditional `state: restarted` here
+    ## reported changed on every single run and could never converge.
     - name: "Copying jail.local template"
       ansible.builtin.template:
         src: asterisk.jail.local.j2
         dest: /etc/fail2ban/jail.d/asterisk.conf
         mode: "0644"
+      notify: "Restarting fail2ban"
 
     - name: "Starting and Enabling fail2ban"
-      ansible.builtin.systemd:
+      ansible.builtin.systemd_service:
         name: fail2ban
-        state: restarted
+        state: started
         enabled: true

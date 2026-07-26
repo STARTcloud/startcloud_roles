@@ -10,14 +10,12 @@
     group: "{{ mongodb_user }}"
     state: present
 
-# Workaround because default(omit) is not working. At least in Ansible 2.8.
-
 - name: "Setting mongodb gid"
   ansible.builtin.group:
     name: "{{ mongodb_user }}"
     gid: "{{ mongodb_gid }}"
     state: present
-  when: mongodb_gid is defined
+  when: mongodb_gid is not none
 
 - name: "Setting mongodb uid"
   ansible.builtin.user:
@@ -25,7 +23,7 @@
     uid: "{{ mongodb_uid }}"
     group: "{{ mongodb_user }}"
     state: present
-  when: mongodb_uid is defined
+  when: mongodb_uid is not none
 
 - name: "Creating keyFile"
   ansible.builtin.copy:

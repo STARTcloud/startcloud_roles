@@ -16,12 +16,17 @@ packages:
 
 extra_repos:
   - name: "startcloud"
-    gpg_key_url: "https://public.debian.packages.startcloud.com/debian/startcloud-archive-keyring.asc"
+    ## Short-path URL scheme (2026-07) — debian.startcloud.com serves
+    ## public/private/mirror by path. The legacy
+    ## *.debian.packages.startcloud.com hosts stay online until ~2027-07.
+    gpg_key_url: "https://debian.startcloud.com/public/debian/startcloud-archive-keyring.asc"
     gpg_keyring_path: "/etc/apt/keyrings/startcloud-archive-keyring.gpg"
     repo: "deb [arch={{ deb_architecture.stdout }} signed-by=/etc/apt/keyrings/startcloud-archive-keyring.gpg]
-      https://public.debian.packages.startcloud.com/debian/ {{ ansible_distribution_release }} main"
+      https://debian.startcloud.com/public/debian/ {{ ansible_distribution_release }} main"
     needs_dearmor: true
-    ## apt_repository used to auto-derive this filename from the repo URL; boxes
-    ## built before the filename was pinned to startcloud.list still carry it.
+    filename: "debian-startcloud"
+    ## Each URL-scheme migration leaves the previous pinned filename behind;
+    ## boxes provisioned under the old schemes still carry these.
     stale_source_files:
       - /etc/apt/sources.list.d/public_debian_packages_startcloud_com_debian.list
+      - /etc/apt/sources.list.d/startcloud.list

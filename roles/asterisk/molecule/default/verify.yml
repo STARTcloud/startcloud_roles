@@ -1,0 +1,187 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Gather package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Assert the Asterisk build dependencies from vars/debian12.yml are installed
+      ansible.builtin.assert:
+        that:
+          - "'build-essential' in ansible_facts.packages"
+          - "'libjansson-dev' in ansible_facts.packages"
+          - "'libsrtp2-dev' in ansible_facts.packages"
+          - "'libedit-dev' in ansible_facts.packages"
+          - "'libxml2-dev' in ansible_facts.packages"
+        fail_msg: "The asterisk_packages build dependencies are not all installed"
+        success_msg: "The asterisk_packages build dependencies are installed"
+
+    - name: Look up the asterisk account the role creates
+      ansible.builtin.getent:
+        database: passwd
+        key: asterisk
+
+    - name: Assert the asterisk account exists with a bash shell
+      ansible.builtin.assert:
+        that:
+          - "'asterisk' in ansible_facts.getent_passwd"
+          - ansible_facts.getent_passwd['asterisk'][5] == '/bin/bash'
+        fail_msg: "The asterisk user does not exist with /bin/bash as its shell"
+        success_msg: "The asterisk user exists with /bin/bash as its shell"
+
+    - name: Look up the supplementary groups the role adds the asterisk user to
+      ansible.builtin.getent:
+        database: group
+
+    - name: Assert asterisk is a member of the audio and dialout groups
+      ansible.builtin.assert:
+        that:
+          - "'asterisk' in ansible_facts.getent_group"
+          - "'asterisk' in ansible_facts.getent_group['audio'][2].split(',')"
+          - "'asterisk' in ansible_facts.getent_group['dialout'][2].split(',')"
+        fail_msg: "asterisk is not a member of both the audio and dialout groups"
+        success_msg: "asterisk is a member of the audio and dialout groups"
+
+    - name: Stat the Asterisk binary that `make install` puts in place
+      ansible.builtin.stat:
+        path: /usr/sbin/asterisk
+      register: asterisk_binary
+
+    - name: Assert the Asterisk binary was built and installed
+      ansible.builtin.assert:
+        that:
+          - asterisk_binary.stat.exists
+          - asterisk_binary.stat.isreg
+          - asterisk_binary.stat.executable
+        fail_msg: "/usr/sbin/asterisk is not an installed executable"
+        success_msg: "/usr/sbin/asterisk is an installed executable"
+
+    - name: Stat the directories the role creates and chowns to the asterisk user
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: asterisk_dirs
+      loop:
+        - /data
+        - /usr/src/asterisk
+        - /etc/asterisk
+        - /var/lib/asterisk
+        - /var/log/asterisk
+        - /var/spool/asterisk
+
+    - name: Assert every Asterisk directory is an asterisk-owned directory
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.isdir
+          - item.stat.pw_name == 'asterisk'
+        fail_msg: "{{ item.item }} is not an asterisk-owned directory"
+        success_msg: "{{ item.item }} is an asterisk-owned directory"
+      loop: "{{ asterisk_dirs.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Stat the init.d script the role explicitly removes after `make config`
+      ansible.builtin.stat:
+        path: /etc/init.d/asterisk
+      register: asterisk_initd
+
+    - name: Assert the SysV init script was removed in favour of the systemd unit
+      ansible.builtin.assert:
+        that:
+          - not asterisk_initd.stat.exists
+        fail_msg: "/etc/init.d/asterisk still exists"
+        success_msg: "/etc/init.d/asterisk was removed"
+
+    - name: Read the systemd unit rendered from asterisk.service.j2
+      ansible.builtin.slurp:
+        src: /etc/systemd/system/asterisk.service
+      register: asterisk_unit
+
+    - name: Assert the unit runs the daemon as asterisk against the configured config dir
+      ansible.builtin.assert:
+        that:
+          - "'ExecStart=/usr/sbin/asterisk -mqf -C /etc/asterisk/asterisk.conf' in (asterisk_unit.content | b64decode)"
+          - "'User=asterisk' in (asterisk_unit.content | b64decode)"
+          - "'WorkingDirectory=/var/lib/asterisk' in (asterisk_unit.content | b64decode)"
+        fail_msg: "asterisk.service was not rendered with the expected ExecStart/User/WorkingDirectory"
+        success_msg: "asterisk.service was rendered with the expected ExecStart/User/WorkingDirectory"
+
+    - name: Read /etc/default/asterisk rendered from sysconfig.sh.j2
+      ansible.builtin.slurp:
+        src: /etc/default/asterisk
+      register: asterisk_sysconfig
+
+    - name: Assert the sysconfig file names the asterisk user and group
+      ansible.builtin.assert:
+        that:
+          - "'AST_USER=\"asterisk\"' in (asterisk_sysconfig.content | b64decode)"
+          - "'AST_GROUP=\"asterisk\"' in (asterisk_sysconfig.content | b64decode)"
+        fail_msg: "/etc/default/asterisk does not set AST_USER/AST_GROUP to asterisk"
+        success_msg: "/etc/default/asterisk sets AST_USER/AST_GROUP to asterisk"
+
+    - name: Read the modules.conf the role copies and then edits
+      ansible.builtin.slurp:
+        src: /etc/asterisk/modules.conf
+      register: asterisk_modules_conf
+
+    - name: Assert the security log module is loaded from modules.conf
+      ansible.builtin.assert:
+        that:
+          - "'load => res_security_log.so' in (asterisk_modules_conf.content | b64decode)"
+          - "'noload => chan_sip.so' in (asterisk_modules_conf.content | b64decode)"
+        fail_msg: "/etc/asterisk/modules.conf is missing the res_security_log.so load line"
+        success_msg: "/etc/asterisk/modules.conf loads res_security_log.so"
+
+    - name: Read the logger.conf the role copies and then edits
+      ansible.builtin.slurp:
+        src: /etc/asterisk/logger.conf
+      register: asterisk_logger_conf
+
+    - name: Assert the security log channel is enabled in logger.conf
+      ansible.builtin.assert:
+        that:
+          - "'security = security' in (asterisk_logger_conf.content | b64decode)"
+        fail_msg: "/etc/asterisk/logger.conf does not enable the security log channel"
+        success_msg: "/etc/asterisk/logger.conf enables the security log channel"
+
+    - name: Read the fail2ban jail rendered from asterisk.jail.local.j2
+      ansible.builtin.slurp:
+        src: /etc/fail2ban/jail.d/asterisk.conf
+      register: asterisk_jail
+
+    - name: Assert the fail2ban jail carries the Asterisk ports, log path and ban policy
+      ansible.builtin.assert:
+        that:
+          - "'[asterisk]' in (asterisk_jail.content | b64decode)"
+          - "'enabled = true' in (asterisk_jail.content | b64decode)"
+          - "'5060,5062,5061,5038,8088,8089,5080' in (asterisk_jail.content | b64decode)"
+          - "'logpath = /var/log/asterisk/security' in (asterisk_jail.content | b64decode)"
+          - "'maxretry = 10' in (asterisk_jail.content | b64decode)"
+          - "'bantime = 8h' in (asterisk_jail.content | b64decode)"
+        fail_msg: "/etc/fail2ban/jail.d/asterisk.conf was not rendered with the expected jail settings"
+        success_msg: "/etc/fail2ban/jail.d/asterisk.conf carries the expected jail settings"
+
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Assert asterisk.service is installed and enabled and fail2ban is running
+      ansible.builtin.assert:
+        that:
+          - "'asterisk.service' in ansible_facts.services"
+          - ansible_facts.services['asterisk.service'].status == 'enabled'
+          - "'fail2ban.service' in ansible_facts.services"
+          - ansible_facts.services['fail2ban.service'].state == 'running'
+          - ansible_facts.services['fail2ban.service'].status == 'enabled'
+        fail_msg: >-
+          asterisk.service is not enabled or fail2ban.service is not running and enabled:
+          asterisk={{ ansible_facts.services['asterisk.service'] | default('missing') }}
+          fail2ban={{ ansible_facts.services['fail2ban.service'] | default('missing') }}
+        success_msg: "asterisk.service is enabled and fail2ban.service is running and enabled"
+
+    - name: Wait for the Asterisk control socket the running daemon creates
+      ansible.builtin.wait_for:
+        path: /var/run/asterisk/asterisk.ctl
+        timeout: 30

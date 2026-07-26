@@ -107,3 +107,32 @@ argument_specs:
         type: list
         elements: str
         description: Service subdomain labels added as certificate subjectAltNames.
+      ssl_appliance_cert_dir:
+        type: str
+        default: /conf/acme
+        description: Certificate directory on FreeBSD firewall appliances (the path gbauthd and the webConfigurator consume).
+      ssl_appliance_tools_dir:
+        type: str
+        default: /conf/ansible/tools
+        description: Directory for the XML configuration helper scripts on appliances.
+      ssl_appliance_keytool:
+        type: str
+        default: /usr/local/openjdk8-jre/bin/keytool
+        description: keytool path on the appliance, used for the JKS fan-out (the target Python cannot run the java_keystore module).
+      ssl_acme_cleanup:
+        type: bool
+        default: false
+        description: Strip the ACME package configuration and cron entries from an appliance when Let's Encrypt is not in use.
+      ssl_acme_account_name:
+        type: str
+        description: ACME account display name written to the appliance acme package configuration.
+      ssl_acme_account_email:
+        type: str
+        description: ACME account email written to the appliance acme package configuration.
+      ssl_acme_account_key:
+        type: str
+        description: Base64 ACME account key (supply via vault) for the appliance acme package.
+      ssl_acme_server:
+        type: str
+        default: letsencrypt-production-2
+        description: ACME server profile name used by the appliance acme package.

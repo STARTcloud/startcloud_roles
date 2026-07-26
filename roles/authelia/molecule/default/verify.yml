@@ -1,0 +1,142 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  tasks:
+    - name: Look up the authelia system user
+      ansible.builtin.getent:
+        database: passwd
+        key: authelia
+
+    - name: Assert the authelia system account exists with a nologin shell
+      ansible.builtin.assert:
+        that:
+          - "'authelia' in ansible_facts.getent_passwd"
+          - ansible_facts.getent_passwd['authelia'][5] == '/usr/sbin/nologin'
+        fail_msg: "authelia system account missing or has a login shell"
+        success_msg: "authelia system account exists with /usr/sbin/nologin"
+
+    - name: Stat the installed authelia binary
+      ansible.builtin.stat:
+        path: /usr/local/bin/authelia
+      register: authelia_binary
+
+    - name: Assert the authelia binary was installed and is executable
+      ansible.builtin.assert:
+        that:
+          - authelia_binary.stat.exists
+          - authelia_binary.stat.executable
+          - authelia_binary.stat.pw_name == 'root'
+        fail_msg: "/usr/local/bin/authelia is missing, not executable, or not root-owned"
+        success_msg: "/usr/local/bin/authelia is installed, executable and root-owned"
+
+    - name: Stat the rendered configuration file
+      ansible.builtin.stat:
+        path: /etc/authelia/configuration.yml
+      register: authelia_config
+
+    - name: Assert the configuration file is owned by authelia and mode 0640
+      ansible.builtin.assert:
+        that:
+          - authelia_config.stat.exists
+          - authelia_config.stat.pw_name == 'authelia'
+          - authelia_config.stat.gr_name == 'authelia'
+          - authelia_config.stat.mode == '0640'
+        fail_msg: "/etc/authelia/configuration.yml missing or has wrong ownership/mode"
+        success_msg: "/etc/authelia/configuration.yml is authelia:authelia 0640"
+
+    - name: Read the rendered configuration file
+      ansible.builtin.slurp:
+        src: /etc/authelia/configuration.yml
+      register: authelia_config_raw
+
+    - name: Assert the configuration carries the converge listener, domain and storage paths
+      ansible.builtin.assert:
+        that:
+          - "'tcp://0.0.0.0:9091' in authelia_config_content"
+          - "'domain: \"startcloud.test\"' in authelia_config_content"
+          - "'/var/lib/authelia/db.sqlite3' in authelia_config_content"
+          - "'/etc/authelia/users_database.yml' in authelia_config_content"
+          - "'address: \"udp://time.cloudflare.com:123\"' in authelia_config_content"
+          - "'disable_startup_check: true' in authelia_config_content"
+        fail_msg: "configuration.yml does not reflect the converge variables"
+        success_msg: "configuration.yml reflects the converge listener, domain, paths and NTP startup-check override"
+      vars:
+        authelia_config_content: "{{ authelia_config_raw.content | b64decode }}"
+
+    - name: Read the rendered users database
+      ansible.builtin.slurp:
+        src: /etc/authelia/users_database.yml
+      register: authelia_users_raw
+
+    - name: Assert the admin user was rendered with its argon2id digest
+      ansible.builtin.assert:
+        that:
+          - "'admin:' in authelia_users_content"
+          - "'$argon2id$v=19$' in authelia_users_content"
+          - "'admin@startcloud.test' in authelia_users_content"
+        fail_msg: "users_database.yml is missing the admin entry or its password digest"
+        success_msg: "users_database.yml contains the admin entry with an argon2id digest"
+      vars:
+        authelia_users_content: "{{ authelia_users_raw.content | b64decode }}"
+
+    - name: Validate the rendered configuration with the installed binary
+      ansible.builtin.command: /usr/local/bin/authelia validate-config --config /etc/authelia/configuration.yml
+      register: authelia_validate
+      changed_when: false
+
+    - name: Assert Authelia accepts the rendered configuration
+      ansible.builtin.assert:
+        that:
+          - "'without errors' in authelia_validate.stdout"
+        fail_msg: "authelia validate-config rejected the rendered configuration"
+        success_msg: "authelia validate-config parsed and loaded the configuration without errors"
+
+    # The unit uses Restart=always/RestartSec=10 and Authelia runs an NTP
+    # startup check that can fail on a container's first boot, so wait for the
+    # listener to come up before sampling the service state.
+    - name: Wait for the Authelia listener to accept connections
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 9091
+        state: started
+        timeout: 30
+
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Assert the authelia service is enabled and running
+      ansible.builtin.assert:
+        that:
+          - "'authelia.service' in ansible_facts.services"
+          - ansible_facts.services['authelia.service'].state == 'running'
+          - ansible_facts.services['authelia.service'].status == 'enabled'
+        fail_msg: "authelia.service is not running and enabled"
+        success_msg: "authelia.service is running and enabled"
+
+    - name: Query the Authelia health endpoint
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:9091/api/health"
+        status_code: 200
+      register: authelia_health
+
+    - name: Assert the Authelia health endpoint reports OK
+      ansible.builtin.assert:
+        that:
+          - authelia_health.status == 200
+        fail_msg: "Authelia health endpoint did not return 200"
+        success_msg: "Authelia health endpoint returned 200"
+
+    - name: Stat the SQLite storage created by Authelia at startup
+      ansible.builtin.stat:
+        path: /var/lib/authelia/db.sqlite3
+      register: authelia_db
+
+    - name: Assert the SQLite storage was created under the data directory
+      ansible.builtin.assert:
+        that:
+          - authelia_db.stat.exists
+          - authelia_db.stat.pw_name == 'authelia'
+          - authelia_db.stat.size > 0
+        fail_msg: "/var/lib/authelia/db.sqlite3 missing, empty, or not owned by authelia"
+        success_msg: "/var/lib/authelia/db.sqlite3 exists, is non-empty and owned by authelia"

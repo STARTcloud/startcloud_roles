@@ -1,0 +1,55 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  tasks:
+    - name: Gather installed package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Assert the configured ifconfig_me packages were installed
+      ansible.builtin.assert:
+        that:
+          - "'curl' in ansible_facts.packages"
+          - "'ca-certificates' in ansible_facts.packages"
+        fail_msg: "curl and/or ca-certificates are not installed"
+        success_msg: "curl and ca-certificates are installed"
+
+    - name: Stat the curl executable
+      ansible.builtin.stat:
+        path: /usr/bin/curl
+      register: ifconfig_me_curl_binary
+
+    - name: Assert the curl executable is present and executable
+      ansible.builtin.assert:
+        that:
+          - ifconfig_me_curl_binary.stat.exists
+          - ifconfig_me_curl_binary.stat.executable
+        fail_msg: "/usr/bin/curl is missing or not executable"
+        success_msg: "/usr/bin/curl is present and executable"
+
+    - name: Run the installed curl to confirm it is functional # noqa: command-instead-of-module
+      ansible.builtin.command: /usr/bin/curl --version
+      register: ifconfig_me_curl_version
+      changed_when: false
+
+    - name: Assert curl reports a working libcurl build
+      ansible.builtin.assert:
+        that:
+          - ifconfig_me_curl_version.rc == 0
+          - "'libcurl' in ifconfig_me_curl_version.stdout"
+        fail_msg: "curl did not report a usable libcurl build"
+        success_msg: "curl is functional: {{ ifconfig_me_curl_version.stdout_lines[0] }}"
+
+    - name: Stat the CA certificate bundle installed alongside curl
+      ansible.builtin.stat:
+        path: /etc/ssl/certs/ca-certificates.crt
+      register: ifconfig_me_ca_bundle
+
+    - name: Assert the CA bundle needed for HTTPS public-IP lookups exists
+      ansible.builtin.assert:
+        that:
+          - ifconfig_me_ca_bundle.stat.exists
+          - ifconfig_me_ca_bundle.stat.size > 0
+        fail_msg: "/etc/ssl/certs/ca-certificates.crt is missing or empty"
+        success_msg: "/etc/ssl/certs/ca-certificates.crt is present and populated"

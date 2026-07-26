@@ -1,0 +1,20 @@
+---
+- name: "Converge"
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    ## state: present exercises the full role path (package install, mount point
+    ## creation, fstab entry) without requiring a reachable NFS server, which a
+    ## single-container scenario cannot provide.
+    nfs_client_mounts:
+      - src: "nfs-server.example.com:/export/share"
+        path: "/local/share"
+        state: present
+      - src: "nfs-server.example.com:/export/backups"
+        path: "/local/backups"
+        fstype: "nfs4"
+        opts: "rw,noatime,_netdev"
+        state: present
+  roles:
+    - role: nfs_client

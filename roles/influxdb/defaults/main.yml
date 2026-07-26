@@ -12,8 +12,11 @@ influxdb_package_state: "present"
 influxdb_http_bind_address: "0.0.0.0"
 influxdb_http_port: 8086
 
-# On-disk locations
+# On-disk locations. influxd 2.x only reads the configuration file named by
+# INFLUXD_CONFIG_PATH, which the role pins to influxdb_config_path with a
+# systemd drop-in so the templated file is guaranteed to be the consumed one.
 influxdb_config_dir: "/etc/influxdb"
+influxdb_config_path: "{{ influxdb_config_dir }}/config.toml"
 influxdb_data_dir: "/var/lib/influxdb"
 influxdb_bolt_path: "{{ influxdb_data_dir }}/influxd.bolt"
 influxdb_engine_path: "{{ influxdb_data_dir }}/engine"

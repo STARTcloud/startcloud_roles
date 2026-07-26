@@ -107,3 +107,17 @@
             state: "started"
             enabled: true
             daemon_reload: true
+
+        # Restart=always hides a fatal startup (a failed NTP probe, a rejected
+        # configuration) behind a systemd unit that never reports failure, so
+        # apply the pending restart and prove the listener actually answers
+        # rather than leaving the role green over a crash loop.
+        - name: "Applying any pending Authelia restart before the health gate"
+          ansible.builtin.meta: "flush_handlers"
+
+        - name: "Waiting for the Authelia listener to accept connections"
+          ansible.builtin.wait_for:
+            host: "{{ '127.0.0.1' if authelia_listen_address in ['0.0.0.0', '::'] else authelia_listen_address }}"
+            port: "{{ authelia_listen_port }}"
+            state: "started"
+            timeout: 60

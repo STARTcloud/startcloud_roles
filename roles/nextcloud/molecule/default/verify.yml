@@ -1,0 +1,107 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  vars:
+    nextcloud_webroot: /var/www/nextcloud
+    nextcloud_data_dir: /var/www/nextcloud/data
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting the Nextcloud stack packages are installed"
+      ansible.builtin.assert:
+        that:
+          - "'nginx' in ansible_facts.packages"
+          - "'mariadb-server' in ansible_facts.packages"
+          - "'unzip' in ansible_facts.packages"
+          - "'php-fpm' in ansible_facts.packages"
+          - "'php-gd' in ansible_facts.packages"
+          - "'php-mysql' in ansible_facts.packages"
+        fail_msg: "Expected Nextcloud system packages were not installed"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting nginx and mariadb are running"
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['nginx.service'].state == 'running'
+          - ansible_facts.services['mariadb.service'].state == 'running'
+        fail_msg: "nginx and/or mariadb are not running"
+
+    - name: "Stat the Nextcloud occ entrypoint"
+      ansible.builtin.stat:
+        path: "{{ nextcloud_webroot }}/occ"
+      register: nextcloud_occ_stat
+
+    - name: "Stat the Nextcloud data directory"
+      ansible.builtin.stat:
+        path: "{{ nextcloud_data_dir }}"
+      register: nextcloud_data_stat
+
+    - name: "Asserting the Nextcloud release was extracted with correct ownership"
+      ansible.builtin.assert:
+        that:
+          - nextcloud_occ_stat.stat.exists
+          - nextcloud_occ_stat.stat.pw_name == 'www-data'
+          - nextcloud_data_stat.stat.exists
+          - nextcloud_data_stat.stat.isdir
+          - nextcloud_data_stat.stat.pw_name == 'www-data'
+        fail_msg: "Nextcloud webroot/data layout is not as expected"
+
+    - name: "Reading the generated Nextcloud config.php"
+      ansible.builtin.slurp:
+        src: "{{ nextcloud_webroot }}/config/config.php"
+      register: nextcloud_config_php
+
+    - name: "Asserting occ maintenance:install wrote a usable config"
+      ansible.builtin.assert:
+        that:
+          - "'nextcloud' in (nextcloud_config_php.content | b64decode)"
+          - "'mysql' in (nextcloud_config_php.content | b64decode)"
+          - "'nextcloud.startcloud.test' in (nextcloud_config_php.content | b64decode)"
+          - "'installed' in (nextcloud_config_php.content | b64decode)"
+        fail_msg: "config.php is missing the database / trusted_domains settings occ should have written"
+
+    - name: "Reading the rendered nginx virtual host"
+      ansible.builtin.slurp:
+        src: /etc/nginx/sites-available/nextcloud.conf
+      register: nextcloud_vhost
+
+    - name: "Stat the enabled nginx virtual host symlink"
+      ansible.builtin.stat:
+        path: /etc/nginx/sites-enabled/nextcloud.conf
+      register: nextcloud_vhost_link
+
+    - name: "Asserting the nginx virtual host is rendered and enabled"
+      ansible.builtin.assert:
+        that:
+          - "'server_name nextcloud.startcloud.test;' in (nextcloud_vhost.content | b64decode)"
+          - "'root /var/www/nextcloud;' in (nextcloud_vhost.content | b64decode)"
+          - "'server unix:/run/php/php8.2-fpm.sock;' in (nextcloud_vhost.content | b64decode)"
+          - nextcloud_vhost_link.stat.exists
+          - nextcloud_vhost_link.stat.islnk
+          - nextcloud_vhost_link.stat.lnk_source == '/etc/nginx/sites-available/nextcloud.conf'
+        fail_msg: "nginx vhost was not rendered or not enabled"
+
+    - name: "Asserting the Nextcloud database user can reach its database"
+      ansible.builtin.command: >
+        mysql -unextcloud -pCHANGEME -e "SELECT COUNT(*) FROM information_schema.tables
+        WHERE table_schema='nextcloud'" nextcloud
+      register: nextcloud_db_check
+      changed_when: false
+
+    - name: "Asserting the Nextcloud schema was created"
+      ansible.builtin.assert:
+        that:
+          - nextcloud_db_check.rc == 0
+          - (nextcloud_db_check.stdout_lines | last | int) > 0
+        fail_msg: "Nextcloud database schema is empty — occ maintenance:install did not populate it"
+
+    - name: "Asserting nginx is listening on port 80"
+      ansible.builtin.wait_for:
+        port: 80
+        host: 127.0.0.1
+        timeout: 30

@@ -1,0 +1,25 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    settings:
+      hostname: nextcloud
+      domain: startcloud.test
+    run_tasks: true
+    nextcloud_version: "31"
+    nextcloud_webroot: /var/www/nextcloud
+    nextcloud_data_dir: /var/www/nextcloud/data
+    nextcloud_web_user: www-data
+    nextcloud_web_group: www-data
+    nextcloud_server_name: "{{ settings.hostname }}.{{ settings.domain }}"
+    nextcloud_php_bin: php
+    nextcloud_db_type: mysql
+    nextcloud_db_host: localhost
+    nextcloud_db_name: nextcloud
+    nextcloud_db_user: nextcloud
+    nextcloud_db_password: CHANGEME
+    nextcloud_admin_user: admin
+    nextcloud_admin_password: CHANGEME
+  roles:
+    - role: nextcloud

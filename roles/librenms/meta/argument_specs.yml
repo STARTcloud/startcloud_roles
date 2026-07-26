@@ -31,6 +31,10 @@ argument_specs:
         type: str
         default: "librenms"
         description: System group that owns the LibreNMS install.
+      librenms_acl_directories:
+        type: list
+        elements: str
+        description: Runtime directories under the install directory given a group-writable default ACL and group-writable permissions.
       librenms_php_version:
         type: str
         default: "8.2"

@@ -1,0 +1,12 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    run_tasks: true
+    exim_dc_eximconfig_configtype: internet
+    exim_dc_localdelivery: mail_spool
+    exim_primary_hostname: mail.startcloud.test
+  roles:
+    - role: exim

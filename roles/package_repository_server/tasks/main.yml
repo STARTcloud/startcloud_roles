@@ -9,8 +9,38 @@
     - name: "Including OS-specific base tasks"
       ansible.builtin.include_tasks: "{{ pkg_server_os }}-base.yml"
 
-    - name: "Including OS-specific archive tasks"
-      ansible.builtin.include_tasks: "{{ pkg_server_os }}-{{ pkg_server.type }}.yml"
+    ## OmniOS publishes one IPS archive per include of the role, selected by
+    ## pkg_server.type.
+    - name: "Including the OmniOS archive tasks"
+      ansible.builtin.include_tasks: "omnios-{{ pkg_server.type }}.yml"
       when:
+        - pkg_server_os == 'omnios'
         - pkg_server.type is defined
         - pkg_server.type != 'base'
+
+    ## The Debian package server serves every tree from one path-based vhost, so
+    ## the trees are toggles instead of mutually exclusive types: a single
+    ## include of the role provisions the whole server.
+    - name: "Including the public landing page tasks"
+      ansible.builtin.include_tasks: debian-public.yml
+      when:
+        - pkg_server_os == 'debian'
+        - pkg_server_public_enabled
+
+    - name: "Including the Debian mirror tasks"
+      ansible.builtin.include_tasks: debian-mirror.yml
+      when:
+        - pkg_server_os == 'debian'
+        - pkg_server_mirror_enabled
+
+    - name: "Including the private repository tasks"
+      ansible.builtin.include_tasks: debian-private.yml
+      when:
+        - pkg_server_os == 'debian'
+        - pkg_server_private_enabled
+
+    ## Rendered last: the vhost describes the trees the includes above created,
+    ## and apt is only pointed at the repository once it is being served.
+    - name: "Including the package server vhost tasks"
+      ansible.builtin.include_tasks: debian-vhost.yml
+      when: pkg_server_os == 'debian'

@@ -1,0 +1,70 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    tomcat_version: 9
+    tomcat_user: tomcat
+    tomcat_group: tomcat
+    tomcat_home_dir: /usr/share/tomcat
+    ui_manager_user: manager
+    ui_manager_pass: "CHANGEME"
+    ui_admin_username: admin
+    ui_admin_pass: "CHANGEME"
+    jks_cert: keystore.jks
+    startcloud_tomcat_port_forwards:
+      - guest: 8181
+        url: "tomcat"
+        guest_redirect: 8843
+      - guest: 8843
+        url: "tomcat"
+    # Minimal provisioner-context stand-ins so the role runs standalone.
+    # server.xml.j2 reads all four of these but the role ships no defaults
+    # for them - they normally come from the startcloud_ssl / provisioner
+    # context. See NOTES.md.
+    selfsigned_enabled: false
+    cert_dir: "/secure"
+    cert_pass: "CHANGEME"
+    settings:
+      hostname: "startcloud-tomcat"
+      domain: "molecule.test"
+  pre_tasks:
+    - name: "Installing the prerequisites the role's tasks shell out to"
+      ansible.builtin.apt:
+        name:
+          - iproute2
+          - openssl
+        state: present
+        update_cache: true
+
+    - name: "Creating the public_adapter interface the role reads its external IP from"
+      ansible.builtin.shell: |
+        set -e
+        ip link add public_adapter type veth peer name pa-peer
+        ip addr add 10.99.99.10/24 dev public_adapter
+        ip link set public_adapter up
+      args:
+        executable: /bin/bash
+        creates: /sys/class/net/public_adapter
+
+    - name: "Creating the keystore directory server.xml.j2 points its TLS connector at"
+      ansible.builtin.file:
+        path: "{{ cert_dir }}/jks"
+        state: directory
+        mode: "0755"
+
+    - name: "Generating the keystore the rendered TLS connector loads"
+      ansible.builtin.shell: >
+        openssl req -x509 -nodes -newkey rsa:2048 -days 365
+        -subj "/CN=tomcat.{{ settings.hostname }}.{{ settings.domain }}"
+        -keyout /tmp/default-signed.key -out /tmp/default-signed.crt &&
+        openssl pkcs12 -export -name tomcat
+        -in /tmp/default-signed.crt -inkey /tmp/default-signed.key
+        -out {{ cert_dir }}/jks/default-signed.jks
+        -passout pass:{{ cert_pass }}
+      args:
+        executable: /bin/bash
+        creates: "{{ cert_dir }}/jks/default-signed.jks"
+  roles:
+    - role: tomcat

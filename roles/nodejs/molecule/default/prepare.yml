@@ -1,0 +1,27 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    # The role defaults nodejs_install_npm_user to "{{ service_user }}" and
+    # chowns the global npm prefix to it. In production that account is created
+    # by the provisioner before this role runs, so the container needs it too.
+    - name: Create the service_user group the role chowns the npm prefix to
+      ansible.builtin.group:
+        name: startcloud
+        state: present
+
+    - name: Create the service_user account the role chowns the npm prefix to
+      ansible.builtin.user:
+        name: startcloud
+        group: startcloud
+        shell: /bin/bash
+        create_home: true
+        state: present
+
+    # The image ships with an empty /var/lib/apt/lists; a real Debian host
+    # always has an index, so prime it before the role's dependency install.
+    - name: Prime the apt index the role's dependency install assumes exists
+      ansible.builtin.apt:
+        update_cache: true

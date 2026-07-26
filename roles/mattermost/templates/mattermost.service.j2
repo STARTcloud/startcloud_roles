@@ -7,7 +7,7 @@ BindsTo=mysql.service
 [Service]
 Type=notify
 ExecStart={{ mattermost_root_dir }}/bin/mattermost
-TimeoutStartSec=3600
+TimeoutStartSec=300
 KillMode=mixed
 Restart=always
 RestartSec=10
@@ -17,4 +17,4 @@ Group={{ mattermost_group }}
 LimitNOFILE=49152
 
 [Install]
-WantedBy=mysql.service
+WantedBy=multi-user.target

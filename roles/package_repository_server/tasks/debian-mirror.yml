@@ -1,11 +1,13 @@
 ---
-## Debian mirror — mirrors the production layout on
-## packages.debian.startcloud.com: debmirror into /local/mirror/debian nightly,
-## served by nginx with autoindex.
-- name: "Installing debmirror and nginx"
+## Debian mirror — debmirror into {{ pkg_server_base_dir }}/mirror/debian
+## nightly, served by the shared vhost at /mirror/ with autoindex.
+## cron carries the crontab binary the schedule below is written with; a
+## minimal image does not necessarily ship it.
+- name: "Installing debmirror, cron and nginx"
   ansible.builtin.apt:
     name:
       - debmirror
+      - cron
       - nginx
     state: present
 
@@ -45,17 +47,3 @@
     hour: "{{ pkg_server_mirror_cron_hour }}"
     weekday: "1-7"
     job: "{{ pkg_server_base_dir }}/mirror_deb_repo.sh"
-
-- name: "Templating the mirror nginx vhost"
-  ansible.builtin.template:
-    src: nginx-mirror.conf.j2
-    dest: "/etc/nginx/sites-available/{{ pkg_server_mirror_domains | first }}"
-    mode: "0644"
-  notify: "Reloading nginx"
-
-- name: "Enabling the mirror nginx vhost"
-  ansible.builtin.file:
-    src: "/etc/nginx/sites-available/{{ pkg_server_mirror_domains | first }}"
-    dest: "/etc/nginx/sites-enabled/{{ pkg_server_mirror_domains | first }}"
-    state: link
-  notify: "Reloading nginx"

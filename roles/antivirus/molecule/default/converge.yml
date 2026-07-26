@@ -1,0 +1,17 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    run_tasks: true
+    # vars/STARTcloud.yml turns ClamAV on and Sophos off, matching the
+    # README example playbook for a STARTcloud-vendored guest.
+    vendor: STARTcloud
+    clamav_daemon_localsocket: /var/run/clamav/clamd.ctl
+    clamav_daemon_state: started
+    clamav_daemon_enabled: true
+    clamav_freshclam_daemon_state: started
+    clamav_freshclam_daemon_enabled: true
+  roles:
+    - role: antivirus

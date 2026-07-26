@@ -1,0 +1,180 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    postgresql_config_path: "/etc/postgresql/15/main"
+    postgresql_service_unit: "postgresql@15-main.service"
+  tasks:
+    - name: "Gather package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Assert the PostgreSQL packages and python library are installed"
+      ansible.builtin.assert:
+        that:
+          - "'postgresql' in ansible_facts.packages"
+          - "'postgresql-contrib' in ansible_facts.packages"
+          - "'libpq-dev' in ansible_facts.packages"
+          - "'python3-psycopg2' in ansible_facts.packages"
+        fail_msg: "Expected PostgreSQL packages are not all installed"
+        success_msg: "PostgreSQL server, contrib, libpq-dev and python3-psycopg2 are installed"
+
+    - name: "Gather service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Assert the PostgreSQL cluster service is running"
+      ansible.builtin.assert:
+        that:
+          - postgresql_service_unit in ansible_facts.services
+          - ansible_facts.services[postgresql_service_unit].state == 'running'
+        fail_msg: "{{ postgresql_service_unit }} is not running"
+        success_msg: "{{ postgresql_service_unit }} is running"
+
+    # service_facts derives `status` from `systemctl list-unit-files`, which lists the
+    # template `postgresql@.service` and not the `postgresql@15-main` instance, so the
+    # instance's boot-time enablement is checked by asking systemd to enable it in
+    # check mode: no change reported means the role already left it enabled.
+    - name: "Re-assert the cluster unit's boot-time enablement without changing it"
+      ansible.builtin.systemd_service:
+        name: "{{ postgresql_service_unit }}"
+        enabled: true
+      check_mode: true
+      register: pg_enabled_check
+
+    - name: "Assert the cluster service is already enabled to start at boot"
+      ansible.builtin.assert:
+        that:
+          - not pg_enabled_check.changed
+        fail_msg: "{{ postgresql_service_unit }} is not enabled at boot — check mode wanted to enable it"
+        success_msg: "{{ postgresql_service_unit }} is already enabled at boot"
+
+    - name: "Look up the postgres system user and group"
+      ansible.builtin.getent:
+        database: "{{ item }}"
+        key: postgres
+      loop:
+        - passwd
+        - group
+
+    - name: "Assert the postgres system user and group exist"
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.getent_passwd['postgres'] is defined
+          - ansible_facts.getent_group['postgres'] is defined
+        fail_msg: "The postgres system user or group is missing"
+        success_msg: "The postgres system user and group exist"
+
+    - name: "Stat the rendered pg_hba.conf"
+      ansible.builtin.stat:
+        path: "{{ postgresql_config_path }}/pg_hba.conf"
+      register: pg_hba_stat
+
+    - name: "Assert pg_hba.conf exists with the ownership and mode the role sets"
+      ansible.builtin.assert:
+        that:
+          - pg_hba_stat.stat.exists
+          - pg_hba_stat.stat.pw_name == 'postgres'
+          - pg_hba_stat.stat.gr_name == 'postgres'
+          - pg_hba_stat.stat.mode == '0600'
+        fail_msg: "pg_hba.conf is missing or has unexpected ownership/mode"
+        success_msg: "pg_hba.conf exists as postgres:postgres 0600"
+
+    - name: "Slurp the rendered pg_hba.conf"
+      ansible.builtin.slurp:
+        src: "{{ postgresql_config_path }}/pg_hba.conf"
+      register: pg_hba_slurp
+
+    - name: "Assert the converge hba entries were rendered"
+      ansible.builtin.assert:
+        that:
+          - "'local all postgres' in pg_hba_content"
+          - "'host all all 127.0.0.1/32' in pg_hba_content"
+          - "'scram-sha-256' in pg_hba_content"
+        fail_msg: "Rendered pg_hba.conf does not contain the expected entries"
+        success_msg: "Rendered pg_hba.conf contains the expected entries"
+      vars:
+        pg_hba_content: "{{ pg_hba_slurp.content | b64decode }}"
+
+    - name: "Slurp postgresql.conf"
+      ansible.builtin.slurp:
+        src: "{{ postgresql_config_path }}/postgresql.conf"
+      register: pg_conf_slurp
+
+    - name: "Assert the global config options were applied to postgresql.conf"
+      ansible.builtin.assert:
+        that:
+          - "\"unix_socket_directories = '/var/run/postgresql'\" in pg_conf_content"
+          - "\"log_directory = 'log'\" in pg_conf_content"
+          - "\"max_connections = '120'\" in pg_conf_content"
+        fail_msg: "postgresql.conf is missing the options configured by the role"
+        success_msg: "postgresql.conf contains the options configured by the role"
+      vars:
+        pg_conf_content: "{{ pg_conf_slurp.content | b64decode }}"
+
+    - name: "Slurp the PostgreSQL profile script"
+      ansible.builtin.slurp:
+        src: /etc/profile.d/postgres.sh
+      register: pg_profile_slurp
+
+    - name: "Assert the profile script exports PGDATA and the bin path"
+      ansible.builtin.assert:
+        that:
+          - "'export PGDATA=/var/lib/postgresql/15/main' in pg_profile_content"
+          - "'/usr/lib/postgresql/15/bin' in pg_profile_content"
+        fail_msg: "/etc/profile.d/postgres.sh does not export the expected environment"
+        success_msg: "/etc/profile.d/postgres.sh exports PGDATA and the PostgreSQL bin path"
+      vars:
+        pg_profile_content: "{{ pg_profile_slurp.content | b64decode }}"
+
+    - name: "Assert the unix socket directory exists"
+      ansible.builtin.stat:
+        path: /var/run/postgresql
+      register: pg_socket_dir
+
+    - name: "Assert the unix socket directory is a postgres-owned directory"
+      ansible.builtin.assert:
+        that:
+          - pg_socket_dir.stat.exists
+          - pg_socket_dir.stat.isdir
+          - pg_socket_dir.stat.pw_name == 'postgres'
+        fail_msg: "/var/run/postgresql is missing or not owned by postgres"
+        success_msg: "/var/run/postgresql exists and is owned by postgres"
+
+    - name: "Assert PostgreSQL is listening on its port"
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 5432
+        state: started
+        timeout: 30
+
+    - name: "Query the cluster for the database created by the role"
+      ansible.builtin.command:
+        cmd: psql -tAc "SELECT datname FROM pg_database WHERE datname = 'startclouddb'"
+      become: true
+      become_user: postgres
+      changed_when: false
+      register: pg_db_query
+
+    - name: "Assert the configured database exists"
+      ansible.builtin.assert:
+        that:
+          - "'startclouddb' in pg_db_query.stdout"
+        fail_msg: "The startclouddb database was not created"
+        success_msg: "The startclouddb database exists"
+
+    - name: "Query the cluster for the role created by the role"
+      ansible.builtin.command:
+        cmd: psql -tAc "SELECT rolname FROM pg_roles WHERE rolname = 'startclouduser'"
+      become: true
+      become_user: postgres
+      changed_when: false
+      register: pg_role_query
+
+    - name: "Assert the configured PostgreSQL user exists"
+      ansible.builtin.assert:
+        that:
+          - "'startclouduser' in pg_role_query.stdout"
+        fail_msg: "The startclouduser PostgreSQL role was not created"
+        success_msg: "The startclouduser PostgreSQL role exists"

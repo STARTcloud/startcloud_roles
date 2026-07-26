@@ -5,3 +5,14 @@ run_tasks: true
 grafana_packages:
   - apt-transport-https
 grafana_package: grafana
+
+# [server] section rendered into /etc/grafana/grafana.ini.
+grafana_protocol: http
+grafana_http_addr: ""
+grafana_http_port: 3000
+grafana_domain: "{{ settings.hostname }}.{{ settings.domain }}"
+
+# Certificate material Grafana serves when grafana_protocol is https or h2.
+# Defaults to the per-host certificate the ssl role writes under cert_dir.
+grafana_cert_file: "{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}.crt"
+grafana_cert_key: "{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}.key"

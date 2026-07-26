@@ -1,0 +1,109 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting the snmp and snmpd packages are installed"
+      ansible.builtin.assert:
+        that:
+          - "'snmpd' in ansible_facts.packages"
+          - "'snmp' in ansible_facts.packages"
+        fail_msg: "Expected the snmp and snmpd packages to be installed"
+        success_msg: "snmp and snmpd packages are installed"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting the snmpd service is running and enabled"
+      ansible.builtin.assert:
+        that:
+          - "'snmpd.service' in ansible_facts.services"
+          - ansible_facts.services['snmpd.service'].state == 'running'
+          - ansible_facts.services['snmpd.service'].status == 'enabled'
+        fail_msg: >-
+          Expected snmpd.service to be running and enabled, got
+          state={{ ansible_facts.services['snmpd.service'].state | default('absent') }}
+          status={{ ansible_facts.services['snmpd.service'].status | default('absent') }}
+        success_msg: "snmpd.service is running and enabled"
+
+    - name: "Stat the snmpd configuration file"
+      ansible.builtin.stat:
+        path: /etc/snmp/snmpd.conf
+      register: snmpd_conf_stat
+
+    - name: "Stat the snmpd daemon defaults file"
+      ansible.builtin.stat:
+        path: /etc/default/snmpd
+      register: snmpd_default_stat
+
+    - name: "Asserting both rendered config files exist with the expected modes"
+      ansible.builtin.assert:
+        that:
+          - snmpd_conf_stat.stat.exists
+          - snmpd_conf_stat.stat.mode == '0600'
+          - snmpd_default_stat.stat.exists
+          - snmpd_default_stat.stat.mode == '0644'
+        fail_msg: "Expected /etc/snmp/snmpd.conf (0600) and /etc/default/snmpd (0644) to exist"
+        success_msg: "Both rendered snmpd config files exist with the expected modes"
+
+    - name: "Reading the rendered snmpd.conf"
+      ansible.builtin.slurp:
+        src: /etc/snmp/snmpd.conf
+      register: snmpd_conf_content
+
+    - name: "Reading the rendered snmpd daemon defaults"
+      ansible.builtin.slurp:
+        src: /etc/default/snmpd
+      register: snmpd_default_content
+
+    - name: "Asserting the templated values landed in the configuration"
+      vars:
+        snmpd_conf_text: "{{ snmpd_conf_content.content | b64decode }}"
+        snmpd_default_text: "{{ snmpd_default_content.content | b64decode }}"
+      ansible.builtin.assert:
+        that:
+          - "'createUser snmpmonitor SHA CHANGEME AES CHANGEME' in snmpd_conf_text"
+          - "'rouser snmpmonitor priv' in snmpd_conf_text"
+          - "'agentAddress udp:127.0.0.1:161' in snmpd_conf_text"
+          - "'sysLocation STARTcloud Molecule Lab' in snmpd_conf_text"
+          - "'sysContact admin@example.com' in snmpd_conf_text"
+          - "'extend osupdate /usr/local/lib/snmpd/osupdate' in snmpd_conf_text"
+          - "'-u Debian-snmp -g Debian-snmp' in snmpd_default_text"
+          - "'SNMPDRUN=yes' in snmpd_default_text"
+        fail_msg: "Rendered snmpd configuration is missing expected templated values"
+        success_msg: "Rendered snmpd configuration contains the expected templated values"
+
+    - name: "Stat the downloaded LibreNMS extension scripts"
+      ansible.builtin.stat:
+        path: "{{ extension_script }}"
+      register: snmp_extension_stat
+      loop:
+        - /usr/local/lib/snmpd/distro
+        - /usr/local/lib/snmpd/osupdate
+      loop_control:
+        loop_var: extension_script
+
+    - name: "Asserting the LibreNMS extension scripts are installed and executable"
+      ansible.builtin.assert:
+        that:
+          - snmp_extension_stat.results | map(attribute='stat.exists') | select | list | length == 2
+          - snmp_extension_stat.results | map(attribute='stat.mode') | unique | list == ['0755']
+        fail_msg: "Expected distro and osupdate extension scripts under /usr/local/lib/snmpd with mode 0755"
+        success_msg: "LibreNMS extension scripts are installed and executable"
+
+    - name: "Looking up the Debian-snmp daemon user"
+      ansible.builtin.getent:
+        database: passwd
+        key: Debian-snmp
+
+    - name: "Asserting the Debian-snmp daemon user exists"
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.getent_passwd['Debian-snmp'] is defined
+        fail_msg: "Expected the Debian-snmp daemon user created by the snmpd package to exist"
+        success_msg: "Debian-snmp daemon user exists"

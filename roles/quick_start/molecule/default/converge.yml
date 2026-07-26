@@ -1,0 +1,32 @@
+---
+- name: "Converge"
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    quick_start: true
+    service_user: java_user
+    service_group: java_group
+    service_home_dir: /local/notesjava
+    cert_dir: /secure
+    completed_dir: /vagrant/completed
+    selfsigned_enabled: true
+    generate_self_signed_certificate_authority: false
+    letsencrypt_enabled: false
+    jedi_enabled: false
+    domino_oidc_provider_enabled: false
+    domino_server_name_common_with_org: "startcloud-quick-start/STARTCLOUD"
+    provisioner_name: startcloud-quick-start
+    provisioner_version: v0.1.0
+    core_provisioner_version: v0.1.0
+    startcloud_quick_start_port_forwards:
+      - guest: 8000
+        url: "demo"
+    settings:
+      hostname: startcloud-quick-start
+      domain: startcloud.test
+      server_id: 1
+      vagrant_user: startcloud
+      vagrant_user_pass: CHANGEME
+  roles:
+    - role: quick_start

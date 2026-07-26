@@ -37,3 +37,10 @@ argument_specs:
         type: list
         elements: dict
         description: Port-forward entries (guest port + URL slug) exposed by the proxy.
+      ansible_module_running_in_container:
+        type: bool
+        description: >-
+          Provisioner context — true when the target is a container. The role gathers it itself with
+          community.docker.current_container_facts at role start, so it never has to be supplied; when true haproxy is
+          run under supervisord (program file plus dump script), when false it is started and enabled through systemd.
+          A value supplied by the provisioner as a play or extra var outranks the gathered fact.

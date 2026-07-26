@@ -1,0 +1,23 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    settings:
+      hostname: startcloud-mrtg
+      domain: molecule.local
+    service_user: root
+    run_tasks: true
+    mrtg_packages:
+      - mrtg
+      - snmp
+      - snmpd
+    mrtg_config_file: /etc/mrtg.cfg
+    mrtg_working_directory: /var/www/html/mrtg
+    mrtg_snmp_community: CHANGEME
+    mrtg_snmp_target: localhost
+    mrtg_refresh_interval: 300
+    mrtg_run_interval: "*/5"
+  roles:
+    - role: mrtg

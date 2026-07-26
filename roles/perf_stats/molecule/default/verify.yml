@@ -1,0 +1,125 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  tasks:
+    - name: Gather installed package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Assert the telegraf package the role installs is present
+      ansible.builtin.assert:
+        that:
+          - "'telegraf' in ansible_facts.packages"
+        fail_msg: "telegraf package is not installed"
+        success_msg: "telegraf package is installed"
+
+    - name: Stat the telegraf agent binary shipped by the package
+      ansible.builtin.stat:
+        path: /usr/bin/telegraf
+      register: perf_stats_binary
+
+    - name: Assert the telegraf binary is present and executable
+      ansible.builtin.assert:
+        that:
+          - perf_stats_binary.stat.exists
+          - perf_stats_binary.stat.executable
+        fail_msg: "/usr/bin/telegraf is missing or not executable"
+        success_msg: "/usr/bin/telegraf is present and executable"
+
+    - name: Stat the telegraf configuration the role templates out
+      ansible.builtin.stat:
+        path: /etc/telegraf/telegraf.conf
+      register: perf_stats_config
+
+    - name: Assert the templated configuration exists with the mode the role sets
+      ansible.builtin.assert:
+        that:
+          - perf_stats_config.stat.exists
+          - perf_stats_config.stat.isreg
+          - perf_stats_config.stat.mode == '0644'
+          - perf_stats_config.stat.size > 0
+        fail_msg: "/etc/telegraf/telegraf.conf missing, empty or not mode 0644"
+        success_msg: "/etc/telegraf/telegraf.conf exists, is non-empty and is mode 0644"
+
+    - name: Read the telegraf configuration the role rendered
+      ansible.builtin.slurp:
+        src: /etc/telegraf/telegraf.conf
+      register: perf_stats_config_content
+
+    - name: Assert the rendered configuration defines a metrics output
+      ansible.builtin.assert:
+        that:
+          - "'[[outputs.' in perf_stats_rendered"
+        fail_msg: >-
+          /etc/telegraf/telegraf.conf contains no [[outputs.*]] section, telegraf
+          refuses to run without at least one output
+        success_msg: "rendered telegraf.conf declares at least one output plugin"
+      vars:
+        perf_stats_rendered: "{{ perf_stats_config_content.content | b64decode }}"
+
+    - name: Assert the rendered configuration carries the agent, tag, output and input values converge set
+      ansible.builtin.assert:
+        that:
+          - "'MANAGED BY THE perf_stats ANSIBLE ROLE' in perf_stats_rendered"
+          - "'[global_tags]' in perf_stats_rendered"
+          - "'environment = \"molecule\"' in perf_stats_rendered"
+          - "'[agent]' in perf_stats_rendered"
+          - "'interval = \"15s\"' in perf_stats_rendered"
+          - "'flush_interval = \"20s\"' in perf_stats_rendered"
+          - "'metric_batch_size = 500' in perf_stats_rendered"
+          - "'metric_buffer_limit = 5000' in perf_stats_rendered"
+          - "'hostname = \"startcloud-perf-stats-debian12\"' in perf_stats_rendered"
+          - "'omit_hostname = false' in perf_stats_rendered"
+          - "'[[outputs.file]]' in perf_stats_rendered"
+          - "'files = [\"/var/log/perf_stats/metrics.out\"]' in perf_stats_rendered"
+          - "'[[inputs.cpu]]' in perf_stats_rendered"
+          - "'percpu = true' in perf_stats_rendered"
+          - "'[[inputs.mem]]' in perf_stats_rendered"
+          - "'[[inputs.system]]' in perf_stats_rendered"
+          - "'[[inputs.processes]]' in perf_stats_rendered"
+        fail_msg: "telegraf.conf was not rendered from the role template with the converge values"
+        success_msg: "telegraf.conf carries the templated agent, global tags, output and input stanzas"
+      vars:
+        perf_stats_rendered: "{{ perf_stats_config_content.content | b64decode }}"
+
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Assert the telegraf service is enabled and running as the role requires
+      ansible.builtin.assert:
+        that:
+          - "'telegraf.service' in ansible_facts.services"
+          - ansible_facts.services['telegraf.service'].status == 'enabled'
+          - ansible_facts.services['telegraf.service'].state == 'running'
+        fail_msg: "telegraf.service is not both enabled and running"
+        success_msg: "telegraf.service is enabled and running"
+
+    - name: Wait for the agent to flush a collection interval into the configured file output
+      ansible.builtin.wait_for:
+        path: /var/log/perf_stats/metrics.out
+        search_regex: "^cpu"
+        timeout: 120
+
+    - name: Stat the metrics file the running agent writes
+      ansible.builtin.stat:
+        path: /var/log/perf_stats/metrics.out
+      register: perf_stats_metrics
+
+    - name: Assert the agent actually collected and flushed performance statistics
+      ansible.builtin.assert:
+        that:
+          - perf_stats_metrics.stat.exists
+          - perf_stats_metrics.stat.size > 0
+        fail_msg: "telegraf started but never wrote metrics to /var/log/perf_stats/metrics.out"
+        success_msg: "telegraf is collecting and flushing metrics to its configured output"
+
+    - name: Re-gather service facts after the agent has run for a full flush interval
+      ansible.builtin.service_facts:
+
+    - name: Assert telegraf is still running and did not exit after start
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['telegraf.service'].state == 'running'
+        fail_msg: "telegraf.service exited after starting - the rendered configuration is not usable"
+        success_msg: "telegraf.service is still running after a full collection and flush cycle"

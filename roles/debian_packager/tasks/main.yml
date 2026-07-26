@@ -48,11 +48,18 @@
                   printf("hello packaged world\n");
                   return 0;
               }
+          register: packager_source
+
+        - name: "Checking for an existing compiled binary"
+          ansible.builtin.stat:
+            path: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}/{{ package_name }}"
+          register: packager_binary
 
         - name: "Compiling program: {{ package_name }}"
           ansible.builtin.command: gcc -o {{ package_name }} main.c
           args:
             chdir: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}"
+          when: packager_source is changed or not packager_binary.stat.exists
           changed_when: true
 
         - name: "Creating package directory"
@@ -71,8 +78,9 @@
 
         - name: "Copying binary to package: {{ package_name }}"
           ansible.builtin.copy:
-            src: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}"
+            src: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}/{{ package_name }}"
             dest: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}_{{ package_version }}-1_{{ item }}/usr/bin/startcloud"
+            remote_src: true
             mode: "0755"
           loop: "{{ package_arch }}"
 

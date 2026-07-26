@@ -1,0 +1,30 @@
+---
+argument_specs:
+  main:
+    short_description: Firewall appliance SMTP notifications
+    description:
+      - Writes the SMTP notification configuration into a pfSense appliance's config.xml and reloads
+        the configuration. OPNsense support slots into the same role when implemented.
+      - Appliances run Python 3.7 — keep the controller on ansible-core 2.16.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      firewall_notifications_smtp_server:
+        type: str
+        description: SMTP relay hostname.
+      firewall_notifications_smtp_port:
+        type: int
+        default: 465
+        description: SMTP relay port.
+      firewall_notifications_user:
+        type: str
+        description: SMTP authentication user; also used as the from address.
+      firewall_notifications_pass:
+        type: str
+        description: SMTP authentication password (supply via vault).
+      firewall_notifications_notify_address:
+        type: str
+        description: Destination address for firewall notifications.

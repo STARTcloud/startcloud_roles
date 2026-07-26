@@ -1,0 +1,59 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting the cockpit package is installed"
+      ansible.builtin.assert:
+        that:
+          - "'cockpit' in ansible_facts.packages"
+        fail_msg: "The cockpit package was not installed by the role"
+        success_msg: "The cockpit package is installed"
+
+    - name: "Querying the cockpit.socket unit state"
+      ansible.builtin.systemd_service:
+        name: cockpit.socket
+      register: cockpit_socket
+      check_mode: true
+
+    - name: "Asserting cockpit.socket is enabled and active"
+      ansible.builtin.assert:
+        that:
+          - cockpit_socket.status.UnitFileState == 'enabled'
+          - cockpit_socket.status.ActiveState == 'active'
+        fail_msg: >-
+          cockpit.socket state is unexpected
+          (UnitFileState={{ cockpit_socket.status.UnitFileState }},
+          ActiveState={{ cockpit_socket.status.ActiveState }})
+        success_msg: "cockpit.socket is enabled and active"
+
+    - name: "Waiting for the Cockpit web console port to listen"
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 9090
+        state: started
+        timeout: 30
+
+    - name: "Stating the Cockpit MOTD banner files"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: cockpit_motd_files
+      loop:
+        - "/etc/issue.d/cockpit.issue"
+        - "/etc/motd.d/cockpit"
+
+    - name: "Asserting the Cockpit MOTD banner files were cleared"
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.size == 0
+        fail_msg: "{{ item.item }} is missing or was not emptied"
+        success_msg: "{{ item.item }} exists and is empty"
+      loop: "{{ cockpit_motd_files.results }}"
+      loop_control:
+        label: "{{ item.item }}"

@@ -1,0 +1,100 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    service_home_dir: "/home/startcloud"
+    package_org: "startcloud"
+    package_name: "startcloud"
+    package_version: "0.0.1"
+    package_arch:
+      - arm64
+      - amd64
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting the build toolchain packages are installed"
+      ansible.builtin.assert:
+        that:
+          - "'gcc' in ansible_facts.packages"
+          - "'dpkg-dev' in ansible_facts.packages"
+          - "'gpg' in ansible_facts.packages"
+        fail_msg: "gcc, dpkg-dev and gpg must all be installed by the role"
+
+    - name: "Stat the compiled binary"
+      ansible.builtin.stat:
+        path: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}/{{ package_name }}"
+      register: compiled_binary
+
+    - name: "Asserting the binary was compiled and is executable"
+      ansible.builtin.assert:
+        that:
+          - compiled_binary.stat.exists
+          - compiled_binary.stat.executable
+          - compiled_binary.stat.size > 0
+        fail_msg: "Compiled binary missing at {{ service_home_dir }}/{{ package_org }}/{{ package_name }}/{{ package_name }}"
+
+    - name: "Stat the built .deb artefacts"
+      ansible.builtin.stat:
+        path: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}_{{ package_version }}-1_{{ item }}.deb"
+      register: deb_artefacts
+      loop: "{{ package_arch }}"
+
+    - name: "Asserting a .deb exists for every requested architecture"
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.size > 0
+        fail_msg: "Missing .deb artefact for architecture {{ item.item }}"
+      loop: "{{ deb_artefacts.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "Reading the generated DEBIAN/control file for amd64"
+      ansible.builtin.slurp:
+        src: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}_{{ package_version }}-1_amd64/DEBIAN/control"
+      register: control_file
+
+    - name: "Asserting the control file carries the expected metadata"
+      ansible.builtin.assert:
+        that:
+          - "'Package: ' ~ package_name in control_content"
+          - "'Version: ' ~ package_version in control_content"
+          - "'Architecture: amd64' in control_content"
+          - "'Depends: libc6' in control_content"
+          - "'Maintainer: support@startcloud.com' in control_content"
+        fail_msg: "DEBIAN/control content unexpected: {{ control_content }}"
+      vars:
+        control_content: "{{ control_file.content | b64decode }}"
+
+    - name: "Listing the contents of the amd64 .deb"
+      ansible.builtin.command:
+        cmd: "dpkg-deb --contents {{ service_home_dir }}/{{ package_org }}/{{ package_name }}_{{ package_version }}-1_amd64.deb"
+      register: deb_contents
+      changed_when: false
+
+    - name: "Asserting the packaged binary is shipped at usr/bin/startcloud"
+      ansible.builtin.assert:
+        that:
+          - "'./usr/bin/startcloud' in deb_contents.stdout"
+        fail_msg: "The .deb does not ship ./usr/bin/startcloud"
+
+    - name: "Installing the built amd64 package to prove it is valid"
+      ansible.builtin.apt:
+        deb: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}_{{ package_version }}-1_amd64.deb"
+        state: present
+
+    - name: "Running the installed binary"
+      ansible.builtin.command:
+        cmd: "/usr/bin/startcloud"
+      register: binary_run
+      changed_when: false
+
+    - name: "Asserting the installed binary produces the expected output"
+      ansible.builtin.assert:
+        that:
+          - "'hello packaged world' in binary_run.stdout"
+        fail_msg: "Installed binary did not print the expected greeting"

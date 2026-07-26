@@ -1,0 +1,7 @@
+---
+- name: Converge
+  hosts: all
+  vars:
+    hello_world: "Hello from molecule"
+  roles:
+    - role: hello_world

@@ -1,2 +1,7 @@
 ---
 run_tasks: true
+# The role installs no JVM of its own. The collection's sdkman_install and
+# sdkman_java roles put the JDK in the service account's SDKMAN candidates tree
+# and register /usr/bin/java through update-alternatives; this is the candidate
+# path the Jenkins systemd drop-in exports as JAVA_HOME and puts on PATH.
+jenkins_java_home: "/home/{{ vagrant_user }}/.sdkman/candidates/java/current"

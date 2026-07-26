@@ -1,0 +1,16 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    ## The container has exactly one usable adapter (eth0) and no second NIC is
+    ## added: the role must work on a single-NIC host.
+    - name: "Installing the tooling the role and its template shell out to"
+      ansible.builtin.apt:
+        name:
+          - iproute2
+          - psmisc
+        state: present
+        update_cache: true
+        cache_valid_time: 3600

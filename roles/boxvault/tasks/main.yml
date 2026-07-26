@@ -5,28 +5,115 @@
     - name: "Installing BoxVault from the STARTcloud APT repository"
       when: "ansible_os_family == 'Debian' and not boxvault_build_from_source"
       block:
+        - name: "Ensuring gnupg is present for key dearmoring"
+          ansible.builtin.apt:
+            name: gnupg
+            state: present
+            update_cache: true
+            cache_valid_time: 3600
+
+        - name: "Gathering DEB architecture"
+          ansible.builtin.command: dpkg --print-architecture
+          register: boxvault_deb_architecture
+          changed_when: false
+
         - name: "Creating keyrings directory for repository GPG keys"
           ansible.builtin.file:
             path: /etc/apt/keyrings
             state: directory
             mode: "0755"
 
+        # The download/cleanup pair is gated on the keyring the flow produces,
+        # otherwise every rerun re-downloads and re-deletes the temp key and
+        # reports two changes forever (same gate as roles/dependencies).
+        - name: "Checking for the dearmored STARTcloud keyring"
+          ansible.builtin.stat:
+            path: "{{ boxvault_apt_keyring_path }}"
+          register: boxvault_startcloud_keyring
+
         - name: "Downloading armored STARTcloud GPG key"
           ansible.builtin.get_url:
             url: "{{ boxvault_apt_key_url }}"
             dest: /tmp/startcloud-archive-keyring.asc
             mode: "0644"
+          when: not boxvault_startcloud_keyring.stat.exists
 
         - name: "Dearmoring STARTcloud GPG key"
           ansible.builtin.command:
-            cmd: "gpg --dearmor -o /etc/apt/keyrings/startcloud-archive-keyring.gpg /tmp/startcloud-archive-keyring.asc"
-            creates: /etc/apt/keyrings/startcloud-archive-keyring.gpg
+            cmd: "gpg --dearmor -o {{ boxvault_apt_keyring_path }} /tmp/startcloud-archive-keyring.asc"
+            creates: "{{ boxvault_apt_keyring_path }}"
+
+        - name: "Setting permissions on the dearmored STARTcloud keyring"
+          ansible.builtin.file:
+            path: "{{ boxvault_apt_keyring_path }}"
+            mode: "0644"
+
+        - name: "Cleaning up the temporary armored STARTcloud key"
+          ansible.builtin.file:
+            path: /tmp/startcloud-archive-keyring.asc
+            state: absent
+          when: not boxvault_startcloud_keyring.stat.exists
 
         - name: "Adding STARTcloud APT repository"
           ansible.builtin.apt_repository:
-            repo: "deb [signed-by=/etc/apt/keyrings/startcloud-archive-keyring.gpg] {{ boxvault_apt_repo_url }} {{ ansible_distribution_release }} main"
+            repo: "deb [signed-by={{ boxvault_apt_keyring_path }}] {{ boxvault_apt_repo_url }} {{ ansible_distribution_release }} main"
             state: present
             filename: startcloud
+            update_cache: false
+
+        # The boxvault package depends on nodejs (>= 22); no Debian or Ubuntu
+        # release in meta/main.yml ships one, so the role supplies NodeSource
+        # itself rather than depending on roles/nodejs having run first.
+        - name: "Checking for the dearmored NodeSource keyring"
+          ansible.builtin.stat:
+            path: "{{ boxvault_nodejs_keyring_path }}"
+          register: boxvault_nodesource_keyring
+
+        - name: "Downloading armored NodeSource GPG key"
+          ansible.builtin.get_url:
+            url: "{{ boxvault_nodejs_key_url }}"
+            dest: /tmp/nodesource-key.asc
+            mode: "0644"
+          when: not boxvault_nodesource_keyring.stat.exists
+
+        - name: "Dearmoring NodeSource GPG key"
+          ansible.builtin.command:
+            cmd: "gpg --dearmor -o {{ boxvault_nodejs_keyring_path }} /tmp/nodesource-key.asc"
+            creates: "{{ boxvault_nodejs_keyring_path }}"
+
+        - name: "Setting permissions on the dearmored NodeSource keyring"
+          ansible.builtin.file:
+            path: "{{ boxvault_nodejs_keyring_path }}"
+            mode: "0644"
+
+        - name: "Cleaning up the temporary armored NodeSource key"
+          ansible.builtin.file:
+            path: /tmp/nodesource-key.asc
+            state: absent
+          when: not boxvault_nodesource_keyring.stat.exists
+
+        - name: "Adding NodeSource repository for Node.js"
+          ansible.builtin.apt_repository:
+            repo: "deb [arch={{ boxvault_deb_architecture.stdout }} signed-by={{ boxvault_nodejs_keyring_path }}]
+              https://deb.nodesource.com/node_{{ boxvault_nodejs_version }} nodistro main"
+            state: present
+            filename: nodesource
+            update_cache: false
+
+        - name: "Creating APT preferences for the nodejs package"
+          ansible.builtin.copy:
+            dest: /etc/apt/preferences.d/nodejs
+            content: |
+              Package: nodejs
+              Pin: origin deb.nodesource.com
+              Pin-Priority: 600
+            mode: "0644"
+
+        - name: "Installing Node.js from NodeSource"
+          ansible.builtin.apt:
+            name: nodejs
+            state: present
+            update_cache: true
 
         - name: "Installing BoxVault"
           ansible.builtin.apt:

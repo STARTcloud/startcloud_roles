@@ -19,6 +19,14 @@ authelia_group: "authelia"
 authelia_config_dir: "/etc/authelia"
 authelia_data_dir: "/var/lib/authelia"
 
+# NTP startup check. Authelia probes an NTP server as it boots and exits fatal
+# when the probe fails; paired with Restart=always that turns any host without
+# outbound UDP 123 or a reliable time source into a permanent crash loop. Point
+# authelia_ntp_address at a reachable server, or set
+# authelia_ntp_disable_startup_check to true to skip the probe entirely.
+authelia_ntp_address: "udp://time.cloudflare.com:123"
+authelia_ntp_disable_startup_check: false
+
 # Server listener and logging.
 authelia_listen_address: "0.0.0.0"
 authelia_listen_port: 9091

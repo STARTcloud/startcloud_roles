@@ -7,13 +7,21 @@
         name: "{{ sendmail_packages }}"
         state: present
         update_cache: true
+      register: sendmail_package_install
+      until: sendmail_package_install is succeeded
       retries: 5
+      delay: 5
+    - name: "Ensuring the Sendmail configuration group exists"
+      ansible.builtin.group:
+        name: "{{ sendmail_config_group }}"
+        state: present
+        system: true
     - name: "Templating Sendmail Configuration"
       ansible.builtin.template:
         src: "sendmail.mc.j2"
         dest: "{{ sendmail_config_dir }}/sendmail.mc"
         owner: root
-        group: smmsp
+        group: "{{ sendmail_config_group }}"
         mode: "0644"
       notify:
         - "Rebuilding Sendmail Configuration"

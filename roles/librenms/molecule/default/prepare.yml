@@ -1,0 +1,24 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    # The role's first task installs ~40 packages with `update_cache: true`;
+    # the base image ships no apt lists, so warm them here with retries rather
+    # than letting a transient mirror hiccup read as a role failure.
+    - name: "Refreshing the apt package cache"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 0
+      register: librenms_apt_cache
+      until: librenms_apt_cache is succeeded
+      retries: 3
+      delay: 5
+
+    # The role clones LibreNMS over HTTPS from github.com but installs no trust
+    # store of its own; a minimal Debian image has none.
+    - name: "Installing the CA bundle the LibreNMS HTTPS clone needs"
+      ansible.builtin.apt:
+        name: ca-certificates
+        state: present

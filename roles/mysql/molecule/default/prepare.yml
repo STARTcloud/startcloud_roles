@@ -1,0 +1,13 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  tasks:
+    # The only thing the role cannot do for itself: a minimal image ships with an
+    # empty apt cache, so the role's first apt call would have nothing to install
+    # from. Everything the Debian path needs (ca-certificates, gnupg, and
+    # mysql-apt-config's lsb-release pre-dependency) is installed by the role.
+    - name: "Updating the apt cache"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600

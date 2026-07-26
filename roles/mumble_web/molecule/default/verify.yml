@@ -1,0 +1,123 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting the Docker engine required by the role is installed"
+      ansible.builtin.assert:
+        that:
+          - "'docker-ce' in ansible_facts.packages"
+          - "'containerd.io' in ansible_facts.packages"
+        fail_msg: "docker-ce / containerd.io are missing, the docker meta dependency did not run"
+        success_msg: "docker-ce and containerd.io are installed"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting the docker service is running"
+      ansible.builtin.assert:
+        that:
+          - "'docker.service' in ansible_facts.services"
+          - ansible_facts.services['docker.service'].state == 'running'
+        fail_msg: "docker.service is not running"
+        success_msg: "docker.service is running"
+
+    - name: "Waiting for the Docker daemon socket"
+      ansible.builtin.wait_for:
+        path: /var/run/docker.sock
+        timeout: 30
+
+    - name: "Inspecting the mumble-web Docker network"
+      community.docker.docker_network_info:
+        name: mumble-web
+      register: mumble_web_network_info
+
+    - name: "Asserting the mumble-web Docker network was created"
+      ansible.builtin.assert:
+        that:
+          - mumble_web_network_info.exists
+          - mumble_web_network_info.network.Name == 'mumble-web'
+        fail_msg: "The mumble-web Docker network does not exist"
+        success_msg: "The mumble-web Docker network exists"
+
+    - name: "Inspecting the mumble-web-proxy container"
+      community.docker.docker_container_info:
+        name: mumble-web-proxy
+      register: mumble_web_proxy_info
+
+    - name: "Asserting no proxy container was deployed while the proxy is disabled"
+      ansible.builtin.assert:
+        that:
+          - not mumble_web_proxy_info.exists
+        fail_msg: "A mumble-web-proxy container exists even though mumble_web_proxy_enabled is false"
+        success_msg: "No mumble-web-proxy container was deployed, as configured"
+
+    - name: "Inspecting the mumble-web client container"
+      community.docker.docker_container_info:
+        name: mumble-web
+      register: mumble_web_client_info
+
+    - name: "Asserting the client container runs the configured image, network, env and port map"
+      ansible.builtin.assert:
+        that:
+          - mumble_web_client_info.exists
+          - mumble_web_client_info.container.State.Running
+          - mumble_web_client_info.container.Config.Image == 'rankenstein/mumble-web:latest'
+          - "'mumble-web' in mumble_web_client_info.container.NetworkSettings.Networks"
+          - "'MUMBLE_SERVER=192.0.2.10:64738' in mumble_web_client_info.container.Config.Env"
+          - "'8080/tcp' in mumble_web_client_info.container.HostConfig.PortBindings"
+          - mumble_web_client_info.container.HostConfig.PortBindings['8080/tcp'][0].HostPort == '8080'
+          - mumble_web_client_info.container.HostConfig.RestartPolicy.Name == 'unless-stopped'
+        fail_msg: "The mumble-web container is missing or was not deployed as configured"
+        success_msg: "The mumble-web container is running as configured"
+
+    ## The image's EXPOSE metadata is not checked: rankenstein/mumble-web still
+    ## declares EXPOSE 80 while its server binds 8080, so the only honest proof
+    ## of the serving port is the HTTP fetch through the published port below.
+    - name: "Waiting for the published mumble-web HTTP port"
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 8080
+        state: started
+        timeout: 30
+
+    ## Reaches through the published port into the container, so this fails if
+    ## the client image is not actually serving on mumble_web_container_http_port.
+    ## The request is retried because the client image starts its web server a
+    ## moment after the container is reported running; the assertion below still
+    ## demands a 200 with a body.
+    - name: "Fetching the mumble-web client over the published port"
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:8080/"
+        return_content: true
+        status_code: 200
+      register: mumble_web_http
+      failed_when: false
+      until: mumble_web_http.status == 200
+      retries: 12
+      delay: 5
+
+    - name: "Re-inspecting the mumble-web client container after the HTTP check"
+      community.docker.docker_container_info:
+        name: mumble-web
+      register: mumble_web_client_state
+
+    - name: "Reading the mumble-web container log"
+      ansible.builtin.command: "docker logs --tail 50 mumble-web"
+      changed_when: false
+      register: mumble_web_logs
+
+    - name: "Asserting the published port serves the mumble-web client"
+      ansible.builtin.assert:
+        that:
+          - mumble_web_http.status == 200
+          - mumble_web_http.content | length > 0
+        fail_msg: >-
+          The published mumble-web port did not serve the client (status {{ mumble_web_http.status }}).
+          Container state: {{ mumble_web_client_state.container.State }}.
+          Container log: {{ mumble_web_logs.stdout }} {{ mumble_web_logs.stderr }}
+        success_msg: "The published mumble-web port serves the client"

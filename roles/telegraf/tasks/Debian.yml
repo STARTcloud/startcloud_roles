@@ -1,29 +1,29 @@
 ---
-- name: "Debian | Setting name if state is not latest"
-  ansible.builtin.set_fact:
-    telegraf_agent_package: telegraf={{ telegraf_agent_version }}-{{ telegraf_agent_version_patch }}
-  when:
-    - telegraf_agent_package_state != "latest"
-
-- name: "Debian | Ensuring the system can use the HTTPS transport for APT"
-  ansible.builtin.stat:
-    path: /usr/lib/apt/methods/https
-  register: apt_https_transport
-
-- name: "Debian | Installing APT HTTPS transport"
+- name: "Debian | Installing the InfluxData repository prerequisites"
   ansible.builtin.apt:
-    name: "apt-transport-https"
-    state: present
+    name:
+      - "apt-transport-https"
+      - "ca-certificates"
+      - "gnupg"
+    state: "present"
+    update_cache: true
   register: are_telegraf_dependencies_packages_installed
   until: are_telegraf_dependencies_packages_installed is succeeded
-  when:
-    - not apt_https_transport.stat.exists
   become: true
+
+- name: "Debian | Ensuring the APT keyrings directory exists"
+  ansible.builtin.file:
+    path: "/usr/share/keyrings"
+    state: "directory"
+    mode: "0755"
+  become: true
+  when:
+    - telegraf_agent_package_method == "repo"
 
 - name: "Debian | Downloading the InfluxData repository signing key"
   ansible.builtin.get_url:
     url: "https://repos.influxdata.com/influxdata-archive.key"
-    dest: /tmp/influxdata-archive.key
+    dest: "/tmp/influxdata-archive.key"
     mode: "0644"
     timeout: 60
   register: are_telegraf_dependencies_keys_installed
@@ -33,8 +33,17 @@
     - telegraf_agent_package_method == "repo"
 
 - name: "Debian | Installing the InfluxData repository signing key"
-  ansible.builtin.command: gpg --batch --yes --dearmor -o /usr/share/keyrings/influxdata-archive.gpg /tmp/influxdata-archive.key
-  changed_when: true
+  ansible.builtin.command:
+    cmd: "gpg --batch --yes --dearmor -o /usr/share/keyrings/influxdata-archive.gpg /tmp/influxdata-archive.key"
+    creates: "/usr/share/keyrings/influxdata-archive.gpg"
+  become: true
+  when:
+    - telegraf_agent_package_method == "repo"
+
+- name: "Debian | Ensuring the InfluxData keyring is readable by apt"
+  ansible.builtin.file:
+    path: "/usr/share/keyrings/influxdata-archive.gpg"
+    mode: "0644"
   become: true
   when:
     - telegraf_agent_package_method == "repo"
@@ -50,17 +59,18 @@
 
 - name: "Debian | Downloading Telegraf package (online)"
   ansible.builtin.get_url:
-    url: https://dl.influxdata.com/telegraf/releases/{{ telegraf_agent_package_file_deb }}
-    dest: "{{ telegraf_agent_package_path }}/{{ telegraf_agent_package }}"
+    url: "https://dl.influxdata.com/telegraf/releases/{{ telegraf_agent_package_file_deb }}"
+    dest: "{{ telegraf_agent_package_path }}/{{ telegraf_agent_package_file_deb }}"
     mode: "0644"
     use_proxy: "{{ true if http_proxy is defined and http_proxy else false }}"
   environment:
     http_proxy: "{{ http_proxy | default(None) | default(omit) }}"
     https_proxy: "{{ https_proxy | default(None) | default(omit) }}"
+  become: true
   when:
     - telegraf_agent_package_method == "online"
 
-- name: "Debian | Installing Telegraf package"
+- name: "Debian | Installing Telegraf package from the repository"
   ansible.builtin.apt:
     name: "{{ telegraf_agent_package }}"
     state: "{{ telegraf_agent_package_state }}"
@@ -72,9 +82,9 @@
   when:
     - telegraf_agent_package_method == "repo"
 
-- name: "Debian | Installing Telegraf package"
+- name: "Debian | Installing the downloaded Telegraf package"
   ansible.builtin.apt:
-    deb: "{{ telegraf_agent_package_path }}/{{ telegraf_agent_package }}"
+    deb: "{{ telegraf_agent_package_path }}/{{ telegraf_agent_package_file_deb }}"
     state: "present"
   register: is_telegraf_package_installed
   until: is_telegraf_package_installed is succeeded

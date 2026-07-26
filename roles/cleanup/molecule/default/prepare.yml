@@ -1,0 +1,45 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  tasks:
+    # The role finalises full cloud images: it rewrites /etc/netplan and relinks
+    # /var/lib/dbus/machine-id. A bare Debian container image ships neither
+    # directory, so stand them in as the image prerequisites the role assumes.
+    - name: Create the netplan and dbus state directories the role assumes exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - /etc/netplan
+        - /var/lib/dbus
+
+    - name: Drop a stale netplan config for the role to purge
+      ansible.builtin.copy:
+        content: |
+          network:
+            version: 2
+            ethernets:
+              eth0:
+                dhcp4: false
+                addresses:
+                  - 10.0.0.9/24
+        dest: /etc/netplan/99-stale-provisioner.yaml
+        mode: "0644"
+
+    - name: Create the home directory of the user whose history gets scrubbed
+      ansible.builtin.file:
+        path: /home/startcloud
+        state: directory
+        mode: "0755"
+
+    - name: Seed shell history and a rotated log the role must remove
+      ansible.builtin.copy:
+        content: "echo secret-provisioning-command\n"
+        dest: "{{ item }}"
+        mode: "0600"
+      loop:
+        - /root/.bash_history
+        - /home/startcloud/.bash_history
+        - /var/log/startcloud-molecule.old

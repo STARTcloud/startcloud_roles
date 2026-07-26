@@ -1,0 +1,19 @@
+---
+- name: "Prepare"
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    ## Plant a pre-existing /etc/modules so the role is tested against a real
+    ## file rather than creating a fresh one:
+    ##   * the unrelated `loop` entry and the comment prove the role appends
+    ##     instead of rewriting the file;
+    ##   * mode 0600 proves the role's `mode: "0644"` is applied to an existing
+    ##     file, not only to files it creates.
+    - name: "Planting a pre-existing /etc/modules the role must preserve"
+      ansible.builtin.copy:
+        dest: /etc/modules
+        mode: "0600"
+        content: |
+          # /etc/modules: kernel modules to load at boot time.
+          loop

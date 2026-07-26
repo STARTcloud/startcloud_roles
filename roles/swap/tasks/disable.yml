@@ -1,7 +1,19 @@
 ---
+- name: "Reading the currently active swap areas"
+  ansible.builtin.slurp:
+    src: /proc/swaps
+  register: swap_active_areas
+
 - name: "Disabling swap (if configured)"
-  ansible.builtin.command: swapoff -a
-  changed_when: true
+  ansible.builtin.command:
+    cmd: swapoff -a
+  vars:
+    swap_active_area_lines: >-
+      {{ (swap_active_areas.content | b64decode).splitlines()[1:]
+         | select('search', '\S')
+         | list }}
+  when: swap_active_area_lines | length > 0
+  changed_when: swap_active_area_lines | length > 0
 
 - name: "Ensuring swap file does not exist (if configured)"
   ansible.builtin.file:

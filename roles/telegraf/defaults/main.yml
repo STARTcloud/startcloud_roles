@@ -3,8 +3,13 @@ run_tasks: true
 telegraf_enabled: true
 # defaults file for ansible-telegraf
 
-telegraf_agent_version: 1.10.0
+# Version of the package artefacts downloaded by the online, Docker and Windows
+# install methods. The repo method installs whatever the InfluxData repository
+# currently publishes; pin it there with telegraf_agent_package instead.
+telegraf_agent_version: 1.39.2
 telegraf_agent_version_patch: 1
+# Unpinned by default. To pin the repo method set the full package spec, e.g.
+# "telegraf=1.39.2-1" on Debian or "telegraf-1.39.2" on RedHat.
 telegraf_agent_package: telegraf
 telegraf_agent_package_arch: "{{ 'amd64' if ansible_architecture == 'x86_64' else ('armhf' if ansible_architecture == 'arm64' else ansible_architecture) }}"
 telegraf_agent_package_file_deb: telegraf_{{ telegraf_agent_version }}-{{ telegraf_agent_version_patch }}_{{ telegraf_agent_package_arch }}.deb
@@ -76,6 +81,7 @@ telegraf_yum_baseurl:
   default: "https://repos.influxdata.com/{{ ansible_distribution | lower }}/{{ telegraf_redhat_releasever }}/$basearch/stable"
   redhat: "https://repos.influxdata.com/rhel/{{ telegraf_redhat_releasever }}/$basearch/stable"
 telegraf_yum_gpgkey: "https://repos.influxdata.com/influxdb.key"
+telegraf_yum_gpgcheck: true
 
 telegraf_win_install_dir: "C:\\Telegraf"
 telegraf_win_logfile: "C:\\\\Telegraf\\\\telegraf.log"

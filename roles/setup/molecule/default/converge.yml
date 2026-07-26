@@ -1,0 +1,28 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    show_help: true
+    debug_all: false
+    timezone: "Europe/Berlin"
+    win_timezone: "W. Europe Standard Time"
+    installer_dir: /vagrant/installers
+    completed_dir: /vagrant/completed
+    email: support@startcloud.com
+    root_ssh_key: ""
+    provisioner_name: molecule-provisioner
+    provisioner_version: v1.2.3
+    core_provisioner_version: v4.5.6
+    secrets:
+      installer_base_url: https://installers.example.com/artifacts
+      installer_url_user: molecule
+      installer_url_pass: CHANGEME
+    # Minimal provisioner-context stand-ins so the role runs standalone.
+    vendor: STARTcloud
+    settings:
+      hostname: startcloud-setup
+      domain: example.com
+  roles:
+    - role: setup

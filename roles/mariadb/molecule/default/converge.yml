@@ -1,0 +1,35 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+
+    # Credentials — literal placeholder secret for the test container only.
+    mariadb_admin_user: root
+    mariadb_admin_pass: "CHANGEME"
+
+    startcloud_mariadb_port_forwards:
+      - guest: 3306
+        url: "mariadb"
+
+    # Minimal provisioner-context stand-ins so the role runs standalone.
+    settings:
+      hostname: "molecule"
+      domain: "startcloud.test"
+  pre_tasks:
+    - name: "Refreshing the apt cache so the role can resolve mariadb-server"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 600
+
+    - name: "Installing the python libraries the role's modules need on the target"
+      ansible.builtin.apt:
+        name:
+          - python3-pymysql
+          - python3-pexpect
+        state: present
+  tasks:
+    - name: "Applying the mariadb role"
+      ansible.builtin.include_role:
+        name: mariadb

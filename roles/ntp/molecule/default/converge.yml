@@ -1,0 +1,23 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    ntp_enabled: true
+    ntp_manage_config: true
+    ntp_tinker_panic: true
+    ntp_timezone: America/Chicago
+    ntp_area: ""
+    ntp_cron_handler_enabled: false
+    ntp_servers:
+      - "ntp1.prominic.net iburst"
+      - "ntp2.prominic.net iburst"
+    ntp_restrict:
+      - "127.0.0.1"
+      - "::1"
+    settings:
+      hostname: startcloud-ntp-debian12
+      domain: molecule.local
+  roles:
+    - role: ntp

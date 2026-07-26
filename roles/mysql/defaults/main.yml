@@ -16,6 +16,13 @@ mysql_root_password: root
 mysql_root_password_update: false
 mysql_user_password_update: false
 
+# Set this to `true` to re-apply the passwords in `mysql_users` to accounts that
+# already exist. By default credentials are only applied when the account is
+# created: MySQL 8 salts and hashes them server-side, so a stored credential can
+# never be compared against the configured cleartext again. Individual entries in
+# `mysql_users` can override this with `password_update: true`.
+mysql_users_password_update: false
+
 mysql_enabled_on_startup: true
 
 # Whether my.cnf should be updated on every run.

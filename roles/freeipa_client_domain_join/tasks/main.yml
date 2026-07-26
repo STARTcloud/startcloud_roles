@@ -6,7 +6,6 @@
       ansible.builtin.apt:
         cache_valid_time: 3600
         update_cache: true
-      when: "ansible_os_family == 'Debian'"
 
     - name: "Installing freeipa-client"
       ansible.builtin.apt:
@@ -19,22 +18,82 @@
           - sssd-krb5
           - sssd-tools
           - chrony
-    - name: "Backing Up old libnssckbi.so for Firefox to Trust Prominic.Global"
-      ansible.builtin.copy:
-        remote_src: true
-        src: /usr/lib/firefox/libnssckbi.so
-        dest: /usr/lib/firefox/libnssckbi.so.bak
-        mode: "0644"
+        state: present
 
-    - name: "Removing old for libnssckbi.so Firefox to Trust Prominic.Global"
-      ansible.builtin.file:
-        path: /usr/lib/firefox/libnssckbi.so
-        state: absent
+    - name: "Checking which Firefox installation directory exists on this host"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: freeipa_client_domain_join_firefox_dir_stat
+      loop: "{{ freeipa_client_domain_join_firefox_dirs }}"
 
-    - name: "Creating symlink from p11-kit-trust.so for libnssckbi.so Firefox to Trust Prominic.Global"
-      ansible.builtin.file:
-        src: /usr/lib/aarch64-linux-gnu/pkcs11/p11-kit-trust.so
-        dest: /usr/lib/firefox/libnssckbi.so
-        owner: "root"
-        group: "root"
-        state: link
+    - name: "Recording the Firefox installation directory whose trust store gets repointed"
+      ansible.builtin.set_fact:
+        freeipa_client_domain_join_firefox_dir: >-
+          {{
+            freeipa_client_domain_join_firefox_dir_stat.results
+            | selectattr('stat.isdir', 'defined')
+            | selectattr('stat.isdir')
+            | map(attribute='item')
+            | list | first | default('', true)
+          }}
+
+    - name: "Repointing the Firefox NSS trust store at the system p11-kit trust module"
+      when: freeipa_client_domain_join_firefox_dir | length > 0
+      block:
+        - name: "Locating the p11-kit trust module in this target's multiarch library path"
+          ansible.builtin.find:
+            paths: "{{ freeipa_client_domain_join_p11_kit_search_paths }}"
+            patterns: "p11-kit-trust.so"
+            file_type: any
+            recurse: true
+            depth: 3
+          register: freeipa_client_domain_join_p11_kit_find
+
+        - name: "Asserting the p11-kit trust module is installed before repointing Firefox"
+          ansible.builtin.assert:
+            that:
+              - freeipa_client_domain_join_p11_kit_find.files | length > 0
+            fail_msg: >-
+              No p11-kit-trust.so found under
+              {{ freeipa_client_domain_join_p11_kit_search_paths | join(', ') }};
+              install p11-kit-modules before repointing the Firefox trust store.
+
+        - name: "Recording the p11-kit trust module path found on this target"
+          ansible.builtin.set_fact:
+            freeipa_client_domain_join_p11_kit_module: >-
+              {{ freeipa_client_domain_join_p11_kit_find.files | map(attribute='path') | sort | first }}
+
+        - name: "Checking the current state of the Firefox NSS trust module"
+          ansible.builtin.stat:
+            path: "{{ freeipa_client_domain_join_firefox_dir }}/libnssckbi.so"
+            follow: false
+          register: freeipa_client_domain_join_nssckbi_stat
+
+        - name: "Checking whether the stock Firefox NSS trust module was already backed up"
+          ansible.builtin.stat:
+            path: "{{ freeipa_client_domain_join_firefox_dir }}/libnssckbi.so.bak"
+            follow: false
+          register: freeipa_client_domain_join_nssckbi_backup_stat
+
+        - name: "Backing up the stock Firefox libnssckbi.so once, before it is ever replaced"
+          ansible.builtin.copy:
+            remote_src: true
+            src: "{{ freeipa_client_domain_join_firefox_dir }}/libnssckbi.so"
+            dest: "{{ freeipa_client_domain_join_firefox_dir }}/libnssckbi.so.bak"
+            owner: "root"
+            group: "root"
+            mode: "0644"
+          when:
+            - not freeipa_client_domain_join_nssckbi_backup_stat.stat.exists
+            - freeipa_client_domain_join_nssckbi_stat.stat.exists
+            - freeipa_client_domain_join_nssckbi_stat.stat.lnk_target | default('') != freeipa_client_domain_join_p11_kit_module
+
+        - name: "Pointing Firefox libnssckbi.so at the system p11-kit trust module"
+          ansible.builtin.file:
+            src: "{{ freeipa_client_domain_join_p11_kit_module }}"
+            dest: "{{ freeipa_client_domain_join_firefox_dir }}/libnssckbi.so"
+            owner: "root"
+            group: "root"
+            state: link
+            force: true
+            follow: false

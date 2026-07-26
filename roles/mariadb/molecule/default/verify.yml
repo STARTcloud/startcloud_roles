@@ -1,0 +1,97 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    mariadb_server_config: /etc/mysql/mariadb.conf.d/50-server.cnf
+    mariadb_port: 3306
+    mariadb_admin_user: root
+    mariadb_admin_pass: "CHANGEME"
+    mariadb_login_unix_socket: /run/mysqld/mysqld.sock
+  tasks:
+    - name: "Gather package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Assert the mariadb-server package is installed"
+      ansible.builtin.assert:
+        that:
+          - "'mariadb-server' in ansible_facts.packages"
+        fail_msg: "mariadb-server package is not installed"
+        success_msg: "mariadb-server package is installed"
+
+    - name: "Gather service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Assert the mariadb service is running and enabled"
+      ansible.builtin.assert:
+        that:
+          - "'mariadb.service' in ansible_facts.services"
+          - ansible_facts.services['mariadb.service'].state == 'running'
+          - ansible_facts.services['mariadb.service'].status == 'enabled'
+        fail_msg: "mariadb.service is not running and enabled"
+        success_msg: "mariadb.service is running and enabled"
+
+    - name: "Stat the server configuration file the role edits"
+      ansible.builtin.stat:
+        path: "{{ mariadb_server_config }}"
+      register: mariadb_conf_stat
+
+    - name: "Assert the server configuration file exists with the mode the role sets"
+      ansible.builtin.assert:
+        that:
+          - mariadb_conf_stat.stat.exists
+          - mariadb_conf_stat.stat.mode == '0644'
+        fail_msg: "{{ mariadb_server_config }} is missing or does not have mode 0644"
+        success_msg: "{{ mariadb_server_config }} exists with mode 0644"
+
+    - name: "Slurp the server configuration file"
+      ansible.builtin.slurp:
+        src: "{{ mariadb_server_config }}"
+      register: mariadb_conf_slurp
+
+    - name: "Assert the role bound the server to all interfaces"
+      ansible.builtin.assert:
+        that:
+          - "'bind-address  = 0.0.0.0' in mariadb_conf_content"
+          - "'= 127.0.0.1' not in mariadb_conf_content"
+        fail_msg: "The bind-address directive was not rewritten to 0.0.0.0"
+        success_msg: "The bind-address directive is set to 0.0.0.0"
+      vars:
+        mariadb_conf_content: "{{ mariadb_conf_slurp.content | b64decode }}"
+
+    - name: "Look up the mysql system user the server package creates"
+      ansible.builtin.getent:
+        database: passwd
+        key: mysql
+
+    - name: "Assert the mysql system user exists"
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.getent_passwd['mysql'] is defined
+        fail_msg: "The mysql system user does not exist"
+        success_msg: "The mysql system user exists"
+
+    - name: "Log in as the administrative user with the password the role configures"
+      community.mysql.mysql_info:
+        login_user: "{{ mariadb_admin_user }}"
+        login_password: "{{ mariadb_admin_pass }}"
+        login_unix_socket: "{{ mariadb_login_unix_socket }}"
+        filter:
+          - version
+      register: mariadb_admin_login
+
+    - name: "Assert the administrative credentials the role set are accepted"
+      ansible.builtin.assert:
+        that:
+          - mariadb_admin_login.version is defined
+        fail_msg: "Could not authenticate as {{ mariadb_admin_user }} with the password the role sets"
+        success_msg: "The password the role sets authenticates {{ mariadb_admin_user }}"
+
+    - name: "Assert mariadb is listening on its port on all interfaces"
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: "{{ mariadb_port }}"
+        state: started
+        timeout: 30

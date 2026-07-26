@@ -3,3 +3,7 @@ run_tasks: true
 raritan_mpc_packages:
   - snmp
   - snmp-mibs-downloader
+raritan_mpc_non_free_components:
+  - non-free
+raritan_mpc_debian_archive_uri: http://deb.debian.org/debian
+raritan_mpc_debian_security_uri: http://security.debian.org/debian-security

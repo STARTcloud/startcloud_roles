@@ -1,0 +1,172 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  tasks:
+    - name: Gather installed package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Assert the InfluxDB server and CLI packages were installed
+      ansible.builtin.assert:
+        that:
+          - "'influxdb2' in ansible_facts.packages"
+          - "'influxdb2-cli' in ansible_facts.packages"
+        fail_msg: "influxdb2 and/or influxdb2-cli are not installed"
+        success_msg: "influxdb2 and influxdb2-cli are installed"
+
+    - name: Stat the InfluxData APT keyring installed by the role
+      ansible.builtin.stat:
+        path: /usr/share/keyrings/influxdata-archive.gpg
+      register: influxdb_keyring
+
+    - name: Assert the dearmored InfluxData signing key exists
+      ansible.builtin.assert:
+        that:
+          - influxdb_keyring.stat.exists
+          - influxdb_keyring.stat.size > 0
+        fail_msg: "/usr/share/keyrings/influxdata-archive.gpg is missing or empty"
+        success_msg: "InfluxData APT keyring is present"
+
+    - name: Read the InfluxData APT source list written by the role
+      ansible.builtin.slurp:
+        src: /etc/apt/sources.list.d/influxdata.list
+      register: influxdb_sources
+
+    - name: Assert the InfluxData repository line is correct
+      ansible.builtin.assert:
+        that:
+          - "'https://repos.influxdata.com/debian' in influxdb_sources_content"
+          - "'signed-by=/usr/share/keyrings/influxdata-archive.gpg' in influxdb_sources_content"
+          - "'stable main' in influxdb_sources_content"
+        fail_msg: "InfluxData APT repository line is missing or malformed"
+        success_msg: "InfluxData APT repository line is correct"
+      vars:
+        influxdb_sources_content: "{{ influxdb_sources.content | b64decode }}"
+
+    - name: Resolve the influxdb service account
+      ansible.builtin.getent:
+        database: passwd
+        key: influxdb
+
+    - name: Assert the influxdb service account exists
+      ansible.builtin.assert:
+        that:
+          - "'influxdb' in ansible_facts.getent_passwd"
+        fail_msg: "influxdb system user does not exist"
+        success_msg: "influxdb system user exists"
+
+    - name: Stat the InfluxDB data directory
+      ansible.builtin.stat:
+        path: /var/lib/influxdb
+      register: influxdb_datadir
+
+    - name: Assert the data directory is owned by influxdb with mode 0750
+      ansible.builtin.assert:
+        that:
+          - influxdb_datadir.stat.exists
+          - influxdb_datadir.stat.isdir
+          - influxdb_datadir.stat.pw_name == 'influxdb'
+          - influxdb_datadir.stat.gr_name == 'influxdb'
+          - influxdb_datadir.stat.mode == '0750'
+        fail_msg: "/var/lib/influxdb is missing or has the wrong ownership/permissions"
+        success_msg: "/var/lib/influxdb is owned by influxdb:influxdb with mode 0750"
+
+    - name: Read the templated InfluxDB configuration file
+      ansible.builtin.slurp:
+        src: /etc/influxdb/config.toml
+      register: influxdb_config
+
+    - name: Assert the configuration file has the templated paths and bind address
+      ansible.builtin.assert:
+        that:
+          - "'bolt-path = \"/var/lib/influxdb/influxd.bolt\"' in influxdb_config_content"
+          - "'engine-path = \"/var/lib/influxdb/engine\"' in influxdb_config_content"
+          - "'http-bind-address = \"127.0.0.1:8086\"' in influxdb_config_content"
+          - "'Ansible managed' in influxdb_config_content"
+        fail_msg: "/etc/influxdb/config.toml is missing the templated values"
+        success_msg: "/etc/influxdb/config.toml holds the templated bolt, engine and bind values"
+      vars:
+        influxdb_config_content: "{{ influxdb_config.content | b64decode }}"
+
+    - name: Read the systemd drop-in that pins INFLUXD_CONFIG_PATH
+      ansible.builtin.slurp:
+        src: /etc/systemd/system/influxdb.service.d/10-startcloud-config-path.conf
+      register: influxdb_dropin
+
+    - name: Assert the drop-in points influxd at the templated configuration file
+      ansible.builtin.assert:
+        that:
+          - "'Environment=INFLUXD_CONFIG_PATH=/etc/influxdb/config.toml' in influxdb_dropin_content"
+          - "'EnvironmentFile=' in influxdb_dropin_content"
+        fail_msg: "influxd is not pinned to /etc/influxdb/config.toml, the templated config would be inert"
+        success_msg: "influxd is pinned to the templated /etc/influxdb/config.toml"
+      vars:
+        influxdb_dropin_content: "{{ influxdb_dropin.content | b64decode }}"
+
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Assert the influxdb service is running and enabled
+      ansible.builtin.assert:
+        that:
+          - "'influxdb.service' in ansible_facts.services"
+          - ansible_facts.services['influxdb.service'].state == 'running'
+          - ansible_facts.services['influxdb.service'].status == 'enabled'
+        fail_msg: "influxdb.service is not running and enabled"
+        success_msg: "influxdb.service is running and enabled"
+
+    - name: Wait for the InfluxDB HTTP API port to accept connections
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 8086
+        timeout: 30
+
+    - name: Query the InfluxDB onboarding endpoint
+      ansible.builtin.uri:
+        url: http://127.0.0.1:8086/api/v2/setup
+        method: GET
+        return_content: true
+      register: influxdb_onboarding_state
+
+    - name: Assert onboarding already ran so no further setup is allowed
+      ansible.builtin.assert:
+        that:
+          - not (influxdb_onboarding_state.json.allowed | bool)
+        fail_msg: "InfluxDB still allows onboarding, the initial setup did not complete"
+        success_msg: "InfluxDB onboarding completed, further setup is refused"
+
+    - name: List the buckets created by the onboarding using the influx CLI
+      ansible.builtin.command:
+        cmd: influx org list --host http://127.0.0.1:8086
+      register: influxdb_org_list
+      changed_when: false
+      failed_when: false
+
+    - name: Assert the influx CLI is usable and the onboarding org exists
+      ansible.builtin.assert:
+        that:
+          - influxdb_org_list.rc == 0
+          - "'startcloud' in influxdb_org_list.stdout"
+        fail_msg: "influx CLI could not list orgs or the 'startcloud' org is missing"
+        success_msg: "influx CLI reports the 'startcloud' org created during onboarding"
+
+    - name: Read the runtime configuration back out of the running influxd daemon
+      ansible.builtin.command:
+        cmd: influx server-config --host http://127.0.0.1:8086
+      register: influxdb_server_config
+      changed_when: false
+
+    - name: Assert the running daemon consumed the templated bind address
+      ansible.builtin.assert:
+        that:
+          - "'127.0.0.1:8086' in influxdb_server_config.stdout"
+        fail_msg: "influxd runtime config does not carry the templated bind address 127.0.0.1:8086, the config file is inert"
+        success_msg: "influxd runtime config reports the templated bind address 127.0.0.1:8086"
+
+    - name: Assert the API refuses connections on the container address the config excluded
+      ansible.builtin.wait_for:
+        host: "{{ ansible_default_ipv4.address }}"
+        port: 8086
+        state: stopped
+        timeout: 15

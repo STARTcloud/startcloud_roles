@@ -1,0 +1,62 @@
+---
+- name: "Detecting pfSense Appliance"
+  ansible.builtin.stat:
+    path: /etc/inc/globals.inc
+  register: firewall_pfsense_check
+
+- name: "Configuring CGNAT Bogon Exclusions"
+  when: firewall_bogon_exclusions and firewall_pfsense_check.stat.exists
+  block:
+    - name: "Excluding 100.64.0.0/10 in the Bogons Update Script"
+      ansible.builtin.replace:
+        backup: true
+        path: /etc/rc.update_bogons.sh
+        regexp: '(^\s*egrep -v\s)(.*)$'
+        replace: '\1"^192.168.0.0/16|^172.16.0.0/12|^10.0.0.0/8|^100.64.0.0/10" /tmp/bogons > /etc/bogons'
+
+    - name: "Updating Bogon Script URL"
+      ansible.builtin.replace:
+        backup: true
+        path: /etc/rc.update_bogons.sh
+        regexp: 'files\.pfsense\.org'
+        replace: 'files.netgate.com'
+
+    # Old releases ship an expired CA bundle; fetch(1) then cannot reach the
+    # bogon mirror over TLS, so the bundle refresh is part of this flow.
+    - name: "Downloading latest CA Certificate Bundle"
+      ansible.builtin.get_url:
+        url: https://curl.se/ca/cacert.pem
+        dest: /usr/local/share/certs/ca-root-nss.crt
+        mode: "0644"
+        validate_certs: false
+        force: true
+
+    - name: "Asserting Expired DST Root CA X3 is Absent from the Bundle"
+      ansible.builtin.lineinfile:
+        path: /usr/local/share/certs/ca-root-nss.crt
+        line: "DST Root CA X3"
+        state: absent
+      check_mode: true
+      register: firewall_dst_check
+      failed_when: firewall_dst_check is changed
+
+    - name: "Symlinking the Bundle for the pfSense Fetch Function"
+      ansible.builtin.file:
+        src: /usr/local/share/certs/ca-root-nss.crt
+        dest: /usr/local/etc/ssl/cert.pem
+        state: link
+        force: true
+
+    - name: "Running the Bogon Update Script"
+      ansible.builtin.command: sh -x /etc/rc.update_bogons.sh nosleep
+      register: firewall_bogons_updated
+      changed_when: firewall_bogons_updated.stdout is search("addresses deleted")
+
+    - name: "Asserting the CGNAT Range Left the Bogon List"
+      ansible.builtin.lineinfile:
+        path: /etc/bogons
+        line: "100.64.0.0/10"
+        state: absent
+      check_mode: true
+      register: firewall_cgnat_status
+      failed_when: firewall_cgnat_status is changed

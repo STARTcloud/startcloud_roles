@@ -1,0 +1,76 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    # Minimal provisioner-context stand-ins so the role runs standalone.
+    settings:
+      hostname: startcloud-sdkman-gradle-debian12
+      domain: startcloud.test
+    # Service account context the role expects from the provisioner.
+    service_user: startcloud
+    service_group: startcloud
+    service_home_dir: /home/startcloud
+    # tasks/debian.yml consumes sdkman_dir in the update-alternatives task but
+    # never sets it (only tasks/windows.yml does), so it has to come from the
+    # play context. See NOTES.md.
+    sdkman_dir: /home/startcloud/.sdkman
+    run_tasks: true
+  pre_tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install acl so Ansible can become the unprivileged service user
+      ansible.builtin.apt:
+        name:
+          - acl
+          - ca-certificates
+        state: present
+
+    - name: Create the service group
+      ansible.builtin.group:
+        name: "{{ service_group }}"
+        state: present
+
+    - name: Create the service user Gradle is installed for
+      ansible.builtin.user:
+        name: "{{ service_user }}"
+        group: "{{ service_group }}"
+        home: "{{ service_home_dir }}"
+        shell: /bin/bash
+        create_home: true
+        state: present
+
+    - name: Create the shell profile files SDKMAN persists its settings into
+      ansible.builtin.file:
+        path: "{{ service_home_dir }}/{{ item }}"
+        state: touch
+        owner: "{{ service_user }}"
+        group: "{{ service_group }}"
+        mode: "0644"
+        modification_time: preserve
+        access_time: preserve
+      loop:
+        - .bash_profile
+        - .profile
+        - .bashrc
+        - .zshrc
+  roles:
+    # Hard prerequisite: sdkman_gradle sources ~/.sdkman/bin/sdkman-init.sh, so
+    # SDKMAN itself must already be installed for the service user. Installed
+    # with no candidates and no alternatives so everything the verify play
+    # asserts about Gradle is the work of sdkman_gradle.
+    - role: sdkman_install
+      vars:
+        sdkman_install_packages: []
+        sdkman_update_alternatives: []
+    - role: sdkman_gradle
+      vars:
+        gradle_version: 5.4.1
+        sdkman_update_alternatives:
+          - candidate: gradle
+            name: gradle
+            link: /usr/bin/gradle

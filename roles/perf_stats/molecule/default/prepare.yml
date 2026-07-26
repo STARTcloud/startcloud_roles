@@ -1,0 +1,51 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Update the apt cache"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: "Install the transport and keyring tooling the InfluxData repository needs"
+      ansible.builtin.apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - gnupg
+        state: present
+
+    - name: "Download the InfluxData repository signing key"
+      ansible.builtin.get_url:
+        url: https://repos.influxdata.com/influxdata-archive.key
+        dest: /tmp/influxdata-archive.key
+        mode: "0644"
+        timeout: 60
+
+    - name: "Install the InfluxData repository signing key"
+      ansible.builtin.command:
+        cmd: gpg --batch --yes --dearmor -o /usr/share/keyrings/influxdata-archive.gpg /tmp/influxdata-archive.key
+        creates: /usr/share/keyrings/influxdata-archive.gpg
+
+    - name: "Add the InfluxData apt repository that provides the telegraf package"
+      ansible.builtin.apt_repository:
+        repo: >-
+          deb [signed-by=/usr/share/keyrings/influxdata-archive.gpg]
+          https://repos.influxdata.com/debian stable main
+        filename: telegraf
+        state: present
+        update_cache: true
+
+    - name: "Confirm the telegraf package is resolvable before converge"
+      ansible.builtin.command: apt-cache policy telegraf
+      register: perf_stats_prepare_policy
+      changed_when: false
+      failed_when: "'Candidate: (none)' in perf_stats_prepare_policy.stdout"
+
+    - name: "Create the directory the converge file output writes metrics into"
+      ansible.builtin.file:
+        path: /var/log/perf_stats
+        state: directory
+        mode: "0777"

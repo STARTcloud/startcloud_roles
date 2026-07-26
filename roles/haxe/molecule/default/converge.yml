@@ -1,0 +1,30 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    haxe_version: "4.3.6"
+    install_neko: true
+    # OpenFL setup is disabled: "haxelib run openfl setup" requires the openfl
+    # library to already be installed, and openfl is not part of the default
+    # additional_haxe_libraries list.
+    install_openfl: false
+    # Trimmed from the defaults (feathersui-validators, lime, pako) to a single
+    # small pure-Haxe library so the haxelib install path is exercised without
+    # pulling lime's multi-hundred-megabyte binary payload inside the 10 minute
+    # scenario budget.
+    additional_haxe_libraries:
+      - pako
+    additional_haxe_libraries_dev:
+      - library: "mxhx-component"
+        repo: "https://github.com/mxhx-dev/mxhx-component.git"
+        branch: ""
+    # Provisioner-context stand-ins: the role reads service_user/service_group
+    # (falling back to ansible_user_id) for directory ownership and become_user.
+    service_user: "root"
+    service_group: "root"
+  tasks:
+    - name: "Applying the haxe role"
+      ansible.builtin.include_role:
+        name: haxe

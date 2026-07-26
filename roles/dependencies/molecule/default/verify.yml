@@ -1,0 +1,109 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: apt
+
+    - name: "Asserting the OS baseline packages from vars/debian.yml are installed"
+      ansible.builtin.assert:
+        that:
+          - "'htop' in ansible_facts.packages"
+          - "'lynx' in ansible_facts.packages"
+          - "'lshw' in ansible_facts.packages"
+          - "'tree' in ansible_facts.packages"
+          - "'python3-psutil' in ansible_facts.packages"
+          - "'python3-pexpect' in ansible_facts.packages"
+          - "'libxml2-utils' in ansible_facts.packages"
+        fail_msg: "One or more baseline `packages` entries were not installed by the role"
+        success_msg: "All asserted baseline packages are installed"
+
+    - name: "Asserting the extra_packages passed by converge are installed"
+      ansible.builtin.assert:
+        that:
+          - "'dos2unix' in ansible_facts.packages"
+          - "'xmlstarlet' in ansible_facts.packages"
+          - "'jq' in ansible_facts.packages"
+        fail_msg: "The extra_packages role param was not honoured (include_vars beat the role param)"
+        success_msg: "All extra_packages are installed"
+
+    - name: "Stating the keyrings directory"
+      ansible.builtin.stat:
+        path: /etc/apt/keyrings
+      register: dependencies_keyring_dir
+
+    - name: "Asserting the keyrings directory was created as a directory"
+      ansible.builtin.assert:
+        that:
+          - dependencies_keyring_dir.stat.exists
+          - dependencies_keyring_dir.stat.isdir
+        fail_msg: "/etc/apt/keyrings was not created"
+
+    ## converge.yml substitutes a reachable armored-key repository for the
+    ## production STARTcloud one (see NOTES.md), so the artifacts asserted here
+    ## are the molecule-docker ones the role was actually asked to create.
+    - name: "Stating the dearmored repository keyring"
+      ansible.builtin.stat:
+        path: /etc/apt/keyrings/molecule-docker-keyring.gpg
+      register: dependencies_keyring
+
+    - name: "Asserting the keyring exists, is non-empty and is mode 0644"
+      ansible.builtin.assert:
+        that:
+          - dependencies_keyring.stat.exists
+          - dependencies_keyring.stat.size > 0
+          - dependencies_keyring.stat.mode == '0644'
+        fail_msg: "The dearmored GPG keyring was not produced at the expected path/mode"
+
+    - name: "Reading the generated APT source file"
+      ansible.builtin.slurp:
+        src: /etc/apt/sources.list.d/molecule-docker.list
+      register: dependencies_source_file
+
+    - name: "Asserting the source line is signed-by the dearmored keyring"
+      ansible.builtin.assert:
+        that:
+          - "'signed-by=/etc/apt/keyrings/molecule-docker-keyring.gpg' in dependencies_source_content"
+          - "'download.docker.com/linux/debian' in dependencies_source_content"
+          - "ansible_distribution_release in dependencies_source_content"
+          - "'arch=' + dependencies_deb_arch in dependencies_source_content"
+        fail_msg: "molecule-docker.list does not contain the expected signed-by repository line"
+      vars:
+        dependencies_source_content: "{{ dependencies_source_file.content | b64decode }}"
+        dependencies_deb_arch: "{{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' }}"
+
+    - name: "Stating the stale duplicate source file planted by prepare.yml"
+      ansible.builtin.stat:
+        path: /etc/apt/sources.list.d/molecule-docker-stale.list
+      register: dependencies_stale_source
+
+    - name: "Asserting the stale duplicate source file is absent"
+      ansible.builtin.assert:
+        that:
+          - not dependencies_stale_source.stat.exists
+        fail_msg: "The stale duplicate APT source file was not removed"
+
+    - name: "Stating the APT proxy configuration"
+      ansible.builtin.stat:
+        path: /etc/apt/apt.conf.d/10proxy.conf
+      register: dependencies_proxy_conf
+
+    - name: "Asserting no APT proxy config was rendered while use_proxy is false"
+      ansible.builtin.assert:
+        that:
+          - not dependencies_proxy_conf.stat.exists
+        fail_msg: "10proxy.conf was rendered even though use_proxy is false"
+
+    - name: "Stating the temporary armored key file"
+      ansible.builtin.stat:
+        path: /tmp/molecule-docker-key.asc
+      register: dependencies_tmp_key
+
+    - name: "Asserting the temporary armored key was cleaned up"
+      ansible.builtin.assert:
+        that:
+          - not dependencies_tmp_key.stat.exists
+        fail_msg: "The temporary armored GPG key was left behind in /tmp"

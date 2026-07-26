@@ -1,0 +1,186 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  gather_facts: false
+  vars:
+    example_role_home: /local/notesjava
+    example_role_proxy_url: demo.startcloud-example-role.startcloud.test
+  tasks:
+    - name: "Stating the installation directories created by the role"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: example_role_dirs
+      loop:
+        - "{{ example_role_home }}/images"
+        - "{{ example_role_home }}/ids"
+
+    - name: "Asserting the installation directories exist"
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.isdir
+        fail_msg: "Expected {{ item.item }} to be a directory created by the role"
+      loop: "{{ example_role_dirs.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "Locating uploadserver in the per-user site-packages pip installed into"
+      ansible.builtin.find:
+        paths: /root/.local/lib
+        patterns: "uploadserver*"
+        file_type: any
+        recurse: true
+      register: example_role_uploadserver
+
+    - name: "Asserting uploadserver was pip-installed"
+      ansible.builtin.assert:
+        that:
+          - example_role_uploadserver.matched | int > 0
+        fail_msg: "uploadserver was not installed under /root/.local/lib"
+
+    - name: "Stating the files the role templates and archives out"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: example_role_files
+      loop:
+        - /etc/systemd/system/pythonserve.service
+        - /etc/pythonserv
+        - /etc/cockpit/cockpit.conf
+        - "{{ example_role_home }}/welcome.html"
+        - "{{ example_role_home }}/styles.css"
+        - "{{ example_role_home }}/support-bundle.zip"
+        - /vagrant/support-bundle/ansible-roles.zip
+        - /vagrant/support-bundle/installers.json
+        - /vagrant/support-bundle/completed.json
+
+    - name: "Asserting every templated, copied and archived artifact is present"
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.isreg
+          - item.stat.size > 0
+        fail_msg: "Expected {{ item.item }} to exist as a non-empty regular file"
+      loop: "{{ example_role_files.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "Asserting the templated files are owned by the service user"
+      ansible.builtin.assert:
+        that:
+          - item.stat.pw_name == 'java_user'
+        fail_msg: "Expected {{ item.item }} to be owned by java_user"
+      loop: "{{ example_role_files.results[0:5] }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "Reading the systemd unit the role placed"
+      ansible.builtin.slurp:
+        src: /etc/systemd/system/pythonserve.service
+      register: example_role_unit
+
+    - name: "Asserting the unit launches uploadserver from the served directory"
+      ansible.builtin.assert:
+        that:
+          - "'ExecStart=python3 -m uploadserver' in example_role_unit_text"
+          - "'EnvironmentFile=/etc/pythonserv' in example_role_unit_text"
+          - "'WorkingDirectory=' + example_role_home in example_role_unit_text"
+        fail_msg: "pythonserve.service does not launch uploadserver from {{ example_role_home }}"
+      vars:
+        example_role_unit_text: "{{ example_role_unit.content | b64decode }}"
+
+    - name: "Reading the systemd environment file"
+      ansible.builtin.slurp:
+        src: /etc/pythonserv
+      register: example_role_env
+
+    - name: "Asserting the environment file carries the forwarded port and the self-signed certificate"
+      ansible.builtin.assert:
+        that:
+          - "'port=\"8000\"' in example_role_env_text"
+          - "'/secure/combined/startcloud-example-role.startcloud.test-self-signed.pem' in example_role_env_text"
+        fail_msg: "/etc/pythonserv is missing the port or the self-signed certificate path"
+      vars:
+        example_role_env_text: "{{ example_role_env.content | b64decode }}"
+
+    - name: "Reading the rendered welcome page"
+      ansible.builtin.slurp:
+        src: "{{ example_role_home }}/welcome.html"
+      register: example_role_welcome
+
+    - name: "Asserting the welcome page rendered the provisioner context and the discovered address"
+      ansible.builtin.assert:
+        that:
+          - "'10.244.44.10 startcloud-example-role startcloud-example-role.startcloud.test' in example_role_welcome_text"
+          - "example_role_proxy_url in example_role_welcome_text"
+          - "'https://console.startcloud-example-role.startcloud.test/system/terminal' in example_role_welcome_text"
+          - "'startcloud-example-role.startcloud.test/STARTCLOUD' in example_role_welcome_text"
+          - "'sudo domino console' in example_role_welcome_text"
+        fail_msg: "welcome.html is missing the rendered provisioner context"
+      vars:
+        example_role_welcome_text: "{{ example_role_welcome.content | b64decode }}"
+
+    - name: "Reading the cockpit configuration the role placed"
+      ansible.builtin.slurp:
+        src: /etc/cockpit/cockpit.conf
+      register: example_role_cockpit
+
+    - name: "Asserting cockpit is configured for the proxied /admin/ url root"
+      ansible.builtin.assert:
+        that:
+          - "'[Webservice]' in example_role_cockpit_text"
+          - "'UrlRoot=/admin/' in example_role_cockpit_text"
+        fail_msg: "cockpit.conf was not rendered with the /admin/ url root"
+      vars:
+        example_role_cockpit_text: "{{ example_role_cockpit.content | b64decode }}"
+
+    - name: "Reading the recorded installers inventory"
+      ansible.builtin.slurp:
+        src: /vagrant/support-bundle/installers.json
+      register: example_role_installers
+
+    - name: "Asserting the installers inventory captured the tree output"
+      ansible.builtin.assert:
+        that:
+          - "'/vagrant/installers' in example_role_installers_text"
+          - "'placeholder-installer.bin' in example_role_installers_text"
+        fail_msg: "installers.json does not contain the tree listing of /vagrant/installers"
+      vars:
+        example_role_installers_text: "{{ example_role_installers.content | b64decode }}"
+
+    - name: "Querying the pythonserve unit state"
+      ansible.builtin.systemd_service:
+        name: pythonserve
+      register: example_role_pythonserve
+      check_mode: true
+
+    - name: "Asserting pythonserve is enabled and active"
+      ansible.builtin.assert:
+        that:
+          - example_role_pythonserve.status.UnitFileState == 'enabled'
+          - example_role_pythonserve.status.ActiveState == 'active'
+        fail_msg: >-
+          pythonserve state is unexpected
+          (UnitFileState={{ example_role_pythonserve.status.UnitFileState }},
+          ActiveState={{ example_role_pythonserve.status.ActiveState }})
+
+    - name: "Waiting for the python simple http server to listen on the forwarded port"
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 8000
+        state: started
+        timeout: 30
+
+    - name: "Querying the cockpit unit the role restarts last"
+      ansible.builtin.systemd_service:
+        name: cockpit
+      register: example_role_cockpit_unit
+      check_mode: true
+
+    - name: "Asserting cockpit is active after the role restarted it"
+      ansible.builtin.assert:
+        that:
+          - example_role_cockpit_unit.status.ActiveState == 'active'
+        fail_msg: >-
+          cockpit is not active after the role restart
+          (ActiveState={{ example_role_cockpit_unit.status.ActiveState }})

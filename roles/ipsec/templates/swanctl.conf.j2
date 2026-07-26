@@ -1,0 +1,43 @@
+connections {
+{% for peer in ipsec_peers %}
+  to-{{ peer.name }} {
+    local_addrs = {{ peer.me }}
+    remote_addrs = {{ peer.other }}
+    local {
+      auth = psk
+      id = {{ peer.myid | default(peer.me) }}
+    }
+    remote {
+      auth = psk
+      id = {{ peer.otherid | default(peer.other) }}
+    }
+    mobike = no
+    version = 2
+    proposals = {{ ipsec_proposals }}
+
+    children {
+      vti {
+        local_ts = 0.0.0.0/0,::/0
+        remote_ts = 0.0.0.0/0,::/0
+        esp_proposals = {{ ipsec_esp_proposals }}
+      }
+    }
+    # the if_id pairs with the xfrm interface the role creates in /etc/network/interfaces
+    if_id_in = {{ ipsec_base_if_id + loop.index0 }}
+    if_id_out = {{ ipsec_base_if_id + loop.index0 }}
+  }
+{% endfor %}
+}
+
+secrets {
+{% for peer in ipsec_peers %}
+  ike-{{ loop.index }}-1 {
+    id-1 = {{ peer.myid | default(peer.me) }}
+    secret = "{{ peer.psk }}"
+  }
+  ike-{{ loop.index }}-2 {
+    id-2 = {{ peer.otherid | default(peer.other) }}
+    secret = "{{ peer.psk }}"
+  }
+{% endfor %}
+}

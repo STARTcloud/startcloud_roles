@@ -12,16 +12,16 @@ argument_specs:
         description: Master gate — when false the role loads its vars but runs no tasks.
       startcloud_keepalived_state:
         type: str
-        default: master
-        description: Initial VRRP state for this node (master or backup).
+        default: MASTER
+        description: Initial VRRP state for this node; keepalived matches MASTER or BACKUP literally and treats anything else as BACKUP.
       startcloud_keepalived_virtual_router_id:
         type: int
         default: 60
         description: VRRP virtual router ID shared by all nodes in the same group.
       startcloud_keepalived_auth_pass:
-        type: bool
-        default: true
-        description: Authentication password value written into the VRRP instance authentication block.
+        type: str
+        default: STARTcld
+        description: VRRP simple authentication password written into the authentication block; keepalived truncates it at 8 characters.
       startcloud_keepalived_virtual_ipaddress:
         type: str
         default: ""

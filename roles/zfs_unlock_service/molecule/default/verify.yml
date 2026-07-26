@@ -1,0 +1,87 @@
+---
+- name: "Verify zfs_unlock_service"
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: "Stat the zfs-unlock systemd unit"
+      ansible.builtin.stat:
+        path: /etc/systemd/system/zfs-unlock.service
+      register: zfs_unlock_unit
+
+    - name: "Stat the zfs-unlock helper script"
+      ansible.builtin.stat:
+        path: /usr/local/sbin/zfs-unlock-user-data.sh
+      register: zfs_unlock_script
+
+    - name: "Stat the WantedBy enablement symlink"
+      ansible.builtin.stat:
+        path: /etc/systemd/system/zfs-mount.service.wants/zfs-unlock.service
+      register: zfs_unlock_wants
+
+    - name: "Assert both templated artifacts exist and are executable"
+      ansible.builtin.assert:
+        that:
+          - zfs_unlock_unit.stat.exists
+          - zfs_unlock_unit.stat.isreg
+          - zfs_unlock_unit.stat.xusr
+          - zfs_unlock_script.stat.exists
+          - zfs_unlock_script.stat.isreg
+          - zfs_unlock_script.stat.xusr
+        fail_msg: >-
+          Expected /etc/systemd/system/zfs-unlock.service and
+          /usr/local/sbin/zfs-unlock-user-data.sh to exist as executable regular
+          files (role templates them with mode a+x).
+
+    - name: "Read the rendered systemd unit"
+      ansible.builtin.slurp:
+        src: /etc/systemd/system/zfs-unlock.service
+      register: zfs_unlock_unit_content
+
+    - name: "Read the rendered helper script"
+      ansible.builtin.slurp:
+        src: /usr/local/sbin/zfs-unlock-user-data.sh
+      register: zfs_unlock_script_content
+
+    - name: "Assert the unit wires ExecStart to the helper and orders around zfs-mount"
+      ansible.builtin.assert:
+        that:
+          - "'Type=oneshot' in _unit_text"
+          - "'ExecStart=/usr/local/sbin/zfs-unlock-user-data.sh' in _unit_text"
+          - "'Before=zfs-mount.service' in _unit_text"
+          - "'WantedBy=zfs-mount.service' in _unit_text"
+        fail_msg: "Rendered zfs-unlock.service is missing required directives."
+      vars:
+        _unit_text: "{{ zfs_unlock_unit_content.content | b64decode }}"
+
+    - name: "Assert the helper script imports, unlocks and mounts the user_data pool"
+      ansible.builtin.assert:
+        that:
+          - "'zpool import -f user_data' in _script_text"
+          - "'zfs load-key -L file:///dev/disk/by-partlabel/key user_data' in _script_text"
+          - "'zfs mount user_data' in _script_text"
+        fail_msg: "Rendered zfs-unlock-user-data.sh is missing required ZFS commands."
+      vars:
+        _script_text: "{{ zfs_unlock_script_content.content | b64decode }}"
+
+    - name: "Assert the unit is enabled via the zfs-mount.service.wants symlink"
+      ansible.builtin.assert:
+        that:
+          - zfs_unlock_wants.stat.exists
+          - zfs_unlock_wants.stat.islnk
+          - zfs_unlock_wants.stat.lnk_target == '/etc/systemd/system/zfs-unlock.service'
+        fail_msg: >-
+          zfs-unlock.service is not enabled: expected a symlink at
+          /etc/systemd/system/zfs-mount.service.wants/zfs-unlock.service.
+
+    - name: "Collect service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Assert systemd knows the unit and it is not running"
+      ansible.builtin.assert:
+        that:
+          - "'zfs-unlock.service' in ansible_facts.services"
+          - ansible_facts.services['zfs-unlock.service'].state != 'running'
+        fail_msg: >-
+          systemd does not report zfs-unlock.service, or it is running even
+          though the role sets state=stopped.

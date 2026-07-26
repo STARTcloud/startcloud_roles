@@ -3,22 +3,15 @@ run_tasks: true
 
 mongodb_package: mongodb-org
 mongodb_package_state: present
-mongodb_version: "4.4"
-mongodb_apt_key_from_url: false
-mongodb_apt_keyserver: "hkp://keyserver.ubuntu.com:80"
-mongodb_apt_key_id:
-  "3.6": "2930ADAE8CAF5059EE73BB4B58712A2291FA4AD5"
-  "4.0": "9DA31620334BD75D9DCB49F368818C72E52529D4"
-  "4.2": "E162F504A20CDF15827F718D4B7C549A058F8B6B"
-  "4.4": "20691eec35216c63caf66ce1656408e390cfb1f5"
-mongodb_apt_key_url:
-  "3.6": "https://www.mongodb.org/static/pgp/server-3.6.asc"
-  "4.0": "https://www.mongodb.org/static/pgp/server-4.0.asc"
-  "4.2": "https://www.mongodb.org/static/pgp/server-4.2.asc"
-  "4.4": "https://www.mongodb.org/static/pgp/server-4.4.asc"
+# Supported releases are 7.0 and newer; the repository URL, signing key URL and
+# keyring path are all derived from this value in vars/<os_family>.yml.
+mongodb_version: "8.0"
 
-mongodb_pymongo_from_pip: true # Install latest PyMongo via PIP or package manager
-mongodb_pymongo_pip_version: 3.11.3
+# Install PyMongo from the distribution packages by default. Installing into the
+# system interpreter with pip fails on PEP 668 ("externally managed") systems.
+mongodb_pymongo_from_pip: false
+# Pin a PyMongo release when installing from pip; unset installs the latest.
+mongodb_pymongo_pip_version:
 
 mongodb_user_update_password: "on_create" # MongoDB user password update default policy
 mongodb_manage_service: true
@@ -37,14 +30,16 @@ mongodb_daemon_name: "{{ 'mongod' if ('mongodb-org' in mongodb_package) else 'mo
 
 ## net Options
 mongodb_net_bindip: 127.0.0.1 # Comma separated list of ip addresses to listen on
-mongodb_net_http_enabled: false # Enable http interface
 mongodb_net_ipv6: false # Enable IPv6 support (disabled by default)
 mongodb_net_maxconns: 65536 # Max number of simultaneous connections
 mongodb_net_port: 27017 # Specify port number
-mongodb_net_ssl: disabled # Enable or disable ssl connections
-mongodb_net_ssl_mode: "" # Set the ssl mode (RequireSSL / preferSSL / AllowSSL / disabled)
-mongodb_net_ssl_pemfile: "" # Location of the pemfile to use for ssl
-mongodb_net_ssl_host: "" # Valid ssl hostname
+# TLS mode for mongod (net.tls.mode): disabled / allowTLS / preferTLS / requireTLS.
+# net.ssl was removed in MongoDB 7.0; mongod treats it as a fatal unknown option.
+mongodb_net_tls_mode: "disabled"
+mongodb_net_tls_certificate_key_file: "" # PEM file holding the server certificate and its private key (net.tls.certificateKeyFile)
+mongodb_net_tls_ca_file: "" # CA file used to validate certificates presented by clients (net.tls.CAFile)
+mongodb_net_tls_allow_connections_without_certificates: false # Accept clients that present no certificate
+mongodb_net_tls_host: "" # Hostname clients use to reach this member; must match the server certificate
 
 ## processManagement Options
 # Fork server process
@@ -61,15 +56,9 @@ mongodb_security_javascript_enabled: true # Enables or disables server-side Java
 mongodb_storage_dbpath: /data/db # Directory for datafiles
 mongodb_storage_dirperdb: false # Use one directory per DB
 
-# The storage engine for the mongod database
+# The storage engine for the mongod database. wiredTiger is the only engine
+# supported by MongoDB 7.0 and newer.
 mongodb_storage_engine: "wiredTiger"
-# mmapv1 specific options
-mongodb_storage_quota_enforced: false # Limits each database to a certain number of files
-mongodb_storage_quota_maxfiles: 8 # Number of quota files per DB
-mongodb_storage_smallfiles: false # Very useful for non-data nodes
-
-mongodb_storage_journal_enabled: true # Enable journaling
-mongodb_storage_prealloc: true # Enable data file preallocation
 
 mongodb_wiredtiger_directory_for_indexes: false
 
@@ -85,12 +74,8 @@ mongodb_systemlog_path: /var/log/mongodb/{{ mongodb_daemon_name }}.log # Log fil
 mongodb_operation_profiling_slow_op_threshold_ms: 100
 mongodb_operation_profiling_mode: "off"
 
-## cloud options (MongoDB >= 4.0)
-mongodb_cloud_monitoring_free_state: "runtime"
-
 ## replication Options
 mongodb_replication_replset: "" # Enable replication
-mongodb_replication_replindexprefetch: "all" # specify index prefetching behavior (if secondary) [none|_id_only|all]
 mongodb_replication_oplogsize: 1024 # specifies a maximum size in megabytes for the replication operation log
 
 # MMS Agent

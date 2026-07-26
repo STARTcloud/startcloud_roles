@@ -1,0 +1,10 @@
+---
+# Config changes have to reach the running service. On a systemd host that is a
+# restart of the web-terminal unit. In a container supervisord is PID 1 (or is
+# owned by roles/supervisord), so the role does not restart it from here - the
+# same gate roles/supervisord and roles/haproxy use for their container paths.
+- name: "Restarting web-terminal"
+  when: not (ansible_module_running_in_container | default(false))
+  ansible.builtin.service:
+    name: web-terminal
+    state: restarted

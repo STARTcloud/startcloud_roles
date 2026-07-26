@@ -1,0 +1,16 @@
+---
+## pfSense reads the parsed /tmp/config.cache, not /conf/config.xml — every
+## direct XML edit needs this invalidate + reload before dependent commands
+## (acme_command.sh, easyrule, the webConfigurator) see the change.
+- name: "Invalidating pfSense Configuration Cache"
+  ansible.builtin.file:
+    path: /tmp/config.cache
+    state: absent
+
+- name: "Reloading pfSense Configuration"
+  ansible.builtin.command: /etc/rc.reload_all
+  changed_when: true
+
+- name: "Waiting for pfSense Cache to Regenerate"
+  ansible.builtin.wait_for:
+    path: /tmp/config.cache

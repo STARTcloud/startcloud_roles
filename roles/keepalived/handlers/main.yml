@@ -3,8 +3,3 @@
   ansible.builtin.service:
     name: keepalived
     state: restarted
-
-- name: "Reloading keepalived"
-  ansible.builtin.service:
-    name: keepalived
-    state: reloaded

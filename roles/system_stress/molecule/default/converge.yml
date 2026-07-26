@@ -1,0 +1,17 @@
+---
+- name: "Converge"
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    show_help: true
+    vm_encrypted: false
+    stress_packages:
+      - stress-ng
+      - stress
+      - fio
+      - python3-cpuinfo
+  tasks:
+    - name: "Include system_stress role"
+      ansible.builtin.include_role:
+        name: system_stress

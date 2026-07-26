@@ -1,0 +1,33 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+
+    # Source checkout — the role's default tag, cloned from upstream.
+    librenms_git_repo: "https://github.com/librenms/librenms.git"
+    librenms_git_version: "24.11.0"
+    librenms_install_dir: "/opt/librenms"
+    librenms_user: "librenms"
+    librenms_group: "librenms"
+
+    # PHP runtime — 8.2 is the version Debian 12 ships natively.
+    librenms_php_version: "8.2"
+    librenms_php_timezone: "Etc/UTC"
+
+    # Web front-end
+    librenms_server_name: "librenms.molecule.test"
+    librenms_fpm_pool: "librenms"
+    librenms_fpm_socket: "/run/php-fpm-librenms.sock"
+
+    # Database — literal placeholder secrets, test container only.
+    librenms_mysql_database: "librenms"
+    librenms_mysql_user: "librenms"
+    librenms_mysql_password: "CHANGEME"
+    librenms_mysql_root_password: "CHANGEME"
+
+    # SNMP — the community string is a credential, so it is a placeholder too.
+    librenms_community_string: "CHANGEME"
+  roles:
+    - role: librenms

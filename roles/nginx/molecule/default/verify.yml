@@ -1,0 +1,119 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting the nginx package is installed"
+      ansible.builtin.assert:
+        that:
+          - "'nginx' in ansible_facts.packages"
+        fail_msg: "The nginx package was not installed by the role"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting nginx service is running and enabled"
+      ansible.builtin.assert:
+        that:
+          - "'nginx.service' in ansible_facts.services"
+          - ansible_facts.services['nginx.service'].state == 'running'
+          - ansible_facts.services['nginx.service'].status == 'enabled'
+        fail_msg: "nginx.service is not running and enabled"
+
+    - name: "Stat the rendered main nginx configuration"
+      ansible.builtin.stat:
+        path: /etc/nginx/nginx.conf
+      register: nginx_conf_stat
+
+    - name: "Stat the managed vhost configuration"
+      ansible.builtin.stat:
+        path: /etc/nginx/sites-enabled/molecule.startcloud.test.conf
+      register: nginx_vhost_stat
+
+    - name: "Stat the removed default vhost"
+      ansible.builtin.stat:
+        path: /etc/nginx/sites-enabled/default
+      register: nginx_default_vhost_stat
+
+    - name: "Asserting configuration files are in the expected state"
+      ansible.builtin.assert:
+        that:
+          - nginx_conf_stat.stat.exists
+          - nginx_conf_stat.stat.isreg
+          - nginx_conf_stat.stat.pw_name == 'root'
+          - nginx_conf_stat.stat.mode == '0644'
+          - nginx_vhost_stat.stat.exists
+          - nginx_vhost_stat.stat.isreg
+          - not nginx_default_vhost_stat.stat.exists
+        fail_msg: "nginx.conf / managed vhost missing, or the default vhost was not removed"
+
+    - name: "Reading the rendered main nginx configuration"
+      ansible.builtin.slurp:
+        src: /etc/nginx/nginx.conf
+      register: nginx_conf_content
+
+    - name: "Asserting nginx.conf matches the supplied variables"
+      ansible.builtin.assert:
+        that:
+          - nginx_conf_decoded is search('user\s+www-data;')
+          - nginx_conf_decoded is search('pid\s+/run/nginx\.pid;')
+          - nginx_conf_decoded is search('worker_connections\s+1024;')
+          - "'client_max_body_size 128m;' in nginx_conf_decoded"
+          - "'server_tokens off;' in nginx_conf_decoded"
+          - "'worker_rlimit_nofile 8192;' in nginx_conf_decoded"
+          - "'proxy_set_header X-Real-IP $remote_addr;' in nginx_conf_decoded"
+          - "'upstream molecule_backend {' in nginx_conf_decoded"
+          - "'least_conn;' in nginx_conf_decoded"
+          - "'server 127.0.0.1:8082 weight=3;' in nginx_conf_decoded"
+          - "'keepalive 16;' in nginx_conf_decoded"
+          - "'include /etc/nginx/sites-enabled/*;' in nginx_conf_decoded"
+        fail_msg: "Rendered nginx.conf does not contain the expected directives"
+      vars:
+        nginx_conf_decoded: "{{ nginx_conf_content.content | b64decode }}"
+
+    - name: "Reading the rendered vhost configuration"
+      ansible.builtin.slurp:
+        src: /etc/nginx/sites-enabled/molecule.startcloud.test.conf
+      register: nginx_vhost_content
+
+    - name: "Asserting the rendered vhost matches the supplied variables"
+      ansible.builtin.assert:
+        that:
+          - "'listen 8080;' in nginx_vhost_decoded"
+          - "'server_name molecule.startcloud.test;' in nginx_vhost_decoded"
+          - "'root /var/www/html;' in nginx_vhost_decoded"
+          - "'index index.html index.htm;' in nginx_vhost_decoded"
+          - "'access_log /var/log/nginx/molecule.access.log main;' in nginx_vhost_decoded"
+          - "'error_log /var/log/nginx/molecule.error.log error;' in nginx_vhost_decoded"
+          - "'location /healthz {' in nginx_vhost_decoded"
+          - "'listen       [::]:' not in nginx_vhost_decoded"
+        fail_msg: "Rendered vhost does not contain the expected directives"
+      vars:
+        nginx_vhost_decoded: "{{ nginx_vhost_content.content | b64decode }}"
+
+    - name: "Looking up the nginx run-as user"
+      ansible.builtin.getent:
+        database: passwd
+        key: www-data
+
+    - name: "Asserting the nginx run-as user exists"
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.getent_passwd['www-data'] is defined
+        fail_msg: "The www-data user nginx runs as does not exist"
+
+    - name: "Asserting nginx is listening on the managed vhost port"
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 8080
+        state: started
+        timeout: 30
+
+    - name: "Validating the rendered configuration with nginx -t"
+      ansible.builtin.command: nginx -t -c /etc/nginx/nginx.conf
+      changed_when: false

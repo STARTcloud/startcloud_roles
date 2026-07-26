@@ -1,6 +1,13 @@
 ---
+## Sets ansible_module_running_in_container, the fact every host-owned stage in
+## this role is gated on. Inside a container the init units belong to the host
+## image rather than the guest, so stopping and disabling them is neither
+## possible nor meaningful; gathered once here and consumed below.
+- name: "Gathering facts on current container"
+  community.docker.current_container_facts:
+
 - name: "Disabling NFS, Exim and Cockpit, reboot to fully apply"
-  when: not ansible_module_running_in_container
+  when: not (ansible_module_running_in_container | default(false))
   ansible.builtin.service:
     name: "{{ item }}"
     state: stopped
@@ -8,42 +15,54 @@
   loop: "{{ lockdown }}"
   failed_when: false
 
+## password_hash('sha512') picks a fresh random salt on every invocation, so the
+## resulting hash differs each run and the user module rewrites /etc/shadow
+## forever. This role exists to rotate an existing account's password, so
+## update_password: on_create is not an option - pin the salt to a per-host
+## deterministic value instead. The hash then changes only when the password
+## itself changes, which is the real change signal.
 - name: "Changing startcloud Password"
   when: lockdown_use_settings_password
   ansible.builtin.user:
     name: "startcloud"
     state: present
-    password: "{{ vagrant_user_pass | password_hash('sha512') }}"
+    password: "{{ vagrant_user_pass | password_hash('sha512', (inventory_hostname | hash('sha256'))[:16]) }}"
 
 - name: "Changing startcloud Password"
   when: not lockdown_use_settings_password
   ansible.builtin.user:
     name: "startcloud"
     state: present
-    password: "{{ lockdown_new_password | password_hash('sha512') }}"
+    password: "{{ lockdown_new_password | password_hash('sha512', (inventory_hostname | hash('sha256'))[:16]) }}"
 
 - name: "Generating an OpenSSH keypair with the default values"
   community.crypto.openssh_keypair:
     owner: startcloud
     group: startcloud
-    path: /home/startcloud/.ssh/id_ssh_rsa
+    path: "{{ lockdown_user_private_key_path }}"
 
 - name: "Setting ownership of SSH files"
   ansible.builtin.file:
     owner: startcloud
     group: startcloud
-    path: "{{ item }}"
+    path: "{{ lockdown_user_private_key_path | dirname }}"
     state: directory
     recurse: true
-  with_items:
-    - "/home/startcloud/.ssh"
+
+- name: "Reading the generated public key from the target"
+  # The keypair is generated ON the target, so the public key must be read back
+  # from the target. lookup('file', ...) would read the controller's filesystem
+  # and break any push-mode run; slurp works identically when controller == target.
+  ansible.builtin.slurp:
+    src: "{{ lockdown_user_private_key_path }}.pub"
+  register: lockdown_generated_pubkey
 
 - name: "Copying the public key to the remote server"
   ansible.posix.authorized_key:
     user: startcloud
     state: present
     exclusive: false
-    key: "{{ lookup('file', '/home/startcloud/.ssh/id_ssh_rsa.pub') }}"
+    key: "{{ lockdown_generated_pubkey.content | b64decode }}"
 
 - name: "Resetting ssh connection to apply user changes"
   ansible.builtin.meta: reset_connection

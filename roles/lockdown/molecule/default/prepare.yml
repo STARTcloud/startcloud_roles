@@ -1,0 +1,34 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  tasks:
+    - name: "Creating the startcloud group (normally created by the users role)"
+      ansible.builtin.group:
+        name: startcloud
+        state: present
+
+    - name: "Creating the startcloud user (normally created by the users role)"
+      ansible.builtin.user:
+        name: startcloud
+        group: startcloud
+        home: /home/startcloud
+        shell: /bin/bash
+        create_home: true
+        state: present
+
+    - name: "Creating the startcloud .ssh directory (normally created by the users role)"
+      ansible.builtin.file:
+        path: /home/startcloud/.ssh
+        state: directory
+        owner: startcloud
+        group: startcloud
+        mode: "0700"
+
+    - name: "Seeding a sensitive file so the cleanup step has something to remove"
+      ansible.builtin.copy:
+        dest: /var/log/startcloud-debug.log
+        content: "provisioning debug output\n"
+        owner: root
+        group: root
+        mode: "0644"

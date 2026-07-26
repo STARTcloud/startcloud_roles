@@ -29,26 +29,25 @@
             name: "{{ squid_packages }}"
             state: present
 
-    - name: "Removing Default Squid Configuration"
-      ansible.builtin.file:
-        path: /etc/squid/squid.conf
-        state: absent
-
+    ## The template writes the whole file, so the delete of /etc/squid/squid.conf
+    ## that used to sit here bought nothing - it only guaranteed a changed report
+    ## on every run, since the write overwrites whatever the package shipped.
     - name: "Creating New Squid Configuration"
       ansible.builtin.template:
         dest: /etc/squid/squid.conf
         src: squid.conf.j2
         mode: "0644"
+      notify: "Restart squid"
 
     - name: "Running Squid Configuration Parse Check"
       ansible.builtin.command: squid -k parse
       register: squid_parse_result
       changed_when: false
-      ignore_errors: true
+      failed_when: false
 
     - name: "Failing if Squid Configuration is Invalid"
       ansible.builtin.fail:
-        msg: "Squid configuration is invalid."
+        msg: "Squid configuration is invalid: {{ squid_parse_result.stderr | default('') }}"
       when: squid_parse_result.rc != 0
 
     - name: "Checking if Squid Config is Valid"
@@ -56,8 +55,11 @@
         msg: "Squid configuration is valid."
       when: squid_parse_result.rc == 0
 
-    - name: "Restarting Squid Service"
-      ansible.builtin.systemd:
+    ## squid only needs bouncing when its configuration actually changes, and
+    ## that restart hangs off the template above. An unconditional
+    ## `state: restarted` here reported changed on every run and never converged.
+    - name: "Starting and Enabling Squid Service"
+      ansible.builtin.systemd_service:
         name: squid
-        state: restarted
+        state: started
         enabled: true

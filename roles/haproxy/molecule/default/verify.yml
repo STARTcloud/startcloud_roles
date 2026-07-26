@@ -1,0 +1,150 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    haproxy_expected_error_codes:
+      - 400
+      - 403
+      - 404
+      - 408
+      - 500
+      - 502
+      - 503
+      - 504
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting the haproxy package is installed"
+      ansible.builtin.assert:
+        that:
+          - "'haproxy' in ansible_facts.packages"
+        fail_msg: "The haproxy package was not installed by the role"
+
+    - name: "Looking up the haproxy run-as user"
+      ansible.builtin.getent:
+        database: passwd
+        key: haproxy
+
+    - name: "Looking up the haproxy run-as group"
+      ansible.builtin.getent:
+        database: group
+        key: haproxy
+
+    - name: "Asserting the user and group haproxy.cfg runs as exist"
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.getent_passwd['haproxy'] is defined
+          - ansible_facts.getent_group['haproxy'] is defined
+        fail_msg: "The haproxy user/group the rendered config drops privileges to is missing"
+
+    - name: "Stat the rendered haproxy configuration"
+      ansible.builtin.stat:
+        path: /etc/haproxy/haproxy.cfg
+      register: haproxy_cfg_stat
+
+    - name: "Asserting haproxy.cfg was rendered and owned as the role specifies"
+      ansible.builtin.assert:
+        that:
+          - haproxy_cfg_stat.stat.exists
+          - haproxy_cfg_stat.stat.isreg
+          - haproxy_cfg_stat.stat.pw_name == 'haproxy'
+          - haproxy_cfg_stat.stat.xusr
+        fail_msg: "/etc/haproxy/haproxy.cfg is missing, not owned by haproxy, or not executable (mode a+x)"
+
+    - name: "Reading the rendered haproxy configuration"
+      ansible.builtin.slurp:
+        src: /etc/haproxy/haproxy.cfg
+      register: haproxy_cfg_content
+
+    - name: "Asserting haproxy.cfg matches the supplied variables"
+      ansible.builtin.assert:
+        that:
+          - "'frontend EXT-WEB:80' in haproxy_cfg_decoded"
+          - haproxy_cfg_decoded is search('bind :::80\n')
+          - haproxy_cfg_decoded is search('bind :::443 v4v6 ssl crt\s+/secure/combined/default-signed\.pem')
+          - haproxy_cfg_decoded is search('bind :::444 ssl crt /secure/combined/default-signed\.pem')
+          - "'redirect  code 301 scheme https if !{ ssl_fc }   !ispath_letsencrypt' in haproxy_cfg_decoded"
+          - haproxy_cfg_decoded is search('acl host_console\s+hdr\(host\)\s+-i console\.startcloud-haproxy\.molecule\.test')
+          - haproxy_cfg_decoded is search('default_backend\s+letsencrypt_80')
+          - haproxy_cfg_decoded is search('server\s+letsencrypt\s+127\.0\.0\.1:8181')
+          - "'backend cors_backend' in haproxy_cfg_decoded"
+          - "'errorfile 404 /etc/haproxy/errors/tpl/404.http' in haproxy_cfg_decoded"
+        fail_msg: "The rendered haproxy.cfg does not reflect the ports, cert path, hostname and backends supplied to the role"
+      vars:
+        haproxy_cfg_decoded: "{{ haproxy_cfg_content.content | b64decode }}"
+
+    - name: "Stat the branded error page templates"
+      ansible.builtin.stat:
+        path: "/etc/haproxy/errors/tpl/{{ item }}.http"
+      register: haproxy_tpl_stat
+      loop: "{{ haproxy_expected_error_codes }}"
+
+    - name: "Stat the branded error pages"
+      ansible.builtin.stat:
+        path: "/etc/haproxy/errors/html/{{ item }}.html"
+      register: haproxy_html_stat
+      loop: "{{ haproxy_expected_error_codes }}"
+
+    - name: "Asserting every branded error page was deployed"
+      ansible.builtin.assert:
+        that:
+          - haproxy_tpl_stat.results | rejectattr('stat.exists') | list | length == 0
+          - haproxy_html_stat.results | rejectattr('stat.exists') | list | length == 0
+          - haproxy_tpl_stat.results | length == 8
+          - haproxy_html_stat.results | length == 8
+        fail_msg: "One or more /etc/haproxy/errors tpl/html files were not deployed"
+
+    - name: "Reading a deployed error page template"
+      ansible.builtin.slurp:
+        src: /etc/haproxy/errors/tpl/503.http
+      register: haproxy_503_content
+
+    - name: "Asserting the error page template is a complete HTTP response"
+      ansible.builtin.assert:
+        that:
+          - "'HTTP/1.0 503 Service Unavailable' in haproxy_503_decoded"
+          - "'503 Service Unavailable' in haproxy_503_decoded"
+        fail_msg: "/etc/haproxy/errors/tpl/503.http is not the expected raw HTTP error response"
+      vars:
+        haproxy_503_decoded: "{{ haproxy_503_content.content | b64decode }}"
+
+    - name: "Stat the supervisord program definition"
+      ansible.builtin.stat:
+        path: /etc/supervisor/conf.d/supervisord.haproxy.conf
+      register: haproxy_supervisord_stat
+
+    - name: "Stat the container dump script"
+      ansible.builtin.stat:
+        path: /etc/haproxy/dump.sh
+      register: haproxy_dump_stat
+
+    - name: "Asserting the container-mode artifacts were deployed"
+      ansible.builtin.assert:
+        that:
+          - haproxy_supervisord_stat.stat.exists
+          - haproxy_supervisord_stat.stat.mode == '0644'
+          - haproxy_dump_stat.stat.exists
+          - haproxy_dump_stat.stat.xusr
+        fail_msg: "The supervisord program file or the dump script was not deployed for the container path"
+
+    - name: "Reading the supervisord program definition"
+      ansible.builtin.slurp:
+        src: /etc/supervisor/conf.d/supervisord.haproxy.conf
+      register: haproxy_supervisord_content
+
+    - name: "Asserting supervisord launches haproxy against the rendered config"
+      ansible.builtin.assert:
+        that:
+          - "'[program:haproxy]' in haproxy_supervisord_decoded"
+          - "'command=/usr/sbin/haproxy -W -db -f /etc/haproxy/haproxy.cfg' in haproxy_supervisord_decoded"
+        fail_msg: "supervisord.haproxy.conf does not start haproxy from /etc/haproxy/haproxy.cfg"
+      vars:
+        haproxy_supervisord_decoded: "{{ haproxy_supervisord_content.content | b64decode }}"
+
+    - name: "Validating the rendered configuration with haproxy -c"
+      ansible.builtin.command: haproxy -c -f /etc/haproxy/haproxy.cfg
+      changed_when: false

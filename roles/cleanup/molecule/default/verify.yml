@@ -1,0 +1,123 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  tasks:
+    - name: Stat the regenerated machine-id
+      ansible.builtin.stat:
+        path: /etc/machine-id
+      register: cleanup_machine_id
+
+    - name: Stat the dbus machine-id the role deregisters last
+      ansible.builtin.stat:
+        path: /var/lib/dbus/machine-id
+      register: cleanup_dbus_machine_id
+
+    - name: Assert the machine identity was reset
+      ansible.builtin.assert:
+        that:
+          - cleanup_machine_id.stat.exists
+          - cleanup_machine_id.stat.isreg
+          - cleanup_machine_id.stat.size == 0
+          - not cleanup_dbus_machine_id.stat.exists
+        fail_msg: >-
+          machine identity not reset: /etc/machine-id must exist and be empty and
+          /var/lib/dbus/machine-id must be gone
+        success_msg: "/etc/machine-id is empty and /var/lib/dbus/machine-id is gone"
+
+    - name: Stat the netplan config written by the role
+      ansible.builtin.stat:
+        path: /etc/netplan/50-cloud-init.yaml
+      register: cleanup_netplan_config
+
+    - name: Stat the stale netplan config seeded before the run
+      ansible.builtin.stat:
+        path: /etc/netplan/99-stale-provisioner.yaml
+      register: cleanup_stale_netplan
+
+    - name: Read the netplan config written by the role
+      ansible.builtin.slurp:
+        src: /etc/netplan/50-cloud-init.yaml
+      register: cleanup_netplan_slurp
+
+    - name: Assert stale netplan configs were replaced by a DHCP-all config
+      ansible.builtin.assert:
+        that:
+          - cleanup_netplan_config.stat.exists
+          - not cleanup_stale_netplan.stat.exists
+          - "'dhcp4: true' in cleanup_netplan_content"
+          - "'enp*s*' in cleanup_netplan_content"
+          - "'dhcp-identifier: mac' in cleanup_netplan_content"
+        fail_msg: "netplan was not reset to the DHCP-all template"
+        success_msg: "stale netplan config removed and 50-cloud-init.yaml serves DHCP on enp*s*"
+      vars:
+        cleanup_netplan_content: "{{ cleanup_netplan_slurp.content | b64decode }}"
+
+    - name: Stat the shell histories and the rotated log seeded before the run
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: cleanup_scrubbed
+      loop:
+        - /root/.bash_history
+        - /home/startcloud/.bash_history
+        - /var/log/startcloud-molecule.old
+        - /etc/cloud
+        - /var/lib/cloud
+
+    - name: Assert histories, rotated logs and cloud-init state were purged
+      ansible.builtin.assert:
+        that:
+          - cleanup_scrubbed.results | rejectattr('stat.exists') | list | length == 5
+        fail_msg: >-
+          still present after cleanup:
+          {{ cleanup_scrubbed.results | selectattr('stat.exists') | map(attribute='item') | list }}
+        success_msg: "shell histories, rotated logs and cloud-init state are gone"
+
+    - name: Stat the truncated audit logs
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: cleanup_audit_logs
+      loop:
+        - /var/log/lastlog
+        - /var/log/wtmp
+        - /var/log/btmp
+
+    - name: Assert audit logs exist and are empty
+      ansible.builtin.assert:
+        that:
+          - cleanup_audit_logs.results | selectattr('stat.exists') | list | length == 3
+          - cleanup_audit_logs.results | selectattr('stat.size', 'equalto', 0) | list | length == 3
+        fail_msg: "lastlog/wtmp/btmp were not recreated as empty files"
+        success_msg: "lastlog, wtmp and btmp exist and are zero length"
+
+    - name: Gather installed package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Assert the unwanted packages are absent
+      ansible.builtin.assert:
+        that:
+          - "'snapd' not in ansible_facts.packages"
+          - "'ppp' not in ansible_facts.packages"
+          - "'wireless-tools' not in ansible_facts.packages"
+          - "'wpasupplicant' not in ansible_facts.packages"
+          - "'popularity-contest' not in ansible_facts.packages"
+        fail_msg: "an unwanted package survived the cleanup"
+        success_msg: "snapd, ppp, wireless-tools, wpasupplicant and popularity-contest are absent"
+
+    - name: Stat the recreated doc, man and tmp directories
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: cleanup_recreated_dirs
+      loop:
+        - /usr/share/doc
+        - /usr/share/man
+        - /tmp
+
+    - name: Assert the doc, man and tmp directories were recreated
+      ansible.builtin.assert:
+        that:
+          - cleanup_recreated_dirs.results | selectattr('stat.isdir') | list | length == 3
+          - cleanup_recreated_dirs.results[2].stat.mode == '0777'
+        fail_msg: "/usr/share/doc, /usr/share/man or /tmp missing, or /tmp is not mode 0777"
+        success_msg: "/usr/share/doc, /usr/share/man and /tmp exist with /tmp at 0777"

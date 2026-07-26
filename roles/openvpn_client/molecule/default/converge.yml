@@ -1,0 +1,39 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    run_tasks: true
+
+    # Only the server endpoint has no usable default - everything else
+    # (packages, group, configuration directory, PKI location) comes from
+    # the role defaults so this scenario exercises them.
+    openvpn_client_server: vpn.startcloud.com
+
+  tasks:
+    - name: "Converging the openvpn_client role"
+      ansible.builtin.include_role:
+        name: openvpn_client
+
+    - name: "Exercising the PKI guard with a directory that holds no server PKI"
+      block:
+        - name: "Re-running the role against a nonexistent PKI directory"
+          ansible.builtin.include_role:
+            name: openvpn_client
+          vars:
+            openvpn_client_pki_directory: /nonexistent/openvpn/pki
+
+        - name: "Failing because the PKI guard did not stop the run"
+          ansible.builtin.fail:
+            msg: "openvpn_client kept going even though the server PKI was absent"
+
+      rescue:
+        - name: "Asserting the PKI guard failed with an actionable message"
+          ansible.builtin.assert:
+            that:
+              - "'expects the OpenVPN server PKI to be present on this host' in ansible_failed_result.msg"
+              - "'/nonexistent/openvpn/pki' in ansible_failed_result.msg"
+              - "'ca.crt' in ansible_failed_result.msg"
+            fail_msg: "The PKI guard did not produce the expected failure message: {{ ansible_failed_result.msg | default('no message') }}"

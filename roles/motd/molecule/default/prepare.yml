@@ -1,0 +1,17 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Installing prerequisites the role assumes exist on a real host"
+      ansible.builtin.apt:
+        name:
+          - openssh-server
+          - procps
+          - iproute2
+        state: present
+        update_cache: true
+      # sshd_config is edited by the role but never installed by it; procps and
+      # iproute2 back the free/ip calls inside the rendered motd + sysinfo
+      # scripts. A bare docker image ships none of them.

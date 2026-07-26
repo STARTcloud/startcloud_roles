@@ -1,0 +1,59 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  tasks:
+    - name: "Gathering Installed Package Facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting the flatpak Package Is Installed"
+      ansible.builtin.assert:
+        that:
+          - "'flatpak' in ansible_facts.packages"
+        fail_msg: "The flatpak package is not installed."
+        success_msg: "The flatpak package is installed."
+
+    - name: "Stating the flatpak Binary"
+      ansible.builtin.stat:
+        path: /usr/bin/flatpak
+      register: flatpak_binary
+
+    - name: "Stating the System Flatpak Repo Config"
+      ansible.builtin.stat:
+        path: /var/lib/flatpak/repo/config
+      register: flatpak_repo_config
+
+    - name: "Asserting the flatpak Binary and System Repo Exist"
+      ansible.builtin.assert:
+        that:
+          - flatpak_binary.stat.exists
+          - flatpak_binary.stat.executable
+          - flatpak_repo_config.stat.exists
+        fail_msg: "flatpak binary or the system-wide flatpak repository is missing."
+        success_msg: "flatpak binary and the system-wide flatpak repository are present."
+
+    - name: "Reading the System Flatpak Repo Config"
+      ansible.builtin.slurp:
+        src: /var/lib/flatpak/repo/config
+      register: flatpak_repo_config_content
+
+    - name: "Asserting the flathub Remote Is Registered System-Wide"
+      ansible.builtin.assert:
+        that:
+          - "'remote \"flathub\"' in (flatpak_repo_config_content.content | b64decode)"
+          - "'flathub.org' in (flatpak_repo_config_content.content | b64decode)"
+        fail_msg: "The flathub remote was not registered in the system flatpak repo config."
+        success_msg: "The flathub remote is registered system-wide."
+
+    - name: "Listing the System Flatpak Remotes"
+      ansible.builtin.command: flatpak remotes --system --columns=name
+      register: flatpak_remotes
+      changed_when: false
+
+    - name: "Asserting flatpak Reports the flathub Remote"
+      ansible.builtin.assert:
+        that:
+          - "'flathub' in flatpak_remotes.stdout"
+        fail_msg: "flatpak remotes does not list flathub."
+        success_msg: "flatpak remotes lists flathub."

@@ -1,0 +1,58 @@
+---
+- name: "Prepare"
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Installing prerequisites the provisioner normally supplies"
+      ansible.builtin.apt:
+        name:
+          - acl
+          - python3-pip
+        state: present
+        update_cache: true
+
+    - name: "Creating the service group (normally created by the service_user role)"
+      ansible.builtin.group:
+        name: java_group
+        state: present
+
+    - name: "Creating the service user (normally created by the service_user role)"
+      ansible.builtin.user:
+        name: java_user
+        group: java_group
+        home: /local/notesjava
+        create_home: true
+        shell: /bin/bash
+        state: present
+
+    - name: "Creating directories the ssl, cockpit, supervisord and support_bundle roles provide"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - /secure/ca
+        - /secure/combined
+        - /etc/cockpit
+        - /etc/supervisor/conf.d
+        - /vagrant/support-bundle
+        - /vagrant/completed
+
+    - name: "Placing stand-in CA certificates normally produced by the ssl role"
+      ansible.builtin.copy:
+        dest: "{{ item }}"
+        mode: "0644"
+        content: |
+          -----BEGIN CERTIFICATE-----
+          MOLECULEPLACEHOLDERCERTIFICATE
+          -----END CERTIFICATE-----
+      loop:
+        - /secure/ca/ca-certificate.crt
+        - /secure/ca/root-ca.crt
+
+    - name: "Placing a stand-in support bundle artifact"
+      ansible.builtin.copy:
+        dest: /vagrant/support-bundle/provisioner.log
+        mode: "0644"
+        content: "molecule support bundle placeholder\n"

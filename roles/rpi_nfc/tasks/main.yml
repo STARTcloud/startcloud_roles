@@ -2,7 +2,7 @@
 - name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    - name: "Installing python3 packages for GPIO/SPI"
+    - name: "Installing libnfc packages"
       ansible.builtin.apt:
         name:
           - libnfc-bin
@@ -10,49 +10,99 @@
           - libnfc-examples
           - libnfc-pn53x-examples
           - libnfc6
+        state: present
 
-    - name: "Configuring NFC"
-      ansible.builtin.template:
-        mode: a+x
-        dest: "{{ item.dest }}"
-        src: "{{ item.src }}"
-      with_items:
-        - src: libnfc.conf.j2
-          dest: "/etc/nfc/libnfc.conf"
+    ## libnfc-auth.py imports yaml, smbus and RPi.GPIO at the top of the file, so
+    ## without these the hook script dies on the first badge scan.
+    - name: "Installing python3 packages for GPIO/SPI"
+      ansible.builtin.apt:
+        name: "{{ rpi_nfc_python_packages }}"
+        state: present
+
+    - name: "Checking whether nfc-daemon is already built and installed"
+      ansible.builtin.stat:
+        path: "{{ rpi_nfc_binary }}"
+      register: nfc_daemon_bin
 
     - name: "Cloning nfc-daemon"
       ansible.builtin.git:
-        repo: https://github.com/whotwagner/nfc-daemon
-        dest: /src/nfc-daemon
-        version: main
+        repo: "{{ rpi_nfc_repo }}"
+        dest: "{{ rpi_nfc_source_dir }}"
+        version: "{{ rpi_nfc_version }}"
+      register: nfc_daemon_clone
 
-    - name: "Making nfc-daemon"
-      community.general.make:
-        chdir: /src/nfc-daemon
+    ## `make` and `make install` were unconditional: they relinked the binary and
+    ## re-laid the upstream sample hook scripts into rpi_nfc_script_dir on every
+    ## converge, so the role reported changed forever and clobbered its own
+    ## rendered run_script/end_script. The pair now only runs when the installed
+    ## artifact is missing or the checkout actually moved, and every template is
+    ## rendered *after* it so the role-managed copies are the ones left on disk.
+    - name: "Building and installing nfc-daemon"
+      when: nfc_daemon_clone is changed or not nfc_daemon_bin.stat.exists
+      block:
+        - name: "Making nfc-daemon"
+          community.general.make:
+            chdir: "{{ rpi_nfc_source_dir }}"
 
-    - name: "Installing nfc-daemon"
-      community.general.make:
-        chdir: /src/nfc-daemon
-        target: install
-      become: true
+        - name: "Installing nfc-daemon"
+          community.general.make:
+            chdir: "{{ rpi_nfc_source_dir }}"
+            target: install
+
+    - name: "Configuring NFC"
+      ansible.builtin.template:
+        src: libnfc.conf.j2
+        dest: /etc/nfc/libnfc.conf
+        mode: "0644"
+
+    - name: "Ensuring the nfc-daemon hook script directory exists"
+      ansible.builtin.file:
+        path: "{{ rpi_nfc_script_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: "Installing the nfc-daemon hook scripts"
+      ansible.builtin.template:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        mode: "0755"
+      loop:
+        - src: run_script.j2
+          dest: "{{ rpi_nfc_script_dir }}/run_script"
+        - src: end_script.j2
+          dest: "{{ rpi_nfc_script_dir }}/end_script"
+        - src: libnfc-auth.py.j2
+          dest: /usr/local/bin/libnfc-auth.py
+      loop_control:
+        label: "{{ item.dest }}"
+
+    - name: "Ensuring the badge roster directory exists"
+      ansible.builtin.file:
+        path: "{{ rpi_nfc_user_source | dirname }}"
+        state: directory
+        mode: "0755"
+
+    ## libnfc-auth.py reads this roster on every scan and the role is the only
+    ## thing that knows where the script looks, so the file is seeded here rather
+    ## than left as an undeclared prerequisite. force:false means a roster that
+    ## already holds real badges is never overwritten.
+    - name: "Seeding the badge roster libnfc-auth.py reads"
+      ansible.builtin.copy:
+        dest: "{{ rpi_nfc_user_source }}"
+        content: |
+          ---
+          users: []
+        mode: "0644"
+        force: false
 
     - name: "Setting NFC-Daemon to start at boot"
       ansible.builtin.template:
-        mode: a+x
-        dest: "{{ item.dest }}"
-        src: "{{ item.src }}"
-      with_items:
-        - src: nfc-daemon.service.j2
-          dest: "/etc/systemd/system/nfc-daemon.service"
-        - src: run_script.j2
-          dest: "/usr/local/share/nfc-daemon/run_script"
-        - src: end_script.j2
-          dest: "/usr/local/share/nfc-daemon/end_script"
-        - src: libnfc-auth.py.j2
-          dest: "/usr/local/bin/libnfc-auth.py"
+        src: nfc-daemon.service.j2
+        dest: /etc/systemd/system/nfc-daemon.service
+        mode: "0644"
 
     - name: "Enabling nfc-daemon at boot"
-      ansible.builtin.service:
+      ansible.builtin.systemd_service:
         name: nfc-daemon
         enabled: true
         state: stopped

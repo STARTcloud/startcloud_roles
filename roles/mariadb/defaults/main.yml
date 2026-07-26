@@ -3,6 +3,7 @@ run_tasks: true
 
 mariadb_admin_pass: SomeMariaDBeyPassword
 mariadb_admin_user: root
+mariadb_login_unix_socket: /run/mysqld/mysqld.sock
 startcloud_mariadb_port_forwards:
   - guest: 3306
     url: "mariadb"

@@ -1,0 +1,80 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting the NTP package is installed"
+      ansible.builtin.assert:
+        that:
+          - "'ntp' in ansible_facts.packages or 'ntpsec' in ansible_facts.packages"
+        fail_msg: "Neither ntp nor ntpsec is installed"
+
+    - name: "Asserting the tzdata package is installed"
+      ansible.builtin.assert:
+        that:
+          - "'tzdata' in ansible_facts.packages"
+        fail_msg: "tzdata is not installed"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting the NTP daemon is running and enabled"
+      ansible.builtin.assert:
+        that:
+          - ntp_units | length > 0
+          - ntp_units | map(attribute='state') | select('equalto', 'running') | list | length > 0
+          - ntp_units | map(attribute='status') | select('equalto', 'enabled') | list | length > 0
+        fail_msg: "No ntp/ntpsec unit is running and enabled: {{ ntp_units }}"
+      vars:
+        ntp_units: >-
+          {{ ansible_facts.services.values()
+             | selectattr('name', 'match', '^ntp(sec)?\.service$')
+             | list }}
+
+    - name: "Stating the rendered NTP configuration file"
+      ansible.builtin.stat:
+        path: /etc/ntp.conf
+      register: ntp_conf_stat
+
+    - name: "Asserting the NTP configuration file exists with mode 0644"
+      ansible.builtin.assert:
+        that:
+          - ntp_conf_stat.stat.exists
+          - ntp_conf_stat.stat.isreg
+          - ntp_conf_stat.stat.mode == '0644'
+        fail_msg: "/etc/ntp.conf missing or has unexpected mode"
+
+    - name: "Reading the rendered NTP configuration file"
+      ansible.builtin.slurp:
+        src: /etc/ntp.conf
+      register: ntp_conf_content
+
+    - name: "Asserting the configuration contains the servers, driftfile and tinker panic"
+      ansible.builtin.assert:
+        that:
+          - "'pool ntp1.prominic.net iburst' in ntp_conf_decoded"
+          - "'pool ntp2.prominic.net iburst' in ntp_conf_decoded"
+          - "'driftfile /var/lib/ntp/drift' in ntp_conf_decoded"
+          - "'tinker panic 0' in ntp_conf_decoded"
+          - "'restrict 127.0.0.1' in ntp_conf_decoded"
+        fail_msg: "/etc/ntp.conf does not contain the expected rendered content"
+      vars:
+        ntp_conf_decoded: "{{ ntp_conf_content.content | b64decode }}"
+
+    - name: "Stating the localtime symlink"
+      ansible.builtin.stat:
+        path: /etc/localtime
+        follow: false
+      register: localtime_stat
+
+    - name: "Asserting the timezone was set to America/Chicago"
+      ansible.builtin.assert:
+        that:
+          - localtime_stat.stat.exists
+          - "'America/Chicago' in localtime_stat.stat.lnk_source | default(localtime_stat.stat.path)"
+        fail_msg: "System timezone was not set to America/Chicago"

@@ -2,14 +2,18 @@
 - name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
+    - name: "Gathering facts on current container (Linux only; FreeBSD doesn't have the docker collection's container detection)"
+      when: ansible_system == 'Linux'
+      community.docker.current_container_facts:
+
     - name: "Gathering Networking Configurations"
       when:
-        - not ansible_module_running_in_container
+        - not (ansible_module_running_in_container | default(false))
         - ansible_virtualization_type != "virtualbox"
       become: true
       block:
         - name: "Executing shell command to sort network interfaces"
-          when: networks[0] is defined
+          when: (networks | default([])) | length > 0
           changed_when: false
           ansible.builtin.shell: |
             set -o pipefail
@@ -41,7 +45,7 @@
 
     - name: "Virtualbox Networking"
       when:
-        - not ansible_module_running_in_container
+        - not (ansible_module_running_in_container | default(false))
         - ansible_virtualization_type == "virtualbox"
       become: true
       block:
@@ -60,7 +64,7 @@
 
     - name: "Generating Help File"
       when:
-        - not ansible_module_running_in_container
+        - not (ansible_module_running_in_container | default(false))
       become: true
       block:
         - name: "Rendering Help File template"

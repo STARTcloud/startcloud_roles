@@ -7,6 +7,8 @@
       - curl
       - gnupg
     state: present
+    update_cache: true
+    cache_valid_time: 3600
 
 - name: "Gathering DEB architecture"
   ansible.builtin.command: dpkg --print-architecture
@@ -34,31 +36,53 @@
     - /usr/share/keyrings/nodesource.gpg
     - /etc/apt/signing-key-nodesource-repo.asc
 
-- name: "Removing old NodeSource repository list (if present)"
+- name: "Checking for an existing NodeSource repository list"
+  ansible.builtin.stat:
+    path: /etc/apt/sources.list.d/nodesource.list
+  register: nodejs_list_state
+
+- name: "Reading the existing NodeSource repository list"
+  ansible.builtin.slurp:
+    src: /etc/apt/sources.list.d/nodesource.list
+  register: nodejs_list_content
+  when: nodejs_list_state.stat.exists
+
+- name: "Removing a NodeSource repository list that predates the keyrings layout"
   ansible.builtin.file:
     path: /etc/apt/sources.list.d/nodesource.list
     state: absent
+  when:
+    - nodejs_list_state.stat.exists
+    - "'signed-by=/etc/apt/keyrings/nodesource.gpg' not in (nodejs_list_content.content | b64decode)"
 
-- name: "Downloading armored NodeSource GPG key"
-  ansible.builtin.get_url:
-    url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
-    dest: /tmp/nodesource-key.asc
-    mode: "0644"
+- name: "Checking for the dearmored NodeSource GPG key"
+  ansible.builtin.stat:
+    path: /etc/apt/keyrings/nodesource.gpg
+  register: nodejs_keyring_state
 
-- name: "Dearmoring NodeSource GPG key"
-  ansible.builtin.command:
-    cmd: "gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg /tmp/nodesource-key.asc"
-    creates: /etc/apt/keyrings/nodesource.gpg
+- name: "Installing the NodeSource repository signing key"
+  when: not nodejs_keyring_state.stat.exists
+  block:
+    - name: "Downloading armored NodeSource GPG key"
+      ansible.builtin.get_url:
+        url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
+        dest: /tmp/nodesource-key.asc
+        mode: "0644"
+
+    - name: "Dearmoring NodeSource GPG key"
+      ansible.builtin.command:
+        cmd: "gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg /tmp/nodesource-key.asc"
+        creates: /etc/apt/keyrings/nodesource.gpg
+
+    - name: "Cleaning up temporary armored key file"
+      ansible.builtin.file:
+        path: /tmp/nodesource-key.asc
+        state: absent
 
 - name: "Setting permissions on dearmored NodeSource GPG key"
   ansible.builtin.file:
     path: /etc/apt/keyrings/nodesource.gpg
     mode: "0644"
-
-- name: "Cleaning up temporary armored key file"
-  ansible.builtin.file:
-    path: /tmp/nodesource-key.asc
-    state: absent
 
 - name: "Adding NodeSource repository for Node.js"
   ansible.builtin.apt_repository:
@@ -88,7 +112,6 @@
 - name: "Updating apt cache after repository configuration"
   ansible.builtin.apt:
     update_cache: true
-    cache_valid_time: 600
 
 - name: "Ensuring Node.js and npm are installed"
   ansible.builtin.apt:

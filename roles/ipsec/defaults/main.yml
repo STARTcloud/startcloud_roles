@@ -1,0 +1,15 @@
+---
+run_tasks: true
+## This file stores the lowest precedence of variables.
+## These can be overridden by variables in vars/main.yml, playbook variables, and Ansible environment variables.
+## If you are confused about how variable precedence works,
+## please see this article: https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_variables.html
+## Peer PSKs must never be committed — reference the gitignored root vault.yml
+## from Hosts.yml, e.g.  psk: "{{ vault_ipsec_psk_sitea | default('CHANGEME') }}"
+ipsec_peers: []
+## Optional network namespace strongswan and the xfrm interfaces run in ("" = host namespace).
+ipsec_namespace: ""
+## First xfrm interface id; peer N uses ipsec_base_if_id + N in both swanctl and ifupdown.
+ipsec_base_if_id: 158
+ipsec_proposals: aes256-sha256-modp2048
+ipsec_esp_proposals: aes256-sha256-modp2048

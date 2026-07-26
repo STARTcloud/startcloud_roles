@@ -1,0 +1,93 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gather package facts"
+      ansible.builtin.package_facts:
+        manager: apt
+
+    - name: "Assert the conky-all package is installed"
+      ansible.builtin.assert:
+        that:
+          - "'conky-all' in ansible_facts.packages"
+        fail_msg: "conky-all was not installed by the role"
+        success_msg: "conky-all is installed"
+
+    - name: "Stat the conky binary"
+      ansible.builtin.stat:
+        path: /usr/bin/conky
+      register: conky_bin
+
+    - name: "Assert the conky binary is present and executable"
+      ansible.builtin.assert:
+        that:
+          - conky_bin.stat.exists
+          - conky_bin.stat.executable
+        fail_msg: "/usr/bin/conky is missing or not executable"
+        success_msg: "/usr/bin/conky is present and executable"
+
+    - name: "Stat the templated conky configuration"
+      ansible.builtin.stat:
+        path: /etc/conky/conky.conf
+      register: conky_conf
+
+    - name: "Assert the conky configuration was deployed with mode 0644"
+      ansible.builtin.assert:
+        that:
+          - conky_conf.stat.exists
+          - conky_conf.stat.isreg
+          - conky_conf.stat.mode == '0644'
+        fail_msg: "/etc/conky/conky.conf missing or wrong mode"
+        success_msg: "/etc/conky/conky.conf deployed with mode 0644"
+
+    - name: "Read the deployed conky configuration"
+      ansible.builtin.slurp:
+        src: /etc/conky/conky.conf
+      register: conky_conf_content
+
+    - name: "Assert the templated dashboard content is what the role ships"
+      ansible.builtin.assert:
+        that:
+          - "'conky.config = {' in conky_conf_decoded"
+          - "\"alignment = 'top_right'\" in conky_conf_decoded"
+          - "'conky.text = [[' in conky_conf_decoded"
+          - "'RAM Usage:' in conky_conf_decoded"
+          - "'${top name 1}' in conky_conf_decoded"
+        fail_msg: "/etc/conky/conky.conf does not contain the role's dashboard template"
+        success_msg: "conky.conf contains the role's resource dashboard template"
+      vars:
+        conky_conf_decoded: "{{ conky_conf_content.content | b64decode }}"
+
+    - name: "Assert the rendered configuration is syntactically sane and host-specific"
+      ansible.builtin.assert:
+        that:
+          ## The net meters must follow this host's default IPv4 interface, not
+          ## the NIC name of the machine the template was written on.
+          - "'${upspeed ' ~ conky_expected_iface ~ '}' in conky_conf_decoded"
+          - "'${downspeed ' ~ conky_expected_iface ~ '}' in conky_conf_decoded"
+          - "'enx98ded005061c' not in conky_conf_decoded"
+          ## Lua rejects nothing here, but a repeated key and the stray brace
+          ## after $nodename were both real defects in the shipped template.
+          - "conky_conf_decoded.count('own_window = true') == 1"
+          - "'$nodename}' not in conky_conf_decoded"
+        fail_msg: "/etc/conky/conky.conf still carries the hardcoded NIC, a duplicate directive or an unbalanced brace"
+        success_msg: "conky.conf renders the host interface with no duplicate directive or stray brace"
+      vars:
+        conky_conf_decoded: "{{ conky_conf_content.content | b64decode }}"
+        conky_expected_iface: "{{ ansible_default_ipv4.interface }}"
+
+    - name: "Stat the autostart desktop entry"
+      ansible.builtin.stat:
+        path: /etc/xdg/autostart/conky.desktop
+      register: conky_autostart
+
+    - name: "Assert conky is registered to autostart for all users"
+      ansible.builtin.assert:
+        that:
+          - conky_autostart.stat.exists
+          - conky_autostart.stat.isreg
+          - conky_autostart.stat.mode == '0644'
+        fail_msg: "/etc/xdg/autostart/conky.desktop missing or wrong mode"
+        success_msg: "conky.desktop installed into /etc/xdg/autostart"

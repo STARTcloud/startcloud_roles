@@ -1,0 +1,90 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    php_version: "8.2"
+
+  tasks:
+    - name: "Stat the Ondrej Sury signing keyring installed by the role"
+      ansible.builtin.stat:
+        path: /usr/share/keyrings/deb.sury.org-php.gpg
+      register: sury_keyring
+
+    - name: "Asserting the sury signing keyring exists with mode 0644 and content"
+      ansible.builtin.assert:
+        that:
+          - sury_keyring.stat.exists
+          - sury_keyring.stat.isreg
+          - sury_keyring.stat.size > 0
+          - sury_keyring.stat.mode == '0644'
+        fail_msg: "The sury signing key was not downloaded to /usr/share/keyrings/deb.sury.org-php.gpg"
+
+    - name: "Finding the apt source file created for the sury repository"
+      ansible.builtin.find:
+        paths: /etc/apt/sources.list.d
+        patterns: "*.list"
+        contains: ".*packages\\.sury\\.org/php.*"
+      register: sury_source_files
+
+    - name: "Asserting the sury apt repository was added"
+      ansible.builtin.assert:
+        that:
+          - sury_source_files.matched > 0
+        fail_msg: "No apt source file referencing packages.sury.org/php was found in /etc/apt/sources.list.d"
+
+    - name: "Slurping the sury apt source file"
+      ansible.builtin.slurp:
+        src: "{{ sury_source_files.files[0].path }}"
+      register: sury_source_content
+
+    - name: "Asserting the sury repo line is signed by the downloaded keyring and targets this release"
+      ansible.builtin.assert:
+        that:
+          - "'signed-by=/usr/share/keyrings/deb.sury.org-php.gpg' in sury_repo_line"
+          - "'https://packages.sury.org/php/' in sury_repo_line"
+          - ansible_distribution_release in sury_repo_line
+        fail_msg: "The sury apt source line is malformed: {{ sury_repo_line }}"
+      vars:
+        sury_repo_line: "{{ sury_source_content.content | b64decode }}"
+
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting the chosen PHP version is present and the purged versions are gone"
+      ansible.builtin.assert:
+        that:
+          - "'php' ~ php_version ~ '-cli' in ansible_facts.packages"
+          - "'php7.2-common' not in ansible_facts.packages"
+          - "'php7.3-common' not in ansible_facts.packages"
+          - "'php7.4-common' not in ansible_facts.packages"
+          - "'php8.0-common' not in ansible_facts.packages"
+        fail_msg: "Package state is wrong; a purged PHP version is still installed or php{{ php_version }}-cli is missing"
+
+    - name: "Stat the php alternatives symlink"
+      ansible.builtin.stat:
+        path: /etc/alternatives/php
+      register: php_alternative
+
+    - name: "Asserting the php alternative points at the chosen version"
+      ansible.builtin.assert:
+        that:
+          - php_alternative.stat.exists
+          - php_alternative.stat.islnk
+          - php_alternative.stat.lnk_target == '/usr/bin/php' ~ php_version
+        fail_msg: "The php alternative does not point at /usr/bin/php{{ php_version }}"
+
+    - name: "Running the default php interpreter"
+      ansible.builtin.command:
+        cmd: php --version
+      register: php_version_output
+      changed_when: false
+
+    - name: "Asserting the default php CLI reports the chosen version"
+      ansible.builtin.assert:
+        that:
+          - php_version_output.stdout is search('^PHP ' ~ php_version ~ '\\.')
+        fail_msg: "The default php CLI is not {{ php_version }}: {{ php_version_output.stdout_lines[0] | default('') }}"

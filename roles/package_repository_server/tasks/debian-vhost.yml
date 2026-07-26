@@ -1,0 +1,51 @@
+---
+## The single path-based vhost every tree is served from, plus the proof that
+## the published repository is consumable: the host installs the package it
+## just built and signed back off its own URL.
+
+## The package server owns port 80/443 on the host, so the distribution sample
+## site is removed instead of being left as the default server for requests
+## that carry no matching Host header.
+- name: "Removing the distribution default nginx site"
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: "Reloading nginx"
+
+- name: "Templating the package server nginx vhost"
+  ansible.builtin.template:
+    src: nginx-package-repository.conf.j2
+    dest: "/etc/nginx/sites-available/{{ pkg_server_domain }}"
+    mode: "0644"
+  notify: "Reloading nginx"
+
+- name: "Enabling the package server nginx vhost"
+  ansible.builtin.file:
+    src: "/etc/nginx/sites-available/{{ pkg_server_domain }}"
+    dest: "/etc/nginx/sites-enabled/{{ pkg_server_domain }}"
+    state: link
+  notify: "Reloading nginx"
+
+## The vhost has to be live before apt is pointed at it, so the pending reload
+## is flushed here instead of at the end of the play.
+- name: "Flushing the nginx reload before apt is pointed at the repository"
+  ansible.builtin.meta: flush_handlers
+
+- name: "Adding the published repository to apt"
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [arch=amd64 signed-by={{ pkg_server_base_dir }}/pgp/pgp-key.public]
+      {{ pkg_server_apt_source_url }} stable main
+    filename: startcloud-package-server
+    state: present
+  register: pkg_server_apt_source
+
+- name: "Updating apt cache for the published repository"
+  ansible.builtin.apt:
+    update_cache: true
+  when: pkg_server_apt_source.changed or pkg_server_release_published.changed
+
+- name: "Installing the startcloud package from the published repository"
+  ansible.builtin.apt:
+    name: startcloud
+    state: present

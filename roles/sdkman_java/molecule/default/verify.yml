@@ -1,0 +1,119 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    java_service_user: startcloud
+    java_service_group: startcloud
+    java_service_home: /home/startcloud
+    java_sdkman_dir: /home/startcloud/.sdkman
+  tasks:
+    - name: Gather installed package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Assert the archive tooling SDKMAN needs to unpack the JDK is present
+      ansible.builtin.assert:
+        that:
+          - "'curl' in ansible_facts.packages"
+          - "'zip' in ansible_facts.packages"
+          - "'unzip' in ansible_facts.packages"
+          - "'tar' in ansible_facts.packages"
+        fail_msg: "SDKMAN system packages are missing, the JDK could not have been unpacked"
+
+    - name: Look up the service user Java was installed for
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ java_service_user }}"
+
+    - name: Assert the service user exists with the expected home directory
+      ansible.builtin.assert:
+        that:
+          - java_service_user in ansible_facts.getent_passwd
+          - ansible_facts.getent_passwd[java_service_user][4] == java_service_home
+        fail_msg: "{{ java_service_user }} is missing or does not own {{ java_service_home }}"
+
+    - name: Stat the Java binary SDKMAN installed for the service user
+      ansible.builtin.stat:
+        path: "{{ java_sdkman_dir }}/candidates/java/current/bin/java"
+      register: java_candidate_bin
+
+    - name: Assert the Java candidate was installed and is executable
+      ansible.builtin.assert:
+        that:
+          - java_candidate_bin.stat.exists
+          - java_candidate_bin.stat.xusr
+        fail_msg: "sdk install java did not produce {{ java_sdkman_dir }}/candidates/java/current/bin/java"
+
+    - name: Stat the compiler shipped by the installed JDK
+      ansible.builtin.stat:
+        path: "{{ java_sdkman_dir }}/candidates/java/current/bin/javac"
+      register: java_candidate_javac
+
+    - name: Assert the installed candidate is a full JDK
+      ansible.builtin.assert:
+        that:
+          - java_candidate_javac.stat.exists
+          - java_candidate_javac.stat.xusr
+        fail_msg: "the installed Java candidate has no javac, update-alternatives would point at nothing"
+
+    - name: Stat the profile drop-in the role writes
+      ansible.builtin.stat:
+        path: /etc/profile.d/java.sh
+      register: java_profile_stat
+
+    - name: Assert /etc/profile.d/java.sh was created with the templated mode
+      ansible.builtin.assert:
+        that:
+          - java_profile_stat.stat.exists
+          - java_profile_stat.stat.isreg
+          - java_profile_stat.stat.mode == '0755'
+        fail_msg: "/etc/profile.d/java.sh is missing or has the wrong mode"
+
+    - name: Read the profile drop-in
+      ansible.builtin.slurp:
+        src: /etc/profile.d/java.sh
+      register: java_profile_content
+
+    - name: Assert the drop-in puts the SDKMAN Java bin directory on PATH
+      ansible.builtin.assert:
+        that:
+          - "'PATH=$PATH:' + java_sdkman_dir + '/candidates/java/current/bin' in java_profile_text"
+        fail_msg: "/etc/profile.d/java.sh does not export the SDKMAN Java bin directory"
+      vars:
+        java_profile_text: "{{ java_profile_content.content | b64decode }}"
+
+    - name: Stat the update-alternatives links the role registers
+      ansible.builtin.stat:
+        path: "{{ item }}"
+        follow: false
+      register: java_alternative_links
+      loop:
+        - /usr/bin/java
+        - /usr/bin/javac
+        - /usr/bin/javadoc
+
+    - name: Assert every configured alternative was linked system-wide
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.islnk
+        fail_msg: "{{ item.item }} was not registered by community.general.alternatives"
+      loop: "{{ java_alternative_links.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Run the system-wide java binary
+      ansible.builtin.command: /usr/bin/java -version
+      register: java_version_output
+      changed_when: false
+
+    - name: Assert the system-wide java is the Zulu 8 build SDKMAN installed
+      ansible.builtin.assert:
+        that:
+          - "'1.8.0' in java_version_combined"
+          - "'Zulu' in java_version_combined"
+        fail_msg: "/usr/bin/java did not report a Zulu 8 runtime"
+      vars:
+        java_version_combined: "{{ java_version_output.stdout }}{{ java_version_output.stderr }}"

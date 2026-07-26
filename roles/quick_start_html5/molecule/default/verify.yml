@@ -1,0 +1,198 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    service_user: "startcloud"
+    service_home_dir: "/home/startcloud"
+    cert_dir: "/secure"
+    quick_start_port: 8000
+    quick_start_external_ip: "10.42.42.10"
+    quick_start_proxy_url: "demo.startcloud-quick-start.startcloud.test"
+  tasks:
+    - name: "Importing the uploadserver module the systemd unit executes"
+      ansible.builtin.command:
+        cmd: "python3 -c 'import uploadserver'"
+      register: quick_start_uploadserver
+      changed_when: false
+
+    - name: "Asserting the uploadserver package is importable"
+      ansible.builtin.assert:
+        that:
+          - quick_start_uploadserver.rc == 0
+        fail_msg: "The uploadserver pip package the pythonserve unit runs is not installed"
+        success_msg: "The uploadserver pip package is installed"
+
+    - name: "Stating the artefacts the role places on disk"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: quick_start_artifacts
+      loop:
+        - "{{ service_home_dir }}/images"
+        - "{{ service_home_dir }}/ids"
+        - "{{ service_home_dir }}/welcome.html"
+        - "{{ service_home_dir }}/styles.css"
+        - "{{ service_home_dir }}/ca-certificate.crt"
+        - "{{ service_home_dir }}/root-ca.crt"
+        - "{{ service_home_dir }}/support-bundle.zip"
+        - "/etc/systemd/system/pythonserve.service"
+        - "/etc/pythonserv"
+        - "/etc/cockpit/cockpit.conf"
+        - "/vagrant/support-bundle.zip"
+        - "/vagrant/support-bundle/ansible-roles.zip"
+        - "/vagrant/support-bundle/installers.json"
+        - "/vagrant/support-bundle/completed.json"
+
+    - name: "Asserting every artefact exists and the served directories are directories"
+      ansible.builtin.assert:
+        that:
+          - quick_start_artifacts.results | selectattr('stat.exists') | list | length == 14
+          - quick_start_artifacts.results[0].stat.isdir
+          - quick_start_artifacts.results[1].stat.isdir
+          - quick_start_artifacts.results[0].stat.mode == '0755'
+          - quick_start_artifacts.results[1].stat.mode == '0755'
+          - quick_start_artifacts.results[2].stat.isreg
+          - quick_start_artifacts.results[2].stat.pw_name == service_user
+          - quick_start_artifacts.results[6].stat.size > 0
+          - quick_start_artifacts.results[10].stat.size > 0
+        fail_msg: "The role did not produce all of the web-root, unit and support-bundle artefacts"
+        success_msg: "All web-root, unit and support-bundle artefacts are present"
+
+    - name: "Looking up the owner the role assigns its artefacts to"
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ service_user }}"
+
+    - name: "Asserting the artefact owner resolves in passwd"
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.getent_passwd[service_user] is defined
+        fail_msg: "The artefact owner {{ service_user }} does not exist"
+        success_msg: "The artefact owner {{ service_user }} exists"
+
+    - name: "Reading the pythonserve environment file"
+      ansible.builtin.slurp:
+        src: /etc/pythonserv
+      register: quick_start_environment
+
+    - name: "Asserting the environment file drives the port, theme and TLS certificate"
+      ansible.builtin.assert:
+        that:
+          - >-
+            'port="8000"' in quick_start_env_text
+          - >-
+            'theme="--theme"' in quick_start_env_text
+          - >-
+            'thememode="dark"' in quick_start_env_text
+          - >-
+            'servercert="--server-certificate"' in quick_start_env_text
+          - >-
+            (cert_dir ~ '/combined/default-signed.pem') in quick_start_env_text
+        fail_msg: "/etc/pythonserv does not carry the port, theme and certificate settings the unit expects"
+        success_msg: "/etc/pythonserv carries the expected port, theme and certificate settings"
+      vars:
+        quick_start_env_text: "{{ quick_start_environment.content | b64decode }}"
+
+    - name: "Reading the templated systemd unit"
+      ansible.builtin.slurp:
+        src: /etc/systemd/system/pythonserve.service
+      register: quick_start_unit
+
+    - name: "Asserting the unit runs uploadserver from the served directory"
+      ansible.builtin.assert:
+        that:
+          - "'ExecStart=python3 -m uploadserver' in quick_start_unit_text"
+          - "'EnvironmentFile=/etc/pythonserv' in quick_start_unit_text"
+          - "('WorkingDirectory=' ~ service_home_dir) in quick_start_unit_text"
+        fail_msg: "The pythonserve unit does not execute uploadserver from {{ service_home_dir }}"
+        success_msg: "The pythonserve unit executes uploadserver from {{ service_home_dir }}"
+      vars:
+        quick_start_unit_text: "{{ quick_start_unit.content | b64decode }}"
+
+    - name: "Querying the pythonserve unit state"
+      ansible.builtin.systemd_service:
+        name: pythonserve
+      register: quick_start_service
+      check_mode: true
+
+    - name: "Asserting pythonserve is enabled and running"
+      ansible.builtin.assert:
+        that:
+          - quick_start_service.status.UnitFileState == 'enabled'
+          - quick_start_service.status.ActiveState == 'active'
+          - quick_start_service.status.SubState == 'running'
+        fail_msg: >-
+          pythonserve state is unexpected
+          (UnitFileState={{ quick_start_service.status.UnitFileState }},
+          ActiveState={{ quick_start_service.status.ActiveState }},
+          SubState={{ quick_start_service.status.SubState }})
+        success_msg: "pythonserve is enabled and running"
+
+    - name: "Waiting for the Python web server to listen on its guest port"
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: "{{ quick_start_port }}"
+        state: started
+        timeout: 30
+
+    - name: "Reading the rendered welcome page"
+      ansible.builtin.slurp:
+        src: "{{ service_home_dir }}/welcome.html"
+      register: quick_start_welcome
+
+    - name: "Asserting the welcome page carries the host entry, proxy URL and support bundle link"
+      ansible.builtin.assert:
+        that:
+          - quick_start_external_ip in quick_start_welcome_text
+          - "'startcloud-quick-start.startcloud.test' in quick_start_welcome_text"
+          - quick_start_proxy_url in quick_start_welcome_text
+          - "'STARTcloudMolecule' in quick_start_welcome_text"
+          - "'/support-bundle.zip' in quick_start_welcome_text"
+        fail_msg: "The welcome page is missing the external IP, the FQDN, the proxy URL or the support bundle link"
+        success_msg: "The welcome page carries the external IP, FQDN, proxy URL and support bundle link"
+      vars:
+        quick_start_welcome_text: "{{ quick_start_welcome.content | b64decode }}"
+
+    - name: "Reading the installer inventory written into the support bundle"
+      ansible.builtin.slurp:
+        src: /vagrant/support-bundle/installers.json
+      register: quick_start_installers
+
+    - name: "Asserting the installer inventory recorded the seeded installer"
+      ansible.builtin.assert:
+        that:
+          - "'domino-server.tar' in quick_start_installers_text"
+          - "'/vagrant/installers' in quick_start_installers_text"
+        fail_msg: "installers.json does not list the contents of /vagrant/installers"
+        success_msg: "installers.json lists the contents of /vagrant/installers"
+      vars:
+        quick_start_installers_text: "{{ quick_start_installers.content | b64decode }}"
+
+    - name: "Reading the Cockpit configuration the role writes"
+      ansible.builtin.slurp:
+        src: /etc/cockpit/cockpit.conf
+      register: quick_start_cockpit_conf
+
+    - name: "Asserting Cockpit is configured for the reverse-proxied admin URL root"
+      ansible.builtin.assert:
+        that:
+          - "'UrlRoot=/admin/' in quick_start_cockpit_text"
+          - "'ProtocolHeader = X-Forwarded-Proto' in quick_start_cockpit_text"
+        fail_msg: "/etc/cockpit/cockpit.conf was not templated with the admin URL root"
+        success_msg: "/etc/cockpit/cockpit.conf carries the admin URL root"
+      vars:
+        quick_start_cockpit_text: "{{ quick_start_cockpit_conf.content | b64decode }}"
+
+    - name: "Querying the cockpit unit the role restarts last"
+      ansible.builtin.systemd_service:
+        name: cockpit
+      register: quick_start_cockpit
+      check_mode: true
+
+    - name: "Asserting the cockpit service came back up after the role restarted it"
+      ansible.builtin.assert:
+        that:
+          - quick_start_cockpit.status.ActiveState in ['active', 'activating']
+        fail_msg: "cockpit is {{ quick_start_cockpit.status.ActiveState }} after the role restarted it"
+        success_msg: "cockpit is up after the role restarted it"

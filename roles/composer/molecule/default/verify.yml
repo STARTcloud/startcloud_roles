@@ -1,0 +1,100 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    composer_bin_path: /usr/local/bin/composer
+    composer_home_dir: /usr/local/share/composer
+    composer_project_bin: /opt/startcloud/app/vendor/bin
+  tasks:
+    - name: Gather installed package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Assert the PHP CLI Composer runs under is installed
+      ansible.builtin.assert:
+        that:
+          - "'php-cli' in ansible_facts.packages"
+        fail_msg: "php-cli is not installed, Composer cannot run"
+
+    - name: Stat the installed Composer binary
+      ansible.builtin.stat:
+        path: "{{ composer_bin_path }}"
+      register: composer_binary
+
+    - name: Assert Composer was installed and is executable
+      ansible.builtin.assert:
+        that:
+          - composer_binary.stat.exists
+          - composer_binary.stat.isreg
+          - composer_binary.stat.xusr
+        fail_msg: "{{ composer_bin_path }} is missing or not executable"
+
+    - name: Run composer --version
+      ansible.builtin.command:
+        cmd: "{{ composer_bin_path }} --version --no-interaction"
+      environment:
+        COMPOSER_HOME: "{{ composer_home_dir }}"
+      changed_when: false
+      register: composer_version_out
+
+    - name: Assert Composer reports a version on the 2.x branch
+      ansible.builtin.assert:
+        that:
+          - "'Composer version 2' in composer_version_out.stdout"
+        fail_msg: "Unexpected composer --version output: {{ composer_version_out.stdout }}"
+
+    - name: Stat the COMPOSER_HOME directory
+      ansible.builtin.stat:
+        path: "{{ composer_home_dir }}"
+      register: composer_home_stat
+
+    - name: Assert COMPOSER_HOME exists with the configured ownership
+      ansible.builtin.assert:
+        that:
+          - composer_home_stat.stat.exists
+          - composer_home_stat.stat.isdir
+          - composer_home_stat.stat.pw_name == 'root'
+          - composer_home_stat.stat.gr_name == 'root'
+        fail_msg: "{{ composer_home_dir }} is missing or wrongly owned"
+
+    - name: Stat the globally required package directory
+      ansible.builtin.stat:
+        path: "{{ composer_home_dir }}/vendor/psr/log"
+      register: composer_global_pkg
+
+    - name: Assert the configured global package was installed
+      ansible.builtin.assert:
+        that:
+          - composer_global_pkg.stat.exists
+          - composer_global_pkg.stat.isdir
+        fail_msg: "composer global require psr/log did not install into {{ composer_home_dir }}/vendor"
+
+    - name: Read the global PATH profile snippet
+      ansible.builtin.slurp:
+        src: /etc/profile.d/composer.sh
+      register: composer_profile
+
+    - name: Assert the global vendor bin directory is added to PATH
+      ansible.builtin.assert:
+        that:
+          - composer_home_dir + '/vendor/bin' in composer_profile.content | b64decode
+        fail_msg: "/etc/profile.d/composer.sh does not export the global vendor bin directory"
+
+    - name: Read the project PATH profile snippet
+      ansible.builtin.slurp:
+        src: /etc/profile.d/composer-project.sh
+      register: composer_project_profile
+
+    - name: Assert the project vendor bin directory is added to PATH
+      ansible.builtin.assert:
+        that:
+          - composer_project_bin in composer_project_profile.content | b64decode
+        fail_msg: "/etc/profile.d/composer-project.sh does not export the project vendor bin directory"
+
+    - name: Assert no auth.json was written when no OAuth token is configured
+      ansible.builtin.stat:
+        path: "{{ composer_home_dir }}/auth.json"
+      register: composer_auth_json
+      failed_when: composer_auth_json.stat.exists

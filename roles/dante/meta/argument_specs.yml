@@ -3,7 +3,7 @@ argument_specs:
   main:
     short_description: Install and configure the Dante SOCKS5 proxy
     description:
-      - Installs the Dante SOCKS5 proxy server, writes a default danted.conf, creates a dedicated SOCKS system user, and restarts the danted service.
+      - Installs the Dante SOCKS5 proxy server, renders danted.conf from a template, creates a dedicated SOCKS system user, and starts and enables the danted service.
     author: Mark Gilbert
     options:
       run_tasks:
@@ -23,3 +23,6 @@ argument_specs:
         elements: str
         default: ["dante-server"]
         description: APT packages installed to provide the Dante server.
+      dante_external_interface:
+        type: str
+        description: Network interface danted proxies outbound traffic through; derived at runtime from the adapter carrying the default route.

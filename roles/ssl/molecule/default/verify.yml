@@ -1,0 +1,116 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    cert_dir: "/tmp/startcloud-ssl-secure"
+    cert_fqdn: "startcloud-ssl.molecule.test"
+    cert_pass: "CHANGEME"
+    service_user: "startcloud"
+    service_group: "startcloud"
+    # First body line of files/ssls/ca/root-ca.crt (STARTcloud Dev Root CA).
+    root_ca_marker: "MIIFejCCA2KgAwIBAgIUaszwem8lmaSyz41+4TFXRom4e3kwDQYJKoZIhvcNAQEL"
+  tasks:
+    - name: "Stat the certificate artefacts the role publishes for the host"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: ssl_artifacts
+      loop:
+        - "{{ cert_dir }}/key/{{ cert_fqdn }}.key"
+        - "{{ cert_dir }}/crt/{{ cert_fqdn }}.crt"
+        - "{{ cert_dir }}/ca/{{ cert_fqdn }}.crt"
+        - "{{ cert_dir }}/pfx/{{ cert_fqdn }}.pfk"
+        - "{{ cert_dir }}/jks/{{ cert_fqdn }}.jks"
+        - "{{ cert_dir }}/combined/{{ cert_fqdn }}.pem"
+
+    - name: "Asserting every certificate artefact exists and is owned by the service user"
+      ansible.builtin.assert:
+        that:
+          - ssl_artifacts.results | selectattr('stat.exists') | list | length == 6
+          - ssl_artifacts.results | selectattr('stat.pw_name', 'equalto', service_user) | list | length == 6
+          - ssl_artifacts.results | selectattr('stat.gr_name', 'equalto', service_group) | list | length == 6
+          - ssl_artifacts.results | selectattr('stat.mode', 'equalto', '0644') | list | length == 6
+        fail_msg: "The role did not publish all six host certificate artefacts with the expected ownership"
+
+    - name: "Looking up the service user the certificates are assigned to"
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ service_user }}"
+
+    - name: "Asserting the certificate owner exists in passwd"
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.getent_passwd[service_user] is defined
+        fail_msg: "The certificate owner {{ service_user }} does not exist"
+
+    - name: "Reading the combined PEM bundle"
+      ansible.builtin.slurp:
+        src: "{{ cert_dir }}/combined/{{ cert_fqdn }}.pem"
+      register: ssl_combined
+
+    - name: "Asserting the combined PEM holds key, leaf and appended CA chain"
+      ansible.builtin.assert:
+        that:
+          - "'-----BEGIN PRIVATE KEY-----' in ssl_combined_pem"
+          - ssl_combined_pem.count('-----BEGIN CERTIFICATE-----') >= 2
+          - "'# BEGIN ANSIBLE MANAGED BLOCK - CA CHAIN' in ssl_combined_pem"
+          - "'# END ANSIBLE MANAGED BLOCK - CA CHAIN' in ssl_combined_pem"
+        fail_msg: "The combined PEM is missing the private key, the leaf certificate or the appended CA chain"
+      vars:
+        ssl_combined_pem: "{{ ssl_combined.content | b64decode }}"
+
+    - name: "Stat the root CA dropped into the system trust source directory"
+      ansible.builtin.stat:
+        path: /usr/local/share/ca-certificates/self-signed/root-ca.crt
+      register: ssl_trust_source
+
+    - name: "Stat the trust anchor link created by update-ca-certificates"
+      ansible.builtin.stat:
+        path: /etc/ssl/certs/root-ca.pem
+      register: ssl_trust_link
+
+    - name: "Asserting the STARTcloud root CA was installed into the trust store"
+      ansible.builtin.assert:
+        that:
+          - ssl_trust_source.stat.exists
+          - ssl_trust_source.stat.isreg
+          - ssl_trust_link.stat.exists
+        fail_msg: "The root CA was not installed and hashed into the system certificate store"
+
+    - name: "Reading the system CA bundle"
+      ansible.builtin.slurp:
+        src: /etc/ssl/certs/ca-certificates.crt
+      register: ssl_ca_bundle
+
+    - name: "Asserting the root CA is present in the system CA bundle"
+      ansible.builtin.assert:
+        that:
+          - root_ca_marker in (ssl_ca_bundle.content | b64decode)
+        fail_msg: "update-ca-certificates did not add the STARTcloud root CA to ca-certificates.crt"
+
+    - name: "Listing the generated Java keystore"
+      ansible.builtin.command:
+        cmd: "keytool -list -keystore {{ cert_dir }}/jks/{{ cert_fqdn }}.jks -storepass {{ cert_pass }}"
+      register: ssl_keytool_list
+      changed_when: false
+
+    - name: "Asserting the keystore holds the host key entry"
+      ansible.builtin.assert:
+        that:
+          - "'PrivateKeyEntry' in ssl_keytool_list.stdout"
+          - cert_fqdn in ssl_keytool_list.stdout
+        fail_msg: "The JKS keystore does not contain a private key entry for {{ cert_fqdn }}"
+
+    - name: "Reading the subject of the published leaf certificate"
+      ansible.builtin.command:
+        cmd: "openssl x509 -noout -subject -in {{ cert_dir }}/crt/{{ cert_fqdn }}.crt"
+      register: ssl_leaf_subject
+      changed_when: false
+
+    - name: "Asserting the published leaf certificate is the supplied STARTcloud certificate"
+      ansible.builtin.assert:
+        that:
+          - "'STARTcloud' in ssl_leaf_subject.stdout"
+          - "'startcloud.local' in ssl_leaf_subject.stdout"
+        fail_msg: "The published leaf certificate is not the supplied default-signed certificate"

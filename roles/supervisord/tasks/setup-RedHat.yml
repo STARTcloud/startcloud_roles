@@ -1,33 +1,30 @@
 ---
 - name: "Installing required packages"
-  ansible.builtin.package:
-    name:
-      - python3
-      - python3-pip
-      - supervisor
+  ansible.builtin.dnf:
+    name: "{{ supervisord_packages }}"
     state: present
-
-- name: "Ensuring supervisord is started and enabled"
-  ansible.builtin.service:
-    name: supervisor
-    state: started
-    enabled: true
+    update_cache: true
 
 - name: "Creating supervisord configuration directory"
   ansible.builtin.file:
-    path: /etc/supervisor/conf.d
+    path: "{{ supervisord_include_dir }}"
     state: directory
+    owner: root
+    group: root
     mode: "0755"
 
 - name: "Copying supervisord configuration file"
+  notify: Restart supervisord
   ansible.builtin.template:
     src: supervisord.conf.j2
-    dest: /etc/supervisor/supervisord.conf
+    dest: "{{ supervisord_config_file }}"
     owner: root
     group: root
     mode: "0644"
 
-- name: "Restarting supervisord to apply configuration"
+- name: "Ensuring supervisord is started and enabled"
+  when: supervisord_manage_service | bool
   ansible.builtin.service:
-    name: supervisor
-    state: restarted
+    name: "{{ supervisord_service_name }}"
+    state: started
+    enabled: true

@@ -1,0 +1,10 @@
+---
+## Intentionally empty: UTM/KVM applies no EL-specific network configuration.
+## The Debian twin writes netplan drop-ins and runs "netplan apply"; EL has no
+## netplan, so none of that is portable and nothing has been written to replace it.
+## The file exists because tasks/redhat.yml dispatches to
+## "utm/{{ ansible_os_family | lower }}.yml" whenever the virtualization type is
+## kvm — without it a declared platform becomes a missing-file failure.
+- name: "Noting that UTM/KVM applies no EL-specific network configuration"
+  ansible.builtin.debug:
+    msg: "UTM/KVM on EL: no provider-specific network configuration is applied."

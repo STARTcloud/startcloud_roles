@@ -85,12 +85,14 @@
 
     - name: "Installing MySQL Connector {{ mysql_java_connector_jar }}"
       when: not guacamole_installed_check.stat.exists
+      notify: "Restarting Tomcat"
       ansible.builtin.copy:
         mode: "0755"
         owner: "{{ service_user }}"
         group: "{{ service_group }}"
         dest: "/etc/guacamole/lib/mysql-connector-j-{{ mysql_java_connector_jar }}"
         src: "/tmp/mysql-connector-j-{{ mysql_java_connector_jar }}"
+        remote_src: true
 
     - name: "Checking if Guacamole Server is already cloned"
       register: guacamole_server_check
@@ -98,6 +100,7 @@
         path: "/usr/local/src/guacamole/{{ guacamole_version }}/guacamole-server/.git"
 
     - name: "Setting Build Directories Permissions"
+      when: not guacamole_installed_check.stat.exists
       ansible.builtin.file:
         mode: "0755"
         owner: "{{ service_user }}"
@@ -119,7 +122,9 @@
         - "git config --global --add safe.directory /usr/local/src/guacamole/{{ guacamole_version }}/guacamole-server"
 
     - name: "Updating Guacamole Server repository"
-      when: guacamole_server_check.stat.exists
+      when:
+        - guacamole_server_check.stat.exists
+        - not guacamole_installed_check.stat.exists
       become: true
       become_user: "{{ service_user }}"
       ansible.builtin.git:
@@ -128,7 +133,6 @@
         version: "main"
         update: true
         force: true
-      changed_when: guacamole_server_check.stat.exists
 
     - name: "Cloning Guacamole Server repository"
       when: not guacamole_server_check.stat.exists
@@ -147,7 +151,9 @@
         path: "/usr/local/src/guacamole/{{ guacamole_version }}/guacamole-client/.git"
 
     - name: "Updating Guacamole Client repository"
-      when: guacamole_client_check.stat.exists
+      when:
+        - guacamole_client_check.stat.exists
+        - not guacamole_installed_check.stat.exists
       become: true
       become_user: "{{ service_user }}"
       ansible.builtin.git:
@@ -156,7 +162,6 @@
         version: "main"
         update: true
         force: true
-      changed_when: guacamole_client_check.stat.exists
 
     - name: "Cloning Guacamole Client repository"
       when: not guacamole_client_check.stat.exists
@@ -178,10 +183,33 @@
 
     - name: "Compiling Guacamole Server from Source"
       when: not guacamole_installed_check.stat.exists
+      notify: "Restarting guacd"
       ansible.builtin.shell: "make && make install && ldconfig"
-      changed_when: false
+      changed_when: true
       args:
         chdir: "/usr/local/src/guacamole/{{ guacamole_version }}/guacamole-server"
+
+    - name: "Locating the JDK the Guacamole Client build runs against"
+      when: not guacamole_installed_check.stat.exists
+      become: true
+      become_user: "{{ service_user }}"
+      changed_when: false
+      register: guacamole_java_home_check
+      ansible.builtin.shell: |
+        if [ -n "${JAVA_HOME:-}" ]; then
+          printf '%s' "${JAVA_HOME}"
+          exit 0
+        fi
+        if [ -r /etc/profile ]; then
+          . /etc/profile
+        fi
+        javac_bin="$(command -v javac || true)"
+        if [ -z "${javac_bin}" ]; then
+          exit 0
+        fi
+        dirname "$(dirname "$(readlink -f "${javac_bin}")")"
+      args:
+        executable: "/bin/bash"
 
     - name: "Building Guacamole Client"
       when: not guacamole_installed_check.stat.exists
@@ -192,8 +220,12 @@
       args:
         chdir: "/usr/local/src/guacamole/{{ guacamole_version }}/guacamole-client"
         executable: "/bin/bash"
-      # environment:
-      #  JAVA_HOME: "/usr/lib/jvm/java-11-openjdk-amd64"
+      # maven-javadoc-plugin resolves the javadoc binary from JAVA_HOME; Ansible
+      # runs with a bare environment, so hand it the JDK located above. When no
+      # JDK could be located the environment is left untouched.
+      vars:
+        guacamole_detected_java_home: "{{ guacamole_java_home_check.stdout | default('') | trim }}"
+      environment: "{{ {'JAVA_HOME': guacamole_detected_java_home} if guacamole_detected_java_home | length > 0 else {} }}"
       with_items:
         - { shell: "mvn clean package -U" }
 
@@ -207,6 +239,7 @@
       when:
         - not guacamole_installed_check.stat.exists
         - found_war_files.matched > 0
+      notify: "Restarting Tomcat"
       ansible.builtin.copy:
         mode: "0755"
         dest: "/var/lib/tomcat{{ tomcat_version }}/webapps/ROOT.war"
@@ -224,6 +257,7 @@
 
     - name: "Creating Guacamole Configuration File"
       when: not guacamole_installed_check.stat.exists
+      notify: "Restarting Tomcat"
       ansible.builtin.blockinfile:
         block: |
           # Hostname and port of guacamole proxy
@@ -241,10 +275,27 @@
         mode: "0755"
         path: "/etc/guacamole/guacamole.properties"
 
+    - name: "Creating the guacd Daemon Configuration File"
+      notify: "Restarting guacd"
+      # Without a guacd.conf, guacd resolves its default bind host through
+      # getaddrinfo and binds the first result only - on a dual-stack host that
+      # is [::1], so the guacd-hostname: localhost the client is configured with
+      # never connects over IPv4. Pin the bind address and keep the port in step
+      # with the guacd-port written into guacamole.properties above.
+      ansible.builtin.copy:
+        mode: "0644"
+        owner: root
+        group: root
+        dest: "/etc/guacamole/guacd.conf"
+        content: |
+          [server]
+          bind_host = 127.0.0.1
+          bind_port = {{ startcloud_guacamole_port_forwards[1].guest }}
+
     - name: "Removing Test Site"
       when: not guacamole_installed_check.stat.exists
+      notify: "Restarting Tomcat"
       ansible.builtin.file:
-        mode: "0755"
         path: "{{ item }}"
         state: absent
       with_items:
@@ -260,7 +311,8 @@
     - name: "Copying JDBC Driver to Guacamole Working Directory"
       when:
         - not guacamole_installed_check.stat.exists
-        - found_war_files.matched > 0
+        - mysql_found_jar_files.matched > 0
+      notify: "Restarting Tomcat"
       ansible.builtin.copy:
         mode: "0755"
         dest: "/etc/guacamole/extensions/guacamole-auth-jdbc-mysql-{{ guacamole_version }}.jar"
@@ -269,6 +321,7 @@
 
     - name: "Adding Branding"
       when: guacamole_branding and not guacamole_installed_check.stat.exists
+      notify: "Restarting Tomcat"
       ansible.builtin.copy:
         mode: "0755"
         src: "{{ guacamole_branding_jar }}"
@@ -276,6 +329,7 @@
 
     - name: "Adding extensions"
       when: not guacamole_installed_check.stat.exists
+      notify: "Restarting Tomcat"
       ansible.builtin.copy:
         mode: "0755"
         src: "guacamole-auth-domino-{{ guacamole_auth_domino_version }}.jar"
@@ -283,6 +337,7 @@
 
     - name: "Downloading additional Jar Dependencies - log4j version {{ guacamole_log4j_version }}"
       when: not guacamole_installed_check.stat.exists
+      notify: "Restarting Tomcat"
       ansible.builtin.get_url:
         mode: "0755"
         dest: "/etc/guacamole/lib/log4j-{{ guacamole_log4j_version }}.jar"
@@ -304,9 +359,15 @@
 
     - name: "Adding SSO Dependency extension"
       when: not guacamole_installed_check.stat.exists
-      ansible.posix.synchronize:
-        src: "/tmp/httpcomponents-client-{{ guacamole_httpcomponents_version }}/lib/"
+      notify: "Restarting Tomcat"
+      # No owner/group here: this copies into /etc/guacamole/lib itself, and
+      # chowning the destination directory fights the root-owned "Creating
+      # Directories" task above on every subsequent run.
+      ansible.builtin.copy:
+        mode: "0755"
         dest: "/etc/guacamole/lib/"
+        src: "/tmp/httpcomponents-client-{{ guacamole_httpcomponents_version }}/lib/"
+        remote_src: true
 
     - name: "Fixing bug with JDBC Driver over Version 8"
       when: not guacamole_installed_check.stat.exists
@@ -337,12 +398,3 @@
         state: touch
       with_items:
         - "{{ completed_dir }}/guacamole_install"
-
-    - name: "Restarting Services"
-      ansible.builtin.systemd:
-        enabled: true
-        name: "{{ item }}"
-        state: restarted
-      with_items:
-        - guacd
-        - "tomcat{{ tomcat_version }}"

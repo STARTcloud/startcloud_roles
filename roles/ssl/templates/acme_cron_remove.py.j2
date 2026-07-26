@@ -1,0 +1,30 @@
+import xml.etree.ElementTree as ET
+import argparse
+
+# Parse the command line argument
+parser = argparse.ArgumentParser()
+parser.add_argument('-f', '--file', default='/conf/config.xml', help='Path to the XML file')
+args = parser.parse_args()
+
+# Parse the XML file
+tree = ET.parse(args.file)
+
+# Get the root element
+root = tree.getroot()
+
+# Define the command to match
+command_to_remove = "/usr/local/pkg/acme/acme_command.sh"
+
+# Iterate through the XML tree to find matching <item> elements within <cron>
+for cron_block in root.findall('.//cron'):
+    items_to_remove = []
+    for item in cron_block.findall('item'):
+        command_text = item.find('command').text
+        if command_to_remove in command_text:
+            items_to_remove.append(item)
+    # Remove items after collecting them to avoid modifying the tree while iterating
+    for item in items_to_remove:
+        cron_block.remove(item)
+
+# Write changes back to the file
+tree.write(args.file)

@@ -1,0 +1,29 @@
+---
+- name: Cleanup
+  hosts: all
+  become: true
+  gather_facts: false
+  # Molecule's test matrix runs cleanup twice: once before create, when no
+  # instance exists yet, and once after the sequence (including after a failed
+  # stage). The first pass has nothing to connect to, so unreachable is normal.
+  ignore_unreachable: true
+  tasks:
+    # Post-mortem only. Mattermost's startup errors never reach the Ansible
+    # output — systemd reports nothing but a failed job — so when the unit is
+    # not running, pull the journal before the instance is destroyed.
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+      failed_when: false
+
+    - name: "Collecting the Mattermost service journal"
+      ansible.builtin.command: "journalctl -u startcloud_mattermost --no-pager -n 50"
+      register: mattermost_journal
+      changed_when: false
+      failed_when: false
+      when: >-
+        (ansible_facts.services | default({})).get('startcloud_mattermost.service', {}).get('state', 'unknown') != 'running'
+
+    - name: "Showing the Mattermost service post-mortem"
+      ansible.builtin.debug:
+        var: mattermost_journal.stdout_lines
+      when: mattermost_journal.stdout_lines is defined

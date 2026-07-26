@@ -1,0 +1,86 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gathering installed package facts"
+      ansible.builtin.package_facts:
+        manager: apt
+
+    - name: "Asserting the Debian ClamAV package set from vars/Debian.yml is installed"
+      ansible.builtin.assert:
+        that:
+          - "'clamav' in ansible_facts.packages"
+          - "'clamav-base' in ansible_facts.packages"
+          - "'clamav-daemon' in ansible_facts.packages"
+        fail_msg: >-
+          Expected clamav, clamav-base and clamav-daemon to be installed by
+          tasks/clamav/linux.yml; found only
+          {{ ansible_facts.packages.keys() | select('match', '^clamav') | list }}
+
+    - name: "Reading the ClamAV daemon configuration file"
+      ansible.builtin.slurp:
+        src: /etc/clamav/clamd.conf
+      register: antivirus_clamd_conf
+
+    - name: "Asserting clamd.conf carries the configured LocalSocket and no Example stanza"
+      vars:
+        antivirus_clamd_lines: "{{ (antivirus_clamd_conf.content | b64decode).splitlines() }}"
+      ansible.builtin.assert:
+        that:
+          - "'LocalSocket /var/run/clamav/clamd.ctl' in antivirus_clamd_lines"
+          - antivirus_clamd_lines | select('match', '^.*Example$') | list | length == 0
+        fail_msg: >-
+          clamav_daemon_configuration_changes were not applied to
+          /etc/clamav/clamd.conf
+
+    - name: "Stat-ing the freshclam daemon configuration file"
+      ansible.builtin.stat:
+        path: /etc/clamav/freshclam.conf
+      register: antivirus_freshclam_conf
+
+    - name: "Asserting the freshclam configuration path from vars/Debian.yml exists"
+      ansible.builtin.assert:
+        that:
+          - antivirus_freshclam_conf.stat.exists
+          - antivirus_freshclam_conf.stat.isreg
+        fail_msg: /etc/clamav/freshclam.conf is missing
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting both ClamAV units are running and enabled"
+      vars:
+        antivirus_clamd_unit: "{{ ansible_facts.services['clamav-daemon.service'] }}"
+        antivirus_fresh_unit: "{{ ansible_facts.services['clamav-freshclam.service'] }}"
+      ansible.builtin.assert:
+        that:
+          - "'clamav-daemon.service' in ansible_facts.services"
+          - "'clamav-freshclam.service' in ansible_facts.services"
+          - antivirus_clamd_unit.state == 'running'
+          - antivirus_clamd_unit.status == 'enabled'
+          - antivirus_fresh_unit.state == 'running'
+          - antivirus_fresh_unit.status == 'enabled'
+        fail_msg: >-
+          clamav-daemon / clamav-freshclam are not both started and enabled
+
+    - name: "Finding the downloaded virus signature databases"
+      ansible.builtin.find:
+        paths: /var/lib/clamav
+        patterns: "*.cvd,*.cld"
+      register: antivirus_signature_dbs
+
+    - name: "Asserting freshclam actually pulled signature databases down"
+      ansible.builtin.assert:
+        that:
+          - antivirus_signature_dbs.matched > 0
+        fail_msg: >-
+          No *.cvd/*.cld signature databases under /var/lib/clamav; the
+          freshclam handler never produced definitions
+
+    - name: "Waiting for the clamd control socket to accept connections"
+      ansible.builtin.wait_for:
+        path: /var/run/clamav/clamd.ctl
+        state: present
+        timeout: 30

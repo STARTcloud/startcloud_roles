@@ -15,7 +15,7 @@
             update_cache: true
         - name: "Ensuring the APT Keyrings Directory Exists"
           ansible.builtin.file:
-            path: "/etc/apt/keyrings"
+            path: "{{ influxdb_apt_keyring_path | dirname }}"
             state: "directory"
             mode: "0755"
         - name: "Downloading the InfluxData APT Signing Key"
@@ -25,8 +25,9 @@
             mode: "0644"
             timeout: 60
         - name: "Installing the InfluxData APT Signing Key"
-          ansible.builtin.command: "gpg --batch --yes --dearmor -o {{ influxdb_apt_keyring_path }} /tmp/influxdata-archive.key"
-          changed_when: true
+          ansible.builtin.command:
+            cmd: "gpg --batch --yes --dearmor -o {{ influxdb_apt_keyring_path }} /tmp/influxdata-archive.key"
+            creates: "{{ influxdb_apt_keyring_path }}"
         - name: "Adding the InfluxData APT Repository"
           ansible.builtin.apt_repository:
             repo: "{{ influxdb_apt_repo }}"
@@ -73,9 +74,24 @@
     - name: "Templating the InfluxDB Configuration File"
       ansible.builtin.template:
         src: "config.toml.j2"
-        dest: "{{ influxdb_config_dir }}/config.toml"
+        dest: "{{ influxdb_config_path }}"
         owner: "influxdb"
         group: "influxdb"
+        mode: "0644"
+      notify: "Restarting InfluxDB"
+    - name: "Ensuring the InfluxDB Service Drop-In Directory Exists"
+      ansible.builtin.file:
+        path: "/etc/systemd/system/{{ influxdb_service_name }}.service.d"
+        state: "directory"
+        owner: "root"
+        group: "root"
+        mode: "0755"
+    - name: "Pointing influxd at the Templated Configuration File"
+      ansible.builtin.template:
+        src: "10-startcloud-config-path.conf.j2"
+        dest: "/etc/systemd/system/{{ influxdb_service_name }}.service.d/10-startcloud-config-path.conf"
+        owner: "root"
+        group: "root"
         mode: "0644"
       notify: "Restarting InfluxDB"
     - name: "Enabling and Starting the InfluxDB Service"

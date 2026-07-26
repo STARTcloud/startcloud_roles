@@ -29,45 +29,37 @@
         name: "{{ dante_packages }}"
         state: present
 
-    - name: "Removing Default Dante Configuration"
-      ansible.builtin.file:
-        path: /etc/danted.conf
-        state: absent
-
+    ## The config is rendered from a template that writes the whole file, so the
+    ## delete that used to sit here only guaranteed a changed report on every
+    ## run - the write overwrites whatever the package shipped regardless.
+    ## `external` is the adapter danted proxies out of; the literal string
+    ## "public_adapter" that used to be hardcoded here is not an interface name
+    ## and danted refuses to start on it.
     - name: "Creating New Dante Configuration"
-      ansible.builtin.copy:
+      ansible.builtin.template:
+        src: danted.conf.j2
         dest: /etc/danted.conf
         mode: "0644"
-        content: |
-          logoutput: syslog
-          user.privileged: root
-          user.unprivileged: nobody
-          # The listening network interface or address.
-          internal: 0.0.0.0 port=1080
-          # The proxying network interface or address.
-          external: public_adapter
-          # socks-rules determine what is proxied through the external interface.
-          socksmethod: username
-          # client-rules determine who can connect to the internal interface.
-          clientmethod: none
-          client pass {
-              from: 0.0.0.0/0 to: 0.0.0.0/0
-          }
-          socks pass {
-              from: 0.0.0.0/0 to: 0.0.0.0/0
-          }
+      notify: "Restart danted"
 
+    ## password_hash('sha512') salts randomly, so the hash differs on every run
+    ## and the module reports changed forever. The password only has to be
+    ## seeded when the account is created, so leave it alone on later runs.
     - name: "Creating a Dedicated SOCKS User"
       ansible.builtin.user:
         name: "{{ dante_user }}"
         shell: /bin/false
         system: true
         password: "{{ dante_pass | password_hash('sha512') }}"
+        update_password: on_create
 
-    - name: "Restarting Dante Service"
-      ansible.builtin.systemd:
+    ## danted only needs bouncing when its config actually changes - that
+    ## restart hangs off the template above. An unconditional `state: restarted`
+    ## here reported changed on every run and could never converge.
+    - name: "Starting and Enabling Dante Service"
+      ansible.builtin.systemd_service:
         name: danted
-        state: restarted
+        state: started
         enabled: true
 
 - name: "Setting up the microsocks SOCKS server (dante-server has no Debian 13+ package)"
@@ -94,10 +86,13 @@
 
           [Install]
           WantedBy=multi-user.target
+      notify: "Restart microsocks"
 
-    - name: "Restarting microsocks Service"
-      ansible.builtin.systemd:
+    ## Same reasoning as danted above: the unit only needs bouncing when the
+    ## unit file changes, which the copy notifies.
+    - name: "Starting and Enabling microsocks Service"
+      ansible.builtin.systemd_service:
         name: microsocks
-        state: restarted
+        state: started
         enabled: true
         daemon_reload: true

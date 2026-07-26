@@ -4,9 +4,11 @@ argument_specs:
     short_description: Package repository server
     description:
       - Builds and serves OS package repositories — OmniOS IPS pkg server instances and the STARTcloud Debian package
-        server (mirror, public, and mTLS-gated private APT repositories behind nginx).
+        server (a signed public APT repository, a Debian mirror and an mTLS-gated private APT repository) behind a
+        single path-based nginx vhost.
         Additional structures (pkg_server, storage_disk) are supplied externally by the calling play.
-        main.yml always runs the OS base tasks, then the archive tasks selected by pkg_server.type.
+        main.yml always runs the OS base tasks, then on OmniOS the archive tasks selected by pkg_server.type and on
+        Debian the trees selected by the pkg_server_*_enabled toggles, and finally renders the shared vhost.
     author: Mark Gilbert
     options:
       run_tasks:
@@ -16,54 +18,62 @@ argument_specs:
       package_server_email:
         type: str
         description: Email address embedded in the generated PGP signing key.
+      service_home_dir:
+        type: str
+        default: /home/startcloud
+        description: Home directory of the STARTcloud service account the built deb is published from.
       pkg_server_base_dir:
         type: str
         default: /local
-        description: Base directory holding the mirror, public, private, ca, clients and pgp trees.
+        description: Content parent holding the public, mirror, private, clients, ca, pgp and staging trees.
+      pkg_server_domain:
+        type: str
+        default: debian.startcloud.com
+        description: Primary server name of the package server vhost; also names the vhost file and the TLS certificate.
+      pkg_server_legacy_domains:
+        type: list
+        elements: str
+        default: []
+        description: Additional server names appended to the vhost so retired hostnames keep serving during migration.
       pkg_server_ssl_enabled:
         type: bool
         default: true
-        description: Render the port-443 nginx server blocks (requires the referenced certificates to exist).
-      pkg_server_local_dir:
+        description: Render the port-80 redirect plus the port-443 server block (requires the referenced certificates
+          to exist). When false a single plain port-80 server block is rendered instead.
+      pkg_server_ssl_certificate:
         type: str
-        description: Directory holding the local signed demonstration repository (defaults to <base_dir>/startcloud).
-      pkg_server_local_port:
-        type: int
-        default: 8008
-        description: Localhost port the demonstration repository vhost listens on.
+        description: TLS certificate path (defaults to the certbot live path for pkg_server_domain).
+      pkg_server_ssl_certificate_key:
+        type: str
+        description: TLS key path (defaults to the certbot live path for pkg_server_domain).
+      pkg_server_public_enabled:
+        type: bool
+        default: true
+        description: Seed the public landing page and stylesheet served at /public/.
+      pkg_server_mirror_enabled:
+        type: bool
+        default: false
+        description: Provision the debmirror tree and its nightly sync, served at /mirror/.
+      pkg_server_private_enabled:
+        type: bool
+        default: false
+        description: Provision the client-certificate CA and the private tree, served at /private/ and /certs/ behind
+          mTLS verification.
+      pkg_server_public_dir:
+        type: str
+        description: Root of the signed public APT repository (defaults to <base_dir>/public/debian).
       pkg_server_deb_source:
         type: str
-        description: Path of the deb (built by the debian_packager role) published into the demonstration repository.
-      pkg_server_public_domains:
-        type: list
-        elements: str
-        description: Server names for the public repository vhost (first entry names the vhost file).
-      pkg_server_public_ssl_certificate:
+        description: Path of the deb (built by the debian_packager role) published into the public repository.
+      pkg_server_staging_dir:
         type: str
-        description: TLS certificate path for the public repository vhost.
-      pkg_server_public_ssl_certificate_key:
+        description: Directory the repository indexes are rendered in before publication (defaults to <base_dir>/staging).
+      pkg_server_gnupg_dir:
         type: str
-        description: TLS key path for the public repository vhost.
-      pkg_server_private_domains:
-        type: list
-        elements: str
-        description: Server names for the private repository vhost (first entry names the vhost file).
-      pkg_server_private_ssl_certificate:
+        description: GNUPGHOME the repository signing key is generated in and signed from (defaults to <base_dir>/pgp/gnupg).
+      pkg_server_apt_source_url:
         type: str
-        description: TLS certificate path for the private repository vhost.
-      pkg_server_private_ssl_certificate_key:
-        type: str
-        description: TLS key path for the private repository vhost.
-      pkg_server_mirror_domains:
-        type: list
-        elements: str
-        description: Server names for the mirror vhost (first entry names the vhost file).
-      pkg_server_mirror_ssl_certificate:
-        type: str
-        description: TLS certificate path for the mirror vhost.
-      pkg_server_mirror_ssl_certificate_key:
-        type: str
-        description: TLS key path for the mirror vhost.
+        description: Base URL the host points its own apt at to prove the published repository is consumable.
       pkg_server_ca_cn:
         type: str
         default: STARTcloud Package Repository CA
@@ -72,6 +82,10 @@ argument_specs:
         type: int
         default: 3650
         description: Validity in days of the generated CA certificate.
+      pkg_server_client_cert_days:
+        type: int
+        default: 365
+        description: Validity in days of the client certificates generate_client_cert.sh issues.
       pkg_server_mirror_source_host:
         type: str
         default: mirrors.ocf.berkeley.edu

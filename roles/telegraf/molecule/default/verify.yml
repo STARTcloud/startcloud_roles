@@ -1,0 +1,146 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: "Verify | Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Verify | Asserting the telegraf package is installed"
+      ansible.builtin.assert:
+        that:
+          - "'telegraf' in ansible_facts.packages"
+        fail_msg: "The telegraf package was not installed by the role"
+
+    - name: "Verify | Asserting the role installed its own repository prerequisites"
+      ansible.builtin.assert:
+        that:
+          - "'gnupg' in ansible_facts.packages"
+          - "'apt-transport-https' in ansible_facts.packages"
+          - "'ca-certificates' in ansible_facts.packages"
+        fail_msg: "The role did not install the InfluxData repository prerequisites"
+
+    - name: "Verify | Asserting the installed telegraf version is a currently published one"
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.packages['telegraf'][0].version is version('1.23.0', '>=')
+        fail_msg: >-
+          telegraf {{ ansible_facts.packages['telegraf'][0].version }} is older than anything the
+          InfluxData stable repository publishes - the role pinned a dead version
+
+    - name: "Verify | Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Verify | Asserting the telegraf service is running and enabled"
+      ansible.builtin.assert:
+        that:
+          - "'telegraf.service' in ansible_facts.services"
+          - ansible_facts.services['telegraf.service'].state == 'running'
+          - ansible_facts.services['telegraf.service'].status == 'enabled'
+        fail_msg: "telegraf.service is not running and enabled"
+
+    - name: "Verify | Looking up the telegraf system group"
+      ansible.builtin.getent:
+        database: group
+        key: telegraf
+
+    - name: "Verify | Asserting the telegraf group exists"
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.getent_group['telegraf'] is defined
+        fail_msg: "The telegraf group was not created"
+
+    - name: "Verify | Stat-ing the rendered main configuration"
+      ansible.builtin.stat:
+        path: /etc/telegraf/telegraf.conf
+      register: telegraf_main_conf
+
+    - name: "Verify | Asserting main config ownership and permissions"
+      ansible.builtin.assert:
+        that:
+          - telegraf_main_conf.stat.exists
+          - telegraf_main_conf.stat.pw_name == 'telegraf'
+          - telegraf_main_conf.stat.gr_name == 'telegraf'
+          - telegraf_main_conf.stat.mode == '0640'
+        fail_msg: "/etc/telegraf/telegraf.conf missing or wrongly owned"
+
+    - name: "Verify | Reading the rendered main configuration"
+      ansible.builtin.slurp:
+        src: /etc/telegraf/telegraf.conf
+      register: telegraf_main_conf_content
+
+    - name: "Verify | Asserting the templated agent, output and input stanzas"
+      ansible.builtin.assert:
+        that:
+          - "'MANAGED BY telegraf ANSIBLE ROLE' in _conf"
+          - "'interval = \"15s\"' in _conf"
+          - "'flush_interval = \"20s\"' in _conf"
+          - "'metric_batch_size = 500' in _conf"
+          - "'hostname = \"startcloud-telegraf-debian12\"' in _conf"
+          - "'environment = \"molecule\"' in _conf"
+          - "'[[outputs.influxdb]]' in _conf"
+          - "'database = \"telegraf\"' in _conf"
+          - "'[[inputs.cpu]]' in _conf"
+          - "'percpu = true' in _conf"
+          - "'[[inputs.processes]]' in _conf"
+        fail_msg: "telegraf.conf was not rendered from the role template as expected"
+      vars:
+        _conf: "{{ telegraf_main_conf_content.content | b64decode }}"
+
+    - name: "Verify | Stat-ing the extra plugin drop-in"
+      ansible.builtin.stat:
+        path: /etc/telegraf/telegraf.d/net_response.conf
+      register: telegraf_extra_conf
+
+    - name: "Verify | Asserting the extra plugin drop-in exists"
+      ansible.builtin.assert:
+        that:
+          - telegraf_extra_conf.stat.exists
+          - telegraf_extra_conf.stat.pw_name == 'telegraf'
+          - telegraf_extra_conf.stat.mode == '0640'
+        fail_msg: "/etc/telegraf/telegraf.d/net_response.conf was not created"
+
+    - name: "Verify | Reading the extra plugin drop-in"
+      ansible.builtin.slurp:
+        src: /etc/telegraf/telegraf.d/net_response.conf
+      register: telegraf_extra_conf_content
+
+    - name: "Verify | Asserting the extra plugin drop-in contents"
+      ansible.builtin.assert:
+        that:
+          - "'[[inputs.net_response]]' in _extra"
+          - "'interval = \"30s\"' in _extra"
+          - "'protocol = \"tcp\"' in _extra"
+        fail_msg: "net_response.conf was not rendered from the extra plugin template"
+      vars:
+        _extra: "{{ telegraf_extra_conf_content.content | b64decode }}"
+
+    - name: "Verify | Checking the InfluxData apt source was added"
+      ansible.builtin.stat:
+        path: /etc/apt/sources.list.d/telegraf.list
+      register: telegraf_apt_source
+
+    - name: "Verify | Asserting the InfluxData apt source and keyring exist"
+      ansible.builtin.stat:
+        path: /usr/share/keyrings/influxdata-archive.gpg
+      register: telegraf_apt_keyring
+
+    - name: "Verify | Reading the InfluxData apt source"
+      ansible.builtin.slurp:
+        src: /etc/apt/sources.list.d/telegraf.list
+      register: telegraf_apt_source_content
+
+    - name: "Verify | Asserting repo install method artefacts"
+      ansible.builtin.assert:
+        that:
+          - telegraf_apt_source.stat.exists
+          - telegraf_apt_keyring.stat.exists
+          - telegraf_apt_keyring.stat.size > 0
+          - telegraf_apt_keyring.stat.mode == '0644'
+          - "'signed-by=/usr/share/keyrings/influxdata-archive.gpg' in _source"
+          - "'https://repos.influxdata.com/debian stable main' in _source"
+        fail_msg: "InfluxData apt repository or keyring was not configured"
+      vars:
+        _source: "{{ telegraf_apt_source_content.content | b64decode }}"

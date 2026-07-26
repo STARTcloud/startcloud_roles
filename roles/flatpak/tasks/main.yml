@@ -5,23 +5,9 @@
     - name: "Setting up Debian Installations"
       when: "ansible_os_family == 'Debian'"
       block:
-        - name: "Gathering DEB architecture"
-          ansible.builtin.command: dpkg --print-architecture
-          register: deb_architecture
-          changed_when: false
-
-        - name: "Printing DEB architecture"
-          ansible.builtin.debug:
-            msg: "deb_architecture.stdout: {{ deb_architecture.stdout }}"
-
         - name: "Ensuring apt cache is updated"
           ansible.builtin.apt:
             cache_valid_time: 3600
-            update_cache: true
-
-        - name: "Upgrading all apt packages"
-          ansible.builtin.apt:
-            upgrade: dist
             update_cache: true
 
         - name: "Adding flatpak"
@@ -29,7 +15,12 @@
             name: flatpak
             state: present
 
-    - name: "Adding Flatpak Repos"
-      ansible.builtin.command: "flatpak remote-add --if-not-exists --system {{ item.name }} {{ item.url }}"
-      changed_when: false
-      with_items: "{{ flatpak_repos }}"
+        - name: "Adding Flatpak Repos"
+          community.general.flatpak_remote:
+            name: "{{ item.name }}"
+            flatpakrepo_url: "{{ item.url }}"
+            method: system
+            state: present
+          loop: "{{ flatpak_repos }}"
+          loop_control:
+            label: "{{ item.name }}"

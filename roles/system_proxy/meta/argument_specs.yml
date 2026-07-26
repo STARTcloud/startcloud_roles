@@ -13,11 +13,19 @@ argument_specs:
       proxy_systemwide:
         type: bool
         default: true
-        description: Whether to write the system-wide proxy environment variables into /etc/environment.
+        description: Whether to write the system-wide proxy environment variables into /etc/environment (and, on Windows, the machine-level proxy environment and WinHTTP settings).
       proxy_systemwide_proxy:
         type: str
         default: squid
         description: Key of the proxy entry (from proxy) to use for the system-wide environment variable configuration.
+      proxy_package_manager:
+        type: bool
+        default: true
+        description: Whether to write the package-manager proxy configuration (APT drop-in on Debian, /etc/yum.conf on RedHat).
+      proxy_package_manager_proxy:
+        type: str
+        default: dante
+        description: Key of the proxy entry (from proxy) to use for the package-manager proxy configuration, which is written as a socks5h URL.
       proxy:
         type: list
         elements: dict

@@ -1,0 +1,62 @@
+---
+## Registers the deployed certificate in config.xml and points the
+## webConfigurator's ssl-certref at it. The refid is derived
+## deterministically from the hostname so reruns are idempotent.
+- name: "Deriving the Certificate refid"
+  ansible.builtin.set_fact:
+    ssl_appliance_refid: "{{ ssl_appliance_hostname | to_uuid | regex_replace('-', '') | truncate(13, True, '') }}"
+
+# Reads from the controller-side per-host cert store, same lookup pattern
+# the debian lane uses for its keystore step.
+- name: "Normalizing the Certificate Body"
+  ansible.builtin.set_fact:
+    ssl_appliance_cert_b64: >-
+      {{ ('-----BEGIN CERTIFICATE-----' ~ (lookup('file', cert_dir ~ '/' ~ ssl_appliance_fqdn ~ '/host.pem') | regex_replace('^(?:[^\n]*\n)*-----BEGIN CERTIFICATE-----', ''))) | b64encode }}
+    ssl_appliance_key_b64: "{{ lookup('file', cert_dir ~ '/' ~ ssl_appliance_fqdn ~ '/host.key') | b64encode }}"
+
+- name: "Checking Whether the refid is Already Wired"
+  ansible.builtin.lineinfile:
+    path: /conf/config.xml
+    line: "<ssl-certref>{{ ssl_appliance_refid }}</ssl-certref>"
+    state: present
+  check_mode: true
+  register: ssl_appliance_cert_check
+
+- name: "Determining Whether the Certificate Needs Registration"
+  ansible.builtin.set_fact:
+    ssl_appliance_cert_missing: "{{ ssl_appliance_cert_check.changed | bool }}"
+
+- name: "Registering the Certificate in config.xml"
+  when: ssl_appliance_cert_missing
+  ansible.builtin.blockinfile:
+    path: /conf/config.xml
+    marker: "                  <!-- {mark} ANSIBLE SSL EXTERNAL MANAGED BLOCK -->"
+    insertafter: '</cert>'
+    state: present
+    content: |2
+              <cert>
+                      <refid>{{ ssl_appliance_refid }}</refid>
+                      <descr><![CDATA[{{ ssl_appliance_hostname }} ({{ ssl_appliance_refid }})]]></descr>
+                      <type>server</type>
+                      <crt>{{ ssl_appliance_cert_b64 }}</crt>
+                      <prv>{{ ssl_appliance_key_b64 }}</prv>
+              </cert>
+
+- name: "Pointing the webConfigurator at the Certificate"
+  when: ssl_appliance_cert_missing
+  ansible.builtin.replace:
+    path: /conf/config.xml
+    regexp: "<ssl-certref>(.*?)</ssl-certref>"
+    replace: "<ssl-certref>{{ ssl_appliance_refid }}</ssl-certref>"
+    backup: true
+
+- name: "Removing the blockinfile Markers"
+  when: ssl_appliance_cert_missing
+  ansible.builtin.lineinfile:
+    path: /conf/config.xml
+    state: absent
+    regexp: '.*MANAGED BLOCK.*'
+
+- name: "Reloading Appliance Configuration"
+  when: ssl_appliance_cert_missing
+  ansible.builtin.include_tasks: freebsd-reload.yml

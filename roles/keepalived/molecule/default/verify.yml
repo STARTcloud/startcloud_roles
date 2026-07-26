@@ -1,0 +1,82 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    ## The role derives the VIP as "first adapter's address with the host octet
+    ## replaced by 250"; recompute it independently from gathered facts.
+    keepalived_expected_vip: "{{ ansible_default_ipv4.address | regex_replace('[0-9]+$', '250') }}"
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting the keepalived package is installed"
+      ansible.builtin.assert:
+        that:
+          - "'keepalived' in ansible_facts.packages"
+        fail_msg: "The keepalived package was not installed by the role"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting keepalived is enabled and running"
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['keepalived.service'] is defined
+          - ansible_facts.services['keepalived.service'].state == 'running'
+          - ansible_facts.services['keepalived.service'].status == 'enabled'
+        fail_msg: "keepalived.service is not both enabled and running after the role ran"
+
+    - name: "Stat the rendered keepalived configuration"
+      ansible.builtin.stat:
+        path: /etc/keepalived/keepalived.conf
+      register: keepalived_conf_stat
+
+    - name: "Asserting keepalived.conf was rendered with the mode the role specifies"
+      ansible.builtin.assert:
+        that:
+          - keepalived_conf_stat.stat.exists
+          - keepalived_conf_stat.stat.isreg
+          - keepalived_conf_stat.stat.mode == '0644'
+        fail_msg: "/etc/keepalived/keepalived.conf is missing or not mode 0644"
+
+    - name: "Reading the rendered keepalived configuration"
+      ansible.builtin.slurp:
+        src: /etc/keepalived/keepalived.conf
+      register: keepalived_conf_content
+
+    - name: "Asserting keepalived.conf reflects the supplied variables and the derived VIP"
+      ansible.builtin.assert:
+        that:
+          - keepalived_conf_decoded is search('vrrp_instance VI_1')
+          - keepalived_conf_decoded is search('interface\s+' ~ ansible_default_ipv4.interface ~ '\n')
+          - keepalived_conf_decoded is search('state\s+MASTER')
+          - keepalived_conf_decoded is search('virtual_router_id\s+60\n')
+          - keepalived_conf_decoded is search('priority\s+101\n')
+          - keepalived_conf_decoded is search('auth_type\s+PASS')
+          - keepalived_conf_decoded is search('auth_pass\s+V1pS3cr7\n')
+          - keepalived_conf_decoded is search('track_script')
+          - keepalived_expected_vip in keepalived_conf_decoded
+        fail_msg: >-
+          The rendered keepalived.conf does not carry the first adapter, the VRRP state/router-id/priority
+          supplied to the role, or the derived virtual IP {{ keepalived_expected_vip }}
+      vars:
+        keepalived_conf_decoded: "{{ keepalived_conf_content.content | b64decode }}"
+
+    - name: "Waiting for keepalived to claim the virtual IP on the first adapter"
+      ansible.builtin.command: "ip -4 -o addr show dev {{ ansible_default_ipv4.interface }}"
+      register: keepalived_adapter_addrs
+      changed_when: false
+      until: keepalived_expected_vip in keepalived_adapter_addrs.stdout
+      retries: 10
+      delay: 3
+
+    - name: "Asserting the VRRP instance actually took MASTER and bound the virtual IP"
+      ansible.builtin.assert:
+        that:
+          - keepalived_expected_vip in keepalived_adapter_addrs.stdout
+        fail_msg: >-
+          keepalived never assigned {{ keepalived_expected_vip }} to
+          {{ ansible_default_ipv4.interface }}, so the VRRP instance never transitioned to MASTER

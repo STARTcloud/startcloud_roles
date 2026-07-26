@@ -4,6 +4,7 @@ argument_specs:
     short_description: Install Raritan PDU SNMP management tooling.
     description:
       - Installs SNMP command-line and MIB tooling used to query and manage Raritan Master Power Control PDUs.
+      - On Debian the non-free component is declared in deb822 form, reusing the signing key of the host's own base sources so it merges with them.
     author: Mark Gilbert
     options:
       run_tasks:
@@ -14,3 +15,13 @@ argument_specs:
         type: list
         elements: str
         description: SNMP tooling packages installed for managing Raritan PDUs.
+      raritan_mpc_non_free_components:
+        type: list
+        elements: str
+        description: Components added on top of the base Debian sources so snmp-mibs-downloader is installable.
+      raritan_mpc_debian_archive_uri:
+        type: str
+        description: URI of the Debian archive the non-free component is enabled for.
+      raritan_mpc_debian_security_uri:
+        type: str
+        description: URI of the Debian security archive the non-free component is enabled for.

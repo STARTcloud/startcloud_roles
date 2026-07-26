@@ -1,0 +1,41 @@
+---
+## debian-base.yml publishes the deb that the debian_packager role builds into
+## "{{ service_home_dir }}/startcloud/". Nothing in this role produces it, so the
+## scenario stands in a minimal, valid startcloud_0.0.1-1_amd64.deb at that path.
+- name: Prepare
+  hosts: all
+  become: true
+  vars:
+    prep_service_home_dir: /home/startcloud
+  tasks:
+    ## The base image ships with an empty /var/lib/apt/lists; the role installs
+    ## packages without refreshing the cache first.
+    - name: "Updating the apt cache"
+      ansible.builtin.apt:
+        update_cache: true
+
+    - name: "Creating the stand-in package build root"
+      ansible.builtin.file:
+        path: "{{ prep_service_home_dir }}/startcloud/pkgroot/DEBIAN"
+        state: directory
+        mode: "0755"
+
+    - name: "Writing the stand-in package control file"
+      ansible.builtin.copy:
+        dest: "{{ prep_service_home_dir }}/startcloud/pkgroot/DEBIAN/control"
+        mode: "0644"
+        content: |
+          Package: startcloud
+          Version: 0.0.1-1
+          Section: misc
+          Priority: optional
+          Architecture: amd64
+          Maintainer: STARTcloud <support@startcloud.com>
+          Description: Stand-in for the deb built by the debian_packager role.
+
+    - name: "Building the stand-in deb the role publishes"
+      ansible.builtin.command:
+        cmd: >-
+          dpkg-deb --build {{ prep_service_home_dir }}/startcloud/pkgroot
+          {{ prep_service_home_dir }}/startcloud/startcloud_0.0.1-1_amd64.deb
+        creates: "{{ prep_service_home_dir }}/startcloud/startcloud_0.0.1-1_amd64.deb"

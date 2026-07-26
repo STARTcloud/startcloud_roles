@@ -1,0 +1,13 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    run_tasks: true
+    qemu_ga_virtio_enabled: true
+    qemu_ga_serial_enabled: true
+    qemu_ga_virtio_device: /dev/virtio-ports/org.qemu.guest_agent.0
+    qemu_ga_serial_device: /dev/ttyS1
+  roles:
+    - role: qemu_guest_agent

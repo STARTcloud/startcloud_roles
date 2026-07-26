@@ -6,25 +6,34 @@
       ansible.builtin.apt:
         name:
           - mariadb-server
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
 
     - name: "Starting MariaDB"
       ansible.builtin.systemd:
         name: mariadb
         state: started
+        enabled: true
 
-    - name: "Setting the password for {{ mariadb_admin_user }}"
+    # Queried through the module rather than the mysql CLI so the credentials the
+    # role sets below are used — a bare CLI call only works while root is still
+    # socket-authenticated, which stops being true once the password is applied.
+    - name: "Checking whether the test database still exists"
       become: true
-      community.mysql.mysql_user:
-        user: "{{ mariadb_admin_user }}"
-        password: "{{ mariadb_admin_pass }}"
-        host: localhost
-      register: set_password_result
-      failed_when:
-        - set_password_result.failed
-        - "'ERROR' in set_password_result.msg"
+      community.mysql.mysql_info:
+        login_user: "{{ mariadb_admin_user }}"
+        login_password: "{{ mariadb_admin_pass }}"
+        login_unix_socket: "{{ mariadb_login_unix_socket }}"
+        filter:
+          - databases
+      register: mariadb_server_info
 
+    # mysql_secure_installation is interactive-only and always reports changed,
+    # so it runs once — the test database it removes doubles as the marker.
     - name: "Securing MariaDB"
       become: true
+      when: "'test' in mariadb_server_info.databases"
       ansible.builtin.expect:
         command: mysql_secure_installation
         responses:
@@ -38,17 +47,26 @@
           "Remove test database and access to it\\? \\[Y\\/n\\]": "y"
           "Reload privilege tables now\\? \\[Y\\/n\\]": "y"
 
+    # The module has to be pointed at the unix socket: a TCP connection to localhost
+    # is rejected with 1698 while the account is still socket-authenticated, and the
+    # credentials cover the run after the password has been applied.
+    - name: "Setting the password for {{ mariadb_admin_user }}"
+      become: true
+      community.mysql.mysql_user:
+        name: "{{ mariadb_admin_user }}"
+        password: "{{ mariadb_admin_pass }}"
+        host: localhost
+        login_user: "{{ mariadb_admin_user }}"
+        login_password: "{{ mariadb_admin_pass }}"
+        login_unix_socket: "{{ mariadb_login_unix_socket }}"
+
     - name: "Configuring MariaDB to bind to all ports"
+      notify: Restarting MariaDB
       ansible.builtin.lineinfile:
-        mode: "0755"
+        mode: "0644"
         path: "{{ item.dir }}"
         regexp: "^bind-address"
         create: true
         line: "bind-address  = 0.0.0.0"
       with_items:
         - { dir: "/etc/mysql/mariadb.conf.d/50-server.cnf" }
-
-    - name: "Restarting MariaDB"
-      ansible.builtin.systemd:
-        name: mariadb
-        state: restarted

@@ -1,2 +1,55 @@
 ---
 run_tasks: true
+
+# Agent identity and cadence rendered into the [agent] stanza of telegraf.conf.
+perf_stats_hostname: "{{ ansible_fqdn }}"
+perf_stats_omit_hostname: false
+perf_stats_interval: "10s"
+perf_stats_round_interval: true
+perf_stats_collection_jitter: "0s"
+perf_stats_flush_interval: "10s"
+perf_stats_flush_jitter: "0s"
+perf_stats_metric_batch_size: 1000
+perf_stats_metric_buffer_limit: 10000
+perf_stats_debug: false
+perf_stats_quiet: false
+# Empty logfile keeps Telegraf logging to stderr, which systemd sends to the journal.
+perf_stats_logfile: ""
+
+# Tags stamped onto every metric, rendered into [global_tags].
+perf_stats_global_tags: {}
+
+# Where the collected performance statistics are shipped. Telegraf will not
+# start without at least one output, so the default is the always-available
+# file output writing influx line protocol to stdout (captured by journald).
+# Override with, for example:
+#   perf_stats_outputs:
+#     - type: influxdb
+#       config:
+#         - urls = ["http://metrics.example.com:8086"]
+#         - database = "telegraf"
+perf_stats_outputs:
+  - type: file
+    config:
+      - files = ["stdout"]
+      - data_format = "influx"
+
+# Host performance input plugins rendered into telegraf.conf.
+perf_stats_input_plugins:
+  - plugin: cpu
+    config:
+      - percpu = true
+      - totalcpu = true
+      - collect_cpu_time = false
+      - report_active = false
+  - plugin: disk
+    config:
+      - ignore_fs = ["tmpfs", "devtmpfs", "devfs", "overlay", "aufs", "squashfs"]
+  - plugin: diskio
+  - plugin: mem
+  - plugin: net
+  - plugin: netstat
+  - plugin: processes
+  - plugin: swap
+  - plugin: system
+  - plugin: kernel

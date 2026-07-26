@@ -1,3 +1,9 @@
+# Managed by the startcloud.startcloud_roles fail2ban role.
+#
+# fail2ban reads jail.conf, then jail.d/*.conf, then this file, so the [sshd]
+# block below is what overrides the jail Debian enables in
+# jail.d/defaults-debian.conf. Jails shipped by other roles land in
+# /etc/fail2ban/jail.d/ and are left alone.
 [DEFAULT]
 
 [sshd]

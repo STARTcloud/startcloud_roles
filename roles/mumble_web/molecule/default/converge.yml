@@ -1,0 +1,45 @@
+---
+- name: "Converge"
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+
+    ## mumble_web itself.
+    mumble_web_network: mumble-web
+    mumble_web_restart_policy: unless-stopped
+    mumble_web_image: "rankenstein/mumble-web:latest"
+    mumble_web_container_name: mumble-web
+    mumble_web_http_port: 8080
+    mumble_web_container_http_port: 8080
+
+    ## No murmur server runs in the molecule instance, and there is no honest
+    ## default for someone else's Mumble server, so an RFC 5737 documentation
+    ## address stands in. What is under test is that the role wires the address
+    ## the caller gave it into the container, not that voice traffic flows.
+    mumble_web_server_host: "192.0.2.10"
+    mumble_web_server_port: 64738
+
+    ## The proxy stays off: upstream mumble-web-proxy publishes no container
+    ## image, so there is nothing trustworthy to pull here. The verify play
+    ## asserts the proxy container is absent rather than faking a deployment.
+    mumble_web_proxy_enabled: false
+
+    ## Consumed by the startcloud.startcloud_roles.docker meta dependency.
+    ## json-file rather than the journald default: a nested systemd container
+    ## does not guarantee a writable journald socket for dockerd. The address
+    ## pool is moved off 172.17/172.18 so the network this role creates cannot
+    ## collide with the outer Docker daemon molecule is driving.
+    ## storage-driver vfs: the inner daemon's /var/lib/docker sits on the outer
+    ## daemon's overlayfs, and overlay2-on-overlayfs cannot register layer
+    ## whiteout entries here ("operation not permitted"). vfs has no such limit.
+    docker_daemon_options:
+      log-driver: "json-file"
+      log-level: "warn"
+      debug: false
+      storage-driver: "vfs"
+      default-address-pools:
+        - base: "172.31.0.0/16"
+          size: 28
+  roles:
+    - role: mumble_web

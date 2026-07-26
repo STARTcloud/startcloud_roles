@@ -5,9 +5,15 @@ argument_specs:
     description:
       - Opens the remote-access ports (XRDP, SSH, Cockpit, VNC) through UFW on Debian-family hosts.
       - On Windows, disables the Domain, Public, and Private firewall profiles and ensures an inbound OpenSSH allow rule exists.
+      - On FreeBSD firewall appliances (pfSense), optionally excludes the CGNAT range from the bogons
+        table and refreshes the CA bundle the bogon update script depends on.
     author: Mark Gilbert
     options:
       run_tasks:
         type: bool
         default: true
         description: Master gate — when false the role loads its vars but runs no tasks.
+      firewall_bogon_exclusions:
+        type: bool
+        default: false
+        description: On pfSense appliances, exclude 100.64.0.0/10 from the bogons table and refresh the CA bundle.

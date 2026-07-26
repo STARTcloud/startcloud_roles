@@ -1,0 +1,101 @@
+---
+- name: "Prepare"
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Installing prerequisites the provisioner normally supplies"
+      ansible.builtin.apt:
+        name:
+          - acl
+          - python3-pip
+          - iproute2
+          - openssl
+          - tree
+          - cockpit
+        state: present
+        update_cache: true
+
+    - name: "Enabling cockpit.socket (normally done by the cockpit role)"
+      ansible.builtin.systemd_service:
+        name: cockpit.socket
+        enabled: true
+        state: started
+
+    - name: "Creating the service group (normally created by the service_user role)"
+      ansible.builtin.group:
+        name: java_group
+        state: present
+
+    - name: "Creating the service user (normally created by the service_user role)"
+      ansible.builtin.user:
+        name: java_user
+        group: java_group
+        home: /local/notesjava
+        create_home: true
+        shell: /bin/bash
+        state: present
+
+    - name: "Creating directories the ssl, cockpit and support_bundle roles provide"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - /secure
+        - /secure/combined
+        - /secure/parts
+        - /etc/cockpit
+        - /vagrant
+        - /vagrant/ansible
+        - /vagrant/installers
+        - /vagrant/completed
+        - /vagrant/support-bundle
+
+    - name: "Placing the stand-in provisioner artifacts the support bundle archives"
+      ansible.builtin.copy:
+        dest: "{{ item.dest }}"
+        content: "{{ item.content }}"
+        mode: "0644"
+      loop:
+        - dest: /vagrant/ansible/playbook.yml
+          content: "# molecule stand-in for the provisioner playbook\n"
+        - dest: /vagrant/installers/placeholder-installer.bin
+          content: "molecule stand-in installer\n"
+        - dest: /vagrant/completed/example_role
+          content: "molecule stand-in completed marker\n"
+        - dest: /vagrant/support-bundle/provisioner.log
+          content: "molecule support bundle placeholder\n"
+      loop_control:
+        label: "{{ item.dest }}"
+
+    - name: "Generating the key and certificate the ssl role normally issues"
+      ansible.builtin.command:
+        cmd: >-
+          openssl req -x509 -newkey rsa:2048 -nodes -days 365
+          -subj /CN=startcloud-example-role.startcloud.test
+          -keyout /secure/parts/01-key.pem
+          -out /secure/parts/02-cert.pem
+        creates: /secure/parts/02-cert.pem
+
+    - name: "Assembling the combined self-signed pem the python server serves with"
+      ansible.builtin.assemble:
+        src: /secure/parts
+        dest: /secure/combined/startcloud-example-role.startcloud.test-self-signed.pem
+        mode: "0644"
+
+    - name: "Checking for the public_adapter interface the networking role normally provides"
+      ansible.builtin.command: ip -o link show public_adapter
+      register: example_role_adapter
+      changed_when: false
+      failed_when: false
+
+    - name: "Creating the public_adapter interface the role queries for the external IP"
+      when: example_role_adapter.rc != 0
+      ansible.builtin.command: "{{ item }}"
+      changed_when: true
+      loop:
+        - ip link add public_adapter type veth peer name pa-peer
+        - ip link set public_adapter up
+        - ip link set pa-peer up
+        - ip addr add 10.244.44.10/24 dev public_adapter

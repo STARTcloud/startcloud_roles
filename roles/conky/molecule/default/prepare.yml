@@ -1,0 +1,10 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Refresh apt cache (base image ships with cleaned apt lists)
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600

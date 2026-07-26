@@ -23,8 +23,34 @@
         - "/etc/fail2ban"
         - "/etc/fail2ban/jail.d"
 
+    ## The six documented server settings are rendered into fail2ban.local
+    ## rather than edited into the packaged fail2ban.conf: .local is read last
+    ## and survives a package upgrade. The restart hangs off the template so a
+    ## rerun that renders identical content bounces nothing.
+    - name: "Copying fail2ban.local template"
+      ansible.builtin.template:
+        src: fail2ban.local.j2
+        dest: /etc/fail2ban/fail2ban.local
+        owner: root
+        group: root
+        mode: "0644"
+      notify: "Restarting fail2ban"
+
+    ## jail.local is read after jail.d/*.conf, so this is the file that decides
+    ## the [sshd] jail Debian enables in jail.d/defaults-debian.conf.
+    - name: "Copying jail.local template"
+      ansible.builtin.template:
+        src: jail.local.j2
+        dest: /etc/fail2ban/jail.local
+        owner: root
+        group: root
+        mode: "0644"
+      notify: "Restarting fail2ban"
+
+    ## Started only once the whole configuration set is on disk, so the server
+    ## never comes up against the packaged defaults and then gets bounced.
     - name: "Starting and Enabling fail2ban"
       ansible.builtin.systemd:
         name: fail2ban
-        state: restarted
+        state: started
         enabled: true

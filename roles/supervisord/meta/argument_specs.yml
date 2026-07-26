@@ -3,10 +3,67 @@ argument_specs:
   main:
     short_description: Installs and configures Supervisord.
     description:
-      - Installs the Supervisord process control system and deploys its base configuration.
+      - Installs the Supervisord process control system, deploys its base configuration and manages the supervisor service.
     author: Mark Gilbert
     options:
       run_tasks:
         type: bool
         default: true
         description: Master gate — when false the role loads its vars but runs no tasks.
+      supervisord_manage_service:
+        type: bool
+        default: true
+        description:
+          - Whether the role starts, enables and restarts the supervisor service unit.
+          - Defaults to true, and to false when the provisioner reports ansible_module_running_in_container,
+            where supervisord itself is PID 1 and no service unit exists to manage.
+      supervisord_service_name:
+        type: str
+        default: supervisor
+        description: Name of the service unit that runs supervisord.
+      supervisord_packages:
+        type: list
+        elements: str
+        default:
+          - python3
+          - python3-pip
+          - supervisor
+        description: Packages installed to provide supervisord and its Python runtime.
+      supervisord_config_file:
+        type: str
+        default: /etc/supervisor/supervisord.conf
+        description: Path of the supervisord configuration file rendered by the role.
+      supervisord_include_dir:
+        type: str
+        default: /etc/supervisor/conf.d
+        description: Directory other roles drop their supervisord program fragments into.
+      supervisord_include_files:
+        type: str
+        default: /etc/supervisor/conf.d/*.conf
+        description: Glob written to the "[include] files" directive of supervisord.conf.
+      supervisord_socket_path:
+        type: str
+        default: /var/run/supervisor.sock
+        description:
+          - Unix socket supervisord listens on and supervisorctl connects to.
+          - The packaged unit's ExecStop/ExecReload run supervisorctl, so this socket must be configured.
+      supervisord_socket_mode:
+        type: str
+        default: "0700"
+        description: Permission mode applied to the supervisord unix socket (chmod in unix_http_server).
+      supervisord_nodaemon:
+        type: bool
+        default: true
+        description: Whether supervisord runs in the foreground, matching the "-n" flag in the packaged unit.
+      supervisord_log_file:
+        type: str
+        default: /var/log/supervisor/supervisord.log
+        description: Main supervisord log file.
+      supervisord_pid_file:
+        type: str
+        default: /var/run/supervisord.pid
+        description: Path of the supervisord pid file.
+      supervisord_child_log_dir:
+        type: str
+        default: /var/log/supervisor
+        description: Directory supervisord writes managed child process logs into.

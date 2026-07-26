@@ -1,0 +1,11 @@
+---
+- name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    - name: "Verifying supported OS family"
+      ansible.builtin.assert:
+        that: ansible_os_family == "Debian"
+        fail_msg: "The ipsec role currently supports Debian-family hosts only (got {{ ansible_os_family }}); add a setup-{{ ansible_os_family }}.yml to extend it."
+
+    - name: "Including Debian IPsec setup"
+      ansible.builtin.include_tasks: setup-Debian.yml

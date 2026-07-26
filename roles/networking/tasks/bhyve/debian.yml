@@ -1,1 +1,10 @@
 ---
+## Intentionally empty: bhyve needs no Debian-side network configuration.
+## A bhyve guest gets its adapters from the generic Debian path (netplan cleanup,
+## gather.yml, host records) and needs no provider-specific netplan drop-in the way
+## VirtualBox and UTM do. The file is kept because tasks/debian.yml dispatches to
+## "bhyve/{{ ansible_os_family | lower }}.yml" unconditionally on a BHYVE BIOS
+## vendor — deleting it turns a supported platform into a missing-file failure.
+- name: "Noting that bhyve applies no Debian-specific network configuration"
+  ansible.builtin.debug:
+    msg: "bhyve on Debian: no provider-specific network configuration is applied."

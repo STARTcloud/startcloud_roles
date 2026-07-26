@@ -1,0 +1,19 @@
+---
+- name: "Converge"
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    session_observer_packages:
+      - htop
+      - lynx
+      - lshw
+      - libxml2-utils
+      - tree
+      - python3-pexpect
+      - python3-pymongo
+      - python3-pymysql
+      - psutils
+      - python3-psutil
+  roles:
+    - role: session_observer

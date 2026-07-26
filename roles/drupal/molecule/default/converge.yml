@@ -1,0 +1,50 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    # Minimal provisioner-context stand-ins so the role runs standalone.
+    settings:
+      hostname: startcloud-drupal-debian12
+      domain: startcloud.test
+    service_user: startcloud
+    # Supplied by the composer role in a real play; the drupal role uses it
+    # in tasks/build-composer-project.yml but never defines a default for it.
+    composer_path: /usr/bin/composer
+    # Role variables (defaults/main.yml + meta/argument_specs.yml).
+    run_tasks: true
+    drupal_deploy: false
+    drupal_deploy_dir: /var/www/drupal
+    drupal_deploy_composer_install: true
+    drupal_build_makefile: false
+    drupal_build_composer: false
+    drupal_build_composer_project: true
+    # Debian 12 ships PHP 8.2, which the role default (Drupal 9 + Drush 10)
+    # cannot run on, so the supported-on-this-platform pair is used instead.
+    drupal_composer_project_package: "drupal/recommended-project:^10"
+    drupal_composer_project_options: "--prefer-dist --no-dev --no-interaction"
+    drupal_composer_install_dir: /var/www/drupal
+    drupal_composer_bin_dir: vendor/bin
+    drupal_composer_no_dev: true
+    drupal_composer_dependencies:
+      - "drush/drush:^12"
+    drupal_core_path: /var/www/drupal/web
+    drupal_core_owner: root
+    drupal_core_owner_become: false
+    drupal_db_backend: mysql
+    drupal_db_host: "127.0.0.1"
+    drupal_db_name: drupal
+    drupal_db_user: drupal
+    drupal_db_password: CHANGEME
+    drupal_install_site: true
+    drupal_domain: drupal.startcloud.test
+    drupal_site_name: "STARTcloud Drupal Molecule"
+    drupal_install_profile: standard
+    drupal_site_install_extra_args: []
+    drupal_enable_modules:
+      - syslog
+    drupal_account_name: admin
+    drupal_account_pass: CHANGEME
+  roles:
+    - role: drupal

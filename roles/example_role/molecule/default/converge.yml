@@ -1,0 +1,34 @@
+---
+- name: "Converge"
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    run_tasks: true
+    service_user: java_user
+    service_group: java_group
+    service_home_dir: /local/notesjava
+    cert_dir: /secure
+    selfsigned_enabled: true
+    letsencrypt_enabled: false
+    provisioner_name: startcloud-example-role
+    provisioner_version: v0.1.0
+    core_provisioner_version: v0.1.0
+    domino_organization: STARTCLOUD
+    domino_admin_user_first_name: Molecule
+    domino_admin_user_last_name: Admin
+    domino_admin_notes_id_password: CHANGEME
+    domino_dev_user_first_name: Molecule
+    domino_dev_user_last_name: Dev
+    domino_dev_user_id_password: CHANGEME
+    startcloud_quick_start_port_forwards:
+      - guest: 8000
+        url: "demo"
+    settings:
+      hostname: startcloud-example-role
+      domain: startcloud.test
+      server_id: 1
+      vagrant_user: startcloud
+      vagrant_user_pass: CHANGEME
+  roles:
+    - role: example_role

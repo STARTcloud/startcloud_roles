@@ -19,11 +19,6 @@
             cache_valid_time: 3600
             update_cache: true
 
-        - name: "Upgrading all apt packages"
-          ansible.builtin.apt:
-            upgrade: dist
-            update_cache: true
-
         - name: "Adding Additional Dependencies {{ grafana_packages }}"
           ansible.builtin.apt:
             name: "{{ grafana_packages }}"
@@ -48,6 +43,12 @@
           ansible.builtin.apt:
             name: "{{ grafana_package }}"
             state: present
+
+        - name: "Enabling and Starting Grafana Service"
+          ansible.builtin.systemd:
+            name: grafana-server
+            state: started
+            enabled: true
 
         - name: "Configuring Grafana"
           ansible.builtin.template:

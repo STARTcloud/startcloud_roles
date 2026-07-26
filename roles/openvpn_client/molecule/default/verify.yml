@@ -1,0 +1,117 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: "Collecting service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Collecting package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting the role installed the openvpn package itself"
+      ansible.builtin.assert:
+        that:
+          - "'openvpn' in ansible_facts.packages"
+        fail_msg: "openvpn is not installed - the role did not install its own package"
+
+    - name: "Statting the openvpn binary"
+      ansible.builtin.stat:
+        path: /usr/sbin/openvpn
+      register: openvpn_client_binary
+
+    - name: "Asserting the openvpn binary is present and executable"
+      ansible.builtin.assert:
+        that:
+          - openvpn_client_binary.stat.exists
+          - openvpn_client_binary.stat.executable
+        fail_msg: "/usr/sbin/openvpn is missing or not executable"
+
+    - name: "Statting the client directory"
+      ansible.builtin.stat:
+        path: /etc/openvpn/client
+      register: openvpn_client_dir
+
+    - name: "Asserting the client directory is a 0750 root-owned directory"
+      ansible.builtin.assert:
+        that:
+          - openvpn_client_dir.stat.exists
+          - openvpn_client_dir.stat.isdir
+          - openvpn_client_dir.stat.pw_name == 'root'
+          - openvpn_client_dir.stat.gr_name == 'nogroup'
+          - openvpn_client_dir.stat.mode == '0750'
+        fail_msg: "/etc/openvpn/client is missing or has the wrong ownership/mode"
+
+    - name: "Statting the deployed key material"
+      ansible.builtin.stat:
+        path: "/etc/openvpn/client/{{ item }}"
+      register: openvpn_client_material
+      loop:
+        - ca.crt
+        - client.crt
+        - client.key
+        - ta.key
+
+    - name: "Asserting every certificate and key is root:nogroup 0640 so the runtime group can read it"
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - not item.stat.isdir
+          - item.stat.size > 0
+          - item.stat.mode == '0640'
+          - item.stat.pw_name == 'root'
+          - item.stat.gr_name == 'nogroup'
+        fail_msg: "{{ item.item }} was not copied into /etc/openvpn/client as root:nogroup with mode 0640"
+      loop: "{{ openvpn_client_material.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "Reading the rendered client configuration"
+      ansible.builtin.slurp:
+        src: /etc/openvpn/client/client.conf
+      register: openvpn_client_conf
+
+    - name: "Asserting client.conf was rendered with the configured server and paths"
+      ansible.builtin.assert:
+        that:
+          - "'remote vpn.startcloud.com 1194 udp' in _conf"
+          - "'group nogroup' in _conf"
+          - "'ca /etc/openvpn/client/ca.crt' in _conf"
+          - "'cert /etc/openvpn/client/client.crt' in _conf"
+          - "'key /etc/openvpn/client/client.key' in _conf"
+          - "'tls-auth /etc/openvpn/client/ta.key 1' in _conf"
+        fail_msg: "client.conf does not contain the expected rendered directives"
+      vars:
+        _conf: "{{ openvpn_client_conf.content | b64decode }}"
+
+    - name: "Asserting client.conf carries no directive removed in OpenVPN 2.6"
+      ansible.builtin.assert:
+        that:
+          - "'comp-lzo' not in _conf"
+          - "'compress' not in _conf"
+        fail_msg: "client.conf still requests link compression, which OpenVPN 2.6 removed"
+      vars:
+        _conf: "{{ openvpn_client_conf.content | b64decode }}"
+
+    - name: "Statting client.conf for ownership and mode"
+      ansible.builtin.stat:
+        path: /etc/openvpn/client/client.conf
+      register: openvpn_client_conf_stat
+
+    - name: "Asserting client.conf is root:nogroup 0640"
+      ansible.builtin.assert:
+        that:
+          - openvpn_client_conf_stat.stat.pw_name == 'root'
+          - openvpn_client_conf_stat.stat.gr_name == 'nogroup'
+          - openvpn_client_conf_stat.stat.mode == '0640'
+        fail_msg: "client.conf has the wrong ownership or mode"
+
+    - name: "Asserting the openvpn service is known and enabled"
+      ansible.builtin.assert:
+        that:
+          - "'openvpn.service' in ansible_facts.services"
+          - ansible_facts.services['openvpn.service'].status == 'enabled'
+        fail_msg: "openvpn.service is not enabled"

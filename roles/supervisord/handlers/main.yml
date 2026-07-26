@@ -1,0 +1,6 @@
+---
+- name: Restart supervisord
+  when: supervisord_manage_service | bool
+  ansible.builtin.service:
+    name: "{{ supervisord_service_name }}"
+    state: restarted

@@ -1,0 +1,103 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: "auto"
+
+    - name: "Asserting the VoIPmonitor runtime dependencies are installed"
+      ansible.builtin.assert:
+        that:
+          - "'libpcap0.8' in ansible_facts.packages"
+          - "'tcpdump' in ansible_facts.packages"
+        fail_msg: "Expected libpcap0.8 and tcpdump to be installed by the role"
+
+    - name: "Stating the VoIPmonitor sniffer binary"
+      ansible.builtin.stat:
+        path: "/usr/local/sbin/voipmonitor"
+      register: voipmonitor_binary_stat
+
+    - name: "Asserting the VoIPmonitor sniffer binary was installed and is executable"
+      ansible.builtin.assert:
+        that:
+          - voipmonitor_binary_stat.stat.exists
+          - voipmonitor_binary_stat.stat.isreg
+          - voipmonitor_binary_stat.stat.executable
+        fail_msg: "The install script did not produce an executable /usr/local/sbin/voipmonitor"
+
+    - name: "Stating the VoIPmonitor spool directory"
+      ansible.builtin.stat:
+        path: "/var/spool/voipmonitor"
+      register: voipmonitor_spool_stat
+
+    - name: "Asserting the VoIPmonitor spool directory exists with mode 0755"
+      ansible.builtin.assert:
+        that:
+          - voipmonitor_spool_stat.stat.exists
+          - voipmonitor_spool_stat.stat.isdir
+          - voipmonitor_spool_stat.stat.mode == '0755'
+        fail_msg: "Expected /var/spool/voipmonitor to be a 0755 directory"
+
+    - name: "Slurping the rendered VoIPmonitor configuration"
+      ansible.builtin.slurp:
+        src: "/etc/voipmonitor.conf"
+      register: voipmonitor_conf_slurp
+
+    - name: "Asserting the VoIPmonitor configuration carries the converge values"
+      ansible.builtin.assert:
+        that:
+          - "'interface = eth0' in voipmonitor_conf_content"
+          - "'spooldir = /var/spool/voipmonitor' in voipmonitor_conf_content"
+          - "'sipport = 5060' in voipmonitor_conf_content"
+          - "'maxpoolsize = 10240' in voipmonitor_conf_content"
+          - "'cleandatabase = 7' in voipmonitor_conf_content"
+          - "'mysqldb = voipmonitor' in voipmonitor_conf_content"
+          - "'mysqlpassword = CHANGEME' in voipmonitor_conf_content"
+        fail_msg: "Rendered /etc/voipmonitor.conf is missing the expected settings"
+      vars:
+        voipmonitor_conf_content: "{{ voipmonitor_conf_slurp.content | b64decode }}"
+
+    - name: "Slurping the VoIPmonitor systemd unit"
+      ansible.builtin.slurp:
+        src: "/etc/systemd/system/voipmonitor.service"
+      register: voipmonitor_unit_slurp
+
+    - name: "Asserting the VoIPmonitor systemd unit was installed"
+      ansible.builtin.assert:
+        that:
+          - "'Description=VoIPmonitor sniffer' in voipmonitor_unit_content"
+          - "'ExecStart=/etc/init.d/voipmonitor start' in voipmonitor_unit_content"
+          - "'WantedBy=multi-user.target' in voipmonitor_unit_content"
+        fail_msg: "/etc/systemd/system/voipmonitor.service is missing or malformed"
+      vars:
+        voipmonitor_unit_content: "{{ voipmonitor_unit_slurp.content | b64decode }}"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting the VoIPmonitor service is known to systemd and enabled at boot"
+      ansible.builtin.assert:
+        that:
+          - "'voipmonitor.service' in ansible_facts.services"
+          - ansible_facts.services['voipmonitor.service'].status == 'enabled'
+        fail_msg: "voipmonitor.service is not registered with systemd or is not enabled"
+
+    - name: "Querying the active state of the VoIPmonitor unit"
+      ansible.builtin.systemd:
+        name: "voipmonitor"
+      register: voipmonitor_unit_state
+      check_mode: true
+      changed_when: false
+
+    - name: "Asserting the VoIPmonitor service is loaded and active"
+      ansible.builtin.assert:
+        that:
+          - voipmonitor_unit_state.status.LoadState == 'loaded'
+          - voipmonitor_unit_state.status.UnitFileState == 'enabled'
+          - voipmonitor_unit_state.status.ActiveState == 'active'
+        fail_msg: >-
+          voipmonitor.service reported ActiveState
+          '{{ voipmonitor_unit_state.status.ActiveState | default('unknown') }}' instead of active

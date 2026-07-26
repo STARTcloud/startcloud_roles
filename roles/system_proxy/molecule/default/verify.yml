@@ -1,0 +1,47 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: "Stat the APT proxy drop-in written by the role"
+      ansible.builtin.stat:
+        path: /etc/apt/apt.conf.d/proxy.conf
+      register: apt_proxy_conf
+
+    - name: "Assert the APT proxy drop-in exists as a regular file"
+      ansible.builtin.assert:
+        that:
+          - apt_proxy_conf.stat.exists
+          - apt_proxy_conf.stat.isreg
+        fail_msg: "/etc/apt/apt.conf.d/proxy.conf was not created by the role"
+
+    - name: "Read the APT proxy drop-in"
+      ansible.builtin.slurp:
+        src: /etc/apt/apt.conf.d/proxy.conf
+      register: apt_proxy_raw
+
+    - name: "Assert the APT drop-in carries the socks5h Acquire proxy directive"
+      vars:
+        apt_proxy_text: "{{ apt_proxy_raw.content | b64decode }}"
+      ansible.builtin.assert:
+        that:
+          - "'Acquire::http::Proxy' in apt_proxy_text"
+          - "'socks5h://danteuser:CHANGEME@dante.startcloud.test:1080' in apt_proxy_text"
+        fail_msg: "APT drop-in does not contain the expected socks5h proxy directive: {{ apt_proxy_text }}"
+
+    - name: "Read /etc/environment"
+      ansible.builtin.slurp:
+        src: /etc/environment
+      register: environment_raw
+
+    - name: "Assert all four system-wide proxy variables were written to /etc/environment"
+      vars:
+        environment_text: "{{ environment_raw.content | b64decode }}"
+      ansible.builtin.assert:
+        that:
+          - "'http_proxy=http://squiduser:CHANGEME@squid.startcloud.test:3128' in environment_text"
+          - "'https_proxy=http://squiduser:CHANGEME@squid.startcloud.test:3128' in environment_text"
+          - "'ftp_proxy=http://squiduser:CHANGEME@squid.startcloud.test:3128' in environment_text"
+          - "'no_proxy=localhost,127.0.0.1,localaddress,.localdomain.com' in environment_text"
+        fail_msg: "/etc/environment is missing the expected squid proxy variables: {{ environment_text }}"

@@ -1,0 +1,55 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  tasks:
+    - name: Gather installed package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Assert the certbot package was installed
+      ansible.builtin.assert:
+        that:
+          - "'certbot' in ansible_facts.packages"
+        fail_msg: "certbot package is not installed"
+        success_msg: "certbot package is installed"
+
+    - name: Stat the certbot executable
+      ansible.builtin.stat:
+        path: /usr/bin/certbot
+      register: certbot_binary
+
+    - name: Assert the certbot executable is present and executable
+      ansible.builtin.assert:
+        that:
+          - certbot_binary.stat.exists
+          - certbot_binary.stat.executable
+        fail_msg: "/usr/bin/certbot is missing or not executable"
+        success_msg: "/usr/bin/certbot is present and executable"
+
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Assert the cron service backing renewals is running
+      ansible.builtin.assert:
+        that:
+          - "'cron.service' in ansible_facts.services"
+          - ansible_facts.services['cron.service'].state == 'running'
+        fail_msg: "cron.service is not running, the renewal job would never fire"
+        success_msg: "cron.service is running"
+
+    - name: Read the root crontab written by the role
+      ansible.builtin.slurp:
+        src: /var/spool/cron/crontabs/root
+      register: certbot_root_crontab
+
+    - name: Assert the certbot renewal cron job was configured
+      ansible.builtin.assert:
+        that:
+          - "'Certbot automatic renewal.' in certbot_crontab_content"
+          - "'certbot renew --quiet' in certbot_crontab_content"
+          - "'30 3 * * *' in certbot_crontab_content"
+        fail_msg: "renewal cron job missing or has the wrong schedule/command"
+        success_msg: "renewal cron job present at 03:30 running 'certbot renew --quiet'"
+      vars:
+        certbot_crontab_content: "{{ certbot_root_crontab.content | b64decode }}"

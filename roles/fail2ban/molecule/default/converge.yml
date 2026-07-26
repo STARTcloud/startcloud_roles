@@ -1,0 +1,28 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    ## fail2ban_loglevel and fail2ban_dbpurgeage are deliberately set away from
+    ## both the role defaults and the values fail2ban.conf ships, so verify can
+    ## prove the running server took its settings from the rendered
+    ## fail2ban.local rather than from the packaged configuration.
+    fail2ban_loglevel: DEBUG
+    fail2ban_logtarget: /var/log/fail2ban.log
+    fail2ban_socket: /var/run/fail2ban/fail2ban.sock
+    fail2ban_pidfile: /var/run/fail2ban/fail2ban.pid
+    fail2ban_dbfile: /var/lib/fail2ban/fail2ban.sqlite3
+    fail2ban_dbpurgeage: 2d
+    settings:
+      hostname: startcloud-fail2ban-debian12
+      domain: molecule.test
+  pre_tasks:
+    - name: Refresh the apt cache so the role's install task can resolve packages
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 600
+      changed_when: false
+
+  roles:
+    - role: fail2ban

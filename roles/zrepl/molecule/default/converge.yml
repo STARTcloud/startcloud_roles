@@ -1,0 +1,12 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    settings:
+      hostname: startcloud-zrepl
+      domain: molecule.local
+    service_user: startcloud
+  roles:
+    - role: zrepl

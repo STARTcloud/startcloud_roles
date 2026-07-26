@@ -1,34 +1,54 @@
 ---
-- name: "Establishing some role-related facts"
-  ansible.builtin.set_fact:
-    mongodb_major_version: "{{ mongodb_version[0:3] | string }}"
-
 - name: "Disabling transparent huge pages on systemd systems"
   ansible.builtin.include_tasks: disable_transparent_hugepages.yml
   when:
     - mongodb_disable_transparent_hugepages | bool
     - ansible_service_mgr == "systemd"
 
-- name: "Adding APT key"
-  ansible.builtin.apt_key:
-    keyserver: "{{ mongodb_apt_keyserver if not mongodb_apt_key_from_url | bool else omit }}"
-    url: "{{ mongodb_apt_key_url[mongodb_major_version] if mongodb_apt_key_from_url | bool else omit }}"
-    id: "{{ mongodb_apt_key_id[mongodb_major_version] }}"
+- name: "Configuring the MongoDB APT repository"
   when: mongodb_package == 'mongodb-org'
+  block:
+    - name: "Installing the APT repository prerequisites"
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - gnupg
+        state: present
+        update_cache: true
 
-- name: "Failing when used wrong mongodb_version variable"
-  ansible.builtin.fail:
-    msg: "mongodb_version variable should be '3.6' or '4.0', '4.2' or '4.4'"
-  when: (mongodb_package == 'mongodb-org' and (mongodb_version is not defined or mongodb_repository[mongodb_major_version] is not defined))
+    - name: "Gathering DEB architecture"
+      ansible.builtin.command: dpkg --print-architecture
+      register: mongodb_deb_architecture
+      changed_when: false
 
-- name: "Adding APT repository"
-  ansible.builtin.apt_repository:
-    repo: "{{ mongodb_repository[version_item] }}"
-    update_cache: true
-  with_items: "{{ mongodb_major_version }}"
-  loop_control:
-    loop_var: version_item
-  when: mongodb_package == 'mongodb-org'
+    - name: "Creating keyrings directory for repository GPG keys"
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: "Downloading the armored MongoDB signing key"
+      ansible.builtin.get_url:
+        url: "{{ mongodb_apt_key_url }}"
+        dest: "{{ mongodb_apt_key_armored_path }}"
+        mode: "0644"
+
+    - name: "Dearmoring the MongoDB signing key"
+      ansible.builtin.command:
+        cmd: "gpg --batch --dearmor -o {{ mongodb_apt_keyring_path }} {{ mongodb_apt_key_armored_path }}"
+        creates: "{{ mongodb_apt_keyring_path }}"
+
+    - name: "Setting permissions on the dearmored MongoDB signing key"
+      ansible.builtin.file:
+        path: "{{ mongodb_apt_keyring_path }}"
+        mode: "0644"
+
+    - name: "Adding the MongoDB APT repository"
+      ansible.builtin.apt_repository:
+        repo: "{{ mongodb_repository }}"
+        filename: "mongodb-org-{{ mongodb_major_version }}"
+        state: present
+        update_cache: true
 
 - name: "Installing MongoDB package"
   ansible.builtin.apt:
@@ -79,35 +99,28 @@
   notify:
     - Reload systemd
 
-# Workaround for the idempotence issue on Debian 10 with pip module
-- name: "Forcefully setting mongodb_pymongo_from_pip to false on Debian 10"
-  ansible.builtin.set_fact:
-    mongodb_pymongo_from_pip: false
-  when:
-    - ansible_distribution == 'Debian'
-    - ansible_distribution_release == 'buster'
-
 - name: "Installing PyMongo package"
   ansible.builtin.apt:
     name: "{{ mongodb_pymongo_package }}"
-  when: not mongodb_pymongo_from_pip
+    state: present
+  when: not mongodb_pymongo_from_pip | bool
 
 - name: "Installing PIP"
   ansible.builtin.apt:
     pkg: "{{ mongodb_pymongo_deps }}"
+    state: present
   when: mongodb_pymongo_from_pip | bool
 
-# TODO: check if it is still needed for Debian/Ubuntu
-- name: "Installing setuptools (required for ansible 2.7+)"
+- name: "Installing setuptools"
   ansible.builtin.apt:
     pkg: "{{ mongodb_python_setuptools }}"
+    state: present
   when: mongodb_pymongo_from_pip | bool
 
 - name: "Installing PyMongo from PIP"
   ansible.builtin.pip:
-    name:
-      - pymongo
-    state: "{{ mongodb_pymongo_pip_version is defined | ternary('present', 'latest') }}"
-    version: "{{ mongodb_pymongo_pip_version | default(omit) }}"
+    name: pymongo
+    state: "{{ 'present' if mongodb_pymongo_pip_version else 'latest' }}"
+    version: "{{ mongodb_pymongo_pip_version | default(omit, true) }}"
     executable: "{{ mongodb_pip_executable }}"
   when: mongodb_pymongo_from_pip | bool

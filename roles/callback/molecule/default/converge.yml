@@ -1,0 +1,15 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    run_tasks: true
+    token: CHANGEME
+    callback_url: http://127.0.0.1:8099/wp-admin/admin-ajax.php
+    trackerid: molecule-tracker-0001
+    settings:
+      hostname: startcloud-callback-debian12
+      domain: molecule.local
+  roles:
+    - role: callback

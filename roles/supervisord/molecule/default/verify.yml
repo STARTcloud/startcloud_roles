@@ -1,0 +1,158 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting supervisor and python3 packages are installed"
+      ansible.builtin.assert:
+        that:
+          - "'supervisor' in ansible_facts.packages"
+          - "'python3' in ansible_facts.packages"
+          - "'python3-pip' in ansible_facts.packages"
+        fail_msg: "Expected supervisor, python3 and python3-pip to be installed by the role"
+
+    - name: "Stat the supervisord configuration directory"
+      ansible.builtin.stat:
+        path: /etc/supervisor/conf.d
+      register: supervisord_confd_dir
+
+    - name: "Asserting the conf.d directory exists with mode 0755"
+      ansible.builtin.assert:
+        that:
+          - supervisord_confd_dir.stat.exists
+          - supervisord_confd_dir.stat.isdir
+          - supervisord_confd_dir.stat.mode == '0755'
+        fail_msg: "/etc/supervisor/conf.d missing or wrong mode: {{ supervisord_confd_dir.stat.mode | default('absent') }}"
+
+    - name: "Stat the deployed supervisord.conf"
+      ansible.builtin.stat:
+        path: /etc/supervisor/supervisord.conf
+      register: supervisord_conf_file
+
+    - name: "Asserting supervisord.conf ownership and permissions"
+      ansible.builtin.assert:
+        that:
+          - supervisord_conf_file.stat.exists
+          - supervisord_conf_file.stat.isreg
+          - supervisord_conf_file.stat.pw_name == 'root'
+          - supervisord_conf_file.stat.gr_name == 'root'
+          - supervisord_conf_file.stat.mode == '0644'
+        fail_msg: "/etc/supervisor/supervisord.conf missing or has unexpected owner/mode"
+
+    - name: "Reading the rendered supervisord.conf"
+      ansible.builtin.slurp:
+        src: /etc/supervisor/supervisord.conf
+      register: supervisord_conf_content
+
+    - name: "Asserting the template rendered the expected directives"
+      ansible.builtin.assert:
+        that:
+          - "'[supervisord]' in supervisord_conf_decoded"
+          - "'nodaemon=true' in supervisord_conf_decoded"
+          - "'[include]' in supervisord_conf_decoded"
+          - "'files = /etc/supervisor/conf.d/*.conf' in supervisord_conf_decoded"
+          - "'logfile=/var/log/supervisor/supervisord.log' in supervisord_conf_decoded"
+          - "'pidfile=/var/run/supervisord.pid' in supervisord_conf_decoded"
+          - "'childlogdir=/var/log/supervisor' in supervisord_conf_decoded"
+        fail_msg: "Rendered supervisord.conf does not match the role template"
+      vars:
+        supervisord_conf_decoded: "{{ supervisord_conf_content.content | b64decode }}"
+
+    - name: "Asserting the sections the packaged unit's stop/reload commands depend on are present"
+      ansible.builtin.assert:
+        that:
+          - "'[unix_http_server]' in supervisord_conf_decoded"
+          - "'file=/var/run/supervisor.sock' in supervisord_conf_decoded"
+          - "'chmod=0700' in supervisord_conf_decoded"
+          - "'[rpcinterface:supervisor]' in supervisord_conf_decoded"
+          - "'supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface' in supervisord_conf_decoded"
+          - "'[supervisorctl]' in supervisord_conf_decoded"
+          - "'serverurl=unix:///var/run/supervisor.sock' in supervisord_conf_decoded"
+        fail_msg: "supervisord.conf is missing the unix_http_server/rpcinterface/supervisorctl sections that supervisorctl (ExecStop, ExecReload) requires"
+      vars:
+        supervisord_conf_decoded: "{{ supervisord_conf_content.content | b64decode }}"
+
+    - name: "Checking the supervisord binary is available"
+      ansible.builtin.stat:
+        path: /usr/bin/supervisord
+      register: supervisord_binary
+
+    - name: "Asserting the supervisord binary was installed"
+      ansible.builtin.assert:
+        that:
+          - supervisord_binary.stat.exists
+          - supervisord_binary.stat.executable
+        fail_msg: "/usr/bin/supervisord not found after installing the supervisor package"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting the supervisor service is running and enabled"
+      ansible.builtin.assert:
+        that:
+          - "'supervisor.service' in ansible_facts.services"
+          - ansible_facts.services['supervisor.service'].state == 'running'
+          - ansible_facts.services['supervisor.service'].status == 'enabled'
+        fail_msg: >-
+          supervisor.service is not running+enabled:
+          {{ ansible_facts.services['supervisor.service'] | default('unit absent') }}
+
+    - name: "Stat the supervisord unix socket"
+      ansible.builtin.stat:
+        path: /var/run/supervisor.sock
+      register: supervisord_socket
+
+    - name: "Asserting supervisord opened its unix socket"
+      ansible.builtin.assert:
+        that:
+          - supervisord_socket.stat.exists
+        fail_msg: "/var/run/supervisor.sock was not created by the running supervisord"
+
+    - name: "Stopping the unit, whose ExecStop is supervisorctl shutdown over that socket"
+      ansible.builtin.systemd:
+        name: supervisor
+        state: stopped
+
+    - name: "Reading the unit state left behind by ExecStop"
+      ansible.builtin.systemd:
+        name: supervisor
+        state: stopped
+      register: supervisord_after_stop
+
+    - name: "Asserting supervisorctl shut supervisord down cleanly"
+      ansible.builtin.assert:
+        that:
+          - supervisord_after_stop.status.ActiveState == 'inactive'
+          - supervisord_after_stop.status.SubState == 'dead'
+        fail_msg: >-
+          supervisor.service did not stop cleanly — ExecStop (supervisorctl shutdown) failed:
+          ActiveState={{ supervisord_after_stop.status.ActiveState | default('unknown') }},
+          SubState={{ supervisord_after_stop.status.SubState | default('unknown') }},
+          Result={{ supervisord_after_stop.status.Result | default('unknown') }}
+
+    - name: "Starting the unit again"
+      ansible.builtin.systemd:
+        name: supervisor
+        state: started
+
+    - name: "Waiting for supervisord to re-open its socket"
+      ansible.builtin.wait_for:
+        path: /var/run/supervisor.sock
+        state: present
+        timeout: 30
+
+    - name: "Re-gathering service facts after the stop/start cycle"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting the service survived a full stop/start cycle"
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['supervisor.service'].state == 'running'
+        fail_msg: >-
+          supervisor.service did not come back after being stopped:
+          {{ ansible_facts.services['supervisor.service'] | default('unit absent') }}

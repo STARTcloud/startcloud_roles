@@ -1,0 +1,23 @@
+---
+# Starter molecule scenario for the collection — run from roles/hello_world:
+#   molecule test
+# Uses a plain-docker Debian image with Python preinstalled; the pattern here
+# is the template for adding scenarios to other roles.
+driver:
+  name: docker
+platforms:
+  - name: startcloud-hello-world-debian12
+    image: geerlingguy/docker-debian12-ansible:latest
+    command: /lib/systemd/systemd
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    cgroupns_mode: host
+    privileged: true
+    pre_build_image: true
+provisioner:
+  name: ansible
+  env:
+    # Resolve bare role names against the collection's roles/ directory.
+    ANSIBLE_ROLES_PATH: "${MOLECULE_PROJECT_DIRECTORY}/.."
+verifier:
+  name: ansible

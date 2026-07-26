@@ -1,0 +1,11 @@
+---
+- name: "Converge"
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    raritan_mpc_packages:
+      - snmp
+      - snmp-mibs-downloader
+  roles:
+    - role: raritan_mpc

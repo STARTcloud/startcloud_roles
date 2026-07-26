@@ -1,0 +1,16 @@
+---
+# Baseline packages for pfSense appliances. pfSense plugin packages are
+# prefixed pfSense-pkg-* and come from the Netgate repo the appliance is
+# already configured for. extra_packages is deliberately NOT set here so the
+# inventory/playbook value reaches the extra-packages task.
+packages:
+  - nano
+  - lsof
+  - pfSense-pkg-sudo
+  - pfSense-pkg-acme
+  - pfSense-pkg-Cron
+  - pfSense-pkg-nmap
+  - pfSense-pkg-iperf
+  - pfSense-pkg-Service_Watchdog
+  - pfSense-pkg-System_Patches
+  - pfSense-pkg-Open-VM-Tools

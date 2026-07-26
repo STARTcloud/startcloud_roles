@@ -1,0 +1,84 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting the avahi-daemon package is installed"
+      ansible.builtin.assert:
+        that:
+          - "'avahi-daemon' in ansible_facts.packages"
+        fail_msg: "The avahi-daemon package was not installed by the role"
+        success_msg: "The avahi-daemon package is installed"
+
+    - name: "Querying the avahi-daemon.service unit state"
+      ansible.builtin.systemd_service:
+        name: avahi-daemon.service
+      register: mdns_avahi_unit
+      check_mode: true
+
+    - name: "Asserting avahi-daemon.service is enabled and active"
+      ansible.builtin.assert:
+        that:
+          - mdns_avahi_unit.status.UnitFileState == 'enabled'
+          - mdns_avahi_unit.status.ActiveState == 'active'
+        fail_msg: >-
+          avahi-daemon.service state is unexpected
+          (UnitFileState={{ mdns_avahi_unit.status.UnitFileState }},
+          ActiveState={{ mdns_avahi_unit.status.ActiveState }})
+        success_msg: "avahi-daemon.service is enabled and active"
+
+    - name: "Stating the Avahi daemon configuration file"
+      ansible.builtin.stat:
+        path: /etc/avahi/avahi-daemon.conf
+      register: mdns_avahi_conf
+
+    - name: "Asserting the Avahi daemon configuration file exists"
+      ansible.builtin.assert:
+        that:
+          - mdns_avahi_conf.stat.exists
+          - mdns_avahi_conf.stat.isreg
+        fail_msg: "/etc/avahi/avahi-daemon.conf is missing"
+        success_msg: "/etc/avahi/avahi-daemon.conf exists"
+
+    - name: "Reading the Avahi daemon configuration file"
+      ansible.builtin.slurp:
+        src: /etc/avahi/avahi-daemon.conf
+      register: mdns_avahi_conf_content
+
+    - name: "Asserting the Avahi configuration carries a server section"
+      ansible.builtin.assert:
+        that:
+          - "'[server]' in (mdns_avahi_conf_content.content | b64decode)"
+        fail_msg: "avahi-daemon.conf does not contain a [server] section"
+        success_msg: "avahi-daemon.conf contains a [server] section"
+
+    - name: "Stating the avahi-daemon binary"
+      ansible.builtin.stat:
+        path: /usr/sbin/avahi-daemon
+      register: mdns_avahi_binary
+
+    - name: "Asserting the avahi-daemon binary is installed and executable"
+      ansible.builtin.assert:
+        that:
+          - mdns_avahi_binary.stat.exists
+          - mdns_avahi_binary.stat.executable
+        fail_msg: "/usr/sbin/avahi-daemon is missing or not executable"
+        success_msg: "/usr/sbin/avahi-daemon is installed and executable"
+
+    - name: "Listing the avahi-daemon process"
+      ansible.builtin.command: pgrep -x avahi-daemon
+      register: mdns_avahi_proc
+      changed_when: false
+      failed_when: false
+
+    - name: "Asserting the avahi-daemon process is running"
+      ansible.builtin.assert:
+        that:
+          - mdns_avahi_proc.rc == 0
+        fail_msg: "No running avahi-daemon process was found"
+        success_msg: "The avahi-daemon process is running"

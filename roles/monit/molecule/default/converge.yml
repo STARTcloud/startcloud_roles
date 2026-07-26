@@ -1,0 +1,17 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    monit_packages:
+      - monit
+    settings:
+      hostname: startcloud-monit-debian12
+      domain: startcloud.test
+      admin_user: startcloud
+      admin_pass: CHANGEME
+  tasks:
+    - name: "Include the monit role"
+      ansible.builtin.include_role:
+        name: monit

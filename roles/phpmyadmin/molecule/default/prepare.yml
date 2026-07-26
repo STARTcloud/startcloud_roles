@@ -1,0 +1,25 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Updating apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Installing prerequisites the role assumes are present
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - tar
+          - gzip
+          - nginx
+        state: present
+
+    - name: Ensuring nginx is running so the role handler has a service to restart
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: true

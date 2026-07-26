@@ -41,20 +41,24 @@
             mode: "0750"
 
         - name: "Creating Nextcloud Database"
-          ansible.builtin.command: >
-            mysql -uroot -e
-            "CREATE DATABASE IF NOT EXISTS {{ nextcloud_db_name }}
-            CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci"
-          register: nextcloud_db_created
-          changed_when: "'Query OK' in nextcloud_db_created.stderr or nextcloud_db_created.rc == 0"
+          community.mysql.mysql_db:
+            name: "{{ nextcloud_db_name }}"
+            encoding: "utf8mb4"
+            collation: "utf8mb4_general_ci"
+            state: present
+            login_user: "{{ nextcloud_db_admin_user }}"
+            login_unix_socket: "{{ nextcloud_db_login_unix_socket }}"
 
         - name: "Creating Nextcloud Database User and Grants"
-          ansible.builtin.command: 'mysql -uroot -e "{{ item }}"'
-          loop:
-            - "CREATE USER IF NOT EXISTS '{{ nextcloud_db_user }}'@'{{ nextcloud_db_host }}' IDENTIFIED BY '{{ nextcloud_db_password }}'"
-            - "GRANT ALL PRIVILEGES ON {{ nextcloud_db_name }}.* TO '{{ nextcloud_db_user }}'@'{{ nextcloud_db_host }}'"
-            - "FLUSH PRIVILEGES"
-          changed_when: true
+          community.mysql.mysql_user:
+            name: "{{ nextcloud_db_user }}"
+            host: "{{ nextcloud_db_host }}"
+            password: "{{ nextcloud_db_password }}"
+            priv: "{{ nextcloud_db_name }}.*:ALL"
+            column_case_sensitive: true
+            state: present
+            login_user: "{{ nextcloud_db_admin_user }}"
+            login_unix_socket: "{{ nextcloud_db_login_unix_socket }}"
 
         - name: "Running Nextcloud occ maintenance:install"
           become: true
@@ -73,6 +77,16 @@
             chdir: "{{ nextcloud_webroot }}"
             creates: "{{ nextcloud_webroot }}/config/config.php"
 
+        - name: "Reading the Configured Nextcloud Trusted Domains"
+          become: true
+          become_user: "{{ nextcloud_web_user }}"
+          ansible.builtin.command: >
+            {{ nextcloud_php_bin }} occ config:system:get trusted_domains
+          args:
+            chdir: "{{ nextcloud_webroot }}"
+          register: nextcloud_trusted_domains
+          changed_when: false
+
         - name: "Configuring Nextcloud Trusted Domain"
           become: true
           become_user: "{{ nextcloud_web_user }}"
@@ -81,6 +95,7 @@
             --value="{{ nextcloud_server_name }}"
           args:
             chdir: "{{ nextcloud_webroot }}"
+          when: nextcloud_server_name not in (nextcloud_trusted_domains.stdout_lines | map('trim') | list)
           changed_when: true
 
         - name: "Installing Nextcloud nginx Virtual Host"

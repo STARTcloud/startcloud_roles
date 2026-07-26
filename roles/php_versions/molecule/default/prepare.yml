@@ -1,0 +1,28 @@
+---
+- name: "Prepare"
+  hosts: all
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: "Updating apt cache"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: "Installing gnupg so the sury signing key can be handled"
+      ansible.builtin.apt:
+        name:
+          - gnupg
+        state: present
+
+    # The role's final task pins the `php` alternative to /usr/bin/php<version>,
+    # which must already exist. In production this role runs alongside the `php`
+    # role, which installs the packages. Debian 12 ships PHP 8.2 in its own
+    # repositories, so the stock package satisfies the prerequisite here.
+    - name: "Installing the stock Debian PHP 8.2 CLI as the role's prerequisite binary"
+      ansible.builtin.apt:
+        name:
+          - php8.2-cli
+        state: present
+        install_recommends: false

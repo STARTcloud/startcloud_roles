@@ -1,8 +1,14 @@
 ---
 run_tasks: true
 
+## `proxy` is a list of single-key dicts: the key names the provider and the
+## value holds that provider's connection details. Every consumer resolves the
+## provider entry by key, so `proxy_systemwide_proxy` / `proxy_package_manager_proxy`
+## must name a key that exists in the list below.
 proxy_systemwide: true
 proxy_systemwide_proxy: squid
+proxy_package_manager: true
+proxy_package_manager_proxy: dante
 proxy:
   - dante:
       user: dante

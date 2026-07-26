@@ -1,0 +1,94 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  vars:
+    frigate_config_dir: /opt/frigate/config
+    frigate_media_dir: /opt/frigate/media
+    frigate_container_name: frigate
+    ## Must match the image converge.yml hands the role.
+    frigate_image: "docker.io/library/nginx:alpine"
+  tasks:
+    - name: "Stating the Frigate configuration directory"
+      ansible.builtin.stat:
+        path: "{{ frigate_config_dir }}"
+      register: frigate_config_dir_stat
+
+    - name: "Stating the Frigate media directory"
+      ansible.builtin.stat:
+        path: "{{ frigate_media_dir }}"
+      register: frigate_media_dir_stat
+
+    - name: "Asserting both Frigate directories were created with mode 0755"
+      ansible.builtin.assert:
+        that:
+          - frigate_config_dir_stat.stat.exists
+          - frigate_config_dir_stat.stat.isdir
+          - frigate_config_dir_stat.stat.mode == '0755'
+          - frigate_media_dir_stat.stat.exists
+          - frigate_media_dir_stat.stat.isdir
+          - frigate_media_dir_stat.stat.mode == '0755'
+        fail_msg: "{{ frigate_config_dir }} and/or {{ frigate_media_dir }} are missing or not mode 0755"
+        success_msg: "The Frigate config and media directories exist with mode 0755"
+
+    - name: "Stating the rendered Frigate configuration file"
+      ansible.builtin.stat:
+        path: "{{ frigate_config_dir }}/config.yml"
+      register: frigate_config_stat
+
+    - name: "Reading the rendered Frigate configuration file"
+      ansible.builtin.slurp:
+        src: "{{ frigate_config_dir }}/config.yml"
+      register: frigate_config_slurp
+
+    - name: "Parsing the rendered Frigate configuration file"
+      ansible.builtin.set_fact:
+        frigate_config: "{{ frigate_config_slurp.content | b64decode | from_yaml }}"
+
+    - name: "Asserting the configuration renders MQTT, the CPU detector and both cameras"
+      ansible.builtin.assert:
+        that:
+          - frigate_config_stat.stat.exists
+          - frigate_config_stat.stat.mode == '0644'
+          - "'enabled' in frigate_config.mqtt"
+          - not frigate_config.mqtt.enabled
+          - "'host' not in frigate_config.mqtt"
+          - frigate_config.detectors.cpu1.type == 'cpu'
+          - frigate_config.cameras | length == 2
+          - frigate_config.cameras.front_door.ffmpeg.inputs[0].path == 'rtsp://frigate:CHANGEME@127.0.0.1:554/stream1'
+          - frigate_config.cameras.front_door.ffmpeg.inputs[0].roles == ['detect', 'record']
+          - frigate_config.cameras.front_door.detect.width == 1920
+          - frigate_config.cameras.front_door.detect.height == 1080
+          - frigate_config.cameras.back_yard.ffmpeg.inputs[0].roles == ['detect']
+          - frigate_config.cameras.back_yard.detect.width == 1280
+          - frigate_config.cameras.back_yard.detect.height == 720
+        fail_msg: "{{ frigate_config_dir }}/config.yml was not rendered with the configured MQTT, detector and camera settings"
+        success_msg: "{{ frigate_config_dir }}/config.yml carries the configured MQTT, detector and camera settings"
+
+    - name: "Gathering information about the Frigate container"
+      community.docker.docker_container_info:
+        name: "{{ frigate_container_name }}"
+      register: frigate_container
+
+    - name: "Asserting the Frigate container is running with the configured runtime settings"
+      ansible.builtin.assert:
+        that:
+          - frigate_container.exists
+          - frigate_container.container.State.Running
+          - frigate_image.split('/')[-1] in frigate_container.container.Config.Image
+          - frigate_container.container.HostConfig.RestartPolicy.Name == 'unless-stopped'
+          - frigate_container.container.HostConfig.ShmSize == 268435456
+          - frigate_container.container.HostConfig.PortBindings['5000/tcp'][0].HostPort == '5000'
+          - frigate_container.container.HostConfig.PortBindings['8554/tcp'][0].HostPort == '8554'
+          - frigate_container.container.HostConfig.PortBindings['8555/tcp'][0].HostPort == '8555'
+          - frigate_container.container.HostConfig.PortBindings['8555/udp'][0].HostPort == '8555'
+          - "'/media/frigate' in (frigate_container.container.Mounts | map(attribute='Destination') | list)"
+          - "'/config/config.yml' in (frigate_container.container.Mounts | map(attribute='Destination') | list)"
+        fail_msg: "The Frigate container is not running with the configured image, restart policy, shm size, ports and mounts"
+        success_msg: "The Frigate container is running with the configured image, restart policy, shm size, ports and mounts"
+
+    - name: "Waiting for the published Frigate web port"
+      ansible.builtin.wait_for:
+        port: 5000
+        host: 127.0.0.1
+        timeout: 30

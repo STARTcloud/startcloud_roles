@@ -1,0 +1,129 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gathering installed package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting MRTG and SNMP packages are installed"
+      ansible.builtin.assert:
+        that:
+          - "'mrtg' in ansible_facts.packages"
+          - "'snmp' in ansible_facts.packages"
+          - "'snmpd' in ansible_facts.packages"
+        fail_msg: "Expected mrtg, snmp and snmpd packages to be installed"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting the SNMP daemon is enabled and running"
+      ansible.builtin.assert:
+        that:
+          - "'snmpd.service' in ansible_facts.services"
+          - "ansible_facts.services['snmpd.service'].state == 'running'"
+          - "ansible_facts.services['snmpd.service'].status == 'enabled'"
+        fail_msg: "snmpd.service is not running and enabled"
+
+    - name: "Statting the rendered MRTG configuration file"
+      ansible.builtin.stat:
+        path: /etc/mrtg.cfg
+      register: mrtg_cfg_stat
+
+    - name: "Asserting the MRTG configuration file exists with the expected ownership and mode"
+      ansible.builtin.assert:
+        that:
+          - mrtg_cfg_stat.stat.exists
+          - mrtg_cfg_stat.stat.isreg
+          - mrtg_cfg_stat.stat.mode == '0644'
+          - mrtg_cfg_stat.stat.pw_name == 'root'
+          - mrtg_cfg_stat.stat.gr_name == 'root'
+        fail_msg: "/etc/mrtg.cfg missing or has unexpected ownership/mode"
+
+    - name: "Reading the rendered MRTG configuration file"
+      ansible.builtin.slurp:
+        src: /etc/mrtg.cfg
+      register: mrtg_cfg_content
+
+    - name: "Asserting the MRTG configuration contains the templated workdir, target and community"
+      ansible.builtin.assert:
+        that:
+          - "'WorkDir: /var/www/html/mrtg' in mrtg_cfg_decoded"
+          - "'Refresh: 300' in mrtg_cfg_decoded"
+          - "'Target[localhost]: 2:CHANGEME@localhost' in mrtg_cfg_decoded"
+          - "'Title[localhost]: Traffic Analysis for localhost' in mrtg_cfg_decoded"
+        fail_msg: "Rendered /etc/mrtg.cfg does not contain the expected templated values"
+      vars:
+        mrtg_cfg_decoded: "{{ mrtg_cfg_content.content | b64decode }}"
+
+    - name: "Statting the MRTG working directory"
+      ansible.builtin.stat:
+        path: /var/www/html/mrtg
+      register: mrtg_workdir_stat
+
+    - name: "Asserting the MRTG working directory exists as a 0755 root directory"
+      ansible.builtin.assert:
+        that:
+          - mrtg_workdir_stat.stat.exists
+          - mrtg_workdir_stat.stat.isdir
+          - mrtg_workdir_stat.stat.mode == '0755'
+          - mrtg_workdir_stat.stat.pw_name == 'root'
+        fail_msg: "/var/www/html/mrtg missing or not a 0755 root-owned directory"
+
+    - name: "Statting the generated MRTG index page"
+      ansible.builtin.stat:
+        path: /var/www/html/mrtg/index.html
+      register: mrtg_index_stat
+
+    - name: "Asserting indexmaker produced a non-empty index page"
+      ansible.builtin.assert:
+        that:
+          - mrtg_index_stat.stat.exists
+          - mrtg_index_stat.stat.isreg
+          - mrtg_index_stat.stat.size > 0
+        fail_msg: "indexmaker did not produce /var/www/html/mrtg/index.html"
+
+    - name: "Reading the generated MRTG index page"
+      ansible.builtin.slurp:
+        src: /var/www/html/mrtg/index.html
+      register: mrtg_index_content
+
+    - name: "Asserting the index page references the configured SNMP target"
+      ansible.builtin.assert:
+        that:
+          - "'localhost' in (mrtg_index_content.content | b64decode)"
+        fail_msg: "Generated index.html does not reference the configured SNMP target"
+
+    - name: "Reading the root crontab installed by the role"
+      ansible.builtin.slurp:
+        src: /var/spool/cron/crontabs/root
+      register: mrtg_crontab_content
+
+    - name: "Asserting the MRTG cron job is installed with the configured schedule"
+      ansible.builtin.assert:
+        that:
+          - "'#Ansible: mrtg' in mrtg_crontab_decoded"
+          - "'*/5 * * * * env LANG=C /usr/bin/mrtg /etc/mrtg.cfg --logging /var/log/mrtg.log' in mrtg_crontab_decoded"
+        fail_msg: "Root crontab does not contain the expected mrtg entry"
+      vars:
+        mrtg_crontab_decoded: "{{ mrtg_crontab_content.content | b64decode }}"
+
+    - name: "Checking the MRTG binary and indexmaker are on PATH"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: mrtg_bins
+      loop:
+        - /usr/bin/mrtg
+        - /usr/bin/indexmaker
+
+    - name: "Asserting the MRTG binaries exist and are executable"
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.xusr
+        fail_msg: "Expected {{ item.item }} to exist and be executable"
+      loop: "{{ mrtg_bins.results }}"
+      loop_control:
+        label: "{{ item.item }}"

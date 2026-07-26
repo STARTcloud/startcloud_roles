@@ -1,0 +1,74 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting the ruby packages from vars/Debian.yml are installed"
+      ansible.builtin.assert:
+        that:
+          - "'ruby-full' in ansible_facts.packages"
+          - "'ruby-dev' in ansible_facts.packages"
+          - "'build-essential' in ansible_facts.packages"
+          - "'libtool' in ansible_facts.packages"
+        fail_msg: "Expected ruby packages are not installed"
+        success_msg: "ruby-full, ruby-dev, build-essential and libtool are installed"
+
+    - name: "Asserting the rubygems package is installed"
+      ansible.builtin.assert:
+        that:
+          - "'rubygems-integration' in ansible_facts.packages"
+        fail_msg: "rubygems-integration is not installed"
+        success_msg: "rubygems-integration is installed"
+
+    - name: "Stating the global PATH profile snippet"
+      ansible.builtin.stat:
+        path: /etc/profile.d/rubygems.sh
+      register: rubygems_profile
+
+    - name: "Slurping the global PATH profile snippet"
+      ansible.builtin.slurp:
+        src: /etc/profile.d/rubygems.sh
+      register: rubygems_profile_content
+
+    - name: "Asserting the RubyGems PATH snippet is deployed correctly"
+      ansible.builtin.assert:
+        that:
+          - rubygems_profile.stat.exists
+          - rubygems_profile.stat.isreg
+          - rubygems_profile.stat.mode == '0644'
+          - "'Gem.user_dir' in (rubygems_profile_content.content | b64decode)"
+        fail_msg: "/etc/profile.d/rubygems.sh is missing or does not export the RubyGems user bin dir"
+        success_msg: "/etc/profile.d/rubygems.sh is present, 0644 and exports the RubyGems user bin dir"
+
+    - name: "Checking the ruby interpreter is usable"
+      ansible.builtin.command:
+        cmd: ruby --version
+      register: ruby_version_output
+      changed_when: false
+
+    - name: "Asserting ruby reports a version"
+      ansible.builtin.assert:
+        that:
+          - ruby_version_output.rc == 0
+          - "'ruby ' in ruby_version_output.stdout"
+        fail_msg: "ruby --version did not report a working interpreter"
+        success_msg: "ruby --version reports {{ ruby_version_output.stdout }}"
+
+    - name: "Listing the installed gems"
+      ansible.builtin.command:
+        cmd: gem list
+      register: installed_gems
+      changed_when: false
+
+    - name: "Asserting bundler and the configured gem are installed"
+      ansible.builtin.assert:
+        that:
+          - "'bundler' in installed_gems.stdout"
+          - "'rake' in installed_gems.stdout"
+        fail_msg: "bundler or the configured gem rake is missing from gem list"
+        success_msg: "bundler and rake are present in the gem list"

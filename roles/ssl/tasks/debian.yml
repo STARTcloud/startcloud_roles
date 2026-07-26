@@ -109,20 +109,27 @@
         owner: "{{ service_user }}"
         mode: "0777"
 
-    - name: "Copying Combined cert"
-      ansible.builtin.copy:
+    - name: "Reading signed certificate material for combined PEM"
+      ansible.builtin.slurp:
         src: "{{ cert_dir }}/combined/default-signed.crt"
-        dest: "{{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}.pem"
-        owner: "{{ service_user }}"
-        group: "{{ service_group }}"
-        mode: "0644"
-        remote_src: true
+      register: ssl_combined_base
 
-    - name: "Appending CA chain to combined certificate"
-      ansible.builtin.blockinfile:
-        path: "{{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}.pem"
-        block: "{{ lookup('file', cert_dir + '/ca/default-signed.ca') }}"
-        marker: "# {mark} ANSIBLE MANAGED BLOCK - CA CHAIN"
+    - name: "Reading CA chain for combined PEM"
+      ansible.builtin.slurp:
+        src: "{{ cert_dir }}/ca/default-signed.ca"
+      register: ssl_ca_chain
+
+    # Single deterministic write: copy+blockinfile fought each other every run
+    # (copy rewrote the file, blockinfile re-appended the chain — never idempotent).
+    # Marker lines are kept verbatim for existing consumers of the combined PEM.
+    - name: "Assembling combined certificate with CA chain"
+      ansible.builtin.copy:
+        content: |
+          {{ ssl_combined_base.content | b64decode | trim }}
+          # BEGIN ANSIBLE MANAGED BLOCK - CA CHAIN
+          {{ ssl_ca_chain.content | b64decode | trim }}
+          # END ANSIBLE MANAGED BLOCK - CA CHAIN
+        dest: "{{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}.pem"
         owner: "{{ service_user }}"
         group: "{{ service_group }}"
         mode: "0644"
@@ -131,8 +138,8 @@
       become: true
       community.general.java_keystore:
         name: "{{ settings.hostname }}.{{ settings.domain }}"
-        certificate: "{{ lookup('file', cert_dir + '/crt/default-signed.crt') }}"
-        private_key: "{{ lookup('file', cert_dir + '/key/default-signed.key') }}"
+        certificate_path: "{{ cert_dir }}/crt/default-signed.crt"
+        private_key_path: "{{ cert_dir }}/key/default-signed.key"
         password: "{{ cert_pass }}"
         owner: "{{ service_user }}"
         mode: "0777"
@@ -230,6 +237,7 @@
         owner: root
         group: root
         mode: "0644"
+        remote_src: true
 
     - name: "Updating system's certificate store"
       ansible.builtin.command: update-ca-certificates
@@ -322,20 +330,26 @@
         owner: "{{ service_user }}"
         mode: "0777"
 
-    - name: "Copying combined"
-      ansible.builtin.copy:
+    - name: "Reading self-signed certificate material for combined PEM"
+      ansible.builtin.slurp:
         src: "{{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}-self-signed.pem"
-        dest: "{{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}.pem"
-        owner: "{{ service_user }}"
-        group: "{{ service_group }}"
-        mode: "0644"
-        remote_src: true
+      register: ssl_selfsigned_base
 
-    - name: "Appending CA certificate to combined certificate"
-      ansible.builtin.blockinfile:
-        path: "{{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}.pem"
-        block: "{{ lookup('file', cert_dir + '/ca/ca-certificate.crt') }}"
-        marker: "# {mark} ANSIBLE MANAGED BLOCK - CA CERTIFICATE"
+    - name: "Reading CA certificate for combined PEM"
+      ansible.builtin.slurp:
+        src: "{{ cert_dir }}/ca/ca-certificate.crt"
+      register: ssl_selfsigned_ca
+
+    # Single deterministic write — see the supplied-certificate path for why
+    # copy+blockinfile could never converge.
+    - name: "Assembling combined certificate with CA certificate"
+      ansible.builtin.copy:
+        content: |
+          {{ ssl_selfsigned_base.content | b64decode | trim }}
+          # BEGIN ANSIBLE MANAGED BLOCK - CA CERTIFICATE
+          {{ ssl_selfsigned_ca.content | b64decode | trim }}
+          # END ANSIBLE MANAGED BLOCK - CA CERTIFICATE
+        dest: "{{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}.pem"
         owner: "{{ service_user }}"
         group: "{{ service_group }}"
         mode: "0644"
@@ -343,8 +357,8 @@
     - name: "Creating a keystore for the self-signed certificate/private key pair"
       community.general.java_keystore:
         name: "{{ settings.hostname }}.{{ settings.domain }}"
-        certificate: "{{ lookup('file', cert_dir + '/crt/' + settings.hostname + '.' + settings.domain + '-self-signed.crt') }}"
-        private_key: "{{ lookup('file', cert_dir + '/key/' + settings.hostname + '.' + settings.domain + '-self-signed.key') }}"
+        certificate_path: "{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt"
+        private_key_path: "{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}-self-signed.key"
         password: "{{ cert_pass }}"
         owner: "{{ service_user }}"
         mode: "0777"
@@ -367,11 +381,6 @@
     - name: "Ensuring apt cache is updated"
       ansible.builtin.apt:
         cache_valid_time: 3600
-        update_cache: true
-
-    - name: "Upgrading all apt packages"
-      ansible.builtin.apt:
-        upgrade: dist
         update_cache: true
 
     - name: "Adding certbot via apt repo"
@@ -542,22 +551,18 @@
         group: "{{ service_group }}"
         mode: "0644"
 
-    - name: "Copying Combined Cert"
+    - name: "Reading letsencrypt certificate material for combined PEM"
       become: true
-      ansible.builtin.copy:
+      ansible.builtin.slurp:
         src: "{{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.pem"
-        dest: "{{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}.pem"
-        owner: "{{ service_user }}"
-        group: "{{ service_group }}"
-        mode: "0777"
-        remote_src: true
+      register: ssl_letsencrypt_base
 
     - name: "Creating a keystore for the letsencrypt certificate/private key pair"
       become: true
       community.general.java_keystore:
         name: "{{ settings.hostname }}.{{ settings.domain }}"
-        certificate: "{{ lookup('file', cert_dir + '/crt/' + settings.hostname + '.' + settings.domain + '-letsencrypt.crt') }}"
-        private_key: "{{ lookup('file', cert_dir + '/key/' + settings.hostname + '.' + settings.domain + '-letsencrypt.key') }}"
+        certificate_path: "{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.crt"
+        private_key_path: "{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.key"
         password: "{{ cert_pass }}"
         owner: "{{ service_user }}"
         group: "{{ service_group }}"
@@ -572,12 +577,17 @@
         src: "/etc/letsencrypt/live/{{ settings.hostname | lower }}.{{ settings.domain | lower }}/chain.pem"
       register: le_chain_content
 
-    - name: "Appending Let's Encrypt chain to combined certificate"
+    # Single deterministic write — see the supplied-certificate path for why
+    # copy+blockinfile could never converge.
+    - name: "Assembling combined certificate with Let's Encrypt chain"
       become: true
-      ansible.builtin.blockinfile:
-        path: "{{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}.pem"
-        block: "{{ le_chain_content.content | b64decode }}"
-        marker: "# {mark} ANSIBLE MANAGED BLOCK - LE CHAIN"
+      ansible.builtin.copy:
+        content: |
+          {{ ssl_letsencrypt_base.content | b64decode | trim }}
+          # BEGIN ANSIBLE MANAGED BLOCK - LE CHAIN
+          {{ le_chain_content.content | b64decode | trim }}
+          # END ANSIBLE MANAGED BLOCK - LE CHAIN
+        dest: "{{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}.pem"
         owner: "{{ service_user }}"
         group: "{{ service_group }}"
         mode: "0777"

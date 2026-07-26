@@ -1,0 +1,133 @@
+---
+- name: "Prepare"
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    cert_dir: "/secure"
+    service_user: "startcloud"
+    service_group: "startcloud"
+    service_home_dir: "/home/startcloud"
+    quick_start_fqdn: "startcloud-quick-start.startcloud.test"
+    quick_start_external_ip: "10.42.42.10"
+  tasks:
+    - name: "Installing the packages the provisioner chain supplies before this role runs"
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - cockpit
+          - iproute2
+          - openssl
+          - python3-pip
+          - tree
+        state: present
+        update_cache: true
+
+    - name: "Enabling the Cockpit socket the way the cockpit role does"
+      ansible.builtin.systemd_service:
+        name: cockpit.socket
+        enabled: true
+        state: started
+
+    - name: "Creating the service group the role assigns file ownership to"
+      ansible.builtin.group:
+        name: "{{ service_group }}"
+        state: present
+
+    - name: "Creating the service user the role assigns file ownership to"
+      ansible.builtin.user:
+        name: "{{ service_user }}"
+        group: "{{ service_group }}"
+        home: "{{ service_home_dir }}"
+        create_home: true
+        shell: /bin/bash
+        state: present
+
+    - name: "Checking whether the public_adapter interface already exists"
+      ansible.builtin.command:
+        cmd: "ip -o link show public_adapter"
+      register: quick_start_adapter
+      changed_when: false
+      failed_when: false
+
+    - name: "Creating the public_adapter interface the role reads the external IP from"
+      when: quick_start_adapter.rc != 0
+      ansible.builtin.shell: |
+        set -e
+        ip link add public_adapter type veth peer name pa-peer
+        ip addr add {{ quick_start_external_ip }}/24 dev public_adapter
+        ip link set public_adapter up
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: "Creating the certificate directory tree the ssl role produces"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "{{ cert_dir }}"
+        - "{{ cert_dir }}/ca"
+        - "{{ cert_dir }}/combined"
+        - "/tmp/quick-start-pem-parts"
+
+    - name: "Generating the stand-in intermediate CA certificate the role publishes"
+      ansible.builtin.command:
+        cmd: >-
+          openssl req -x509 -newkey rsa:2048 -nodes -days 30
+          -subj "/C=US/O=STARTcloud Molecule/CN=STARTcloud Molecule Intermediate CA"
+          -keyout {{ cert_dir }}/ca/ca-certificate.key
+          -out {{ cert_dir }}/ca/ca-certificate.crt
+        creates: "{{ cert_dir }}/ca/ca-certificate.crt"
+
+    - name: "Generating the stand-in root CA certificate the role publishes"
+      ansible.builtin.command:
+        cmd: >-
+          openssl req -x509 -newkey rsa:2048 -nodes -days 30
+          -subj "/C=US/O=STARTcloud Molecule/CN=STARTcloud Molecule Root CA"
+          -keyout /tmp/quick-start-root-ca.key
+          -out {{ cert_dir }}/ca/root-ca.crt
+        creates: "{{ cert_dir }}/ca/root-ca.crt"
+
+    - name: "Generating the stand-in server certificate the pythonserve unit serves TLS with"
+      ansible.builtin.command:
+        cmd: >-
+          openssl req -x509 -newkey rsa:2048 -nodes -days 30
+          -subj "/C=US/O=STARTcloud Molecule/CN={{ quick_start_fqdn }}"
+          -keyout /tmp/quick-start-pem-parts/02-server.key
+          -out /tmp/quick-start-pem-parts/01-server.crt
+        creates: "/tmp/quick-start-pem-parts/01-server.crt"
+
+    - name: "Assembling the combined server PEM the pythonserve unit loads"
+      ansible.builtin.assemble:
+        src: "/tmp/quick-start-pem-parts"
+        dest: "{{ cert_dir }}/combined/default-signed.pem"
+        mode: "0640"
+
+    - name: "Creating the Vagrant synced-folder tree the support bundle is built from"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - /vagrant
+        - /vagrant/ansible
+        - /vagrant/completed
+        - /vagrant/installers
+        - /vagrant/support-bundle
+
+    - name: "Seeding the provisioner artefacts the support bundle inventories"
+      ansible.builtin.copy:
+        content: "{{ item.content }}"
+        dest: "{{ item.dest }}"
+        mode: "0644"
+      loop:
+        - dest: /vagrant/ansible/playbook.yml
+          content: "---\n- name: \"Molecule stand-in provisioner playbook\"\n  hosts: all\n"
+        - dest: /vagrant/installers/domino-server.tar
+          content: "molecule stand-in installer payload\n"
+        - dest: /vagrant/completed/dependencies
+          content: "completed\n"
+      loop_control:
+        label: "{{ item.dest }}"

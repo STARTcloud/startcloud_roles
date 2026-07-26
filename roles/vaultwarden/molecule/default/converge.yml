@@ -1,0 +1,42 @@
+---
+- name: "Converge"
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+
+    ## Role variables (defaults/main.yml + meta/argument_specs.yml).
+    vaultwarden_image: "vaultwarden/server:latest"
+    vaultwarden_container_name: vaultwarden
+    vaultwarden_restart_policy: unless-stopped
+    vaultwarden_data_dir: /opt/vaultwarden/data
+    vaultwarden_web_port: 8080
+    vaultwarden_domain: "https://vault.molecule.test"
+    vaultwarden_admin_token: "CHANGEME"
+    vaultwarden_signups_allowed: false
+    vaultwarden_websocket_enabled: true
+    ## Exercises the `| combine(vaultwarden_extra_env)` merge in tasks/main.yml.
+    ## Values are strings because community.docker.docker_container rejects
+    ## non-string environment values.
+    vaultwarden_extra_env:
+      LOG_LEVEL: "warn"
+      SHOW_PASSWORD_HINT: "false"
+
+    ## Consumed by the startcloud.startcloud_roles.docker meta dependency.
+    ## json-file rather than the journald default: a nested systemd container
+    ## does not guarantee a writable journald socket for dockerd. The address
+    ## pool is moved off 172.17/172.18 so the inner daemon cannot collide with
+    ## the outer Docker bridge network molecule itself is driving. vfs storage
+    ## driver: the inner /var/lib/docker sits on the outer daemon's overlayfs
+    ## and overlay2-on-overlayfs cannot register layer whiteout entries here.
+    docker_daemon_options:
+      log-driver: "json-file"
+      log-level: "warn"
+      debug: false
+      storage-driver: "vfs"
+      default-address-pools:
+        - base: "172.31.0.0/16"
+          size: 28
+    docker_users: []
+  roles:
+    - role: vaultwarden

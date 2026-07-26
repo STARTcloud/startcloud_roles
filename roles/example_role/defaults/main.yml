@@ -8,6 +8,7 @@ core_provisioner_version: v0.0.0
 ## If you are confused about how Variable precedence works,
 ## please see this article: https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_variables.html
 python_simple_web_server_path: "{{ service_home_dir }}"
+example_role_public_adapter: public_adapter
 startcloud_quick_start_port_forwards:
   - guest: 8000
     url: "demo"

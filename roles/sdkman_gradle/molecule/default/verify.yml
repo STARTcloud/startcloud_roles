@@ -1,0 +1,113 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    gradle_service_user: startcloud
+    gradle_service_group: startcloud
+    gradle_service_home: /home/startcloud
+    gradle_sdkman_dir: /home/startcloud/.sdkman
+    gradle_expected_version: 5.4.1
+  tasks:
+    - name: Gather installed package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Assert the archive tooling SDKMAN needs to unpack Gradle is present
+      ansible.builtin.assert:
+        that:
+          - "'curl' in ansible_facts.packages"
+          - "'zip' in ansible_facts.packages"
+          - "'unzip' in ansible_facts.packages"
+        fail_msg: "curl/zip/unzip missing, so sdk install gradle could not have run"
+
+    - name: Look up the service user in passwd
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ gradle_service_user }}"
+
+    - name: Assert the service user exists with the expected home directory
+      ansible.builtin.assert:
+        that:
+          - gradle_service_user in ansible_facts.getent_passwd
+          - ansible_facts.getent_passwd[gradle_service_user][4] == gradle_service_home
+        fail_msg: "{{ gradle_service_user }} is missing or does not own {{ gradle_service_home }}"
+
+    - name: Stat the Gradle launcher installed through SDKMAN
+      ansible.builtin.stat:
+        path: "{{ gradle_sdkman_dir }}/candidates/gradle/current/bin/gradle"
+      register: gradle_launcher
+
+    - name: Assert the Gradle launcher exists, is executable and owned by the service user
+      ansible.builtin.assert:
+        that:
+          - gradle_launcher.stat.exists
+          - gradle_launcher.stat.xusr
+          - gradle_launcher.stat.pw_name == gradle_service_user
+        fail_msg: "sdk install gradle did not produce {{ gradle_sdkman_dir }}/candidates/gradle/current/bin/gradle"
+
+    - name: Stat the versioned Gradle candidate directory
+      ansible.builtin.stat:
+        path: "{{ gradle_sdkman_dir }}/candidates/gradle/{{ gradle_expected_version }}"
+      register: gradle_version_dir
+
+    - name: Assert the requested Gradle version was the version installed
+      ansible.builtin.assert:
+        that:
+          - gradle_version_dir.stat.exists
+          - gradle_version_dir.stat.isdir
+        fail_msg: "gradle {{ gradle_expected_version }} was not installed under {{ gradle_sdkman_dir }}/candidates/gradle"
+
+    - name: Stat the SDKMAN current-version symlink for Gradle
+      ansible.builtin.stat:
+        path: "{{ gradle_sdkman_dir }}/candidates/gradle/current"
+        follow: false
+      register: gradle_current_link
+
+    - name: Assert sdk default pointed current at the requested version
+      ansible.builtin.assert:
+        that:
+          - gradle_current_link.stat.exists
+          - gradle_current_link.stat.islnk
+          - gradle_expected_version in gradle_current_link.stat.lnk_target
+        fail_msg: "candidates/gradle/current does not point at {{ gradle_expected_version }}"
+
+    - name: Stat the profile.d snippet the role writes
+      ansible.builtin.stat:
+        path: /etc/profile.d/gradle.sh
+      register: gradle_profile_script
+
+    - name: Assert the profile.d snippet exists with the mode the role sets
+      ansible.builtin.assert:
+        that:
+          - gradle_profile_script.stat.exists
+          - gradle_profile_script.stat.isreg
+          - gradle_profile_script.stat.mode == '0755'
+        fail_msg: "/etc/profile.d/gradle.sh is missing or was not created with mode 0755"
+
+    - name: Read the profile.d snippet
+      ansible.builtin.slurp:
+        src: /etc/profile.d/gradle.sh
+      register: gradle_profile_content
+
+    - name: Assert the Gradle bin directory was appended to the login PATH
+      ansible.builtin.assert:
+        that:
+          - "'PATH=$PATH:' + gradle_sdkman_dir + '/candidates/gradle/current/bin' in gradle_profile_text"
+        fail_msg: "/etc/profile.d/gradle.sh does not export the SDKMAN gradle bin directory"
+      vars:
+        gradle_profile_text: "{{ gradle_profile_content.content | b64decode }}"
+
+    - name: Stat the update-alternatives link created for Gradle
+      ansible.builtin.stat:
+        path: /usr/bin/gradle
+        follow: false
+      register: gradle_alternative
+
+    - name: Assert update-alternatives registered Gradle system-wide
+      ansible.builtin.assert:
+        that:
+          - gradle_alternative.stat.exists
+          - gradle_alternative.stat.islnk
+        fail_msg: "/usr/bin/gradle was not registered by community.general.alternatives"

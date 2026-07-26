@@ -1,0 +1,85 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    # Minimal provisioner-context stand-ins so the role runs standalone.
+    settings:
+      hostname: startcloud-sdkman-install-debian12
+      domain: startcloud.test
+    # Service account context the role expects from the provisioner.
+    service_user: startcloud
+    service_group: startcloud
+    service_home_dir: /home/startcloud
+    # Role variables (defaults/main.yml + meta/argument_specs.yml).
+    run_tasks: true
+    sdkman_tmp_dir: /tmp
+    sdkman_validate_ssl: true
+    sdkman_update: true
+    sdkman_auto_answer: true
+    sdkman_selfupdate_enable: true
+    sdkman_insecure_ssl: false
+    sdkman_disable_gvm_alias: false
+    sdkman_curl_connect_timeout: 7
+    sdkman_curl_max_time: 10
+    sdkman_beta_channel: false
+    sdkman_debug_mode: false
+    sdkman_colour_enable: true
+    # Maven is the smallest realistic candidate: a ~9MB zip with no JDK needed
+    # to unpack it, so the container test stays fast but still exercises a real
+    # `sdk install` round trip.
+    sdkman_install_packages:
+      - candidate: maven
+    sdkman_uninstall_packages: []
+    sdkman_defaults: {}
+    sdkman_flush_caches_before: []
+    sdkman_flush_caches_after: []
+    sdkman_offline_mode: false
+    sdkman_update_alternatives:
+      - name: mvn
+        candidate: maven
+        link: /usr/local/bin/mvn
+  pre_tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install acl so Ansible can become the unprivileged service user
+      ansible.builtin.apt:
+        name:
+          - acl
+          - ca-certificates
+        state: present
+
+    - name: Create the service group
+      ansible.builtin.group:
+        name: "{{ service_group }}"
+        state: present
+
+    - name: Create the service user the role installs SDKMAN for
+      ansible.builtin.user:
+        name: "{{ service_user }}"
+        group: "{{ service_group }}"
+        home: "{{ service_home_dir }}"
+        shell: /bin/bash
+        create_home: true
+        state: present
+
+    - name: Create the shell profile files the role persists SDKMAN settings into
+      ansible.builtin.file:
+        path: "{{ service_home_dir }}/{{ item }}"
+        state: touch
+        owner: "{{ service_user }}"
+        group: "{{ service_group }}"
+        mode: "0644"
+        modification_time: preserve
+        access_time: preserve
+      loop:
+        - .bash_profile
+        - .profile
+        - .bashrc
+        - .zshrc
+  roles:
+    - role: sdkman_install

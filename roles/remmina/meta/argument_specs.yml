@@ -3,20 +3,33 @@ argument_specs:
   main:
     short_description: Installs the Remmina remote desktop client.
     description:
-      - Installs the Remmina remote desktop client and a set of protocol plugins (RDP, VNC, SPICE, secret storage) on Debian-family systems via apt.
+      - Installs the Remmina remote desktop client and its protocol plugins (RDP, VNC, secret storage and,
+        where the distribution ships it, SPICE) on Debian-family systems via apt.
     author: Mark Gilbert
     options:
       run_tasks:
         type: bool
         default: true
         description: Master gate — when false the role loads its vars but runs no tasks.
+      remmina_spice_plugin_available:
+        type: bool
+        description:
+          - Whether the target distribution ships a remmina-plugin-spice binary.
+          - Defaults to true everywhere except Debian 12 (bookworm), whose remmina source package builds no SPICE plugin.
+          - Set false to drop the SPICE plugin from the default plugin set on any host.
+      remmina_plugins:
+        type: list
+        elements: str
+        description:
+          - Remmina protocol plugin packages to install.
+          - Defaults to remmina-plugin-rdp, remmina-plugin-vnc and remmina-plugin-secret, plus remmina-plugin-spice
+            when remmina_spice_plugin_available is true.
+          - Override to add plugins such as remmina-plugin-www, remmina-plugin-exec, remmina-plugin-python,
+            remmina-plugin-x2go or remmina-plugin-kwallet.
       remmina_packages:
         type: list
         elements: str
-        default:
-          - remmina
-          - remmina-plugin-rdp
-          - remmina-plugin-vnc
-          - remmina-plugin-secret
-          - remmina-plugin-spice
-        description: List of Remmina apt packages (client plus protocol plugins) to install.
+        description:
+          - Full list of Remmina apt packages to install.
+          - Defaults to the remmina client plus every entry of remmina_plugins; override for complete control
+            of the install set.

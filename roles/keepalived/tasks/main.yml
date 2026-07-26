@@ -6,9 +6,15 @@
       ansible.builtin.apt:
         pkg:
           - keepalived
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
 
+    ## Interface discovery is what the VRRP instance is bound to, so it always
+    ## has to run. It used to hang off `networks[0] is defined`, a variable this
+    ## role never reads: on a host without `networks` every task below was
+    ## skipped and the next one still dereferenced the unregistered result.
     - name: "Executing shell command to sort network interfaces"
-      when: networks[0] is defined
       changed_when: false
       ansible.builtin.shell: |
         set -o pipefail
@@ -21,10 +27,16 @@
       ansible.builtin.set_fact:
         interfaces: "{{ sorted_interfaces_output.stdout_lines }}"
 
-    - name: "Setting first and second adapters"
+    - name: "Asserting a usable network interface was discovered"
+      ansible.builtin.assert:
+        that:
+          - interfaces | length > 0
+        fail_msg: "No usable network interface was found on this host, so keepalived has nothing to bind a VRRP instance to"
+
+    ## Only the first adapter is used; a single-NIC host is a supported layout.
+    - name: "Setting the first adapter"
       ansible.builtin.set_fact:
         first_adapter: "{{ interfaces[0] }}"
-        second_adapter: "{{ interfaces[1] }}"
 
     - name: "Gathering details of the first adapter"
       changed_when: false
@@ -35,11 +47,21 @@
         executable: /bin/bash
       register: first_ip
 
+    - name: "Asserting the first adapter carries an IPv4 address to derive the virtual IP from"
+      ansible.builtin.assert:
+        that:
+          - first_ip.stdout_lines | length > 0
+        fail_msg: "{{ first_adapter }} has no IPv4 address, so no virtual IP can be derived; set startcloud_keepalived_virtual_ipaddress explicitly"
+      when: startcloud_keepalived_virtual_ipaddress | length == 0
+
     - name: "Deriving a virtual IP on the first adapter's subnet when none is configured"
       ansible.builtin.set_fact:
         startcloud_keepalived_virtual_ipaddress: "{{ (first_ip.stdout_lines | first).split('/') | first | regex_replace('[0-9]+$', '250') }}"
-      when: startcloud_keepalived_virtual_ipaddress | default('') | length == 0
+      when: startcloud_keepalived_virtual_ipaddress | length == 0
 
+    ## The daemon is only bounced when this file actually changes. An
+    ## unconditional `state: restarted` below reported changed on every run and
+    ## dropped the virtual IP each time the role was re-applied.
     - name: "Configuring keepalived"
       become: true
       ansible.builtin.template:
@@ -48,10 +70,11 @@
         mode: "0644"
       loop:
         - { src: "keepalived.conf.j2", dest: "/etc/keepalived/keepalived.conf" }
+      notify: "Restarting keepalived"
 
     - name: "Enabling and Starting service keepalived"
       ansible.builtin.service:
         enabled: true
         name: keepalived
-        state: restarted
+        state: started
       tags: keepalived

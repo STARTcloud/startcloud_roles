@@ -1,0 +1,18 @@
+---
+- name: "Prepare"
+  hosts: all
+  become: true
+  tasks:
+    - name: "Updating the apt cache"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+      changed_when: false
+
+    ## community.docker's container/network modules talk to the Docker API from
+    ## the managed node and need python3-requests there; the base image does not
+    ## ship it.
+    - name: "Installing the Python requests library for the community.docker modules"
+      ansible.builtin.apt:
+        name: python3-requests
+        state: present

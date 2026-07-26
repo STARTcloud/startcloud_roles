@@ -1,0 +1,82 @@
+---
+# Post-mortem collector. Molecule runs `cleanup` after a failed converge and
+# before `destroy`, so this is the only hook that can read the container after
+# the role's "Wait when mongodb is started" handler times out. It never fails
+# and never changes anything; the first cleanup of the test sequence runs before
+# `create`, hence ignore_unreachable.
+- name: Cleanup
+  hosts: all
+  become: true
+  gather_facts: false
+  ignore_unreachable: true
+  tasks:
+    - name: "Reading the rendered mongod.conf"
+      ansible.builtin.slurp:
+        src: /etc/mongod.conf
+      register: mongodb_postmortem_conf
+      failed_when: false
+
+    - name: "Showing the rendered mongod.conf"
+      ansible.builtin.debug:
+        var: mongodb_postmortem_conf.content | b64decode
+      when: mongodb_postmortem_conf.content is defined
+
+    - name: "Asking mongod to re-parse its own config file"
+      ansible.builtin.command: /usr/bin/mongod --config /etc/mongod.conf --outputConfig
+      register: mongodb_postmortem_parse
+      changed_when: false
+      failed_when: false
+
+    - name: "Showing what mongod says about its config file"
+      ansible.builtin.debug:
+        var: mongodb_postmortem_parse
+
+    - name: "Reading the mongod binary version"
+      ansible.builtin.command: /usr/bin/mongod --version
+      register: mongodb_postmortem_version
+      changed_when: false
+      failed_when: false
+
+    - name: "Showing the mongod binary version"
+      ansible.builtin.debug:
+        var: mongodb_postmortem_version.stdout_lines
+
+    - name: "Reading the installed mongodb-org package versions"
+      ansible.builtin.command: dpkg-query --show --showformat '${Package} ${Version}\n' 'mongodb-org*'
+      register: mongodb_postmortem_pkgs
+      changed_when: false
+      failed_when: false
+
+    - name: "Showing the installed mongodb-org package versions"
+      ansible.builtin.debug:
+        var: mongodb_postmortem_pkgs.stdout_lines
+
+    - name: "Reading the apt sources the role added"
+      ansible.builtin.command: grep --recursive --no-messages mongodb /etc/apt/sources.list /etc/apt/sources.list.d
+      register: mongodb_postmortem_sources
+      changed_when: false
+      failed_when: false
+
+    - name: "Showing the apt sources the role added"
+      ansible.builtin.debug:
+        var: mongodb_postmortem_sources.stdout_lines
+
+    - name: "Reading the mongod journal"
+      ansible.builtin.command: journalctl --unit mongod --no-pager --lines 60
+      register: mongodb_postmortem_journal
+      changed_when: false
+      failed_when: false
+
+    - name: "Showing the mongod journal"
+      ansible.builtin.debug:
+        var: mongodb_postmortem_journal.stdout_lines
+
+    - name: "Reading the tail of the mongod log file"
+      ansible.builtin.command: tail --lines 40 /var/log/mongodb/mongod.log
+      register: mongodb_postmortem_log
+      changed_when: false
+      failed_when: false
+
+    - name: "Showing the tail of the mongod log file"
+      ansible.builtin.debug:
+        var: mongodb_postmortem_log.stdout_lines

@@ -18,6 +18,10 @@ argument_specs:
         type: str
         default: root
         description: MariaDB administrative user whose password is configured.
+      mariadb_login_unix_socket:
+        type: str
+        default: /run/mysqld/mysqld.sock
+        description: Unix socket the administrative account authenticates through when the role sets its password.
       startcloud_mariadb_port_forwards:
         type: list
         elements: dict

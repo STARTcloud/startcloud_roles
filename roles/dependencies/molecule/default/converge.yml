@@ -1,0 +1,56 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    ## Master gate stays on so the OS dispatch block actually runs.
+    run_tasks: true
+    ## No proxy in the test container: 10proxy.conf must NOT be rendered,
+    ## and a bogus proxy would break every apt call that follows.
+    use_proxy: false
+    manually_intall_updates: false
+  roles:
+    ## `packages` is intentionally NOT overridden: the role loads it from
+    ## vars/debian.yml via include_vars, and that is the behaviour under test.
+    ##
+    ## `extra_packages` and `extra_repos` are passed as role params
+    ## (precedence 20, beats include_vars at 18) so both code paths run:
+    ##   * extra_packages proves the extra-package task is reached;
+    ##   * extra_repos exercises get_url -> gpg --dearmor -> chmod ->
+    ##     tmp cleanup -> stale-source removal -> apt_repository(signed-by).
+    ##
+    ## The production repo in vars/debian.yml
+    ## (public.debian.packages.startcloud.com) serves an EXPIRED TLS
+    ## certificate, so get_url aborts there and the whole Debian path dies at
+    ## the first repository task. A reachable armored-key repo is substituted
+    ## here so the role's repository logic is genuinely tested instead of
+    ## being deleted from the scenario. See NOTES.md.
+    ##
+    ## `arch=` is derived from gathered facts rather than from the role's own
+    ## `deb_architecture` register: meta/argument_specs.yml makes
+    ## validate_argument_spec the role's first task, and it templates every
+    ## role param eagerly — a param referencing `deb_architecture.stdout`
+    ## fails with "'deb_architecture' is undefined" before any task runs.
+    ## See NOTES.md.
+    - role: dependencies
+      extra_packages:
+        - htop
+        - dos2unix
+        - xmlstarlet
+        - jq
+      extra_repos:
+        - name: molecule-docker
+          gpg_key_url: https://download.docker.com/linux/debian/gpg
+          gpg_keyring_path: /etc/apt/keyrings/molecule-docker-keyring.gpg
+          repo: >-
+            deb [arch={{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' }}
+            signed-by=/etc/apt/keyrings/molecule-docker-keyring.gpg]
+            https://download.docker.com/linux/debian
+            {{ ansible_distribution_release }} stable
+          needs_dearmor: true
+          filename: molecule-docker
+          ## Planted by prepare.yml so the stale-source-removal task has
+          ## something real to remove.
+          stale_source_files:
+            - /etc/apt/sources.list.d/molecule-docker-stale.list

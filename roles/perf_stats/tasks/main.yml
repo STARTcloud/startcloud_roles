@@ -7,16 +7,15 @@
       ansible.builtin.apt:
         name:
           - telegraf
+        state: present
 
     - name: "Adding Telegraf Configurations"
       when: ansible_os_family == 'Debian'
       ansible.builtin.template:
         mode: "0644"
-        dest: "{{ item.dest }}"
-        src: "{{ item.src }}"
-      with_items:
-        - src: telegraf.cnf.j2
-          dest: "/etc/telegraf/telegraf.conf"
+        dest: "/etc/telegraf/telegraf.conf"
+        src: "telegraf.cnf.j2"
+      notify: "Restarting Telegraf"
 
     - name: "Enabling Telegraf"
       when: ansible_os_family == 'Debian'

@@ -1,0 +1,153 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting the MySQL server package is installed"
+      ansible.builtin.assert:
+        that:
+          - "'mysql-server' in ansible_facts.packages"
+        fail_msg: "mysql-server was not installed by the role"
+
+    - name: "Asserting the MySQL APT configuration package resolved its dependencies"
+      ansible.builtin.assert:
+        that:
+          - "'mysql-apt-config' in ansible_facts.packages"
+          - "'lsb-release' in ansible_facts.packages"
+        fail_msg: "mysql-apt-config or its lsb-release pre-dependency was not installed by the role"
+
+    - name: "Statting the MySQL repository signing keyring"
+      ansible.builtin.stat:
+        path: /usr/share/keyrings/mysql-apt-config.gpg
+      register: mysql_apt_keyring
+
+    - name: "Asserting the MySQL repository signing keyring was installed"
+      ansible.builtin.assert:
+        that:
+          - mysql_apt_keyring.stat.exists
+          - mysql_apt_keyring.stat.mode == '0644'
+          - mysql_apt_keyring.stat.size > 0
+        fail_msg: "/usr/share/keyrings/mysql-apt-config.gpg missing, empty, or wrong mode"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting the MySQL service is running and enabled"
+      ansible.builtin.assert:
+        that:
+          - "'mysql.service' in ansible_facts.services"
+          - ansible_facts.services['mysql.service'].state == 'running'
+          - ansible_facts.services['mysql.service'].status == 'enabled'
+        fail_msg: "mysql.service is not running and enabled"
+
+    - name: "Statting the global my.cnf"
+      ansible.builtin.stat:
+        path: /etc/mysql/my.cnf
+      register: mysql_global_cnf
+
+    - name: "Asserting the global my.cnf was written by the role"
+      ansible.builtin.assert:
+        that:
+          - mysql_global_cnf.stat.exists
+          - mysql_global_cnf.stat.mode == '0644'
+        fail_msg: "/etc/mysql/my.cnf missing or wrong mode"
+
+    - name: "Reading the global my.cnf"
+      ansible.builtin.slurp:
+        src: /etc/mysql/my.cnf
+      register: mysql_global_cnf_content
+
+    - name: "Asserting my.cnf carries the templated settings"
+      vars:
+        mysql_cnf_text: "{{ mysql_global_cnf_content.content | b64decode }}"
+      ansible.builtin.assert:
+        that:
+          - "'port = 3306' in mysql_cnf_text"
+          - "'datadir = /var/lib/mysql' in mysql_cnf_text"
+          - "'socket = /var/run/mysqld/mysqld.sock' in mysql_cnf_text"
+          - "'innodb_buffer_pool_size = 64M' in mysql_cnf_text"
+          - "'max_connections = 50' in mysql_cnf_text"
+        fail_msg: "my.cnf does not contain the values supplied to the role"
+
+    - name: "Statting the root credentials file"
+      ansible.builtin.stat:
+        path: /root/.my.cnf
+      register: mysql_root_cnf
+
+    - name: "Asserting the root credentials file is present and private"
+      ansible.builtin.assert:
+        that:
+          - mysql_root_cnf.stat.exists
+          - mysql_root_cnf.stat.mode == '0600'
+        fail_msg: "/root/.my.cnf missing or not 0600"
+
+    - name: "Looking up the mysql system user"
+      ansible.builtin.getent:
+        database: passwd
+        key: mysql
+
+    - name: "Asserting the mysql system user exists"
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.getent_passwd['mysql'] is defined
+        fail_msg: "mysql system user was not created"
+
+    - name: "Waiting for MySQL to accept connections on its port"
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 3306
+        state: started
+        timeout: 30
+
+    - name: "Listing databases through the root credentials file"
+      ansible.builtin.command: mysql -NBe "SHOW DATABASES"
+      register: mysql_show_databases
+      changed_when: false
+
+    - name: "Asserting the configured database exists and the test database was removed"
+      ansible.builtin.assert:
+        that:
+          - "'startcloud_test' in mysql_show_databases.stdout_lines"
+          - "'test' not in mysql_show_databases.stdout_lines"
+        fail_msg: "database state does not match the role's databases/secure-installation tasks"
+
+    - name: "Listing MySQL accounts"
+      ansible.builtin.command: mysql -NBe "SELECT CONCAT(User, '@', Host) FROM mysql.user"
+      register: mysql_accounts
+      changed_when: false
+
+    - name: "Asserting the configured user exists and anonymous users are gone"
+      ansible.builtin.assert:
+        that:
+          - "'startcloud_app@localhost' in mysql_accounts.stdout_lines"
+          - mysql_accounts.stdout_lines | select('match', '^@') | list | length == 0
+        fail_msg: "MySQL accounts do not match the role's users/secure-installation tasks"
+
+    - name: "Reading the configured user's authentication method"
+      ansible.builtin.command: >
+        mysql -NBe "SELECT CONCAT(plugin, '|', IF(LENGTH(authentication_string) > 0, 'set', 'empty'))
+        FROM mysql.user WHERE User = 'startcloud_app' AND Host = 'localhost'"
+      register: mysql_app_user_auth
+      changed_when: false
+
+    - name: "Asserting the configured user holds a caching_sha2_password credential"
+      ansible.builtin.assert:
+        that:
+          - mysql_app_user_auth.stdout == 'caching_sha2_password|set'
+        fail_msg: "startcloud_app does not use caching_sha2_password with a stored credential"
+
+    - name: "Authenticating as the configured user with the configured password"
+      ansible.builtin.command: mysql --user=startcloud_app --password=CHANGEME -NBe "SELECT 1"
+      register: mysql_app_user_login
+      changed_when: false
+
+    - name: "Asserting the configured user can actually log in"
+      ansible.builtin.assert:
+        that:
+          - mysql_app_user_login.stdout == '1'
+        fail_msg: "startcloud_app cannot authenticate with the password the role was given"

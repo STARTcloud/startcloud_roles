@@ -29,6 +29,10 @@ asterisk_user: asterisk
 asterisk_assets_user: asterisk_assets
 asterisk_user_pass: asterisk
 
+## Supplementary group the asterisk account is added to. Normally supplied by
+## the service_user role; declared here so the role is standalone-safe.
+service_group: java_group
+
 # Default PJSIP and Manager ports
 startcloud_asterisk_pjsip_udp_port: 5060
 startcloud_asterisk_pjsip_tcp_port: 5062

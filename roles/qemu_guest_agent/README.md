@@ -12,11 +12,14 @@ guest-exec, clean shutdown, fsfreeze, osinfo) on every hypervisor:
   named pipe via `--uart2 0x2F8 3 --uart-mode2 server`).
 
 The stock distro unit hard-binds to the virtio device and cannot start
-without it; this role disables it and installs one systemd unit per
+without it; this role masks it (it is static — no `[Install]` section, so
+`disable` neither sticks nor converges) and installs one systemd unit per
 transport, each guarded with `ConditionPathExists` on its device, both
 enabled. Whichever devices exist on a given boot are served — on bhyve that
 is both (the idle serial listener is harmless), on VirtualBox the serial
-one.
+one. A transport is started during the run only when its device is already
+present; where it is not, the unit is left enabled and comes up on the next
+boot that does expose the device.
 
 Windows images get the equivalent from the `virtio` role: the stock
 `QEMU-GA` service (virtio, untouched) plus a second `QEMU-GA-COM` service

@@ -1,0 +1,91 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    # Throwaway PKI for the TLS phase of this scenario. The container is destroyed
+    # at the end of the run, so the key material is world-readable on purpose:
+    # mongod runs as the unprivileged "mongodb" user, which does not exist yet at
+    # prepare time (the package that creates it is installed by converge).
+    mongodb_tls_dir: /etc/ssl/mongodb
+  tasks:
+    - name: "Updating the apt cache"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: "Installing openssl for the throwaway test PKI"
+      ansible.builtin.apt:
+        name: openssl
+        state: present
+
+    - name: "Creating the TLS material directory"
+      ansible.builtin.file:
+        path: "{{ mongodb_tls_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: "Generating the self-signed test CA"
+      ansible.builtin.command:
+        cmd: >-
+          openssl req -x509 -newkey rsa:2048 -nodes -sha256 -days 3650
+          -subj "/CN=molecule-mongodb-ca"
+          -keyout {{ mongodb_tls_dir }}/ca-key.pem
+          -out {{ mongodb_tls_dir }}/ca.crt
+        creates: "{{ mongodb_tls_dir }}/ca.crt"
+      changed_when: true
+
+    - name: "Writing the server certificate extensions"
+      ansible.builtin.copy:
+        dest: "{{ mongodb_tls_dir }}/server-ext.cnf"
+        content: |
+          subjectAltName = DNS:localhost, IP:127.0.0.1
+          extendedKeyUsage = serverAuth
+          basicConstraints = CA:FALSE
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: "Generating the server key and certificate signing request"
+      ansible.builtin.command:
+        cmd: >-
+          openssl req -new -newkey rsa:2048 -nodes -sha256
+          -subj "/CN=127.0.0.1"
+          -keyout {{ mongodb_tls_dir }}/server-key.pem
+          -out {{ mongodb_tls_dir }}/server.csr
+        creates: "{{ mongodb_tls_dir }}/server.csr"
+      changed_when: true
+
+    - name: "Signing the server certificate with the test CA"
+      ansible.builtin.command:
+        cmd: >-
+          openssl x509 -req -sha256 -days 3650
+          -in {{ mongodb_tls_dir }}/server.csr
+          -CA {{ mongodb_tls_dir }}/ca.crt
+          -CAkey {{ mongodb_tls_dir }}/ca-key.pem
+          -CAcreateserial
+          -extfile {{ mongodb_tls_dir }}/server-ext.cnf
+          -out {{ mongodb_tls_dir }}/server.crt
+        creates: "{{ mongodb_tls_dir }}/server.crt"
+      changed_when: true
+
+    - name: "Assembling the certificateKeyFile mongod expects"
+      ansible.builtin.shell:
+        cmd: >-
+          cat {{ mongodb_tls_dir }}/server-key.pem {{ mongodb_tls_dir }}/server.crt
+          > {{ mongodb_tls_dir }}/mongodb.pem
+        creates: "{{ mongodb_tls_dir }}/mongodb.pem"
+      changed_when: true
+
+    - name: "Making the TLS material readable by the mongod service user"
+      ansible.builtin.file:
+        path: "{{ mongodb_tls_dir }}/{{ item }}"
+        owner: root
+        group: root
+        mode: "0644"
+      loop:
+        - ca.crt
+        - mongodb.pem

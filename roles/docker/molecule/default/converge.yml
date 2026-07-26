@@ -1,0 +1,38 @@
+---
+- name: "Converge"
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    docker_edition: "ce"
+    docker_packages_state: present
+    docker_service_manage: true
+    docker_service_state: started
+    docker_service_enabled: true
+    docker_install_compose_plugin: true
+    docker_compose_package: docker-compose-plugin
+    docker_compose_package_state: present
+    docker_install_compose: false
+    docker_add_repo: true
+    docker_apt_release_channel: stable
+    docker_apt_filename: "docker"
+    docker_containerd_root: ""
+    docker_users:
+      - startcloud
+    ## json-file rather than the journald default: the systemd container used for
+    ## testing does not guarantee a writable journald socket for dockerd.
+    docker_daemon_options:
+      log-driver: "json-file"
+      log-level: "warn"
+      debug: false
+      default-address-pools:
+        - base: "172.31.0.0/16"
+          size: 28
+  pre_tasks:
+    - name: "Updating apt cache before the role runs"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+      changed_when: false
+  roles:
+    - role: docker

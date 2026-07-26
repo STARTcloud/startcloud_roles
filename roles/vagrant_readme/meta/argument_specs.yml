@@ -14,3 +14,7 @@ argument_specs:
         type: bool
         default: true
         description: Whether to display the rendered help text during the run.
+      ansible_module_running_in_container:
+        type: bool
+        default: false
+        description: Whether the target is a container guest — the role gathers this with community.docker.current_container_facts and skips address detection and help generation when true.

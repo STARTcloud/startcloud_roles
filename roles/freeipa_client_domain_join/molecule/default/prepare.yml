@@ -1,0 +1,66 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Updating apt cache"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: "Installing p11-kit, which provides the shared trust module the role links against"
+      ansible.builtin.apt:
+        name: p11-kit-modules
+        state: present
+        install_recommends: false
+
+    - name: "Preparing the browser host whose NSS trust store the role is expected to repoint"
+      when: "'firefox_hosts' in group_names"
+      block:
+        - name: "Installing Firefox, which the role assumes is already present on the host"
+          ansible.builtin.apt:
+            name: firefox-esr
+            state: present
+            install_recommends: false
+
+        - name: "Locating the stock NSS trust module shipped by libnss3"
+          ansible.builtin.find:
+            paths:
+              - /usr/lib
+              - /usr/lib64
+            patterns: "libnssckbi.so"
+            file_type: any
+            recurse: true
+            depth: 3
+          register: system_nssckbi_find
+
+        - name: "Asserting a stock NSS trust module exists to seed the Firefox directory with"
+          ansible.builtin.assert:
+            that:
+              - system_nssckbi_find.files | length > 0
+            fail_msg: "No libnssckbi.so found to seed the Firefox installation directory with"
+
+        - name: "Seeding the Firefox lib dir with its own NSS trust module, the way Mozilla builds ship it"
+          ansible.builtin.copy:
+            remote_src: true
+            src: "{{ (system_nssckbi_find.files | sort(attribute='path') | first).path }}"
+            dest: /usr/lib/firefox-esr/libnssckbi.so
+            owner: "root"
+            group: "root"
+            mode: "0644"
+
+    - name: "Recording the stock Firefox NSS trust module exactly as shipped, before the role touches it"
+      ansible.builtin.stat:
+        path: /usr/lib/firefox-esr/libnssckbi.so
+        follow: false
+        get_checksum: true
+      register: stock_nssckbi
+
+    - name: "Saving the stock module state on the target so verify can compare the backup against it"
+      ansible.builtin.copy:
+        content: "{{ stock_nssckbi.stat | to_nice_json }}\n"
+        dest: /var/tmp/molecule-stock-nssckbi.json
+        owner: "root"
+        group: "root"
+        mode: "0644"

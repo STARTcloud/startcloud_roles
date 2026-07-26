@@ -1,0 +1,89 @@
+{% set pkg_server_names = ([pkg_server_domain] + pkg_server_legacy_domains) | join(' ') %}
+{% if pkg_server_ssl_enabled %}
+server {
+    listen 80;
+    server_name {{ pkg_server_names }};
+
+    return 301 https://$host$request_uri;
+}
+
+{% endif %}
+server {
+{% if pkg_server_ssl_enabled %}
+    listen 443 ssl;
+{% else %}
+    listen 80;
+{% endif %}
+    server_name {{ pkg_server_names }};
+    root {{ pkg_server_base_dir }};
+    add_header Access-Control-Allow-Origin "*" always;
+{% if pkg_server_ssl_enabled %}
+
+    ssl_certificate {{ pkg_server_ssl_certificate }};
+    ssl_certificate_key {{ pkg_server_ssl_certificate_key }};
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+{% if pkg_server_private_enabled %}
+
+    # Client certificates are verified against the repository CA but not
+    # demanded at the server level: the public and mirror trees stay reachable
+    # without one, and the private locations enforce SUCCESS themselves.
+    ssl_client_certificate {{ pkg_server_base_dir }}/ca/ca.crt;
+    ssl_verify_client optional;
+    ssl_verify_depth 1;
+{% endif %}
+{% endif %}
+
+    location = / {
+        return 302 /public/;
+    }
+
+    location /public/ {
+        autoindex on;
+        try_files $uri $uri/ =404;
+    }
+{% if pkg_server_mirror_enabled %}
+
+    location /mirror/ {
+        autoindex on;
+        try_files $uri $uri/ =404;
+    }
+{% endif %}
+{% if pkg_server_private_enabled %}
+
+    location /private/ {
+        if ($ssl_client_verify != "SUCCESS") {
+            return 403;
+        }
+
+        autoindex on;
+        try_files $uri $uri/ =404;
+    }
+
+    # Every client only ever reaches the drop directory its own certificate CN
+    # names, and never gets a listing of the others.
+    location /certs/ {
+        if ($ssl_client_verify != "SUCCESS") {
+            return 403;
+        }
+
+        set $client_cn "";
+        if ($ssl_client_s_dn ~ "CN=([^,]+)") {
+            set $client_cn $1;
+        }
+
+        alias {{ pkg_server_base_dir }}/clients/$client_cn/certs/;
+        autoindex off;
+    }
+{% endif %}
+
+    # The CA, the client keys, the PGP key pair, the staging tree and the
+    # scripts all sit beside the published trees under the same root, so
+    # anything that is not a published path is refused outright.
+    location / {
+        return 404;
+    }
+
+    access_log /var/log/nginx/{{ pkg_server_domain }}.access.log;
+    error_log /var/log/nginx/{{ pkg_server_domain }}.error.log;
+}

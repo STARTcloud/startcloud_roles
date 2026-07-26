@@ -2,7 +2,7 @@
 galaxy_info:
   role_name: telegraf
   author: Mark Gilbert
-  description: Installs and configures the Telegraf metrics agent on Linux, FreeBSD, macOS, Windows, and Docker.
+  description: Installs and configures the Telegraf metrics agent on Debian-family systems and FreeBSD, natively or in Docker; owns /etc/telegraf/telegraf.conf as the canonical metrics role.
   company: STARTcloud
   issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
   license: GPL-2.0-or-later
@@ -12,16 +12,8 @@ galaxy_info:
       versions: ["bookworm", "trixie"]
     - name: Ubuntu
       versions: ["jammy", "noble"]
-    - name: EL
-      versions: ["8", "9"]
-    - name: opensuse
-      versions: ["15.5"]
     - name: FreeBSD
       versions: ["14.0"]
-    - name: MacOSX
-      versions: ["all"]
-    - name: Windows
-      versions: ["2022"]
   galaxy_tags:
     - monitoring
     - telegraf

@@ -1,0 +1,118 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    tomcat_expected_packages:
+      - tomcat9
+      - tomcat9-admin
+      - tomcat9-common
+      - tomcat9-user
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting every Tomcat package the role installs is present"
+      ansible.builtin.assert:
+        that:
+          - tomcat_expected_packages | difference(ansible_facts.packages.keys() | list) | length == 0
+        fail_msg: >-
+          Missing Tomcat packages:
+          {{ tomcat_expected_packages | difference(ansible_facts.packages.keys() | list) }}
+
+    - name: "Looking up the Tomcat service account"
+      ansible.builtin.getent:
+        database: passwd
+        key: tomcat
+
+    - name: "Looking up the Tomcat service group"
+      ansible.builtin.getent:
+        database: group
+        key: tomcat
+
+    - name: "Asserting the tomcat user and group exist"
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.getent_passwd['tomcat'] is defined
+          - ansible_facts.getent_group['tomcat'] is defined
+        fail_msg: "The tomcat user/group the role creates is missing"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting the tomcat9 service is running and enabled"
+      ansible.builtin.assert:
+        that:
+          - "'tomcat9.service' in ansible_facts.services"
+          - ansible_facts.services['tomcat9.service'].state == 'running'
+          - ansible_facts.services['tomcat9.service'].status == 'enabled'
+        fail_msg: >-
+          tomcat9.service is not running/enabled:
+          {{ ansible_facts.services['tomcat9.service'] | default('unit absent') }}
+
+    - name: "Stat the rendered Tomcat configuration files"
+      ansible.builtin.stat:
+        path: "/etc/tomcat9/{{ item }}"
+      register: tomcat_conf_stat
+      loop:
+        - server.xml
+        - context.xml
+        - tomcat-users.xml
+
+    - name: "Asserting the templated configuration was deployed with the role's mode"
+      ansible.builtin.assert:
+        that:
+          - tomcat_conf_stat.results | rejectattr('stat.exists') | list | length == 0
+          - tomcat_conf_stat.results | rejectattr('stat.mode', 'eq', '0755') | list | length == 0
+        fail_msg: "server.xml, context.xml or tomcat-users.xml is missing or not mode 0755"
+
+    - name: "Reading the rendered tomcat-users.xml"
+      ansible.builtin.slurp:
+        src: /etc/tomcat9/tomcat-users.xml
+      register: tomcat_users_content
+
+    - name: "Asserting the UI credentials supplied to the role were rendered"
+      ansible.builtin.assert:
+        that:
+          - '''<role rolename="manager-gui" />'' in tomcat_users_decoded'
+          - '''<role rolename="admin-gui" />'' in tomcat_users_decoded'
+          - '''username="manager" password="CHANGEME" roles="manager-gui"'' in tomcat_users_decoded'
+          - '''username="admin" password="CHANGEME" roles="manager-gui,admin-gui"'' in tomcat_users_decoded'
+        fail_msg: "tomcat-users.xml does not carry the manager/admin users and roles given to the role"
+      vars:
+        tomcat_users_decoded: "{{ tomcat_users_content.content | b64decode }}"
+
+    - name: "Reading the rendered server.xml"
+      ansible.builtin.slurp:
+        src: /etc/tomcat9/server.xml
+      register: tomcat_server_content
+
+    - name: "Asserting server.xml reflects the ports, keystore and detected external IP"
+      ansible.builtin.assert:
+        that:
+          - tomcat_server_decoded is search('<Connector port="8181" protocol="HTTP/1.1"')
+          - tomcat_server_decoded is search('<Connector port="8843" protocol="HTTP/1.1" SSLEnabled="true"')
+          - '''keystoreFile="/secure/jks/default-signed.jks"'' in tomcat_server_decoded'
+          - '''keystorePass="CHANGEME"'' in tomcat_server_decoded'
+          - '''internalProxies="10.99.99.10"'' in tomcat_server_decoded'
+          - '''showServerInfo="false"'' in tomcat_server_decoded'
+        fail_msg: "server.xml does not reflect the port forwards, keystore path or the public_adapter address"
+      vars:
+        tomcat_server_decoded: "{{ tomcat_server_content.content | b64decode }}"
+
+    - name: "Waiting for the Tomcat HTTP connector to accept connections"
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 8181
+        state: started
+        timeout: 30
+
+    - name: "Requesting the Tomcat root context over the configured connector"
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:8181/"
+        status_code:
+          - 200
+          - 404
+        return_content: false

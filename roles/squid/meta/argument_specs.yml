@@ -4,7 +4,7 @@ argument_specs:
     short_description: Installs and configures the Squid caching web proxy.
     description:
       - Installs the Squid package and renders its configuration from a template.
-      - Validates the configuration with squid -k parse and restarts the service.
+      - Validates the configuration with squid -k parse and restarts the service when the configuration changes.
     author: Mark Gilbert
     options:
       run_tasks:
@@ -17,3 +17,7 @@ argument_specs:
         default:
           - squid
         description: Packages to install for the Squid proxy.
+      proxy_port:
+        type: int
+        default: 3128
+        description: TCP port Squid listens on; rendered into the http_port directive of squid.conf.

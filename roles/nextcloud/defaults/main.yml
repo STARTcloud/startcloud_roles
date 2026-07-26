@@ -13,9 +13,10 @@ nextcloud_data_dir: "/var/www/nextcloud/data"
 nextcloud_web_user: "www-data"
 nextcloud_web_group: "www-data"
 
-# Web server virtual host settings.
+# Web server virtual host settings. Debian's php-fpm ships a versioned socket
+# (php8.2-fpm.sock on bookworm) — override this when the PHP version differs.
 nextcloud_server_name: "{{ settings.hostname }}.{{ settings.domain }}"
-nextcloud_php_fpm_socket: "unix:/run/php/php-fpm.sock"
+nextcloud_php_fpm_socket: "unix:/run/php/php8.2-fpm.sock"
 
 # PHP CLI binary used for occ commands — override (e.g. php8.4) when the
 # system default php is newer than the installed Nextcloud release supports.
@@ -27,6 +28,12 @@ nextcloud_db_host: "localhost"
 nextcloud_db_name: "nextcloud"
 nextcloud_db_user: "nextcloud"
 nextcloud_db_password: "SomeNextcloudDBPassword"
+
+# Administrative connection used to provision the database and its user. The
+# local MariaDB root account authenticates through the unix socket, so no
+# administrative password is stored anywhere.
+nextcloud_db_admin_user: "root"
+nextcloud_db_login_unix_socket: "/run/mysqld/mysqld.sock"
 
 # Initial administrator account created by occ maintenance:install.
 nextcloud_admin_user: "admin"

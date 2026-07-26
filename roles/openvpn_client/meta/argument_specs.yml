@@ -3,10 +3,42 @@ argument_specs:
   main:
     short_description: Configure an OpenVPN client
     description:
-      - Deploys the OpenVPN client configuration, installs the CA, certificate, and key material, and enables the OpenVPN service.
+      - Installs the OpenVPN client package, deploys the client configuration, installs the CA, certificate and key material, and enables the OpenVPN service.
+      - The CA, client certificate, client key and tls-auth secret are copied from an OpenVPN server PKI that must already be present on the target host.
     author: Mark Gilbert
     options:
       run_tasks:
         type: bool
         default: true
         description: Master gate — when false the role loads its vars but runs no tasks.
+      openvpn_client_packages:
+        type: list
+        elements: str
+        default:
+          - openvpn
+        description: Packages installed to provide the OpenVPN client.
+      openvpn_client_server:
+        type: str
+        default: ""
+        description: Hostname or address of the OpenVPN server the client connects to. Required — the role fails when it is empty.
+      openvpn_configuration_directory:
+        type: str
+        default: /etc/openvpn/client
+        description: Directory that holds the rendered client.conf and the copied certificate and key material.
+      openvpn_group:
+        type: str
+        default: nogroup
+        description: Group that owns the client configuration directory and its contents, and that the OpenVPN daemon drops privileges to at runtime.
+      openvpn_client_pki_directory:
+        type: str
+        default: /etc/openvpn/easy-rsa/pki
+        description: Directory on the target host holding the OpenVPN server PKI that the client material is copied from.
+      openvpn_client_pki_files:
+        type: list
+        elements: str
+        default:
+          - ca.crt
+          - issued/client.crt
+          - private/client.key
+          - ta.key
+        description: Paths, relative to openvpn_client_pki_directory, of the PKI files copied into the client configuration directory.

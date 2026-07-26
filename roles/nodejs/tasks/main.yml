@@ -10,11 +10,6 @@
       ansible.builtin.import_tasks: setup-Debian.yml
       when: ansible_os_family == 'Debian'
 
-    - name: "Defining nodejs_install_npm_user"
-      ansible.builtin.set_fact:
-        nodejs_install_npm_user: "{{ ansible_user | default(lookup('env', 'USER')) }}"
-      when: nodejs_install_npm_user is not defined
-
     - name: "Creating npm global directory"
       ansible.builtin.file:
         path: "{{ npm_config_prefix }}"

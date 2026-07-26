@@ -1,0 +1,13 @@
+---
+- name: "Restarting guacd"
+  ansible.builtin.systemd:
+    daemon_reload: true
+    enabled: true
+    name: guacd
+    state: restarted
+
+- name: "Restarting Tomcat"
+  ansible.builtin.systemd:
+    enabled: true
+    name: "tomcat{{ tomcat_version }}"
+    state: restarted

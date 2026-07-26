@@ -7,11 +7,6 @@
         cache_valid_time: 3600
         update_cache: true
 
-    - name: "Upgrading all apt packages"
-      ansible.builtin.apt:
-        upgrade: dist
-        update_cache: true
-
     - name: "Adding Additional packages"
       ansible.builtin.apt:
         name: "{{ item }}"
@@ -29,95 +24,99 @@
       ansible.builtin.set_fact:
         local_haxe_version: "{{ haxe_version }}"
 
-    - name: "Downloading Haxe tarball"
-      ansible.builtin.get_url:
-        url: "https://github.com/HaxeFoundation/haxe/releases/download/{{ local_haxe_version }}/haxe-{{ local_haxe_version }}-linux64.tar.gz"
-        dest: "/tmp/haxe-{{ local_haxe_version }}-linux64.tar.gz"
-        mode: "0644"
-
-    - name: "Ensuring /opt/haxelib exists"
-      ansible.builtin.file:
-        path: "{{ haxelib_files }}"
-        state: directory
-        mode: "0755"
-        owner: "{{ service_user | default(ansible_user_id) }}"
-        group: "{{ service_group | default(ansible_user_id) }}"
-      loop:
-        - "/opt/haxe"
-        - "{{ haxe_home }}"
-        - "{{ haxelib_dir }}"
-        - /tmp/haxe_temp
-      loop_control:
-        loop_var: haxelib_files
-
     - name: "Installing Neko"
       ansible.builtin.package:
         name: neko
         state: present
         update_cache: true
+      when: install_neko
 
-    - name: "Checking if haxelib directory exists"
+    - name: "Checking if Haxe is already installed"
       ansible.builtin.stat:
-        path: "{{ haxelib }}"
-      register: haxelib_dir_check
+        path: "{{ haxe }}"
+      register: haxe_binary_check
 
-    - name: "Cleaning destination directory"
+    - name: "Getting the installed Haxe version"
+      ansible.builtin.command: "{{ haxe }} -version"
+      register: haxe_version_result
+      changed_when: false
+      failed_when: false
+      environment:
+        HAXE_STD_PATH: "{{ haxe_home }}/std"
+      when: haxe_binary_check.stat.exists
+
+    # The install is only redone when there is no usable binary at haxe_home or
+    # when the binary that is there reports a version other than the requested
+    # one. Everything below that touches /opt/haxe is gated on this fact, so a
+    # second run neither re-downloads nor re-extracts anything.
+    - name: "Determining whether the Haxe release has to be installed"
+      ansible.builtin.set_fact:
+        haxe_install_required: >-
+          {{
+            not haxe_binary_check.stat.exists
+            or haxe_version_result.rc | default(1) != 0
+            or local_haxe_version not in
+               ((haxe_version_result.stdout | default('')) ~ (haxe_version_result.stderr | default('')))
+          }}
+
+    - name: "Removing the mismatched Haxe installation"
       ansible.builtin.file:
-        path: "/tmp/haxe_temp"
+        path: "{{ haxe_home }}"
         state: absent
+      when:
+        - haxe_binary_check.stat.exists
+        - haxe_install_required | bool
 
-    - name: "Ensuring /opt/haxelib exists"
+    - name: "Ensuring the Haxe directories exist"
       ansible.builtin.file:
         path: "{{ haxelib_files }}"
         state: directory
         mode: "0755"
         owner: "{{ service_user | default(ansible_user_id) }}"
-        group: "{{ service_group | default(ansible_user_id) }}"
+        group: "{{ service_group | default(ansible_user_gid) }}"
       loop:
-        - "/opt/haxe"
+        - /opt/haxe
         - "{{ haxe_home }}"
         - "{{ haxelib_dir }}"
-        - /tmp/haxe_temp
       loop_control:
         loop_var: haxelib_files
 
-    - name: "Extracting Haxe tarball to temporary directory"
+    - name: "Downloading Haxe tarball"
+      ansible.builtin.get_url:
+        url: "https://github.com/HaxeFoundation/haxe/releases/download/{{ local_haxe_version }}/haxe-{{ local_haxe_version }}-linux64.tar.gz"
+        dest: "/tmp/haxe-{{ local_haxe_version }}-linux64.tar.gz"
+        mode: "0644"
+      when: haxe_install_required | bool
+
+    # The release tarball carries a single haxe_<build> top level directory, so
+    # --strip-components=1 lands the tree directly in haxe_home and removes the
+    # need for a scratch directory plus a shell mv.
+    - name: "Extracting the Haxe release into the installation directory"
       ansible.builtin.unarchive:
         src: "/tmp/haxe-{{ local_haxe_version }}-linux64.tar.gz"
-        dest: "/tmp/haxe_temp"
+        dest: "{{ haxe_home }}"
         remote_src: true
-
-    - name: "Cleaning destination directory"
-      ansible.builtin.file:
-        path: "/opt/haxe/haxe-{{ haxe_version }}"
-        state: absent
-
-    - name: "Ensuring /opt/haxelib exists"
-      ansible.builtin.file:
-        path: "{{ haxelib_files }}"
-        state: directory
-        mode: "0755"
+        creates: "{{ haxe }}"
         owner: "{{ service_user | default(ansible_user_id) }}"
-        group: "{{ service_group | default(ansible_user_id) }}"
-      loop:
-        - "/opt/haxe/haxe-{{ haxe_version }}/"
-      loop_control:
-        loop_var: haxelib_files
+        group: "{{ service_group | default(ansible_user_gid) }}"
+        extra_opts:
+          - "--strip-components=1"
+      when: haxe_install_required | bool
 
-    - name: "Synchronizing extracted Haxe files to the target directory"
-      ansible.builtin.shell: "mv /tmp/haxe_temp/haxe_*/* /opt/haxe/haxe-{{ haxe_version }}/"
-      changed_when: true
-
-    - name: "Debug haxelib directory existence"
-      failed_when: not haxelib_dir_check.stat.exists
-      ansible.builtin.debug:
-        msg: "The haxelib directory exists."
-      when: haxelib_dir_check.stat.exists and haxelib_dir_check.stat.isdir
-
-    - name: "Cleaning up temporary directory"
+    - name: "Cleaning up temporary files"
       ansible.builtin.file:
-        path: "/tmp/haxe_temp"
+        path: "/tmp/haxe-{{ local_haxe_version }}-linux64.tar.gz"
         state: absent
+
+    - name: "Reading the repository haxelib is currently configured against"
+      ansible.builtin.command: "{{ haxelib }} config"
+      become: true
+      become_user: "{{ service_user | default(ansible_user_id) }}"
+      register: haxelib_config_result
+      changed_when: false
+      failed_when: false
+      environment:
+        PATH: "$PATH:{{ haxe_home }}:/usr/bin"
 
     - name: "Setting up Haxelib"
       ansible.builtin.command: "{{ haxelib }} setup {{ haxelib_dir }}"
@@ -126,43 +125,57 @@
       changed_when: true
       environment:
         PATH: "$PATH:{{ haxe_home }}:/usr/bin"
+      when: >-
+        haxelib_config_result.rc != 0
+        or haxelib_dir not in haxelib_config_result.stdout
+
+    - name: "Listing the Haxe libraries that are already installed"
+      ansible.builtin.command: "{{ haxelib }} list"
+      become: true
+      become_user: "{{ service_user | default(ansible_user_id) }}"
+      register: haxelib_list_result
+      changed_when: false
+      failed_when: false
+      environment:
+        PATH: "$PATH:{{ haxe_home }}:/usr/bin"
+
+    # "haxelib list" prints one "<name>: <versions>" line per library.
+    - name: "Recording the installed Haxe library names"
+      ansible.builtin.set_fact:
+        haxe_installed_libraries: "{{ haxelib_list_result.stdout_lines | map('regex_replace', ':.*$', '') | map('trim') | list }}"
 
     - name: "Installing individual Dev Haxe library"
       ansible.builtin.command: "{{ haxelib }} git {{ haxe_lib_dev_files.library }} {{ haxe_lib_dev_files.repo }} {{ haxe_lib_dev_files.branch }}"
       become: true
       become_user: "{{ service_user | default(ansible_user_id) }}"
-      changed_when: true
+      register: haxelib_dev_install_result
+      changed_when: not (haxelib_dev_install_result.stdout is search('(?i)already (have|installed|up to date)'))
       environment:
         PATH: "$PATH:{{ haxe_home }}:/usr/bin"
       loop: "{{ additional_haxe_libraries_dev }}"
       loop_control:
         loop_var: haxe_lib_dev_files
-      when: additional_haxe_libraries_dev | length > 0
+      when: haxe_lib_dev_files.library not in haxe_installed_libraries
 
     # haxelib's --always flag auto-answers prompts, replacing the old "yes |" pipe
     - name: "Installing individual Haxe library"
       ansible.builtin.command: "{{ haxelib }} install --always {{ haxe_lib_files }}"
       become: true
       become_user: "{{ service_user | default(ansible_user_id) }}"
-      changed_when: true
+      register: haxelib_install_result
+      changed_when: not (haxelib_install_result.stdout is search('(?i)already (have|installed|up to date)'))
       environment:
         PATH: "$PATH:{{ haxe_home }}:/usr/bin"
       loop: "{{ additional_haxe_libraries }}"
       loop_control:
         loop_var: haxe_lib_files
-      when: additional_haxe_libraries | length > 0
+      when: haxe_lib_files not in haxe_installed_libraries
 
     - name: "Setting up OpenFL"
       ansible.builtin.command: "{{ haxelib }} run openfl setup -y --quiet"
       become: true
       become_user: "{{ service_user | default(ansible_user_id) }}"
       changed_when: true
-      when: install_openfl
       environment:
         PATH: "$PATH:{{ haxe_home }}:/usr/bin"
-
-    - name: "Cleaning up temporary files"
-      ansible.builtin.file:
-        path: "/tmp/haxe-{{ local_haxe_version }}-linux64.tar.gz"
-        state: absent
-      delegate_to: localhost
+      when: install_openfl

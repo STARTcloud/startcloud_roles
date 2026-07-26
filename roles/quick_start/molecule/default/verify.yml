@@ -1,0 +1,147 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  gather_facts: false
+  vars:
+    quick_start_home: /local/notesjava
+    quick_start_proxy_url: demo.startcloud-quick-start.startcloud.test
+  tasks:
+    - name: "Stating the served directories created by the role"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: quick_start_dirs
+      loop:
+        - "{{ quick_start_home }}/images"
+        - "{{ quick_start_home }}/ids"
+        - "{{ quick_start_home }}/.cache"
+        - "{{ quick_start_home }}/.cache/pip"
+        - "{{ quick_start_home }}/.local"
+
+    - name: "Asserting the served directories exist and are owned by the service user"
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.isdir
+          - item.stat.pw_name == 'java_user'
+          - item.stat.gr_name == 'java_group'
+        fail_msg: "Expected {{ item.item }} to be a java_user:java_group directory"
+      loop: "{{ quick_start_dirs.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "Locating uploadserver inside the service user's per-user site-packages"
+      ansible.builtin.find:
+        paths: "{{ quick_start_home }}/.local/lib"
+        patterns: "uploadserver*"
+        file_type: any
+        recurse: true
+      register: quick_start_uploadserver
+
+    - name: "Asserting uploadserver was pip-installed for the service user"
+      ansible.builtin.assert:
+        that:
+          - quick_start_uploadserver.matched | int > 0
+        fail_msg: "uploadserver was not installed under {{ quick_start_home }}/.local/lib"
+
+    - name: "Stating the systemd unit and the files the role templates out"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: quick_start_files
+      loop:
+        - /etc/systemd/system/pythonserve.service
+        - /etc/pythonserv
+        - /etc/cockpit/cockpit.conf
+        - /etc/supervisor/conf.d/supervisord.pythonserver.conf
+        - "{{ quick_start_home }}/styles.css"
+        - "{{ quick_start_home }}/welcome.html"
+        - "{{ quick_start_home }}/ca-certificate.crt"
+        - "{{ quick_start_home }}/root-ca.crt"
+        - "{{ quick_start_home }}/support-bundle.zip"
+
+    - name: "Asserting every templated and copied artifact is present"
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.isreg
+          - item.stat.size > 0
+        fail_msg: "Expected {{ item.item }} to exist as a non-empty regular file"
+      loop: "{{ quick_start_files.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "Reading the systemd unit"
+      ansible.builtin.slurp:
+        src: /etc/systemd/system/pythonserve.service
+      register: quick_start_unit
+
+    - name: "Asserting the unit launches uploadserver from the served directory"
+      ansible.builtin.assert:
+        that:
+          - "'ExecStart=python3 -m uploadserver' in quick_start_unit_text"
+          - "'EnvironmentFile=/etc/pythonserv' in quick_start_unit_text"
+          - "'WorkingDirectory=' + quick_start_home in quick_start_unit_text"
+        fail_msg: "pythonserve.service does not launch uploadserver from {{ quick_start_home }}"
+      vars:
+        quick_start_unit_text: "{{ quick_start_unit.content | b64decode }}"
+
+    - name: "Reading the systemd environment file"
+      ansible.builtin.slurp:
+        src: /etc/pythonserv
+      register: quick_start_env
+
+    - name: "Asserting the environment file carries the forwarded port and self-signed certificate"
+      ansible.builtin.assert:
+        that:
+          - "'port=\"8000\"' in quick_start_env_text"
+          - "'/secure/combined/startcloud-quick-start.startcloud.test-self-signed.pem' in quick_start_env_text"
+        fail_msg: "/etc/pythonserv is missing the port or the self-signed certificate path"
+      vars:
+        quick_start_env_text: "{{ quick_start_env.content | b64decode }}"
+
+    - name: "Reading the supervisord program definition"
+      ansible.builtin.slurp:
+        src: /etc/supervisor/conf.d/supervisord.pythonserver.conf
+      register: quick_start_supervisord
+
+    - name: "Asserting supervisord runs uploadserver as the service user on the forwarded port"
+      ansible.builtin.assert:
+        that:
+          - "'[program:python_server]' in quick_start_supervisord_text"
+          - "'--directory ' + quick_start_home in quick_start_supervisord_text"
+          - "'-b :: 8000' in quick_start_supervisord_text"
+          - "'user=java_user' in quick_start_supervisord_text"
+        fail_msg: "supervisord.pythonserver.conf does not run uploadserver as java_user on port 8000"
+      vars:
+        quick_start_supervisord_text: "{{ quick_start_supervisord.content | b64decode }}"
+
+    - name: "Reading the rendered welcome page"
+      ansible.builtin.slurp:
+        src: "{{ quick_start_home }}/welcome.html"
+      register: quick_start_welcome
+
+    - name: "Asserting the welcome page is fully rendered with the provisioner context"
+      ansible.builtin.assert:
+        that:
+          - "quick_start_proxy_url in quick_start_welcome_text"
+          - "'https://console.startcloud-quick-start.startcloud.test/system/terminal' in quick_start_welcome_text"
+          - "'startcloud-quick-start/STARTCLOUD' in quick_start_welcome_text"
+          - "'/root-ca.crt' in quick_start_welcome_text"
+          - "'sudo domino console' in quick_start_welcome_text"
+        fail_msg: "welcome.html is missing rendered provisioner context"
+      vars:
+        quick_start_welcome_text: "{{ quick_start_welcome.content | b64decode }}"
+
+    - name: "Reading the copied root CA"
+      ansible.builtin.slurp:
+        src: "{{ quick_start_home }}/root-ca.crt"
+      register: quick_start_root_ca
+
+    - name: "Asserting the root CA was copied verbatim next to the welcome page"
+      ansible.builtin.assert:
+        that:
+          - "'BEGIN CERTIFICATE' in quick_start_root_ca_text"
+          - "'MOLECULEPLACEHOLDERCERTIFICATE' in quick_start_root_ca_text"
+        fail_msg: "root-ca.crt was not copied into {{ quick_start_home }}"
+      vars:
+        quick_start_root_ca_text: "{{ quick_start_root_ca.content | b64decode }}"

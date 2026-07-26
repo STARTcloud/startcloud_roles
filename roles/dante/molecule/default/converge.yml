@@ -1,0 +1,16 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    # Minimal provisioner-context stand-ins so the role runs standalone.
+    settings:
+      hostname: startcloud-dante
+      domain: startcloud.test
+    dante_user: dante
+    dante_pass: CHANGEME
+    dante_packages:
+      - dante-server
+  roles:
+    - role: dante

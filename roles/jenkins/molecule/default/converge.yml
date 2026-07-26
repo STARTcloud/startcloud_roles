@@ -1,0 +1,45 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    # Provisioner-context stand-ins the role consumes but does not define.
+    vagrant_user: "startcloud"
+    group: "startcloud"
+    certbot_admin_email: "admin@molecule.startcloud.test"
+    jenkins_git_user: "STARTcloud Molecule"
+    settings:
+      hostname: "molecule"
+      domain: "startcloud.test"
+    # Service account context the sdkman_install / sdkman_java roles expect from
+    # the provisioner. Jenkins runs as this account, so the JDK has to be the
+    # one SDKMAN puts in its home.
+    service_user: "startcloud"
+    service_group: "startcloud"
+    service_home_dir: "/home/startcloud"
+  pre_tasks:
+    # The jenkins role installs no JVM of its own; Java is supplied by the
+    # collection's own SDKMAN roles, exactly as the provisioner does it.
+    # sdkman_update is off on purpose: sdkman_install renders ~/.sdkman/etc/config
+    # from its template and only then runs `sdk selfupdate`, which reinstalls that
+    # same file from SDKMAN's own defaults. Leaving it on makes the template task
+    # report a change on the next run against a file SDKMAN rewrote behind it.
+    - name: "Installing SDKMAN for the account Jenkins runs as"
+      ansible.builtin.include_role:
+        name: sdkman_install
+      vars:
+        sdkman_install_packages: []
+        sdkman_uninstall_packages: []
+        sdkman_update_alternatives: []
+        sdkman_update: false
+
+    - name: "Installing the Java 21 runtime Jenkins requires through SDKMAN"
+      ansible.builtin.include_role:
+        name: sdkman_java
+      vars:
+        java_version: "21.0.11-tem"
+  tasks:
+    - name: "Applying the jenkins role"
+      ansible.builtin.include_role:
+        name: jenkins

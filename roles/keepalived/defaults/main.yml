@@ -1,8 +1,11 @@
 ---
 run_tasks: true
-startcloud_keepalived_state: master
+## keepalived's parser compares this literally against MASTER/BACKUP; anything
+## else silently comes up as BACKUP.
+startcloud_keepalived_state: MASTER
 startcloud_keepalived_virtual_router_id: 60
-startcloud_keepalived_auth_pass: true
+## VRRP simple authentication: keepalived truncates auth_pass at 8 characters.
+startcloud_keepalived_auth_pass: "STARTcld"
 ## Empty = derived at runtime from the first adapter's subnet (host part .250)
 startcloud_keepalived_virtual_ipaddress: ""
 startcloud_keepalived_priority: 101

@@ -1,0 +1,68 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    nginx_package_name: "nginx"
+    nginx_default_release: ""
+    nginx_ppa_use: false
+    nginx_service_state: started
+    nginx_service_enabled: true
+    nginx_conf_template: "nginx.conf.j2"
+    nginx_vhost_template: "vhost.j2"
+    nginx_worker_connections: "1024"
+    nginx_multi_accept: "off"
+    nginx_error_log: "/var/log/nginx/error.log warn"
+    nginx_access_log: "/var/log/nginx/access.log main buffer=16k flush=2m"
+    nginx_sendfile: "on"
+    nginx_tcp_nopush: "on"
+    nginx_tcp_nodelay: "on"
+    nginx_keepalive_timeout: "75"
+    nginx_keepalive_requests: "600"
+    nginx_server_tokens: "off"
+    nginx_client_max_body_size: "128m"
+    nginx_server_names_hash_bucket_size: "64"
+    nginx_proxy_cache_path: ""
+    nginx_extra_conf_options: |
+      worker_rlimit_nofile 8192;
+    nginx_extra_http_options: |
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header Host $http_host;
+    nginx_remove_default_vhost: true
+    # Containers frequently have no usable IPv6 stack, so bind IPv4 only.
+    nginx_listen_ipv6: false
+    nginx_upstreams:
+      - name: molecule_backend
+        strategy: "least_conn"
+        keepalive: 16
+        servers:
+          - "127.0.0.1:8081"
+          - "127.0.0.1:8082 weight=3"
+    nginx_vhosts:
+      - listen: "8080"
+        server_name: "molecule.startcloud.test"
+        root: "/var/www/html"
+        index: "index.html index.htm"
+        filename: "molecule.startcloud.test.conf"
+        access_log: "/var/log/nginx/molecule.access.log main"
+        error_log: "/var/log/nginx/molecule.error.log"
+        extra_parameters: |
+          location /healthz {
+              default_type text/plain;
+              return 200 'molecule-ok';
+          }
+    nginx_port_forwards:
+      - guest: 8080
+        host: 8080
+        ip: 127.0.0.1
+        proxied: false
+        url: nginx
+    # Minimal provisioner-context stand-ins so the role runs standalone.
+    settings:
+      hostname: "molecule"
+      domain: "startcloud.test"
+  tasks:
+    - name: "Applying the nginx role"
+      ansible.builtin.include_role:
+        name: nginx

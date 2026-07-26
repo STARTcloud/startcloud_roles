@@ -1,23 +1,42 @@
 ---
+## Windows resolves the same provider entry as the Linux paths and honours the
+## same `proxy_systemwide` gate. The previous `use_proxy` / `proxy_host` /
+## `proxy_port` variables existed nowhere in defaults or argument_specs, so the
+## enable branch could only ever fail on undefined variables.
 - name: "Configuring System Proxy"
-  when: use_proxy | default(false)
+  when: proxy_systemwide | bool
+  vars:
+    proxy_env_entry: "{{ proxy | selectattr(proxy_systemwide_proxy, 'defined') | map(attribute=proxy_systemwide_proxy) | first }}"
+    proxy_env_url: "http://{{ proxy_env_entry.user }}:{{ proxy_env_entry.pass }}@{{ proxy_env_entry.host }}:{{ proxy_env_entry.port }}"
+    proxy_env_endpoint: "{{ proxy_env_entry.host }}:{{ proxy_env_entry.port }}"
   block:
     - name: "Setting HTTP and HTTPS Proxy Environment Variables"
       ansible.windows.win_environment:
-        name: "{{ item.name }}"
-        value: "{{ item.value }}"
+        name: "{{ item }}"
+        value: "{{ proxy_env_url }}"
         state: present
         level: machine
       loop:
-        - { name: "HTTP_PROXY", value: "http://{{ proxy_host }}:{{ proxy_port }}" }
-        - { name: "HTTPS_PROXY", value: "http://{{ proxy_host }}:{{ proxy_port }}" }
+        - HTTP_PROXY
+        - HTTPS_PROXY
+
+    ## netsh always reports success, so the current configuration is read first
+    ## and the set only runs when WinHTTP is not already pointed at this proxy.
+    - name: "Reading the current WinHTTP proxy configuration"
+      ansible.windows.win_command: netsh winhttp show proxy
+      register: proxy_winhttp_state
+      changed_when: false
 
     - name: "Configuring WinHTTP Proxy Settings"
-      ansible.windows.win_shell: |
-        netsh winhttp set proxy proxy-server="http={{ proxy_host }}:{{ proxy_port }};https={{ proxy_host }}:{{ proxy_port }}" bypass-list="*.local"
+      ansible.windows.win_shell: >-
+        netsh winhttp set proxy
+        proxy-server="http={{ proxy_env_endpoint }};https={{ proxy_env_endpoint }}"
+        bypass-list="*.local"
+      changed_when: true
+      when: proxy_env_endpoint not in proxy_winhttp_state.stdout
 
 - name: "Disabling System Wide Proxy"
-  when: not (use_proxy | default(false))
+  when: not (proxy_systemwide | bool)
   block:
     - name: "Removing System Wide HTTP Proxy"
       ansible.windows.win_environment:
@@ -31,6 +50,12 @@
         state: absent
         level: machine
 
+    - name: "Reading the current WinHTTP proxy configuration"
+      ansible.windows.win_command: netsh winhttp show proxy
+      register: proxy_winhttp_state
+      changed_when: false
+
     - name: "Resetting WinHTTP Proxy Settings"
-      ansible.windows.win_shell: |
-        netsh winhttp reset proxy
+      ansible.windows.win_shell: netsh winhttp reset proxy
+      changed_when: true
+      when: "'Direct access' not in proxy_winhttp_state.stdout"

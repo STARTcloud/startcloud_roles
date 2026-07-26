@@ -1,0 +1,106 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting apache packages are installed"
+      ansible.builtin.assert:
+        that:
+          - "'apache2' in ansible_facts.packages"
+          - "'apache2-utils' in ansible_facts.packages"
+        fail_msg: "apache2 and apache2-utils packages were not installed by the role"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting apache2 service is running and enabled"
+      ansible.builtin.assert:
+        that:
+          - "'apache2.service' in ansible_facts.services"
+          - ansible_facts.services['apache2.service'].state == 'running'
+          - ansible_facts.services['apache2.service'].status == 'enabled'
+        fail_msg: "apache2.service is not running and enabled"
+
+    - name: "Stat the generated vhosts configuration"
+      ansible.builtin.stat:
+        path: /etc/apache2/sites-available/vhosts.conf
+      register: vhosts_available
+
+    - name: "Stat the vhosts symlink in sites-enabled"
+      ansible.builtin.stat:
+        path: /etc/apache2/sites-enabled/vhosts.conf
+      register: vhosts_enabled
+
+    - name: "Stat the removed default vhost symlink"
+      ansible.builtin.stat:
+        path: /etc/apache2/sites-enabled/000-default.conf
+      register: default_vhost
+
+    - name: "Asserting vhost files are in the expected state"
+      ansible.builtin.assert:
+        that:
+          - vhosts_available.stat.exists
+          - vhosts_available.stat.isreg
+          - vhosts_enabled.stat.exists
+          - vhosts_enabled.stat.islnk
+          - not default_vhost.stat.exists
+        fail_msg: "vhosts.conf was not created/enabled or the default vhost was not removed"
+
+    - name: "Reading the rendered vhosts configuration"
+      ansible.builtin.slurp:
+        src: /etc/apache2/sites-available/vhosts.conf
+      register: vhosts_content
+
+    - name: "Asserting rendered vhost content matches the supplied variables"
+      ansible.builtin.assert:
+        that:
+          - "'ServerName molecule.startcloud.test' in vhosts_decoded"
+          - "'ServerAlias www.molecule.startcloud.test' in vhosts_decoded"
+          - "'DocumentRoot \"/var/www/html\"' in vhosts_decoded"
+          - "'DirectoryIndex index.html index.php' in vhosts_decoded"
+          - "'<VirtualHost *:80>' in vhosts_decoded"
+          - "'Require all granted' in vhosts_decoded"
+        fail_msg: "Rendered vhosts.conf does not contain the expected directives"
+      vars:
+        vhosts_decoded: "{{ vhosts_content.content | b64decode }}"
+
+    - name: "Reading ports.conf"
+      ansible.builtin.slurp:
+        src: /etc/apache2/ports.conf
+      register: ports_content
+
+    - name: "Asserting the Listen directive was configured"
+      ansible.builtin.assert:
+        that:
+          - "'Listen 80' in (ports_content.content | b64decode)"
+        fail_msg: "ports.conf does not contain the expected Listen directive"
+
+    - name: "Checking enabled apache mods"
+      ansible.builtin.stat:
+        path: "/etc/apache2/mods-enabled/{{ item }}.load"
+      register: enabled_mods
+      loop:
+        - rewrite
+        - headers
+
+    - name: "Asserting requested mods are enabled"
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.islnk
+        fail_msg: "Apache mod {{ item.item }} was not enabled"
+      loop: "{{ enabled_mods.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "Asserting apache is listening on port 80"
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 80
+        state: started
+        timeout: 30

@@ -1,0 +1,31 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Dropping the apt package lists and the update stamp so the cache is genuinely stale"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /var/lib/apt/lists
+        - /var/lib/apt/periodic/update-success-stamp
+
+    - name: "Recreating the empty apt partial directory"
+      ansible.builtin.file:
+        path: /var/lib/apt/lists/partial
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    - name: "Backdating the apt lists directory so cache_valid_time cannot mask a missing update"
+      ansible.builtin.file:
+        path: /var/lib/apt/lists
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+        access_time: "200001010000.00"
+        modification_time: "200001010000.00"

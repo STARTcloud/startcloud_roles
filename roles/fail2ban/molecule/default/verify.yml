@@ -1,0 +1,172 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Gather package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Assert the fail2ban package is installed
+      ansible.builtin.assert:
+        that:
+          - "'fail2ban' in ansible_facts.packages"
+        fail_msg: "fail2ban package is not installed"
+        success_msg: "fail2ban package is installed"
+
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Assert the fail2ban service is running and enabled
+      ansible.builtin.assert:
+        that:
+          - "'fail2ban.service' in ansible_facts.services"
+          - ansible_facts.services['fail2ban.service'].state == 'running'
+          - ansible_facts.services['fail2ban.service'].status == 'enabled'
+        fail_msg: >-
+          fail2ban.service is not running and enabled:
+          {{ ansible_facts.services['fail2ban.service'] | default('service missing') }}
+        success_msg: "fail2ban.service is running and enabled"
+
+    - name: Stat the fail2ban configuration directories created by the role
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: fail2ban_dirs
+      loop:
+        - /etc/fail2ban
+        - /etc/fail2ban/jail.d
+
+    - name: Assert both fail2ban directories exist as root-owned 0755 directories
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.isdir
+          - item.stat.pw_name == 'root'
+          - item.stat.gr_name == 'root'
+          - item.stat.mode == '0755'
+        fail_msg: "{{ item.item }} is not a root-owned 0755 directory"
+        success_msg: "{{ item.item }} is a root-owned 0755 directory"
+      loop: "{{ fail2ban_dirs.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Read the shipped fail2ban jail configuration
+      ansible.builtin.slurp:
+        src: /etc/fail2ban/jail.conf
+      register: fail2ban_jail_conf
+
+    - name: Assert the jail configuration contains the DEFAULT section
+      ansible.builtin.assert:
+        that:
+          - "'[DEFAULT]' in (fail2ban_jail_conf.content | b64decode)"
+        fail_msg: "/etc/fail2ban/jail.conf does not contain a [DEFAULT] section"
+        success_msg: "/etc/fail2ban/jail.conf contains a [DEFAULT] section"
+
+    - name: Read the server override rendered from fail2ban.local.j2
+      ansible.builtin.slurp:
+        src: /etc/fail2ban/fail2ban.local
+      register: fail2ban_local
+
+    - name: Assert fail2ban.local carries all six configured server settings in [Definition]
+      ansible.builtin.assert:
+        that:
+          - "'[Definition]' in (fail2ban_local.content | b64decode)"
+          - "'loglevel = DEBUG' in (fail2ban_local.content | b64decode)"
+          - "'logtarget = /var/log/fail2ban.log' in (fail2ban_local.content | b64decode)"
+          - "'socket = /var/run/fail2ban/fail2ban.sock' in (fail2ban_local.content | b64decode)"
+          - "'pidfile = /var/run/fail2ban/fail2ban.pid' in (fail2ban_local.content | b64decode)"
+          - "'dbfile = /var/lib/fail2ban/fail2ban.sqlite3' in (fail2ban_local.content | b64decode)"
+          - "'dbpurgeage = 2d' in (fail2ban_local.content | b64decode)"
+        fail_msg: "/etc/fail2ban/fail2ban.local was not rendered with the six configured server settings"
+        success_msg: "/etc/fail2ban/fail2ban.local carries the six configured server settings"
+
+    - name: Read the jail override rendered from jail.local.j2
+      ansible.builtin.slurp:
+        src: /etc/fail2ban/jail.local
+      register: fail2ban_jail_local
+
+    - name: Assert jail.local disables the sshd jail Debian enables in jail.d
+      ansible.builtin.assert:
+        that:
+          - "'[sshd]' in (fail2ban_jail_local.content | b64decode)"
+          - "'backend = systemd' in (fail2ban_jail_local.content | b64decode)"
+          - "'enabled = false' in (fail2ban_jail_local.content | b64decode)"
+        fail_msg: "/etc/fail2ban/jail.local does not carry the [sshd] override"
+        success_msg: "/etc/fail2ban/jail.local carries the [sshd] override"
+
+    - name: Wait for the socket the server was told to listen on
+      ansible.builtin.wait_for:
+        path: /var/run/fail2ban/fail2ban.sock
+        timeout: 30
+
+    - name: Stat the socket and pid file paths the configured settings named
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: fail2ban_runtime_paths
+      loop:
+        - /var/run/fail2ban/fail2ban.sock
+        - /var/run/fail2ban/fail2ban.pid
+
+    - name: Assert the server created its socket and pid file at the configured paths
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+        fail_msg: "{{ item.item }} was not created by the running fail2ban server"
+        success_msg: "{{ item.item }} was created by the running fail2ban server"
+      loop: "{{ fail2ban_runtime_paths.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Query the fail2ban server through its own client
+      ansible.builtin.command: fail2ban-client ping
+      register: fail2ban_ping
+      changed_when: false
+
+    - name: Assert the fail2ban server responds to a client ping
+      ansible.builtin.assert:
+        that:
+          - "'pong' in fail2ban_ping.stdout"
+        fail_msg: "fail2ban-client ping did not return pong: {{ fail2ban_ping.stdout }}"
+        success_msg: "fail2ban server responded to fail2ban-client ping"
+
+    ## The client reads these back out of the live server, so they prove the
+    ## rendered fail2ban.local actually reached fail2ban rather than merely
+    ## sitting on disk. DEBUG and 2d are neither the role defaults nor the
+    ## values the packaged fail2ban.conf ships.
+    - name: Ask the running server for the settings it loaded
+      ansible.builtin.command: "fail2ban-client get {{ item }}"
+      register: fail2ban_get
+      changed_when: false
+      loop:
+        - loglevel
+        - logtarget
+        - dbfile
+        - dbpurgeage
+
+    - name: Assert the running server is using the configured settings
+      ansible.builtin.assert:
+        that:
+          - "'DEBUG' in fail2ban_get.results[0].stdout"
+          - "'/var/log/fail2ban.log' in fail2ban_get.results[1].stdout"
+          - "'/var/lib/fail2ban/fail2ban.sqlite3' in fail2ban_get.results[2].stdout"
+          - "'172800' in fail2ban_get.results[3].stdout"
+        fail_msg: >-
+          The running fail2ban server did not load the configured settings:
+          loglevel={{ fail2ban_get.results[0].stdout }}
+          logtarget={{ fail2ban_get.results[1].stdout }}
+          dbfile={{ fail2ban_get.results[2].stdout }}
+          dbpurgeage={{ fail2ban_get.results[3].stdout }}
+        success_msg: "The running fail2ban server loaded the configured loglevel, logtarget, dbfile and dbpurgeage"
+
+    - name: Ask the running server which jails it loaded
+      ansible.builtin.command: fail2ban-client status
+      register: fail2ban_jail_status
+      changed_when: false
+
+    - name: Assert jail.local kept the sshd jail out of the running server
+      ansible.builtin.assert:
+        that:
+          - "'sshd' not in fail2ban_jail_status.stdout"
+        fail_msg: "The sshd jail is still loaded despite jail.local disabling it: {{ fail2ban_jail_status.stdout }}"
+        success_msg: "The running fail2ban server loaded no sshd jail, as jail.local specifies"

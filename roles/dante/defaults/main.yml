@@ -4,3 +4,6 @@ dante_user: dante
 dante_pass: dante24@!
 dante_packages:
   - dante-server
+## Adapter danted proxies outbound traffic through; defaults to the interface
+## carrying the host's default route.
+dante_external_interface: "{{ ansible_default_ipv4.interface }}"

@@ -1,0 +1,32 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  tasks:
+    - name: Refresh the apt cache before installing the container prerequisites
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 600
+
+    - name: Install the base-system packages fail2ban expects on a real Debian host
+      ansible.builtin.apt:
+        name:
+          - rsyslog
+          - iptables
+          - python3-systemd
+        state: present
+        update_cache: false
+
+    - name: Start rsyslog so the system log files fail2ban jails read are produced
+      ansible.builtin.systemd:
+        name: rsyslog
+        state: started
+        enabled: true
+
+    - name: Ensure the auth log the shipped sshd jail reads exists
+      ansible.builtin.file:
+        path: /var/log/auth.log
+        state: touch
+        owner: root
+        group: adm
+        mode: "0640"

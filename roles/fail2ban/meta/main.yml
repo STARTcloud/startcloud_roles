@@ -2,7 +2,7 @@
 galaxy_info:
   role_name: fail2ban
   author: Mark Gilbert
-  description: Installs the Fail2ban intrusion-prevention service and its jail directories on Debian-family systems.
+  description: Installs the Fail2ban intrusion-prevention service, its jail directories and its fail2ban.local and jail.local overrides on Debian-family systems.
   company: STARTcloud
   issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
   license: GPL-2.0-or-later

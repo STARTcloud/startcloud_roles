@@ -1,0 +1,31 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Update the apt cache"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: "Install the flatpak client the role shells out to"
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - flatpak
+        state: present
+
+    - name: "Add the flathub remote the role installs from"
+      ansible.builtin.command:
+        cmd: >-
+          flatpak remote-add --system --if-not-exists flathub
+          https://dl.flathub.org/repo/flathub.flatpakrepo
+      register: bottles_prepare_flathub
+      changed_when: bottles_prepare_flathub.rc == 0
+
+    - name: "Assert the flathub remote is registered before converge"
+      ansible.builtin.command: flatpak remotes --system --columns=name
+      register: bottles_prepare_remotes
+      changed_when: false
+      failed_when: "'flathub' not in bottles_prepare_remotes.stdout"

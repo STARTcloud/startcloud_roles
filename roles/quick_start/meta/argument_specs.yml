@@ -15,6 +15,13 @@ argument_specs:
         type: bool
         default: false
         description: Enables the quick-start web server tasks; when false only the always-run support-bundle task executes.
+      ansible_module_running_in_container:
+        type: bool
+        default: false
+        description:
+          - Whether the target is a container, as reported by community.docker.current_container_facts.
+          - Gathered by the role itself; when true the server is run by supervisord and the systemd unit,
+            its port check and the cockpit restart are skipped.
       python_simple_web_server_path:
         type: str
         description: Filesystem path served by the Python web server (defaults to the service home directory).

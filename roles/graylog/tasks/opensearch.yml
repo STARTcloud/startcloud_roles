@@ -2,12 +2,12 @@
 - name: "Downloading OpenSearch GPG Key"
   ansible.builtin.get_url:
     url: "https://artifacts.opensearch.org/publickeys/opensearch.pgp"
-    dest: "/usr/share/keyrings/opensearch-keyring.gpg"
+    dest: "/usr/share/keyrings/opensearch-keyring.asc"
     mode: "0644"
 
 - name: "Adding OpenSearch APT Repository"
   ansible.builtin.apt_repository:
-    repo: "deb [ signed-by=/usr/share/keyrings/opensearch-keyring.gpg ] https://artifacts.opensearch.org/releases/bundle/opensearch/{{ graylog_opensearch_version }}/apt stable main"
+    repo: "deb [ signed-by=/usr/share/keyrings/opensearch-keyring.asc ] https://artifacts.opensearch.org/releases/bundle/opensearch/{{ graylog_opensearch_version }}/apt stable main"
     filename: "opensearch-{{ graylog_opensearch_version }}"
     state: present
 

@@ -1,0 +1,90 @@
+---
+- name: "Installing strongSwan with swanctl"
+  ansible.builtin.apt:
+    name:
+      - strongswan
+      - charon-systemd
+      - strongswan-swanctl
+    state: present
+    update_cache: true
+
+- name: "Disabling the legacy strongswan-starter service"
+  ansible.builtin.systemd:
+    name: strongswan-starter
+    enabled: false
+
+- name: "Disabling automatic route installation in charon"
+  ansible.builtin.lineinfile:
+    path: /etc/strongswan.d/charon.conf
+    regexp: "^([ \\t]*).*install_routes =.*$"
+    line: "\\1install_routes = no"
+    backrefs: true
+
+# no_log because the rendered file carries every peer's PSK.
+- name: "Placing swanctl connections and secrets configuration"
+  ansible.builtin.template:
+    src: swanctl.conf.j2
+    dest: /etc/swanctl/conf.d/ansible-managed.conf
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify:
+    - Restart strongswan
+
+- name: "Moving strongswan into the configured network namespace"
+  when: ipsec_namespace | length > 0
+  block:
+    - name: "Creating strongswan.service drop-in directory"
+      ansible.builtin.file:
+        path: /etc/systemd/system/strongswan.service.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: "Creating strongswan.service network-namespace drop-in"
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/strongswan.service.d/override.conf
+        content: |
+          [Service]
+          NetworkNamespacePath=/var/run/netns/{{ ipsec_namespace }}
+        owner: root
+        group: root
+        mode: "0644"
+      notify:
+        - Restart strongswan
+
+- name: "Starting and enabling strongswan"
+  ansible.builtin.systemd:
+    daemon_reload: true
+    name: strongswan
+    enabled: true
+    state: started
+
+- name: "Preparing network-namespace command prefix"
+  ansible.builtin.set_fact:
+    ipsec_netns_command: "{{ ('ip netns exec ' + ipsec_namespace) if ipsec_namespace | length > 0 else '' }}"
+
+- name: "Configuring routed xfrm interfaces in /etc/network/interfaces"
+  ansible.builtin.blockinfile:
+    path: /etc/network/interfaces
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - startcloud.startcloud_roles.ipsec"
+    block: |
+      {% for peer in ipsec_peers %}
+      # ipsec to {{ peer.name }}
+      auto ipsec{{ loop.index0 }}
+      iface ipsec{{ loop.index0 }} inet manual
+        # the if_id matches if_id_in/if_id_out of the swanctl connection to-{{ peer.name }}
+        pre-up {{ ipsec_netns_command | trim }} ip link add ipsec{{ loop.index0 }} type xfrm dev lo if_id {{ ipsec_base_if_id + loop.index0 }}
+        pre-up {{ ipsec_netns_command | trim }} sysctl net.ipv6.conf.ipsec{{ loop.index0 }}.autoconf=0
+        pre-up {{ ipsec_netns_command | trim }} ip link set up dev ipsec{{ loop.index0 }}
+        post-up {{ ipsec_netns_command | trim }} ip addr add {{ peer.ipsec_net }} dev ipsec{{ loop.index0 }}
+        {% if 'ipsec_net6' in peer %}
+        post-up {{ ipsec_netns_command | trim }} ip -6 addr add {{ peer.ipsec_net6 }} dev ipsec{{ loop.index0 }}
+        {% endif %}
+        {% for route in peer.routes | default([]) %}
+        post-up {{ ipsec_netns_command | trim }} ip route replace {{ route }} via {{ peer.ipsec_net | ansible.utils.ipaddr('peer') }}
+        {% endfor %}
+        post-down {{ ipsec_netns_command | trim }} ip link del ipsec{{ loop.index0 }}
+      {% endfor %}

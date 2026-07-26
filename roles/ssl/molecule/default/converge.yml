@@ -1,0 +1,118 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    # The supplied-certificate path is the only one that is self-contained: the
+    # self-signed path needs the bundled intermediate key's real passphrase and
+    # the Let's Encrypt path needs a publicly resolvable FQDN plus the live ACME
+    # API, so neither is container-testable.
+    selfsigned_enabled: false
+    generate_self_signed_certificate_authority: false
+    letsencrypt_enabled: false
+    letsencrypt_staging_enabled: false
+    # /secure is the production location; a /tmp path is used here because the
+    # scenario seeds the same material on the controller as well, and molecule
+    # does not run as root on the controller.
+    cert_dir: "/tmp/startcloud-ssl-secure"
+    cert_pass: "CHANGEME"
+    # Only consumed by the self-signed path; the bundled intermediate key uses a
+    # different passphrase, so this value is never exercised by this scenario.
+    ca_cert_pass: "CHANGEME"
+    countrycode: "US"
+    organization: "STARTcloud Molecule"
+    private_key_type: "RSA"
+    private_key_size: 2048
+    dns_entries_list: []
+    # Minimal provisioner-context stand-ins so the role runs standalone.
+    service_user: "startcloud"
+    service_group: "startcloud"
+    service_home_dir: "/home/startcloud"
+    settings:
+      hostname: "startcloud-ssl"
+      domain: "molecule.test"
+      email: "molecule@startcloud.test"
+    ssl_seed_source: "{{ playbook_dir }}/../../files/ssls"
+    ssl_seed_files:
+      - "key/default-signed.key"
+      - "crt/default-signed.crt"
+      - "ca/default-signed.ca"
+      - "ca/root-ca.crt"
+      - "combined/default-signed.crt"
+  pre_tasks:
+    - name: "Installing keystore and crypto prerequisites"
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - default-jre-headless
+          - openssl
+          - python3-cryptography
+        state: present
+        update_cache: true
+
+    - name: "Creating the service group the role assigns certificates to"
+      ansible.builtin.group:
+        name: "{{ service_group }}"
+        state: present
+
+    - name: "Creating the service user the role assigns certificates to"
+      ansible.builtin.user:
+        name: "{{ service_user }}"
+        group: "{{ service_group }}"
+        home: "{{ service_home_dir }}"
+        create_home: true
+        shell: /bin/bash
+        state: present
+
+    - name: "Creating the certificate directory tree on the managed node"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ service_user }}"
+        group: "{{ service_group }}"
+        mode: "0755"
+      loop:
+        - "{{ cert_dir }}"
+        - "{{ cert_dir }}/key"
+        - "{{ cert_dir }}/crt"
+        - "{{ cert_dir }}/ca"
+        - "{{ cert_dir }}/combined"
+
+    - name: "Seeding the supplied certificate material on the managed node"
+      ansible.builtin.copy:
+        src: "{{ ssl_seed_source }}/{{ item }}"
+        dest: "{{ cert_dir }}/{{ item }}"
+        owner: "{{ service_user }}"
+        group: "{{ service_group }}"
+        mode: "0644"
+      loop: "{{ ssl_seed_files }}"
+
+    - name: "Creating the certificate directory tree on the controller"
+      become: false
+      delegate_to: localhost
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "{{ cert_dir }}"
+        - "{{ cert_dir }}/key"
+        - "{{ cert_dir }}/crt"
+        - "{{ cert_dir }}/ca"
+
+    - name: "Seeding the same certificate material on the controller"
+      become: false
+      delegate_to: localhost
+      ansible.builtin.copy:
+        src: "{{ ssl_seed_source }}/{{ item }}"
+        dest: "{{ cert_dir }}/{{ item }}"
+        mode: "0644"
+      loop:
+        - "key/default-signed.key"
+        - "crt/default-signed.crt"
+        - "ca/default-signed.ca"
+  tasks:
+    - name: "Applying the ssl role"
+      ansible.builtin.include_role:
+        name: ssl

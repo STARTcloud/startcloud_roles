@@ -1,0 +1,49 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Installing tree, required by the role's manifest recording tasks"
+      ansible.builtin.apt:
+        name: tree
+        state: present
+        update_cache: true
+
+    - name: "Creating the Vagrant synced-folder layout the role expects"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - /vagrant
+        - /vagrant/ansible
+        - /vagrant/ansible/roles
+        - /vagrant/completed
+        - /vagrant/installers
+
+    - name: "Seeding a playbook file so the ansible archive has content"
+      ansible.builtin.copy:
+        dest: /vagrant/ansible/site.yml
+        content: |
+          ---
+          - name: Provision
+            hosts: all
+            roles:
+              - support_bundle
+        mode: "0644"
+
+    - name: "Seeding a bundled installer so the installer manifest has content"
+      ansible.builtin.copy:
+        dest: /vagrant/installers/domino-installer.tar
+        content: "not-a-real-installer\n"
+        mode: "0644"
+
+    - name: "Seeding completion markers written by earlier roles"
+      ansible.builtin.copy:
+        dest: "/vagrant/completed/{{ item }}"
+        content: "completed\n"
+        mode: "0644"
+      loop:
+        - dependencies
+        - startcloud-marker-role

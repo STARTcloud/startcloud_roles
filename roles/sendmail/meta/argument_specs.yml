@@ -22,6 +22,12 @@ argument_specs:
         type: str
         default: /etc/mail
         description: Directory holding sendmail.mc and the compiled configuration.
+      sendmail_config_group:
+        type: str
+        default: smmsp
+        description: >-
+          Group that owns sendmail.mc. The default group is shipped by the sendmail-base package; the role ensures it exists as a system group before templating so a
+          non-default package set cannot leave the template task pointing at a missing group.
       sendmail_listen_localhost_only:
         type: bool
         default: true

@@ -1,2 +1,8 @@
 ---
 run_tasks: true
+
+# domino_home_dir is documented in meta/argument_specs.yml but deliberately carries
+# no default here: it is published by the Domino roles running earlier in the same
+# play, and a role default would shadow their value for this role's tasks and
+# silently drop the One Touch autoconfigure log from the bundle. The Domino stages
+# in tasks/main.yml are guarded with `domino_home_dir is defined` instead.

@@ -14,6 +14,27 @@ argument_specs:
       python_simple_web_server_path:
         type: str
         description: Base path served by the Python simple HTTP server.
+      example_role_public_adapter:
+        type: str
+        default: public_adapter
+        description: Name of the externally reachable network interface the welcome page advertises; skipped when absent.
+      provisioner_name:
+        type: str
+        default: Ad-Hoc Playbook
+        description: Display name of the provisioner shown on the welcome page.
+      provisioner_version:
+        type: str
+        default: v0.0.0
+        description: Version string of the provisioner shown on the welcome page.
+      core_provisioner_version:
+        type: str
+        default: v0.0.0
+        description: Version string of the core provisioner shown on the welcome page.
+      domino_organization:
+        type: str
+        description: >-
+          Domino organisation appended to the server name on the welcome page. Supplied by the Domino roles, not
+          defaulted here so this role never shadows their value; the template falls back to an empty string.
       startcloud_quick_start_port_forwards:
         type: list
         elements: dict

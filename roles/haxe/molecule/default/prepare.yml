@@ -1,0 +1,16 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    # meta/main.yml declares no dependencies, but "haxelib git" shells out to git
+    # and every download target is HTTPS. Both are prerequisites the role assumes.
+    - name: "Installing prerequisites the role assumes are already present"
+      ansible.builtin.apt:
+        name:
+          - git
+          - ca-certificates
+        state: present
+        update_cache: true
+        cache_valid_time: 3600

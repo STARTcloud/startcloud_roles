@@ -1,0 +1,51 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    drupal_db_name: drupal
+    drupal_db_user: drupal
+    drupal_db_password: CHANGEME
+  tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install the LAMP prerequisites the drupal role assumes are already present
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - git
+          - unzip
+          - composer
+          - php-cli
+          - php-curl
+          - php-gd
+          - php-mbstring
+          - php-mysql
+          - php-xml
+          - php-zip
+          - mariadb-server
+        state: present
+
+    - name: Ensure MariaDB is running
+      ansible.builtin.service:
+        name: mariadb
+        state: started
+        enabled: true
+
+    - name: Create the Drupal database and grant the install user access to it
+      ansible.builtin.command:
+        argv:
+          - mysql
+          - --user=root
+          - --execute=CREATE DATABASE IF NOT EXISTS {{ drupal_db_name }}
+            CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+            CREATE USER IF NOT EXISTS '{{ drupal_db_user }}'@'localhost' IDENTIFIED BY '{{ drupal_db_password }}';
+            CREATE USER IF NOT EXISTS '{{ drupal_db_user }}'@'127.0.0.1' IDENTIFIED BY '{{ drupal_db_password }}';
+            GRANT ALL PRIVILEGES ON {{ drupal_db_name }}.* TO '{{ drupal_db_user }}'@'localhost';
+            GRANT ALL PRIVILEGES ON {{ drupal_db_name }}.* TO '{{ drupal_db_user }}'@'127.0.0.1';
+            FLUSH PRIVILEGES;
+      changed_when: false

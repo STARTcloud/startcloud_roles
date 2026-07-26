@@ -1,0 +1,21 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    # Minimal provisioner-context stand-ins so the role runs standalone.
+    settings:
+      hostname: startcloud-cleanup
+      domain: startcloud.test
+      vagrant_user: startcloud
+      admin_password: CHANGEME
+    vagrant_user: startcloud
+    service_user: startcloud
+    # Windows-only knobs, carried at their defaults for argument_specs validation.
+    verify: true
+    cleanup_proxy: true
+    windows_page_file_size_initial: 512
+    windows_page_file_size_max: 512
+  roles:
+    - role: cleanup

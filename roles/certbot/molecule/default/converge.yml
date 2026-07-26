@@ -1,0 +1,56 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    # Minimal provisioner-context stand-ins so the role runs standalone.
+    settings:
+      hostname: startcloud-certbot
+      domain: startcloud.test
+      admin_password: CHANGEME
+    email: support@startcloud.com
+    # Install from OS packages: the only method reachable inside a container
+    # without snapd or an outbound git clone.
+    certbot_install_method: package
+    # Renewal cron job.
+    certbot_auto_renew: true
+    certbot_auto_renew_user: root
+    certbot_auto_renew_hour: "3"
+    certbot_auto_renew_minute: "30"
+    certbot_auto_renew_options: "--quiet"
+    # Certificate issuance stays off: it would require Let's Encrypt to reach
+    # this container over the public internet on port 80.
+    certbot_create_if_missing: false
+    certbot_create_method: standalone
+    certbot_testmode: true
+    certbot_hsts: false
+    certbot_admin_email: support@startcloud.com
+    certbot_webroot: /var/www/letsencrypt
+    certbot_create_extra_args: ""
+    certbot_certs:
+      - email: support@startcloud.com
+        domains:
+          - certbot.startcloud.test
+    certbot_create_standalone_stop_services:
+      - nginx
+    certbot_dir: /opt/certbot
+  pre_tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+      changed_when: false
+
+    - name: Ensure cron is installed so the renewal job can be written
+      ansible.builtin.package:
+        name: cron
+        state: present
+
+    - name: Ensure the cron service is running
+      ansible.builtin.systemd_service:
+        name: cron
+        state: started
+        enabled: true
+  roles:
+    - role: certbot

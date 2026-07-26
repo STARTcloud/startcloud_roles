@@ -1,8 +1,10 @@
 ---
+# make(1) itself decides whether sendmail.cf is stale: the module runs
+# `make --question` first and only rebuilds — and only reports changed —
+# when the compiled configuration is actually out of date.
 - name: "Rebuilding Sendmail Configuration"
-  ansible.builtin.command:
-    cmd: "make -C {{ sendmail_config_dir }}"
-  changed_when: true
+  community.general.make:
+    chdir: "{{ sendmail_config_dir }}"
 - name: "Restarting Sendmail Service"
   ansible.builtin.systemd_service:
     name: "{{ sendmail_service_name }}"

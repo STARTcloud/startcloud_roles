@@ -8,6 +8,12 @@
         state: present
         update_cache: true
 
+    - name: "Creating the librenms System Group"
+      ansible.builtin.group:
+        name: "{{ librenms_group }}"
+        state: present
+        system: true
+
     - name: "Creating the librenms System User"
       ansible.builtin.user:
         name: "{{ librenms_user }}"
@@ -17,7 +23,20 @@
         create_home: false
         system: true
 
+    # The checkout is created up front and owned by librenms so the clone below
+    # can run as that user. Cloning as root and chowning afterwards leaves git
+    # refusing every later run with "detected dubious ownership".
+    - name: "Creating the LibreNMS Install Directory"
+      ansible.builtin.file:
+        path: "{{ librenms_install_dir }}"
+        state: directory
+        owner: "{{ librenms_user }}"
+        group: "{{ librenms_group }}"
+        mode: "0755"
+
     - name: "Cloning LibreNMS from Git"
+      become: true
+      become_user: "{{ librenms_user }}"
       ansible.builtin.git:
         repo: "{{ librenms_git_repo }}"
         dest: "{{ librenms_install_dir }}"
@@ -31,33 +50,31 @@
         group: "{{ librenms_group }}"
         recurse: true
 
-    - name: "Setting Default ACLs on the LibreNMS Runtime Directories"
-      ansible.builtin.command:
-        cmd: >-
-          setfacl -d -m g::rwx
-          {{ librenms_install_dir }}/rrd
-          {{ librenms_install_dir }}/logs
-          {{ librenms_install_dir }}/bootstrap/cache
-          {{ librenms_install_dir }}/storage
-      changed_when: true
-
-    - name: "Setting Recursive ACLs on the LibreNMS Runtime Directories"
-      ansible.builtin.command:
-        cmd: >-
-          setfacl -R -m g::rwx
-          {{ librenms_install_dir }}/rrd
-          {{ librenms_install_dir }}/logs
-          {{ librenms_install_dir }}/bootstrap/cache
-          {{ librenms_install_dir }}/storage
-      changed_when: true
-
     - name: "Installing PHP Dependencies with Composer"
       become: true
       become_user: "{{ librenms_user }}"
       ansible.builtin.command:
         cmd: "{{ librenms_install_dir }}/scripts/composer_wrapper.php install --no-dev"
         chdir: "{{ librenms_install_dir }}"
-      changed_when: true
+        creates: "{{ librenms_install_dir }}/vendor/autoload.php"
+
+    # After Composer, so the group bits cover the cache files it writes rather
+    # than being undone by them on the next run.
+    - name: "Setting Default ACLs on the LibreNMS Runtime Directories"
+      ansible.posix.acl:
+        path: "{{ item }}"
+        etype: group
+        permissions: rwx
+        default: true
+        state: present
+      loop: "{{ librenms_acl_directories }}"
+
+    - name: "Setting Group Permissions on the LibreNMS Runtime Directories"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        mode: "g+rwx"
+        recurse: true
+      loop: "{{ librenms_acl_directories }}"
 
     - name: "Setting the PHP Timezone"
       ansible.builtin.replace:
@@ -186,25 +203,24 @@
         group: "root"
         mode: "0644"
 
+    - name: "Reading the snmpd Example Shipped with LibreNMS"
+      ansible.builtin.slurp:
+        src: "{{ librenms_install_dir }}/snmpd.conf.example"
+      register: librenms_snmpd_example
+
     - name: "Configuring snmpd from the LibreNMS Example"
       ansible.builtin.copy:
-        src: "{{ librenms_install_dir }}/snmpd.conf.example"
+        content: "{{ librenms_snmpd_example.content | b64decode | replace('RANDOMSTRINGGOESHERE', librenms_community_string) }}"
         dest: "/etc/snmp/snmpd.conf"
-        remote_src: true
         owner: "root"
         group: "root"
         mode: "0600"
-
-    - name: "Setting the SNMP Community String"
-      ansible.builtin.replace:
-        path: "/etc/snmp/snmpd.conf"
-        regexp: "RANDOMSTRINGGOESHERE"
-        replace: "{{ librenms_community_string }}"
+      notify: "Restart snmpd"
 
     - name: "Starting and Enabling snmpd"
       ansible.builtin.systemd:
         name: "snmpd"
-        state: restarted
+        state: started
         enabled: true
 
     - name: "Rendering the RRDCached Defaults"
@@ -214,6 +230,7 @@
         owner: "root"
         group: "root"
         mode: "0644"
+      notify: "Restart rrdcached"
 
     - name: "Creating the RRDCached Journal Directory"
       ansible.builtin.file:
@@ -222,17 +239,16 @@
         owner: "{{ librenms_user }}"
         group: "{{ librenms_group }}"
         mode: "0755"
-        recurse: true
 
     - name: "Starting and Enabling RRDCached"
       ansible.builtin.systemd:
         name: "rrdcached"
-        state: restarted
+        state: started
         enabled: true
 
     - name: "Installing the LibreNMS Cron Jobs"
       ansible.builtin.copy:
-        src: "{{ librenms_install_dir }}/librenms.nonroot.cron"
+        src: "{{ librenms_install_dir }}/dist/librenms.cron"
         dest: "/etc/cron.d/librenms"
         remote_src: true
         owner: "root"

@@ -10,6 +10,23 @@
       with_items:
         - "{{ installer_dir }}/chrome/archives"
 
+    - name: "Ensuring apt cache is updated"
+      ansible.builtin.apt:
+        cache_valid_time: 3600
+        update_cache: true
+
+    ## `gpg` dearmors the signing key below and `unzip` is what
+    ## ansible.builtin.unarchive shells out to for the Chromedriver .zip.
+    ## A minimal Debian/Ubuntu image ships neither, so the role installs the
+    ## tooling it invokes instead of assuming it.
+    - name: "Ensuring dependencies are installed"
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - gnupg
+          - unzip
+        state: present
+
     - name: "Downloading the Chrome signing key"
       ansible.builtin.get_url:
         url: "{{ chrome_signing_key_url }}"
@@ -18,34 +35,68 @@
         timeout: 60
 
     - name: "Installing the Chrome signing key"
-      ansible.builtin.command: gpg --batch --yes --dearmor -o /usr/share/keyrings/google-chrome.gpg /tmp/google-chrome-signing-key.asc
-      changed_when: true
+      ansible.builtin.command:
+        cmd: gpg --batch --yes --dearmor -o /usr/share/keyrings/google-chrome.gpg /tmp/google-chrome-signing-key.asc
+        creates: /usr/share/keyrings/google-chrome.gpg
 
-    - name: "Adding Chrome repository for {{ ansible_distribution_release }}"
-      ansible.builtin.lineinfile:
+    ## google-chrome-stable manages its own apt repository: its postinst and the
+    ## /etc/cron.daily/google-chrome helper it ships both (re)write
+    ## /etc/apt/sources.list.d/google-chrome.list, clobbering the definition this
+    ## role manages. Both code paths read these switches from
+    ## /etc/default/google-chrome, so writing them before the package is
+    ## installed is the documented way to stop the daily cron job and the
+    ## dist-upgrade path from re-adding the repository behind the role's back.
+    - name: "Stopping the Chrome package from regenerating its own apt repository"
+      ansible.builtin.copy:
+        dest: /etc/default/google-chrome
+        content: |
+          # Managed by the startcloud.startcloud_roles chrome role.
+          # The role owns /etc/apt/sources.list.d/google-chrome.list; the package
+          # must not regenerate it on install, upgrade, or from its daily cron.
+          repo_add_once="false"
+          repo_reenable_on_distupgrade="false"
+        owner: root
+        group: root
         mode: "0644"
-        create: true
-        dest: "/etc/apt/sources.list.d/google-chrome.list"
-        line: "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main"
-        state: present
 
-    - name: "Ensuring apt cache is updated"
-      ansible.builtin.apt:
-        cache_valid_time: 3600
-        update_cache: true
-      when: "ansible_os_family == 'Debian'"
+    ## The whole file is owned rather than a single line being kept present, so
+    ## the content is byte-for-byte deterministic and any entry left behind by a
+    ## package-managed install is replaced instead of appended to. The line
+    ## mirrors the package's own https REPOCONFIG so the postinst's
+    ## "fix up bad sources" pass has nothing to rewrite.
+    - name: "Adding Chrome repository for {{ ansible_distribution_release }}"
+      ansible.builtin.copy:
+        dest: /etc/apt/sources.list.d/google-chrome.list
+        content: "{{ chrome_apt_repository }}\n"
+        owner: root
+        group: root
+        mode: "0644"
 
-    - name: "Upgrading all apt packages"
-      ansible.builtin.apt:
-        upgrade: dist
-        update_cache: true
-      when: "ansible_os_family == 'Debian'"
-
+    ## The repository above is written straight into sources.list.d, so apt has
+    ## no index for it yet and google-chrome-stable is unresolvable until the
+    ## cache is refreshed. The refresh rides along with the install the way the
+    ## rest of the collection does it, so the role only ever pulls the index for
+    ## the repository it owns and touches only the package it installs; the
+    ## whole-system `upgrade: dist` belongs to the setup and dependencies roles.
     - name: "Installing Chrome"
       ansible.builtin.apt:
         name:
           - google-chrome-stable
+        state: present
         update_cache: true
+
+    ## The repository has to exist before apt can fetch the package, and the
+    ## package's maintainer scripts rewrite that same file while installing or
+    ## upgrading. Re-asserting the role-owned content afterwards is what makes a
+    ## rerun settle: it only reports changed when the maintainer scripts really
+    ## did drift the file on this run.
+    - name: "Restoring the role-owned Chrome repository after the package maintainer scripts"
+      ansible.builtin.copy:
+        dest: /etc/apt/sources.list.d/google-chrome.list
+        content: "{{ chrome_apt_repository }}\n"
+        owner: root
+        group: root
+        mode: "0644"
 
     - name: "Downloading Chromedriver from {{ chrome_driver_url }}"
       register: domlsresult
@@ -56,12 +107,21 @@
         url: "{{ chrome_driver_url }}{{ chrome_driver_version }}/{{ chrome_driver_server_installer_tar }}"
         dest: "{{ installer_dir }}/chrome/archives/{{ chrome_driver_server_installer_tar }}"
 
+    ## The archive holds a single `chromedriver` binary at its root, so it is
+    ## unpacked straight into a PATH directory and the creates: guard names the
+    ## binary that actually lands there.
     - name: "Extracting Chrome Driver version {{ chrome_driver_version }}"
       ansible.builtin.unarchive:
         src: "{{ installer_dir }}/chrome/archives/{{ chrome_driver_server_installer_tar }}"
-        dest: "/tmp/"
-        creates: "/usr/bin/chromedriver"
+        dest: "{{ chrome_driver_install_dir }}"
+        creates: "{{ chrome_driver_install_dir }}/chromedriver"
         remote_src: true
-        mode: "a+x"
         owner: root
         group: root
+
+    - name: "Ensuring Chromedriver is executable on PATH"
+      ansible.builtin.file:
+        path: "{{ chrome_driver_install_dir }}/chromedriver"
+        owner: root
+        group: root
+        mode: "0755"

@@ -1,7 +1,8 @@
 ---
-## Builds the local signed APT repository under pkg_server_local_dir from the
-## deb produced by the debian_packager role, serves it on a localhost nginx
-## vhost, and installs the package from it — an end-to-end validation of the
+## Builds the signed public APT repository under pkg_server_public_dir from the
+## deb the debian_packager role produces. The tree is the one production serves
+## at https://<pkg_server_domain>/public/debian/; debian-vhost.yml serves it and
+## installs the package back off it — an end-to-end validation of the
 ## build → publish → sign → consume chain.
 - name: "Installing repository build dependencies"
   ansible.builtin.apt:
@@ -10,6 +11,8 @@
       - dpkg-dev
       - gpg
     state: present
+    update_cache: true
+    cache_valid_time: 3600
 
 - name: "Creating the repository directories"
   ansible.builtin.file:
@@ -17,31 +20,48 @@
     state: directory
     mode: "0755"
   with_items:
-    - "{{ pkg_server_local_dir }}/apt-repo/pool/main"
-    - "{{ pkg_server_local_dir }}/apt-repo/dists/stable/main/binary-amd64"
+    - "{{ pkg_server_public_dir }}/pool/main"
+    - "{{ pkg_server_public_dir }}/dists/stable/main/binary-amd64"
+    - "{{ pkg_server_staging_dir }}/dists/stable/main/binary-amd64"
     - "{{ pkg_server_base_dir }}/pgp"
 
 - name: "Copying the deb package into the repository"
   ansible.builtin.copy:
     src: "{{ pkg_server_deb_source }}"
-    dest: "{{ pkg_server_local_dir }}/apt-repo/pool/main/"
+    dest: "{{ pkg_server_public_dir }}/pool/main/"
     remote_src: true
     mode: "0644"
 
-- name: "Generating Packages file"
-  ansible.builtin.shell: "dpkg-scanpackages --arch amd64 pool/ > dists/stable/main/binary-amd64/Packages"
+## The indexes are rendered into a staging tree that holds nothing but the
+## index files and are then published with copy: the checksum comparison in the
+## publish step is the only place a change is reported, and the Release hashes
+## can never fold in the signatures written by the previous run.
+- name: "Rendering the Packages index into the staging tree"
+  ansible.builtin.shell: >-
+    dpkg-scanpackages --arch amd64 pool/
+    > {{ pkg_server_staging_dir }}/dists/stable/main/binary-amd64/Packages
   args:
-    chdir: "{{ pkg_server_local_dir }}/apt-repo"
-  changed_when: true
+    chdir: "{{ pkg_server_public_dir }}"
+  changed_when: false
 
-- name: "Compressing Packages file"
-  ansible.builtin.shell: |
-    set -o pipefail
-    cat dists/stable/main/binary-amd64/Packages | gzip -9 > dists/stable/main/binary-amd64/Packages.gz
+## gzip -n keeps the name and the timestamp out of the member header, so the
+## compressed index is byte-identical whenever the plain index is.
+- name: "Compressing the staged Packages index"
+  ansible.builtin.shell: "gzip -9 -n -c main/binary-amd64/Packages > main/binary-amd64/Packages.gz"
   args:
-    chdir: "{{ pkg_server_local_dir }}/apt-repo"
-    executable: /bin/bash
-  changed_when: true
+    chdir: "{{ pkg_server_staging_dir }}/dists/stable"
+  changed_when: false
+
+- name: "Publishing the Packages indexes"
+  ansible.builtin.copy:
+    src: "{{ pkg_server_staging_dir }}/dists/stable/main/binary-amd64/{{ item }}"
+    dest: "{{ pkg_server_public_dir }}/dists/stable/main/binary-amd64/{{ item }}"
+    remote_src: true
+    mode: "0644"
+  loop:
+    - Packages
+    - Packages.gz
+  register: pkg_server_packages_published
 
 - name: "Installing the Release generation script"
   ansible.builtin.copy:
@@ -49,11 +69,46 @@
     dest: "{{ pkg_server_base_dir }}/generate-release.sh"
     mode: "0755"
 
-- name: "Generating Release file"
+- name: "Statting the staged and the published Release artefacts"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  register: pkg_server_release_artefacts
+  loop:
+    - "{{ pkg_server_staging_dir }}/dists/stable/Release"
+    - "{{ pkg_server_public_dir }}/dists/stable/Release"
+    - "{{ pkg_server_public_dir }}/dists/stable/Release.gpg"
+    - "{{ pkg_server_public_dir }}/dists/stable/InRelease"
+
+## Release carries its generation date, so rendering it unconditionally would
+## rewrite — and force a re-sign of — an otherwise untouched repository. It is
+## rendered when the indexes it hashes changed or when any part of the signed
+## set is missing, which is exactly when the published signatures are stale.
+- name: "Deciding whether the signed Release set is stale"
+  ansible.builtin.set_fact:
+    pkg_server_release_stale: >-
+      {{ pkg_server_packages_published.changed
+         or pkg_server_release_artefacts.results | rejectattr('stat.exists') | list | length > 0 }}
+
+- name: "Rendering the Release metadata into the staging tree"
   ansible.builtin.shell: "{{ pkg_server_base_dir }}/generate-release.sh stable > Release"
   args:
-    chdir: "{{ pkg_server_local_dir }}/apt-repo/dists/stable"
-  changed_when: true
+    chdir: "{{ pkg_server_staging_dir }}/dists/stable"
+  changed_when: false
+  when: pkg_server_release_stale
+
+- name: "Publishing the Release metadata"
+  ansible.builtin.copy:
+    src: "{{ pkg_server_staging_dir }}/dists/stable/Release"
+    dest: "{{ pkg_server_public_dir }}/dists/stable/Release"
+    remote_src: true
+    mode: "0644"
+  register: pkg_server_release_published
+
+- name: "Creating the repository GNUPGHOME"
+  ansible.builtin.file:
+    path: "{{ pkg_server_gnupg_dir }}"
+    state: directory
+    mode: "0700"
 
 - name: "Checking for an existing PGP signing key"
   ansible.builtin.stat:
@@ -62,13 +117,9 @@
 
 - name: "Generating the repository PGP key pair"
   when: not pkg_server_pgp_key.stat.exists
+  environment:
+    GNUPGHOME: "{{ pkg_server_gnupg_dir }}"
   block:
-    - name: "Creating temporary GNUPGHOME directory for key generation"
-      ansible.builtin.tempfile:
-        state: directory
-        suffix: pgpkeys
-      register: pkg_server_keygen_gnupghome
-
     - name: "Writing PGP key generation batch file"
       ansible.builtin.copy:
         content: |
@@ -81,91 +132,72 @@
           %no-ask-passphrase
           %no-protection
           %commit
-        dest: /tmp/startcloud-pgp-key.batch
+        dest: "{{ pkg_server_gnupg_dir }}/startcloud-pgp-key.batch"
         mode: "0600"
 
     - name: "Generating PGP key pair"
-      ansible.builtin.command: gpg --no-tty --batch --gen-key /tmp/startcloud-pgp-key.batch
+      ansible.builtin.command: "gpg --no-tty --batch --gen-key {{ pkg_server_gnupg_dir }}/startcloud-pgp-key.batch"
       changed_when: true
-      environment:
-        GNUPGHOME: "{{ pkg_server_keygen_gnupghome.path }}"
 
     - name: "Removing PGP key generation batch file"
       ansible.builtin.file:
-        path: /tmp/startcloud-pgp-key.batch
+        path: "{{ pkg_server_gnupg_dir }}/startcloud-pgp-key.batch"
         state: absent
 
     - name: "Exporting public PGP key"
       ansible.builtin.shell: "gpg --armor --export startcloud > {{ pkg_server_base_dir }}/pgp/pgp-key.public"
       changed_when: true
-      environment:
-        GNUPGHOME: "{{ pkg_server_keygen_gnupghome.path }}"
 
     - name: "Exporting private PGP key"
       ansible.builtin.shell: "gpg --armor --export-secret-keys startcloud > {{ pkg_server_base_dir }}/pgp/pgp-key.private"
       changed_when: true
-      environment:
-        GNUPGHOME: "{{ pkg_server_keygen_gnupghome.path }}"
 
-## The Release file is regenerated on every run, so it must also be re-signed
-## on every run — a stale Release.gpg/InRelease pair fails apt verification.
-- name: "Creating temporary GNUPGHOME directory for signing"
-  ansible.builtin.tempfile:
-    state: directory
-    suffix: pgpsign
-  register: pkg_server_signing_gnupghome
+## The armoured public key is the keyring consumers pin with signed-by, so it is
+## published inside the repository root the dependencies role fetches it from:
+## https://<domain>/public/debian/startcloud-archive-keyring.asc
+- name: "Publishing the archive keyring into the repository root"
+  ansible.builtin.copy:
+    src: "{{ pkg_server_base_dir }}/pgp/pgp-key.public"
+    dest: "{{ pkg_server_public_dir }}/startcloud-archive-keyring.asc"
+    remote_src: true
+    mode: "0644"
+
+## The keyring lives with the key pair instead of in a tempfile, so the import
+## only has to happen when the signing key is not in it yet.
+- name: "Checking the signing key is in the repository keyring"
+  ansible.builtin.command: "gpg --no-tty --batch --list-secret-keys startcloud"
+  register: pkg_server_signing_key_present
+  changed_when: false
+  failed_when: false
+  environment:
+    GNUPGHOME: "{{ pkg_server_gnupg_dir }}"
 
 - name: "Importing the repository signing key"
   ansible.builtin.command: "gpg --no-tty --batch --import {{ pkg_server_base_dir }}/pgp/pgp-key.private"
+  when: pkg_server_signing_key_present.rc != 0
   changed_when: true
   environment:
-    GNUPGHOME: "{{ pkg_server_signing_gnupghome.path }}"
+    GNUPGHOME: "{{ pkg_server_gnupg_dir }}"
 
-- name: "Signing Release file"
-  ansible.builtin.shell: |
-    set -o pipefail
-    cat Release | gpg --no-tty --batch --default-key startcloud -abs > Release.gpg
-    cat Release | gpg --no-tty --batch --default-key startcloud -abs --clearsign > InRelease
-  args:
-    chdir: "{{ pkg_server_local_dir }}/apt-repo/dists/stable"
-    executable: /bin/bash
-  changed_when: true
+## A stale Release.gpg/InRelease pair fails apt verification, so the signatures
+## are rewritten whenever the Release they cover was rewritten.
+- name: "Signing the published Release"
+  when: pkg_server_release_stale or pkg_server_release_published.changed
   environment:
-    GNUPGHOME: "{{ pkg_server_signing_gnupghome.path }}"
+    GNUPGHOME: "{{ pkg_server_gnupg_dir }}"
+  block:
+    - name: "Writing the detached Release signature"
+      ansible.builtin.command: >-
+        gpg --no-tty --batch --yes --default-key startcloud
+        --armor --detach-sign --output Release.gpg Release
+      args:
+        chdir: "{{ pkg_server_public_dir }}/dists/stable"
+      changed_when: true
 
-- name: "Removing the temporary signing GNUPGHOME"
-  ansible.builtin.file:
-    path: "{{ pkg_server_signing_gnupghome.path }}"
-    state: absent
-
-- name: "Templating the local repository nginx vhost"
-  ansible.builtin.template:
-    src: nginx-local.conf.j2
-    dest: /etc/nginx/sites-available/startcloud-local
-    mode: "0644"
-
-- name: "Enabling the local repository nginx vhost"
-  ansible.builtin.file:
-    src: /etc/nginx/sites-available/startcloud-local
-    dest: /etc/nginx/sites-enabled/startcloud-local
-    state: link
-
-- name: "Reloading nginx to serve the local repository"
-  ansible.builtin.service:
-    name: nginx
-    state: reloaded
-
-- name: "Adding the local signed repository to apt"
-  ansible.builtin.apt_repository:
-    repo: "deb [arch=amd64 signed-by={{ pkg_server_base_dir }}/pgp/pgp-key.public] http://127.0.0.1:{{ pkg_server_local_port }}/apt-repo stable main"
-    filename: startcloud-local
-    state: present
-
-- name: "Updating apt cache"
-  ansible.builtin.apt:
-    update_cache: true
-
-- name: "Installing the startcloud package from the local repository"
-  ansible.builtin.apt:
-    name: startcloud
-    state: present
+    - name: "Writing the clearsigned InRelease"
+      ansible.builtin.command: >-
+        gpg --no-tty --batch --yes --default-key startcloud
+        --armor --clearsign --output InRelease Release
+      args:
+        chdir: "{{ pkg_server_public_dir }}/dists/stable"
+      changed_when: true

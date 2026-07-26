@@ -1,0 +1,130 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    guacamole_version: "1.5.0"
+    guacamole_httpcomponents_version: "4.5.6"
+    guacamole_log4j_version: "1.2.17"
+    guacamole_auth_domino_version: "1.0.0"
+    mysql_java_connector_jar: mariadb-java-client-3.4.0.jar
+    tomcat_version: 10
+    completed_dir: /vagrant/completed
+    guacamole_expected_artifacts:
+      # JDBC connector fetched from the MariaDB DLM and copied into lib/.
+      - "/etc/guacamole/lib/mysql-connector-j-{{ mysql_java_connector_jar }}"
+      # log4j jar pulled from the Apache archive.
+      - "/etc/guacamole/lib/log4j-{{ guacamole_log4j_version }}.jar"
+      # JDBC auth extension taken out of the maven build tree.
+      - "/etc/guacamole/extensions/guacamole-auth-jdbc-mysql-{{ guacamole_version }}.jar"
+      # Branding + Domino extensions shipped in the role's files/ directory.
+      - "/etc/guacamole/extensions/branding.jar"
+      - "/etc/guacamole/extensions/guacamole-auth-domino-{{ guacamole_auth_domino_version }}.jar"
+      # The WAR produced by `mvn clean package -U`, deployed into Tomcat.
+      - "/var/lib/tomcat{{ tomcat_version }}/webapps/ROOT.war"
+      # Marker the role touches once the whole install has completed.
+      - "{{ completed_dir }}/guacamole_install"
+  tasks:
+    - name: "Stat the artefacts the role installs"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: guacamole_artifact_stat
+      loop: "{{ guacamole_expected_artifacts }}"
+
+    - name: "Asserting every Guacamole artefact was installed"
+      ansible.builtin.assert:
+        that:
+          - guacamole_artifact_stat.results | rejectattr('stat.exists') | list | length == 0
+        fail_msg: >-
+          Missing Guacamole artefacts:
+          {{ guacamole_artifact_stat.results | rejectattr('stat.exists') | map(attribute='item') | list }}
+
+    - name: "Stat the HttpComponents jars the role rsyncs into the lib directory"
+      ansible.builtin.find:
+        paths: /etc/guacamole/lib
+        patterns: "httpclient-*.jar"
+      register: guacamole_httpclient_jars
+
+    - name: "Asserting the HttpComponents SSO dependency landed in lib/"
+      ansible.builtin.assert:
+        that:
+          - guacamole_httpclient_jars.matched > 0
+        fail_msg: >-
+          No httpclient jar from httpcomponents-client-{{ guacamole_httpcomponents_version }}
+          found under /etc/guacamole/lib
+
+    - name: "Reading the generated guacamole.properties"
+      ansible.builtin.slurp:
+        src: /etc/guacamole/guacamole.properties
+      register: guacamole_properties
+
+    - name: "Asserting guacamole.properties carries the guacd and database settings given to the role"
+      ansible.builtin.assert:
+        that:
+          - "'guacd-hostname: localhost' in guacamole_properties_decoded"
+          - "'guacd-port: 4822' in guacamole_properties_decoded"
+          # mysql-hostname is templated from the public_adapter address.
+          - "'mysql-hostname: 10.99.99.10' in guacamole_properties_decoded"
+          - "'mysql-port: 3306' in guacamole_properties_decoded"
+          - "'mysql-database: guacdb' in guacamole_properties_decoded"
+          - "'mysql-username: guacadmin' in guacamole_properties_decoded"
+          - "'mysql-password: CHANGEME' in guacamole_properties_decoded"
+        fail_msg: "guacamole.properties does not reflect the guacd port or the database credentials"
+      vars:
+        guacamole_properties_decoded: "{{ guacamole_properties.content | b64decode }}"
+
+    - name: "Stat the guacd binary and unit the source build installs"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: guacamole_guacd_stat
+      loop:
+        - /usr/local/sbin/guacd
+        - /etc/systemd/system/guacd.service
+
+    - name: "Asserting `make install` placed the guacd daemon and its systemd unit"
+      ansible.builtin.assert:
+        that:
+          - guacamole_guacd_stat.results | rejectattr('stat.exists') | list | length == 0
+        fail_msg: >-
+          guacd was not built/installed:
+          {{ guacamole_guacd_stat.results | rejectattr('stat.exists') | map(attribute='item') | list }}
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting guacd and Tomcat are running and enabled"
+      ansible.builtin.assert:
+        that:
+          - "'guacd.service' in ansible_facts.services"
+          - ansible_facts.services['guacd.service'].state == 'running'
+          - ansible_facts.services['guacd.service'].status == 'enabled'
+          - "'tomcat' ~ tomcat_version ~ '.service' in ansible_facts.services"
+          - ansible_facts.services['tomcat' ~ tomcat_version ~ '.service'].state == 'running'
+        fail_msg: >-
+          guacd/tomcat not running:
+          guacd={{ ansible_facts.services['guacd.service'] | default('unit absent') }}
+
+    - name: "Waiting for the guacd proxy to accept connections"
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 4822
+        state: started
+        timeout: 30
+
+    - name: "Asserting the Guacamole schema was imported into the database"
+      community.mysql.mysql_query:
+        login_user: root
+        login_password: "CHANGEME"
+        login_db: guacdb
+        query: "SELECT name FROM guacamole_entity WHERE type = 'USER'"
+      register: guacamole_schema_query
+
+    - name: "Asserting the bundled admin account exists in the imported schema"
+      ansible.builtin.assert:
+        that:
+          - guacamole_schema_query.rowcount[0] > 0
+          - guacamole_schema_query.query_result[0] | map(attribute='name') | list is contains('guacadmin')
+        fail_msg: >-
+          guacamole_entity does not contain the guacadmin user created by
+          002-create-admin-user.sql

@@ -1,9 +1,12 @@
 ---
 argument_specs:
   main:
-    short_description: Fail2ban installation
+    short_description: Fail2ban installation and server configuration
     description:
-      - Installs the Fail2ban package, creates its configuration and jail.d directories, and starts and enables the service on Debian-family systems.
+      - Installs the Fail2ban package, creates its configuration and jail.d directories, renders the server settings into
+        /etc/fail2ban/fail2ban.local and the jail overrides into /etc/fail2ban/jail.local, and starts and enables the service
+        on Debian-family systems. Both files are .local overrides, so they are read after the packaged configuration and
+        survive a package upgrade; changing either one restarts the service through a handler.
     author: Mark Gilbert
     options:
       run_tasks:
@@ -13,24 +16,24 @@ argument_specs:
       fail2ban_loglevel:
         type: str
         default: INFO
-        description: Log verbosity level for the Fail2ban service.
+        description: Log verbosity level for the Fail2ban server, rendered as loglevel in the [Definition] section of /etc/fail2ban/fail2ban.local.
       fail2ban_logtarget:
         type: str
         default: /var/log/fail2ban.log
-        description: Path Fail2ban writes its log to.
+        description: Path Fail2ban writes its log to, rendered as logtarget in the [Definition] section of /etc/fail2ban/fail2ban.local.
       fail2ban_socket:
         type: str
         default: /var/run/fail2ban/fail2ban.sock
-        description: Unix socket path used by the Fail2ban server.
+        description: Unix socket path used by the Fail2ban server, rendered as socket in the [Definition] section of /etc/fail2ban/fail2ban.local.
       fail2ban_pidfile:
         type: str
         default: /var/run/fail2ban/fail2ban.pid
-        description: PID file path for the Fail2ban server.
+        description: PID file path for the Fail2ban server, rendered as pidfile in the [Definition] section of /etc/fail2ban/fail2ban.local.
       fail2ban_dbfile:
         type: str
         default: /var/lib/fail2ban/fail2ban.sqlite3
-        description: SQLite database file used to persist ban state.
+        description: SQLite database file used to persist ban state, rendered as dbfile in the [Definition] section of /etc/fail2ban/fail2ban.local.
       fail2ban_dbpurgeage:
         type: str
         default: 1d
-        description: Age after which old bans are purged from the database.
+        description: Age after which old bans are purged from the database, rendered as dbpurgeage in the [Definition] section of /etc/fail2ban/fail2ban.local.

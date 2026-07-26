@@ -1,0 +1,89 @@
+---
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  lint:
+    name: Lint
+    uses: ./.github/workflows/lint.yml
+
+  release-please:
+    name: Release Please
+    needs: lint
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      full_version: ${{ steps.compose.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Release Please
+        uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          release-type: simple
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      - name: Compose full version
+        id: compose
+        # Explicit string comparison — release_created is the string "false"
+        # (not empty) on the push that follows a release PR merge.
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        run: |
+          MAJOR='${{ steps.release.outputs.major }}'
+          MINOR='${{ steps.release.outputs.minor }}'
+          PATCH='${{ steps.release.outputs.patch }}'
+          echo "version=${MAJOR}.${MINOR}.${PATCH}" >> "$GITHUB_OUTPUT"
+
+  build-collection:
+    name: Build & Upload Collection Artifact
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install ansible-core
+        run: pip install ansible-core
+
+      # Contract inherited from the provisioner-catalog publisher kit:
+      # version source of truth is galaxy.yml — refuse on mismatch; ship the
+      # immutable versioned archive, a mutable "latest" alias, and a .sha256
+      # sidecar for every asset.
+      - name: Build collection artifact
+        id: build
+        run: |
+          VERSION="$(sed -nE 's/^version:[[:space:]]*"?([0-9]+\.[0-9]+\.[0-9]+[0-9A-Za-z.+-]*)"?.*/\1/p' galaxy.yml | head -n1)"
+          echo "Parsed galaxy.yml version=$VERSION"
+          if [ "$VERSION" != "${{ needs.release-please.outputs.full_version }}" ]; then
+            echo "galaxy.yml version ($VERSION) does not match released version (${{ needs.release-please.outputs.full_version }})" >&2
+            exit 1
+          fi
+          ansible-galaxy collection build
+          ARTIFACT="startcloud-startcloud_roles-$VERSION.tar.gz"
+          cp "$ARTIFACT" startcloud-startcloud_roles.tar.gz
+          sha256sum "$ARTIFACT" > "$ARTIFACT.sha256"
+          sha256sum startcloud-startcloud_roles.tar.gz > startcloud-startcloud_roles.tar.gz.sha256
+          echo "artifact=$ARTIFACT" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifacts to the release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ needs.release-please.outputs.tag_name }}" \
+            "${{ steps.build.outputs.artifact }}" \
+            "${{ steps.build.outputs.artifact }}.sha256" \
+            startcloud-startcloud_roles.tar.gz \
+            startcloud-startcloud_roles.tar.gz.sha256 --clobber

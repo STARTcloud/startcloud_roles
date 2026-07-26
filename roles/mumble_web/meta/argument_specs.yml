@@ -3,8 +3,9 @@ argument_specs:
   main:
     short_description: mumble-web HTML5 client container deployment
     description:
-      - Deploys mumble-web, a browser-based Mumble client, together with mumble-web-proxy which bridges browser
-        WebSocket/WebRTC connections to a Mumble (murmur) server. Both run as Docker containers on a shared network.
+      - Deploys mumble-web, a browser-based Mumble client, as a Docker container. The default image bundles websockify
+        and talks straight to a Mumble (murmur) server. mumble-web-proxy, which bridges browser WebSocket/WebRTC to
+        murmur for WebRTC-mode client builds, is opt-in because upstream publishes no official container image.
     author: Mark Gilbert
     options:
       run_tasks:
@@ -14,11 +15,11 @@ argument_specs:
       mumble_web_network:
         type: str
         default: mumble-web
-        description: Docker network shared by the client and proxy containers.
+        description: Docker network shared by the client and the optional proxy container.
       mumble_web_restart_policy:
         type: str
         default: unless-stopped
-        description: Docker restart policy applied to both containers.
+        description: Docker restart policy applied to the deployed containers.
       mumble_web_image:
         type: str
         default: "rankenstein/mumble-web:latest"
@@ -30,11 +31,37 @@ argument_specs:
       mumble_web_http_port:
         type: int
         default: 8080
-        description: Host port mapped to the mumble-web web UI (container 8080).
+        description: Host port mapped to the mumble-web web UI.
+      mumble_web_container_http_port:
+        type: int
+        default: 8080
+        description:
+          - Port the client image serves HTTP on inside the container.
+          - rankenstein/mumble-web binds 8080; the EXPOSE 80 in its image metadata is stale.
+      mumble_web_server_host:
+        type: str
+        default: ""
+        description:
+          - Hostname or address of the upstream Mumble (murmur) server as reachable from inside the containers.
+          - Has no default and must be set by the caller; the role fails when it is empty. A loopback address would
+            resolve to the container's own loopback rather than to the murmur host.
+      mumble_web_server_port:
+        type: int
+        default: 64738
+        description: TCP port of the upstream Mumble (murmur) server.
+      mumble_web_proxy_enabled:
+        type: bool
+        default: false
+        description:
+          - Deploy the mumble-web-proxy WebSocket/WebRTC bridge alongside the client.
+          - Defaults to false because upstream publishes no official mumble-web-proxy image; enabling it requires
+            supplying a self-built image in mumble_web_proxy_image and a WebRTC-mode mumble_web_image.
       mumble_web_proxy_image:
         type: str
-        default: "rankenstein/mumble-web-proxy:latest"
-        description: mumble-web-proxy container image and tag.
+        default: ""
+        description:
+          - mumble-web-proxy container image and tag.
+          - Has no default because no official image is published upstream; required when mumble_web_proxy_enabled.
       mumble_web_proxy_container_name:
         type: str
         default: mumble-web-proxy
@@ -43,14 +70,6 @@ argument_specs:
         type: int
         default: 64737
         description: WebSocket port the proxy listens on and publishes to the host.
-      mumble_web_server_host:
-        type: str
-        default: "127.0.0.1"
-        description: Hostname or address of the upstream Mumble (murmur) server.
-      mumble_web_server_port:
-        type: int
-        default: 64738
-        description: TCP port of the upstream Mumble (murmur) server.
       mumble_web_ice_port_min:
         type: int
         default: 20000

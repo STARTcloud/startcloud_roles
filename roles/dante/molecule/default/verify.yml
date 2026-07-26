@@ -1,0 +1,92 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  tasks:
+    - name: Gather installed package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Assert the dante-server package was installed
+      ansible.builtin.assert:
+        that:
+          - "'dante-server' in ansible_facts.packages"
+        fail_msg: "dante-server package is not installed"
+        success_msg: "dante-server package is installed"
+
+    - name: Stat the danted configuration written by the role
+      ansible.builtin.stat:
+        path: /etc/danted.conf
+      register: dante_conf
+
+    - name: Assert /etc/danted.conf exists with mode 0644
+      ansible.builtin.assert:
+        that:
+          - dante_conf.stat.exists
+          - dante_conf.stat.mode == '0644'
+        fail_msg: "/etc/danted.conf missing or not mode 0644"
+        success_msg: "/etc/danted.conf present with mode 0644"
+
+    - name: Read the danted configuration
+      ansible.builtin.slurp:
+        src: /etc/danted.conf
+      register: dante_conf_raw
+
+    - name: Assert the configuration carries the role's SOCKS settings
+      ansible.builtin.assert:
+        that:
+          - "'internal: 0.0.0.0 port=1080' in dante_conf_content"
+          - "'socksmethod: username' in dante_conf_content"
+          - "'clientmethod: none' in dante_conf_content"
+          - "'user.unprivileged: nobody' in dante_conf_content"
+          - "('external: ' ~ ansible_default_ipv4.interface) in dante_conf_content"
+          - "'external: public_adapter' not in dante_conf_content"
+        fail_msg: "/etc/danted.conf does not contain the settings the role writes"
+        success_msg: "/etc/danted.conf contains the expected SOCKS settings"
+      vars:
+        dante_conf_content: "{{ dante_conf_raw.content | b64decode }}"
+
+    - name: Look up the dedicated SOCKS user
+      ansible.builtin.getent:
+        database: passwd
+        key: dante
+
+    - name: Assert the SOCKS user is a system user with a nologin shell
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.getent_passwd['dante'] is defined
+          - ansible_facts.getent_passwd['dante'][5] == '/bin/false'
+          - ansible_facts.getent_passwd['dante'][1] | int < 1000
+        fail_msg: "the dante SOCKS user is missing, not a system uid, or has a login shell"
+        success_msg: "the dante SOCKS user exists as a system user with /bin/false"
+
+    - name: Read the shadow entry for the SOCKS user
+      ansible.builtin.getent:
+        database: shadow
+        key: dante
+
+    - name: Assert the password hash is a sha512 crypt entry
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.getent_shadow['dante'][0].startswith('$6$')
+        fail_msg: "the dante user has no sha512 password hash, SOCKS username auth would fail"
+        success_msg: "the dante user carries a sha512 password hash"
+
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Assert the danted service is enabled and running
+      ansible.builtin.assert:
+        that:
+          - "'danted.service' in ansible_facts.services"
+          - ansible_facts.services['danted.service'].state == 'running'
+          - ansible_facts.services['danted.service'].status == 'enabled'
+        fail_msg: "danted.service is not running and enabled"
+        success_msg: "danted.service is running and enabled"
+
+    - name: Assert the SOCKS proxy is listening on port 1080
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 1080
+        state: started
+        timeout: 30

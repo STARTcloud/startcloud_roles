@@ -4,12 +4,12 @@
 
 - name: "Cleaning up network configuration"
   when:
-    - not ansible_module_running_in_container
+    - not (ansible_module_running_in_container | default(false))
   become: true
   tags: once
   block:
     - name: "Disabling NetworkManager"
-      when: not ansible_module_running_in_container
+      when: not (ansible_module_running_in_container | default(false))
       ansible.builtin.systemd_service:
         state: stopped
         enabled: false
@@ -17,7 +17,7 @@
       failed_when: false
 
     - name: "Enabling systemd-networkd"
-      when: not ansible_module_running_in_container
+      when: not (ansible_module_running_in_container | default(false))
       ansible.builtin.systemd_service:
         state: restarted
         enabled: true
@@ -30,7 +30,7 @@
 
 - name: "Gathering Networking Configurations"
   when:
-    - not ansible_module_running_in_container
+    - not (ansible_module_running_in_container | default(false))
   become: true
   tags: once
   block:
@@ -40,7 +40,7 @@
 - name: "Loading Virtualbox Tasks"
   when:
     - ansible_virtualization_type == "virtualbox"
-    - not ansible_module_running_in_container
+    - not (ansible_module_running_in_container | default(false))
   become: true
   tags: once
   block:
@@ -51,7 +51,7 @@
   when:
     - ansible_virtualization_type == "kvm"
     - ansible_bios_vendor != "BHYVE"
-    - not ansible_module_running_in_container
+    - not (ansible_module_running_in_container | default(false))
   become: true
   tags: once
   block:
@@ -61,7 +61,7 @@
 - name: "Loading Bhyve Tasks"
   when:
     - ansible_bios_vendor == "BHYVE"
-    - not ansible_module_running_in_container
+    - not (ansible_module_running_in_container | default(false))
   become: true
   tags: once
   block:
@@ -70,7 +70,7 @@
 
 - name: "Setting Host Records"
   become: true
-  when: not ansible_module_running_in_container
+  when: not (ansible_module_running_in_container | default(false))
   tags: always
   block:
     - name: "Creating DNS aliases list"

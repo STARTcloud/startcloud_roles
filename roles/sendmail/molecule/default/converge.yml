@@ -1,0 +1,16 @@
+---
+- name: "Converge"
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    sendmail_packages:
+      - sendmail
+      - sendmail-cf
+    sendmail_service_name: sendmail
+    sendmail_config_dir: /etc/mail
+    sendmail_config_group: smmsp
+    sendmail_listen_localhost_only: true
+    sendmail_smart_host: "smtp-relay.startcloud.test"
+  roles:
+    - role: sendmail

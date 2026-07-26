@@ -1,0 +1,67 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: "auto"
+
+    - name: "Asserting nfs-common is installed"
+      ansible.builtin.assert:
+        that:
+          - "'nfs-common' in ansible_facts.packages"
+        fail_msg: "nfs-common was not installed by the nfs_client role"
+
+    - name: "Asserting mount.nfs helper binary is present"
+      ansible.builtin.stat:
+        path: "/sbin/mount.nfs"
+      register: nfs_client_mount_helper
+
+    - name: "Checking mount.nfs helper exists"
+      ansible.builtin.assert:
+        that:
+          - nfs_client_mount_helper.stat.exists
+        fail_msg: "/sbin/mount.nfs missing - nfs-common did not provide the NFS mount helper"
+
+    - name: "Stat-ing the created mount points"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: nfs_client_mountpoints
+      loop:
+        - "/local/share"
+        - "/local/backups"
+
+    - name: "Asserting mount points exist as directories with mode 0755"
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.isdir
+          - item.stat.mode == '0755'
+        fail_msg: "Mount point {{ item.item }} is missing, not a directory, or has the wrong mode"
+      loop: "{{ nfs_client_mountpoints.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "Reading /etc/fstab"
+      ansible.builtin.slurp:
+        src: "/etc/fstab"
+      register: nfs_client_fstab
+
+    - name: "Asserting fstab holds both NFS entries with the right src, fstype and opts"
+      ansible.builtin.assert:
+        that:
+          - "'nfs-server.example.com:/export/share /local/share nfs defaults,_netdev' in nfs_client_fstab_content"
+          - "'nfs-server.example.com:/export/backups /local/backups nfs4 rw,noatime,_netdev' in nfs_client_fstab_content"
+        fail_msg: >-
+          /etc/fstab does not contain the expected NFS entries. Actual content:
+          {{ nfs_client_fstab_content }}
+      vars:
+        nfs_client_fstab_content: "{{ nfs_client_fstab.content | b64decode }}"
+
+    - name: "Asserting no NFS entry was left unconfigured in fstab"
+      ansible.builtin.assert:
+        that:
+          - (nfs_client_fstab.content | b64decode).split('\n') | select('search', '^nfs-server\\.example\\.com:') | list | length == 2
+        fail_msg: "Expected exactly 2 nfs-server.example.com fstab entries written by the role"

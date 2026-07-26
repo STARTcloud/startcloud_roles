@@ -1,6 +1,14 @@
 ---
+# pfSense appliances use their own pkg repo and package names — route them to
+# a dedicated vars file instead of the OPNsense/FreeBSD baseline (whose os-*
+# plugin packages do not exist in the pfSense repo).
+- name: "Detecting pfSense Appliance"
+  ansible.builtin.stat:
+    path: /etc/inc/globals.inc
+  register: dependencies_pfsense_check
+
 - name: "Including OS-specific vars"
-  ansible.builtin.include_vars: "{{ ansible_os_family | lower }}.yml"
+  ansible.builtin.include_vars: "{{ 'pfsense.yml' if dependencies_pfsense_check.stat.exists else (ansible_os_family | lower ~ '.yml') }}"
 
 - name: "Creating pkg proxy configuration: /usr/local/etc/pkg/repos/proxy.conf"
   ansible.builtin.template:

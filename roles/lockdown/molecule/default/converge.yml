@@ -1,0 +1,28 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    show_help: true
+    settings:
+      hostname: startcloud-lockdown
+      domain: startcloud.test
+    service_user: startcloud
+    vagrant_user: startcloud
+    vagrant_user_pass: "CHANGEME"
+    lockdown_use_settings_password: false
+    lockdown_new_password: "CHANGEME"
+    lockdown_user_private_key_path: /home/startcloud/.ssh/id_ssh_rsa
+    lockdown:
+      - exim4
+      - portmap
+      - rpcbind.target
+      - rpcbind.service
+      - rpcbind.socket
+      - nfs-kernel-server
+    lockdown_cleanup_debug_files: true
+    lockdown_file_cleanups_list:
+      - /var/log/startcloud-debug.log
+  roles:
+    - role: lockdown

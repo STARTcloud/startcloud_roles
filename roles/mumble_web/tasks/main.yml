@@ -2,12 +2,28 @@
 - name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
+    - name: "Asserting the upstream Mumble server address is set"
+      ansible.builtin.assert:
+        that:
+          - mumble_web_server_host | length > 0
+        fail_msg: "mumble_web_server_host is empty; set it to the Mumble (murmur) address reachable from inside the containers, a loopback address there is the container itself"
+        success_msg: "The upstream Mumble server address is set"
+
+    - name: "Asserting a mumble-web-proxy image is set when the proxy is enabled"
+      when: mumble_web_proxy_enabled
+      ansible.builtin.assert:
+        that:
+          - mumble_web_proxy_image | length > 0
+        fail_msg: "mumble_web_proxy_enabled is true but mumble_web_proxy_image is empty; upstream publishes no official mumble-web-proxy image, build one from source and set mumble_web_proxy_image"
+        success_msg: "A mumble-web-proxy image is set"
+
     - name: "Creating mumble-web Docker network"
       community.docker.docker_network:
         name: "{{ mumble_web_network }}"
         state: present
 
     - name: "Deploying mumble-web-proxy container"
+      when: mumble_web_proxy_enabled
       community.docker.docker_container:
         name: "{{ mumble_web_proxy_container_name }}"
         image: "{{ mumble_web_proxy_image }}"
@@ -24,6 +40,9 @@
           - "{{ mumble_web_ice_port_min }}-{{ mumble_web_ice_port_max }}:{{ mumble_web_ice_port_min }}-{{ mumble_web_ice_port_max }}/udp"
         state: started
 
+    ## MUMBLE_SERVER is the endpoint the client image connects to: the proxy's
+    ## WebSocket port in WebRTC mode, otherwise murmur itself, which is what the
+    ## websockify bundled in rankenstein/mumble-web tunnels to.
     - name: "Deploying mumble-web client container"
       community.docker.docker_container:
         name: "{{ mumble_web_container_name }}"
@@ -32,7 +51,12 @@
         networks:
           - name: "{{ mumble_web_network }}"
         env:
-          MUMBLE_SERVER: "{{ mumble_web_proxy_container_name }}:{{ mumble_web_proxy_ws_port }}"
+          MUMBLE_SERVER: >-
+            {{
+              mumble_web_proxy_container_name ~ ':' ~ mumble_web_proxy_ws_port
+              if mumble_web_proxy_enabled
+              else mumble_web_server_host ~ ':' ~ mumble_web_server_port
+            }}
         published_ports:
-          - "{{ mumble_web_http_port }}:8080"
+          - "{{ mumble_web_http_port }}:{{ mumble_web_container_http_port }}"
         state: started

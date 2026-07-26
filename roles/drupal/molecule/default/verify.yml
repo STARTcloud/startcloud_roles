@@ -1,0 +1,118 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    drupal_install_dir: /var/www/drupal
+    drupal_docroot: /var/www/drupal/web
+    drush_bin: /var/www/drupal/vendor/bin/drush
+    expected_site_name: "STARTcloud Drupal Molecule"
+  tasks:
+    - name: Stat the Drupal front controller
+      ansible.builtin.stat:
+        path: "{{ drupal_docroot }}/index.php"
+      register: drupal_index
+
+    - name: Assert the Composer project was built into the docroot
+      ansible.builtin.assert:
+        that:
+          - drupal_index.stat.exists
+          - drupal_index.stat.isreg
+        fail_msg: "{{ drupal_docroot }}/index.php is missing, composer create-project did not land in the install dir"
+
+    - name: Stat the project-local Drush binary
+      ansible.builtin.stat:
+        path: "{{ drush_bin }}"
+      register: drush_binary
+
+    - name: Assert the configured Composer dependency installed an executable Drush
+      ansible.builtin.assert:
+        that:
+          - drush_binary.stat.exists
+          - drush_binary.stat.xusr
+        fail_msg: "{{ drush_bin }} is missing or not executable, drupal_composer_dependencies was not applied"
+
+    - name: Read the generated project composer.json
+      ansible.builtin.slurp:
+        src: "{{ drupal_install_dir }}/composer.json"
+      register: drupal_composer_json
+
+    - name: Assert composer.json holds both the Drupal core and the required Drush package
+      ansible.builtin.assert:
+        that:
+          - "'drupal/core-recommended' in drupal_composer_json.content | b64decode"
+          - "'drush/drush' in drupal_composer_json.content | b64decode"
+        fail_msg: "composer.json does not list drupal/core-recommended and drush/drush"
+
+    - name: Stat the settings.php written by drush site-install
+      ansible.builtin.stat:
+        path: "{{ drupal_docroot }}/sites/default/settings.php"
+      register: drupal_settings
+
+    - name: Assert the site install wrote its settings file
+      ansible.builtin.assert:
+        that:
+          - drupal_settings.stat.exists
+          - drupal_settings.stat.isreg
+        fail_msg: "sites/default/settings.php is missing, drush site-install did not complete"
+
+    - name: Ask Drush for the bootstrap status of the installed site
+      ansible.builtin.command:
+        cmd: "{{ drush_bin }} --root={{ drupal_docroot }} core:status --format=json"
+      changed_when: false
+      register: drupal_bootstrap
+
+    - name: Assert Drupal bootstraps against its database
+      ansible.builtin.assert:
+        that:
+          - (drupal_bootstrap.stdout | from_json).bootstrap == 'Successful'
+          - (drupal_bootstrap.stdout | from_json)['db-status'] == 'Connected'
+        fail_msg: "Drupal does not bootstrap against its database: {{ drupal_bootstrap.stdout }}"
+
+    - name: Count the tables drush site-install created in the Drupal database
+      ansible.builtin.command:
+        argv:
+          - mysql
+          - --user=root
+          - --batch
+          - --skip-column-names
+          - --execute=SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'drupal';
+      changed_when: false
+      register: drupal_table_count
+
+    - name: Assert the Drupal schema was populated
+      ansible.builtin.assert:
+        that:
+          - drupal_table_count.stdout | trim | int > 20
+        fail_msg: "Only {{ drupal_table_count.stdout | trim }} tables in the drupal database, site-install did not populate it"
+
+    - name: Read the site name back out of Drupal configuration
+      ansible.builtin.command:
+        cmd: "{{ drush_bin }} --root={{ drupal_docroot }} config:get system.site name"
+      changed_when: false
+      register: drupal_site_name_out
+
+    - name: Assert the configured site name was applied by the install
+      ansible.builtin.assert:
+        that:
+          - expected_site_name in drupal_site_name_out.stdout
+        fail_msg: "system.site:name is {{ drupal_site_name_out.stdout }}, expected {{ expected_site_name }}"
+
+    - name: Look up the syslog module in the Drupal module schema registry
+      ansible.builtin.command:
+        argv:
+          - mysql
+          - --user=root
+          - --batch
+          - --skip-column-names
+          - --execute=SELECT COUNT(*) FROM drupal.key_value
+            WHERE collection = 'system.schema' AND name = 'syslog';
+      changed_when: false
+      register: drupal_syslog_enabled
+
+    - name: Assert the module named in drupal_enable_modules is enabled
+      ansible.builtin.assert:
+        that:
+          - drupal_syslog_enabled.stdout | trim | int == 1
+        fail_msg: "syslog has no system.schema entry, the drush pm-enable step did not enable it"

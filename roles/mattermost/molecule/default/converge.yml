@@ -1,0 +1,24 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+
+    mattermost_version: "10.5.1"
+    mattermost_team_name: startcloud
+    mattermost_domain_name: chat.startcloud.local
+    mattermost_user: mattermost
+    mattermost_group: mattermost
+    mattermost_db_user: startcloud_mattermost
+    mattermost_db_name: startcloud_mattermost
+    mattermost_db_password: "CHANGEME"
+    mattermost_root_dir: /opt/startcloud_mattermost
+    mattermost_port: 8065
+
+    # Minimal provisioner-context stand-ins so the role runs standalone.
+    settings:
+      hostname: startcloud-mattermost-debian12
+      domain: startcloud.local
+  roles:
+    - role: mattermost

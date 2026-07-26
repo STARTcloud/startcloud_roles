@@ -1,0 +1,39 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    apache_listen_ip: "*"
+    apache_listen_port: 80
+    apache_listen_port_ssl: 443
+    apache_create_vhosts: true
+    apache_vhosts_filename: "vhosts.conf"
+    apache_vhosts_template: "vhosts.conf.j2"
+    apache_remove_default_vhost: true
+    apache_global_vhost_settings: |
+      DirectoryIndex index.html index.php
+    apache_vhosts:
+      - servername: "molecule.startcloud.test"
+        serveralias: "www.molecule.startcloud.test"
+        documentroot: "/var/www/html"
+        serveradmin: "webmaster@molecule.startcloud.test"
+    apache_vhosts_ssl: []
+    apache_allow_override: "All"
+    apache_options: "-Indexes +FollowSymLinks"
+    apache_mods_enabled:
+      - rewrite
+      - headers
+    apache_mods_disabled: []
+    apache_state: started
+    apache_enabled: true
+    apache_restart_state: restarted
+    apache_packages_state: present
+    # Minimal provisioner-context stand-ins so the role runs standalone.
+    settings:
+      hostname: "molecule"
+      domain: "startcloud.test"
+  tasks:
+    - name: "Applying the apache role"
+      ansible.builtin.include_role:
+        name: apache

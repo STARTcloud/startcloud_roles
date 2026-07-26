@@ -1,0 +1,27 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    elasticsearch_version: "7.x"
+    elasticsearch_package: elasticsearch
+    elasticsearch_package_state: present
+    elasticsearch_service_state: started
+    elasticsearch_service_enabled: true
+    elasticsearch_network_host: localhost
+    elasticsearch_http_port: 9200
+    elasticsearch_heap_size_min: 512m
+    elasticsearch_heap_size_max: 512m
+    elasticsearch_extra_options: |
+      cluster.name: molecule-startcloud
+      node.name: molecule-node-1
+      discovery.type: single-node
+    # Minimal provisioner-context stand-ins so the role runs standalone.
+    settings:
+      hostname: "molecule"
+      domain: "startcloud.test"
+  tasks:
+    - name: "Applying the elasticsearch role"
+      ansible.builtin.include_role:
+        name: elasticsearch

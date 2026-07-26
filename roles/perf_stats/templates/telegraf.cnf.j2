@@ -1,0 +1,50 @@
+### MANAGED BY THE {{ role_path | basename }} ANSIBLE ROLE - LOCAL EDITS ARE OVERWRITTEN ###
+# Minimal Telegraf performance-statistics profile: agent settings, the host
+# input plugins listed in perf_stats_input_plugins and the sinks listed in
+# perf_stats_outputs. Telegraf refuses to start without at least one output,
+# so perf_stats_outputs defaults to the file output writing line protocol to
+# stdout (the journal); point it at influxdb/prometheus/etc. to ship metrics.
+
+[global_tags]
+{% for tag_name, tag_value in perf_stats_global_tags.items() %}
+  {{ tag_name }} = "{{ tag_value }}"
+{% endfor %}
+
+[agent]
+  interval = "{{ perf_stats_interval }}"
+  round_interval = {{ perf_stats_round_interval | bool | lower }}
+  metric_batch_size = {{ perf_stats_metric_batch_size }}
+  metric_buffer_limit = {{ perf_stats_metric_buffer_limit }}
+  collection_jitter = "{{ perf_stats_collection_jitter }}"
+  flush_interval = "{{ perf_stats_flush_interval }}"
+  flush_jitter = "{{ perf_stats_flush_jitter }}"
+  precision = ""
+  debug = {{ perf_stats_debug | bool | lower }}
+  quiet = {{ perf_stats_quiet | bool | lower }}
+  logfile = "{{ perf_stats_logfile }}"
+  hostname = "{{ perf_stats_hostname }}"
+  omit_hostname = {{ perf_stats_omit_hostname | bool | lower }}
+
+###############################################################################
+#                                   OUTPUTS                                   #
+###############################################################################
+{% for output in perf_stats_outputs %}
+[[outputs.{{ output.type }}]]
+{% for line in output.config | default([]) %}
+  {{ line }}
+{% endfor %}
+
+{% endfor %}
+###############################################################################
+#                                    INPUTS                                   #
+###############################################################################
+{% for plugin in perf_stats_input_plugins %}
+[[inputs.{{ plugin.plugin }}]]
+{% if plugin.interval is defined %}
+  interval = "{{ plugin.interval }}"
+{% endif %}
+{% for line in plugin.config | default([]) %}
+  {{ line }}
+{% endfor %}
+
+{% endfor %}

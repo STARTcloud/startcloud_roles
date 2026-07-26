@@ -1,0 +1,89 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: "Stat the support bundle directory"
+      ansible.builtin.stat:
+        path: /vagrant/support-bundle
+      register: bundle_dir
+
+    - name: "Assert the support bundle directory was created world-writable"
+      ansible.builtin.assert:
+        that:
+          - bundle_dir.stat.exists
+          - bundle_dir.stat.isdir
+          - bundle_dir.stat.mode == '0777'
+        fail_msg: "/vagrant/support-bundle missing or not mode 0777: {{ bundle_dir.stat }}"
+
+    - name: "Stat the archived ansible playbook zip"
+      ansible.builtin.stat:
+        path: /vagrant/support-bundle/ansible-roles.zip
+      register: roles_zip
+
+    - name: "Assert the ansible playbook was archived into the bundle"
+      ansible.builtin.assert:
+        that:
+          - roles_zip.stat.exists
+          - roles_zip.stat.isreg
+          - roles_zip.stat.size > 0
+        fail_msg: "ansible-roles.zip missing or empty: {{ roles_zip.stat }}"
+
+    - name: "Read the first bytes of the roles archive to confirm zip format"
+      ansible.builtin.command: "head -c 2 /vagrant/support-bundle/ansible-roles.zip"
+      register: roles_zip_magic
+      changed_when: false
+
+    - name: "Assert the roles archive carries the PK zip magic number"
+      ansible.builtin.assert:
+        that:
+          - roles_zip_magic.stdout == 'PK'
+        fail_msg: "ansible-roles.zip is not a zip archive: {{ roles_zip_magic.stdout }}"
+
+    - name: "Slurp the completed-roles manifest"
+      ansible.builtin.slurp:
+        src: /vagrant/support-bundle/completed.json
+      register: completed_manifest
+
+    - name: "Assert the completed-roles manifest records the seeded markers"
+      ansible.builtin.assert:
+        that:
+          - "'dependencies' in (completed_manifest.content | b64decode)"
+          - "'startcloud-marker-role' in (completed_manifest.content | b64decode)"
+        fail_msg: "completed.json did not record the completed markers"
+
+    - name: "Slurp the installers manifest"
+      ansible.builtin.slurp:
+        src: /vagrant/support-bundle/installers.json
+      register: installers_manifest
+
+    - name: "Assert the installers manifest records the seeded installer"
+      ansible.builtin.assert:
+        that:
+          - "'domino-installer.tar' in (installers_manifest.content | b64decode)"
+        fail_msg: "installers.json did not record the seeded installer"
+
+    - name: "Stat the final support bundle zip"
+      ansible.builtin.stat:
+        path: /vagrant/support-bundle.zip
+      register: bundle_zip
+
+    - name: "Assert the final support bundle zip was produced"
+      ansible.builtin.assert:
+        that:
+          - bundle_zip.stat.exists
+          - bundle_zip.stat.isreg
+          - bundle_zip.stat.size > 0
+        fail_msg: "/vagrant/support-bundle.zip missing or empty: {{ bundle_zip.stat }}"
+
+    - name: "Assert the Domino autoconfigure log was not included without a Domino install"
+      ansible.builtin.stat:
+        path: /vagrant/support-bundle/autoconfigure.log
+      register: autoconfigure_log
+
+    - name: "Assert no stray Domino autoconfigure log leaked into the bundle"
+      ansible.builtin.assert:
+        that:
+          - not autoconfigure_log.stat.exists
+        fail_msg: "autoconfigure.log present although domino_home_dir was never defined"

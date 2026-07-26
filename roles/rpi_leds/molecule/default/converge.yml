@@ -1,0 +1,18 @@
+---
+- name: "Converge"
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    run_tasks: true
+  roles:
+    ## `deb_architecture` is NOT set here. The role registers it itself
+    ## ("Gathering DEB architecture", dpkg --print-architecture), and a
+    ## registered var (precedence 19) outranks any play var (12) or role
+    ## `vars:` (15); passing it as a role param (20) is rejected outright by
+    ## validate_argument_spec ("Unsupported parameters ... deb_architecture")
+    ## because it is a runtime register, not a documented role input.
+    ## The arm64 override that makes the Raspberry Pi code path run on this
+    ## x86_64 container is therefore supplied as an extra var (22) from
+    ## molecule.yml `provisioner.ansible_args`.
+    - role: rpi_leds

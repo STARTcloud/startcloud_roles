@@ -1,0 +1,212 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    ## Master gate stays on so the role's task blocks actually run.
+    run_tasks: true
+
+    ## ---------------------------------------------------------------------
+    ## asterisk role variables (defaults/main.yml + meta/argument_specs.yml)
+    ## ---------------------------------------------------------------------
+    asterisk_static_http_port: 8088
+    asterisk_static_https_port: 8089
+    asterisk_config_dir: /etc/asterisk
+    asterisk_lib_dir: /var/lib/asterisk
+    asterisk_run_dir: /var/run/asterisk
+    asterisk_spool_dir: /var/spool/asterisk
+    asterisk_monitor_dir: /var/spool/asterisk/monitor
+    asterisk_voicemail_dir: /var/spool/asterisk/voicemail
+    asterisk_lib64_dir: /usr/lib64/asterisk
+    asterisk_user_lib_dir: /usr/lib/asterisk
+    asterisk_custom_sounds_path: /var/lib/asterisk/sounds/en/custom
+    asterisk_log_dir: /var/log/asterisk
+    asterisk_bin_dir: /usr/sbin
+    asterisk_source_dir: /usr/src/asterisk
+    asterisk_version: asterisk-20.11.1.tar.gz
+    asterisk_package: >-
+      https://downloads.asterisk.org/pub/telephony/asterisk/old-releases/asterisk-20.11.1.tar.gz
+    asterisk_group: asterisk
+    asterisk_user: asterisk
+    asterisk_assets_user: asterisk_assets
+    asterisk_user_pass: "CHANGEME"
+    startcloud_asterisk_pjsip_udp_port: 5060
+    startcloud_asterisk_pjsip_tcp_port: 5062
+    startcloud_asterisk_pjsip_tls_port: 5061
+    startcloud_asterisk_manager_port: 5038
+    startcloud_asterisk_rtp_start: 10000
+    startcloud_asterisk_rtp_end: 20000
+    fail2ban_asterisk_ports: "5060,5062,5061,5038,8088,8089,5080"
+    fail2ban_asterisk_log_dir: /var/log/asterisk/security
+    fail2ban_asterisk_max_retries: 10
+    fail2ban_asterisk_ban_time: 8h
+
+    ## ---------------------------------------------------------------------
+    ## Provisioner-context stand-ins. roles/asterisk/meta/main.yml still
+    ## carries seven role dependencies (setup, hostname, dependencies,
+    ## service_user, sdkman_install, sdkman_java, fail2ban), so applying
+    ## `asterisk` also applies all of them. Everything below exists purely to
+    ## satisfy that dependency chain - none of it is read by the asterisk
+    ## tasks themselves except `service_group`, which tasks/main.yml adds the
+    ## asterisk user to but which the role ships no default for.
+    ## ---------------------------------------------------------------------
+    settings:
+      hostname: startcloud-asterisk-debian12
+      domain: molecule.test
+      vagrant_user: startcloud
+      vagrant_user_pass: "CHANGEME"
+      vagrant_user_home: /home/startcloud
+    vendor: STARTcloud
+    secrets:
+      installer_base_url: https://installers.example.com/artifacts
+      installer_url_user: molecule
+      installer_url_pass: "CHANGEME"
+
+    ## setup
+    show_help: true
+    debug_all: false
+    timezone: "America/Chicago"
+    win_timezone: "Central Standard Time"
+    installer_dir: /vagrant/installers
+    completed_dir: /vagrant/completed
+    email: support@startcloud.com
+    root_ssh_key: ""
+    provisioner_name: molecule-provisioner
+    provisioner_version: v1.2.3
+    core_provisioner_version: v4.5.6
+
+    ## dependencies
+    use_proxy: false
+    manually_intall_updates: false
+
+    ## service_user / sdkman
+    service_user: startcloud
+    service_group: startcloud
+    service_home_dir: /home/startcloud
+    service_user_soft_limit: "60000"
+    service_user_hard_limit: "80000"
+    service_user_password: "CHANGEME"
+    service_user_ssh_key: ""
+    sdkman_tmp_dir: /tmp
+    sdkman_validate_ssl: true
+    sdkman_update: false
+    sdkman_auto_answer: true
+    sdkman_selfupdate_enable: true
+    sdkman_insecure_ssl: false
+    sdkman_disable_gvm_alias: false
+    sdkman_curl_connect_timeout: 7
+    sdkman_curl_max_time: 10
+    sdkman_beta_channel: false
+    sdkman_debug_mode: false
+    sdkman_colour_enable: true
+    sdkman_install_packages: []
+    sdkman_uninstall_packages: []
+    sdkman_defaults: {}
+    sdkman_flush_caches_before: []
+    sdkman_flush_caches_after: []
+    sdkman_offline_mode: false
+    java_version: "LATEST"
+    java_jvm: jre-8u251-linux-x64.tar.gz
+
+  pre_tasks:
+    - name: "Refreshing the apt cache so the package installs can resolve"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 600
+      changed_when: false
+
+    - name: "Installing the prerequisites the dependency chain shells out to"
+      ansible.builtin.apt:
+        name:
+          - acl
+          - ca-certificates
+          - sudo
+          - unzip
+          - zip
+          - curl
+        state: present
+
+    ## The `hostname` meta dependency writes both of these files, and every
+    ## writer it uses is atomic (tmpfile + rename): `hostnamectl --static
+    ## set-hostname` for /etc/hostname, ansible.builtin.replace for /etc/hosts.
+    ## Docker bind-mounts both paths, so renaming over them fails with "Device
+    ## or resource busy". Dropping the bind mounts turns them back into ordinary
+    ## files and both writers succeed. Booting without systemd - the workaround
+    ## the standalone hostname scenario uses - is not available here, because
+    ## the asterisk role enables and restarts asterisk.service.
+    - name: "Dropping docker's bind mounts over the files the hostname dependency rewrites"
+      ansible.builtin.command: "umount {{ item }}"
+      register: asterisk_bind_umount
+      changed_when: asterisk_bind_umount.rc == 0
+      failed_when:
+        - asterisk_bind_umount.rc != 0
+        - "'not mounted' not in asterisk_bind_umount.stderr"
+      loop:
+        - /etc/hostname
+        - /etc/hosts
+
+    ## Behind the bind mount the image ships no /etc/hosts, so restore the two
+    ## loopback lines a real Debian guest has. The lines seeded here are the
+    ## exact text the hostname dependency's replace task produces - seeding
+    ## anything else makes the two fight: the role rewrites both lines, the
+    ## next run's lineinfile no longer finds its own text and appends it back,
+    ## and the role then rewrites the appended copy. Both tasks reported
+    ## changed forever because of that. Identical text converges on run one.
+    - name: "Seeding the loopback entries the hostname dependency rewrites"
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        line: "{{ item }}"
+        create: true
+        mode: "0644"
+      loop:
+        - "127.0.0.1   localhost {{ settings.hostname }}.{{ settings.domain }} {{ settings.hostname }}"
+        - "127.0.1.1   localhost {{ settings.hostname }}.{{ settings.domain }} {{ settings.hostname }}"
+
+    ## Only the two directories the dependency chain does not create itself.
+    ## The setup role creates /vagrant/completed and /vagrant/support-bundle
+    ## with mode 0777 (and creates their parents on the way), so creating them
+    ## here at 0755 only started a chmod tug-of-war - both this task and
+    ## `setup : Creating Directories` reported two changed items every run.
+    - name: "Creating the /vagrant tree the setup role writes its support bundle into"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - /vagrant
+        - /vagrant/installers
+
+    - name: "Creating the group the service account belongs to"
+      ansible.builtin.group:
+        name: "{{ service_group }}"
+        state: present
+
+    - name: "Creating the service/vagrant user the dependency roles expect to exist"
+      ansible.builtin.user:
+        name: "{{ service_user }}"
+        group: "{{ service_group }}"
+        home: "{{ service_home_dir }}"
+        shell: /bin/bash
+        create_home: true
+        state: present
+
+    - name: "Creating the shell profile files SDKMAN persists its settings into"
+      ansible.builtin.file:
+        path: "{{ service_home_dir }}/{{ item }}"
+        state: touch
+        owner: "{{ service_user }}"
+        group: "{{ service_group }}"
+        mode: "0644"
+        modification_time: preserve
+        access_time: preserve
+      loop:
+        - .bash_profile
+        - .profile
+        - .bashrc
+        - .zshrc
+
+  roles:
+    ## No role params: meta/argument_specs.yml makes validate_argument_spec the
+    ## role's first task, and it rejects any parameter the spec does not list.
+    - role: asterisk

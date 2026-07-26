@@ -1,0 +1,262 @@
+---
+## FreeBSD firewall appliances (pfSense; OPNsense slots in via the same
+## detection when its config surgery is implemented). Reuses the role's mode
+## vars: existing-cert mode deploys supplied PEM content and wires the
+## webConfigurator to it; letsencrypt_enabled drives the acme package instead.
+## Fleet constraint: appliances run Python 3.7 — controller stays on
+## ansible-core 2.16.
+- name: "Detecting pfSense Appliance"
+  ansible.builtin.stat:
+    path: /etc/inc/globals.inc
+  register: ssl_pfsense_check
+
+- name: "Configuring Appliance Certificates"
+  when: ssl_pfsense_check.stat.exists
+  block:
+    - name: "Getting Hostname of Appliance"
+      ansible.builtin.command: hostname -s
+      register: ssl_appliance_hostname_result
+      changed_when: false
+      check_mode: false
+
+    - name: "Setting Appliance Hostname Fact"
+      ansible.builtin.set_fact:
+        ssl_appliance_hostname: "{{ ssl_appliance_hostname_result.stdout }}"
+        ssl_appliance_fqdn: "{{ ssl_appliance_hostname_result.stdout }}.{{ settings.domain }}"
+
+    - name: "Creating Appliance Tools Directory"
+      ansible.builtin.file:
+        path: "{{ ssl_appliance_tools_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: "Placing XML Configuration Tools"
+      ansible.builtin.template:
+        src: "{{ item }}.j2"
+        dest: "{{ ssl_appliance_tools_dir }}/{{ item }}"
+        mode: "0755"
+      loop:
+        - refid.py
+        - acme_cron_remove.py
+
+    - name: "Removing ACME Package Configuration"
+      when: ssl_acme_cleanup and not letsencrypt_enabled
+      block:
+        - name: "Stripping ACME Configuration from config.xml"
+          ansible.builtin.replace:
+            path: /conf/config.xml
+            regexp: '[\s\S]'
+            replace: ''
+            after: '<acme>.*?\n'
+            before: '\s*<\/acme>'
+
+        - name: "Removing ACME Cron Entries"
+          ansible.builtin.command: "{{ ansible_python.executable }} {{ ssl_appliance_tools_dir }}/acme_cron_remove.py"
+          args:
+            chdir: "{{ ssl_appliance_tools_dir }}"
+          changed_when: true
+
+        - name: "Reloading Appliance Configuration"
+          ansible.builtin.include_tasks: freebsd-reload.yml
+
+    - name: "Deploying Certificate from the Controller Certificate Store"
+      when: not selfsigned_enabled and not letsencrypt_enabled
+      block:
+        - name: "Creating Appliance Certificate Directories"
+          ansible.builtin.file:
+            path: "{{ item }}"
+            state: directory
+            mode: "0755"
+          with_items:
+            - "{{ ssl_appliance_cert_dir }}"
+            - "{{ ssl_appliance_cert_dir }}/{{ ssl_appliance_hostname }}"
+
+        # Sources are the controller-side certificate store in the fleet's
+        # per-host layout: {{ cert_dir }}/<fqdn>/{host.pem,host.key,cacert.pem}.
+        # Ansible runs from the workstation, so plain copy pushes
+        # controller → appliance.
+        - name: "Placing Certificate"
+          ansible.builtin.copy:
+            src: "{{ cert_dir }}/{{ ssl_appliance_fqdn }}/host.pem"
+            dest: "{{ ssl_appliance_cert_dir }}/{{ ssl_appliance_hostname }}/{{ ssl_appliance_fqdn }}.cer"
+            mode: "0644"
+
+        - name: "Placing Private Key"
+          ansible.builtin.copy:
+            src: "{{ cert_dir }}/{{ ssl_appliance_fqdn }}/host.key"
+            dest: "{{ ssl_appliance_cert_dir }}/{{ ssl_appliance_hostname }}/{{ ssl_appliance_fqdn }}.key"
+            mode: "0600"
+
+        - name: "Placing CA Certificate"
+          ansible.builtin.copy:
+            src: "{{ cert_dir }}/{{ ssl_appliance_fqdn }}/cacert.pem"
+            dest: "{{ ssl_appliance_cert_dir }}/{{ ssl_appliance_hostname }}/cacert.pem"
+            mode: "0644"
+
+        - name: "Wiring the webConfigurator Certificate"
+          ansible.builtin.include_tasks: freebsd-webgui-cert.yml
+
+        # JKS fan-out, appliance-side. The role's debian lane uses the
+        # openssl_pkcs12/java_keystore modules on the target; those need a
+        # modern Python the appliance lacks (3.7), so this uses the box's own
+        # openssl and keytool binaries — the proven legacy method.
+        - name: "Concatenating Key and Certificate for PKCS12"
+          ansible.builtin.shell: >-
+            cat {{ ssl_appliance_cert_dir }}/{{ ssl_appliance_hostname }}/{{ ssl_appliance_fqdn }}.key
+            {{ ssl_appliance_cert_dir }}/{{ ssl_appliance_hostname }}/{{ ssl_appliance_fqdn }}.cer
+            > {{ ssl_appliance_cert_dir }}/{{ ssl_appliance_hostname }}/{{ ssl_appliance_fqdn }}.all.pem
+          changed_when: true
+
+        - name: "Generating PKCS12 Bundle"
+          ansible.builtin.command: >-
+            openssl pkcs12 -export
+            -in {{ ssl_appliance_cert_dir }}/{{ ssl_appliance_hostname }}/{{ ssl_appliance_fqdn }}.all.pem
+            -out {{ ssl_appliance_cert_dir }}/{{ ssl_appliance_hostname }}/{{ ssl_appliance_fqdn }}.p12
+            -passout pass:{{ cert_pass }}
+          changed_when: true
+
+        - name: "Removing the Previous JKS"
+          ansible.builtin.file:
+            path: "{{ ssl_appliance_cert_dir }}/{{ ssl_appliance_hostname }}/{{ ssl_appliance_fqdn }}.jks"
+            state: absent
+
+        - name: "Generating the JKS Keystore"
+          ansible.builtin.command: >-
+            {{ ssl_appliance_keytool }} -importkeystore
+            -srckeystore {{ ssl_appliance_cert_dir }}/{{ ssl_appliance_hostname }}/{{ ssl_appliance_fqdn }}.p12
+            -storepass {{ cert_pass }}
+            -destkeystore {{ ssl_appliance_cert_dir }}/{{ ssl_appliance_hostname }}/{{ ssl_appliance_fqdn }}.jks
+            -keypass {{ cert_pass }} -srcstorepass {{ cert_pass }}
+          changed_when: true
+
+    - name: "Provisioning via the ACME Package"
+      when: letsencrypt_enabled
+      block:
+        - name: "Stripping Previous ACME Configuration from config.xml"
+          ansible.builtin.replace:
+            path: /conf/config.xml
+            regexp: '[\s\S]'
+            replace: ''
+            after: '<acme>.*?\n'
+            before: '\s*<\/acme>'
+
+        - name: "Writing ACME Certificate and Account Configuration for {{ ssl_appliance_hostname }}"
+          ansible.builtin.blockinfile:
+            path: /conf/config.xml
+            marker: "                  <!-- {mark} ANSIBLE ACME MANAGED BLOCK -->"
+            insertafter: '<acme>'
+            state: present
+            content: |2
+                                <certificates>
+                                    <item>
+                                        <a_domainlist>
+                                            <item>
+                                                <status>enable</status>
+                                                <name>{{ ssl_appliance_fqdn }}</name>
+                                                <method>standalone</method>
+                                                <standaloneport>80</standaloneport>
+                                                <_index></_index>
+                                            </item>
+                                        </a_domainlist>
+                                        <a_actionlist>
+                                        </a_actionlist>
+                                        <keypaste></keypaste>
+                                        <name>{{ ssl_appliance_hostname }}</name>
+                                        <descr><![CDATA[{{ ssl_appliance_hostname }}]]></descr>
+                                        <status>active</status>
+                                        <acmeaccount>{{ ssl_acme_account_name }}</acmeaccount>
+                                        <keylength>4096</keylength>
+                                        <ocspstaple></ocspstaple>
+                                        <dnssleep></dnssleep>
+                                        <renewafter>60</renewafter>
+                                        <lastrenewal>1282617226</lastrenewal>
+                                    </item>
+                                </certificates>
+                                <accountkeys>
+                                    <item>
+                                        <accountkey>{{ ssl_acme_account_key }}</accountkey>
+                                        <name>{{ ssl_acme_account_name }}</name>
+                                        <descr><![CDATA[{{ ssl_appliance_hostname }}]]></descr>
+                                        <email><![CDATA[{{ ssl_acme_account_email }}]]></email>
+                                        <acmeserver>{{ ssl_acme_server }}</acmeserver>
+                                        <renewafter></renewafter>
+                                    </item>
+                                </accountkeys>
+                                <enable>yes</enable>
+                                <writecerts>yes</writecerts>
+
+        - name: "Reloading Appliance Configuration"
+          ansible.builtin.include_tasks: freebsd-reload.yml
+
+        - name: "Checking Whether the webGUI HTTP Redirect is Disabled"
+          ansible.builtin.lineinfile:
+            path: /conf/config.xml
+            state: absent
+            regexp: '<disablehttpredirect[\s\S]*?>.*'
+          check_mode: true
+          register: ssl_disablehttpredirect
+
+        - name: "Disabling the webGUI HTTP Redirect"
+          when: not ssl_disablehttpredirect.found
+          ansible.builtin.lineinfile:
+            path: /conf/config.xml
+            insertafter: '<webgui>'
+            state: present
+            line: "                        <disablehttpredirect></disablehttpredirect>"
+
+        - name: "Reloading Appliance Configuration"
+          when: not ssl_disablehttpredirect.found
+          ansible.builtin.include_tasks: freebsd-reload.yml
+
+        - name: "Opening Port 80 for the Standalone Challenge"
+          ansible.builtin.command: "easyrule pass wan tcp any wanip 80"
+          changed_when: true
+
+        - name: "Issuing the Certificate via the ACME Package"
+          ansible.builtin.command: "/usr/local/pkg/acme/acme_command.sh -- -perform=issue -certname={{ ssl_appliance_hostname }} -force"
+          changed_when: true
+
+        - name: "Asserting the Issued Certificate Exists"
+          ansible.builtin.stat:
+            path: "/tmp/acme/{{ ssl_appliance_hostname }}/{{ ssl_appliance_fqdn }}/{{ ssl_appliance_fqdn }}.cer"
+          register: ssl_acme_cert_exists
+          failed_when: not ssl_acme_cert_exists.stat.exists
+
+        - name: "Asserting the Issued Key Exists"
+          ansible.builtin.stat:
+            path: "/tmp/acme/{{ ssl_appliance_hostname }}/{{ ssl_appliance_fqdn }}/{{ ssl_appliance_fqdn }}.key"
+          register: ssl_acme_key_exists
+          failed_when: not ssl_acme_key_exists.stat.exists
+
+        - name: "Creating Appliance Certificate Directories"
+          ansible.builtin.file:
+            path: "{{ item }}"
+            state: directory
+            mode: "0755"
+          with_items:
+            - "{{ ssl_appliance_cert_dir }}"
+            - "{{ ssl_appliance_cert_dir }}/{{ ssl_appliance_hostname }}"
+
+        - name: "Finding Issued Certificate Files"
+          ansible.builtin.find:
+            paths: "/tmp/acme/{{ ssl_appliance_hostname }}/{{ ssl_appliance_fqdn }}/"
+            recurse: true
+            patterns: "*.cer,*.key"
+          register: ssl_acme_files
+
+        - name: "Backing Up Issued Certificate Files for {{ ssl_appliance_hostname }}"
+          ansible.builtin.copy:
+            src: "{{ item.path }}"
+            remote_src: true
+            dest: "{{ ssl_appliance_cert_dir }}/{{ ssl_appliance_hostname }}/"
+            mode: "0600"
+          with_items: "{{ ssl_acme_files.files }}"
+
+        - name: "Setting the webConfigurator refid for {{ ssl_appliance_hostname }}"
+          ansible.builtin.command: "{{ ansible_python.executable }} {{ ssl_appliance_tools_dir }}/refid.py -d {{ ssl_appliance_hostname }} -sr"
+          args:
+            chdir: "{{ ssl_appliance_tools_dir }}"
+          changed_when: true
+
+        - name: "Reloading Appliance Configuration"
+          ansible.builtin.include_tasks: freebsd-reload.yml

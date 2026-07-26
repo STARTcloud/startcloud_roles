@@ -1,2 +1,19 @@
 ---
 run_tasks: true
+
+## Candidate Firefox installation directories, checked in order. Debian ships
+## firefox-esr into /usr/lib/firefox-esr, Ubuntu ships firefox into
+## /usr/lib/firefox. The first directory that actually exists on the target is
+## the one whose NSS trust module is repointed; when none exist the host is
+## browserless and the whole Firefox trust block is skipped.
+freeipa_client_domain_join_firefox_dirs:
+  - /usr/lib/firefox-esr
+  - /usr/lib/firefox
+
+## Roots searched on the target for the p11-kit shared trust module. The module
+## lives under a multiarch directory that differs per architecture
+## (/usr/lib/x86_64-linux-gnu/pkcs11, /usr/lib/aarch64-linux-gnu/pkcs11,
+## /usr/lib64/pkcs11), so the real path is discovered rather than hardcoded.
+freeipa_client_domain_join_p11_kit_search_paths:
+  - /usr/lib
+  - /usr/lib64

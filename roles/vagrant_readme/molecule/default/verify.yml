@@ -1,0 +1,57 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    expected_hostname: startcloud-vagrant-readme
+    expected_domain: molecule.test
+  tasks:
+    - name: "Stat the rendered help file"
+      ansible.builtin.stat:
+        path: /tmp/cloud.txt
+      register: cloud_txt
+
+    - name: "Assert the help file was rendered as a 0644 regular file"
+      ansible.builtin.assert:
+        that:
+          - cloud_txt.stat.exists
+          - cloud_txt.stat.isreg
+          - cloud_txt.stat.mode == '0644'
+        fail_msg: >-
+          /tmp/cloud.txt missing or wrong type/mode
+          (exists={{ cloud_txt.stat.exists }},
+          mode={{ cloud_txt.stat.mode | default('n/a') }})
+
+    - name: "Read the rendered help file"
+      ansible.builtin.slurp:
+        src: /tmp/cloud.txt
+      register: cloud_txt_raw
+
+    - name: "Decode the rendered help file and build the expected host record"
+      ansible.builtin.set_fact:
+        cloud_txt_body: "{{ cloud_txt_raw.content | b64decode }}"
+        expected_host_record: >-
+          {{ ansible_default_ipv4.address }} {{ expected_hostname }}
+          {{ expected_hostname }}.{{ expected_domain }}
+
+    - name: "Assert the static help body from cloud.txt.j2 is present"
+      ansible.builtin.assert:
+        that:
+          - "'### Vagrant VM commands ###' in cloud_txt_body"
+          - "'\"vagrant up\"' in cloud_txt_body"
+          - "'\"vagrant destroy\"' in cloud_txt_body"
+          - "'## Informational Messages' in cloud_txt_body"
+        fail_msg: "templates/cloud.txt.j2 body did not render into /tmp/cloud.txt"
+
+    - name: "Assert the host record line carries the detected address and FQDN"
+      # The role derives netoutput from `ip addr show <first non-lo iface>`
+      # piped through ansible.utils.ipaddr('address'). On this single-NIC
+      # container that is the default IPv4 address, so the rendered line must
+      # read "<ip> <hostname> <hostname>.<domain>".
+      ansible.builtin.assert:
+        that:
+          - expected_host_record in cloud_txt_body
+        fail_msg: >-
+          Expected host record '{{ expected_host_record }}'
+          not found in /tmp/cloud.txt

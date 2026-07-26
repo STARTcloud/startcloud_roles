@@ -8,6 +8,10 @@ server:
 log:
   level: "{{ authelia_log_level }}"
 
+ntp:
+  address: "{{ authelia_ntp_address }}"
+  disable_startup_check: {{ authelia_ntp_disable_startup_check | bool | ternary('true', 'false') }}
+
 identity_validation:
   reset_password:
     jwt_secret: "{{ authelia_jwt_secret }}"

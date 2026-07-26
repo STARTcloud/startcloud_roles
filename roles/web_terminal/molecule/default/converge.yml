@@ -1,0 +1,40 @@
+---
+- name: "Converge"
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    ## Master gate stays on so the role actually runs.
+    run_tasks: true
+    ## Provisioner-context vars the role declares in meta/argument_specs.yml but
+    ## cannot invent: config.yaml.j2 builds the proxy domain from
+    ## settings.hostname/settings.domain and the TLS paths from cert_dir, and
+    ## supervisord.webterminal.conf.j2 builds PATH from service_home_dir.
+    settings:
+      hostname: startcloud-web-terminal
+      domain: local.startcloud.com
+    cert_dir: /etc/ssl
+    service_home_dir: /home/startcloud
+  roles:
+    ## The APT path is the production default and the only container-testable
+    ## one, so web_terminal_build_from_source stays false: the source path
+    ## clones from GitHub, runs two npm installs plus a Vite build, and becomes
+    ## a service_user this role never creates.
+    ##
+    ## The repository/key URLs shipped in defaults/main.yml are deliberately NOT
+    ## overridden - they point at the canonical short-path host
+    ## (debian.startcloud.com/public/debian, matching roles/dependencies), so the
+    ## scenario exercises the values the role really ships.
+    ##
+    ## The secrets are NOT pinned either: defaults/main.yml now leaves both
+    ## empty, which means the role generates them once on the target and reads
+    ## them back, so the scenario tests exactly that - including the idempotence
+    ## run, which only stays clean because the values are persisted.
+    - role: web_terminal
+      web_terminal_build_from_source: false
+      web_terminal_package: web-terminal
+      web_terminal_path: /opt/web-terminal
+      web_terminal_config_path: /etc/web-terminal/config.yaml
+      startcloud_web_terminal_port_forwards:
+        - guest: 8090
+          url: "web-terminal"

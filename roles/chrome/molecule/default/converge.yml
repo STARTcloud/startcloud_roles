@@ -1,0 +1,20 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    ## Master gate stays on so the whole block actually executes.
+    run_tasks: true
+    ## installer_dir now has a declared default (the house-wide
+    ## /vagrant/installers, same as the setup role). The container has no
+    ## /vagrant share worth writing to, so the staging directory is pointed at
+    ## a container-local path here.
+    installer_dir: /opt/installers
+  roles:
+    ## Key URL, driver URL/version, archive name and the Chromedriver install
+    ## directory are left at their defaults so the real Google signing key, the
+    ## real Chrome apt repository and the real Chromedriver bucket are
+    ## exercised — that network path IS the role. No prepare.yml pre-installs
+    ## gnupg/unzip either: the role has to bring its own tooling.
+    - role: chrome

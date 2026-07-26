@@ -56,8 +56,16 @@
   ansible.builtin.debug:
     var: tomcat_version
 
+- name: "Gathering installed package facts"
+  ansible.builtin.package_facts:
+    manager: apt
+
+# The bullseye repo is only borrowed for the initial install and removed again
+# below; both blocks are skipped once tomcat is installed so reruns stay idempotent.
 - name: "Adding Debian 11 Repos"
-  when: tomcat_version is version('10', '<')
+  when:
+    - tomcat_version is version('10', '<')
+    - ("tomcat" ~ tomcat_version) not in ansible_facts.packages
   block:
     - name: "Adding Debian Bullseye repository"
       ansible.builtin.apt_repository:
@@ -78,7 +86,9 @@
     state: present
 
 - name: "Removing Debian 11 Repos"
-  when: tomcat_version is version('10', '<')
+  when:
+    - tomcat_version is version('10', '<')
+    - ("tomcat" ~ tomcat_version) not in ansible_facts.packages
   block:
     - name: "Removing Debian Bullseye repository"
       ansible.builtin.apt_repository:
@@ -133,10 +143,3 @@
   with_items:
     - "/etc/tomcat{{ tomcat_version }}/server.xml"
   notify: "Restart tomcat"
-
-- name: "Starting and Enabling Tomcat {{ tomcat_version }}"
-  ansible.builtin.service:
-    daemon_reload: true
-    name: "tomcat{{ tomcat_version }}"
-    state: restarted
-    enabled: true

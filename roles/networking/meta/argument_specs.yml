@@ -39,3 +39,28 @@ argument_specs:
         type: list
         elements: str
         description: Service subdomain labels to register as DNS entries.
+      completed_dir:
+        type: str
+        description: >-
+          Provisioner context — directory the provisioner keeps its completion artifacts in. The role writes the
+          selected IP into ipaddress.yml inside that directory and reads it back when no bridged adapter was
+          configured. Supplied by the provisioner, so it is deliberately not defaulted here.
+      settings:
+        type: dict
+        description: >-
+          Provisioner context — instance settings supplied by the provisioner. Only hostname and domain are consumed:
+          they build the canonical /etc/hosts record and the per-service DNS alias list derived from dns_entries_list.
+      networks:
+        type: list
+        elements: dict
+        description: >-
+          Provisioner context — network definitions supplied by the provisioner (type, address, netmask, gateway,
+          route, dhcp4, dhcp6, dns). networks[0] decides whether a public bridged adapter is configured and feeds the
+          interface.yaml.j2 netplan template; when it is undefined the role falls back to the NAT/loopback path.
+      ansible_module_running_in_container:
+        type: bool
+        description: >-
+          Provisioner context — true when the target is a container. The role gathers it itself with
+          community.docker.current_container_facts at the top of each OS task file, so it never has to be supplied;
+          when true every stage is skipped, because a container has no netplan, no systemd-networkd and no adapters to
+          reorder. A value supplied by the provisioner as a play or extra var outranks the gathered fact.

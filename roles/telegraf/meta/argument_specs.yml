@@ -4,7 +4,9 @@ argument_specs:
     short_description: Install and configure the Telegraf metrics agent.
     description:
       - Installs the InfluxData Telegraf agent from the upstream repositories (or a downloaded package) and renders its configuration.
-      - Supports Linux (Debian, RedHat, SUSE), FreeBSD, macOS, Windows, and a containerised Docker deployment.
+      - Owns /etc/telegraf/telegraf.conf as the collection's canonical metrics role, superseding perf_stats wherever both could apply.
+      - Claimed platforms are Debian-family systems and FreeBSD, natively or as a containerised Docker deployment.
+      - The RedHat, SUSE, macOS and Windows task paths ship with the role but are unverified, so meta/main.yml does not claim those platforms.
     author: Mark Gilbert
     options:
       run_tasks:
@@ -17,8 +19,10 @@ argument_specs:
         description: Whether the Telegraf service is started and enabled at boot.
       telegraf_agent_version:
         type: str
-        default: 1.10.0
-        description: Telegraf version to install.
+        default: 1.39.2
+        description:
+          - Telegraf version used to build the downloaded artefact names for the online, Docker and Windows install methods.
+          - The repo install method ignores it and installs whatever the InfluxData repository publishes - pin that with telegraf_agent_package.
       telegraf_agent_version_patch:
         type: int
         default: 1
@@ -26,17 +30,19 @@ argument_specs:
       telegraf_agent_package:
         type: str
         default: telegraf
-        description: Package name used when installing Telegraf.
+        description:
+          - Package spec used when installing Telegraf from a repository, unpinned by default.
+          - Set a full spec such as telegraf=1.39.2-1 on Debian or telegraf-1.39.2 on RedHat to pin a specific published version.
       telegraf_agent_package_arch:
         type: str
         default: "{{ 'amd64' if ansible_architecture == 'x86_64' else ('armhf' if ansible_architecture == 'arm64' else ansible_architecture) }}"
         description: Debian package architecture used in the deb package filename.
       telegraf_agent_package_file_deb:
         type: str
-        description: Filename of the Debian package to download for the online install method.
+        description: Filename of the Debian package downloaded (online) or expected on disk (offline) under telegraf_agent_package_path.
       telegraf_agent_package_file_rpm:
         type: str
-        description: Filename of the RPM package to download for the online install method.
+        description: Filename of the RPM package downloaded (online) or expected on disk (offline) under telegraf_agent_package_path.
       telegraf_agent_package_path:
         type: str
         default: /tmp
@@ -163,6 +169,10 @@ argument_specs:
         type: str
         default: https://repos.influxdata.com/influxdb.key
         description: URL of the InfluxData GPG key used to verify yum packages.
+      telegraf_yum_gpgcheck:
+        type: bool
+        default: true
+        description: Whether yum/dnf verifies package signatures for the InfluxData repository.
       telegraf_win_install_dir:
         type: str
         default: "C:\\Telegraf"

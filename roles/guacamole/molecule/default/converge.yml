@@ -1,0 +1,59 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    # Role variables (defaults/main.yml + meta/argument_specs.yml).
+    run_tasks: true
+    guacamole_version: "1.5.0"
+    guacamole_admin_user: guacadmin
+    guacamole_admin_pass: "CHANGEME"
+    guacamole_guacd_port: 4822
+    guacamole_branding: true
+    guacamole_branding_jar: branding.jar
+    guacamole_httpcomponents_archive: httpcomponents-client-4.5.6-bin.zip
+    guacamole_httpcomponents_version: "4.5.6"
+    guacamole_log4j_version: "1.2.17"
+    guacamole_auth_domino_version: "1.0.0"
+    mysql_db_name: guacdb
+    mysql_database_user: guacadmin
+    mysql_database_pass: "CHANGEME"
+    mysql_java_connector_jar: mariadb-java-client-3.4.0.jar
+    mysql_java_connector_version: "8.4.0"
+    mysql_java_connector_jar_url: "https://dlm.mariadb.com/3824147/Connectors/java/connector-java-3.4.0/{{ mysql_java_connector_jar }}"
+    startcloud_guacamole_port_forwards:
+      - guest: "{{ startcloud_tomcat_port_forwards[1].guest }}"
+        url: "guacamole"
+      - guest: 4822
+        url: "guacd"
+    startcloud_guacamole_proxy_url: "{{ startcloud_guacamole_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"
+
+    # Minimal provisioner-context stand-ins so the role runs standalone.
+    # None of the following have defaults in this role - they come from the
+    # setup / service_user / tomcat / mariadb roles and the Vagrant
+    # provisioner, but tasks/main.yml and defaults/main.yml dereference them.
+    settings:
+      hostname: "startcloud-guacamole"
+      domain: "molecule.test"
+    service_user: startcloud
+    service_group: startcloud
+    completed_dir: /vagrant/completed
+    # `tomcat_version` gates the webapps path the WAR is deployed to and the
+    # unit name the role restarts; Debian 12 ships tomcat10.
+    tomcat_version: 10
+    # defaults/main.yml derives the guacamole web port from the tomcat role's
+    # port-forward list, so that list has to exist too.
+    startcloud_tomcat_port_forwards:
+      - guest: 8181
+        url: "tomcat"
+        guest_redirect: 8843
+      - guest: 8843
+        url: "tomcat"
+    # The schema import and the tzinfo fix-up authenticate as the database
+    # superuser; the role never defines these.
+    mysql_root_user: root
+    mysql_root_password: "CHANGEME"
+    mysql_port: 3306
+  roles:
+    - role: guacamole

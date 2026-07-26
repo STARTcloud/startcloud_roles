@@ -2,7 +2,7 @@
 <br />
 <p align="center">
   <a href="https://github.com/STARTcloud/startcloud_roles/">
-    <img src="https://startcloud.com/assets/images/logos/startcloud-logo40.png" alt="Logo" width="200" height="100">
+    <img src="https://raw.githubusercontent.com/STARTcloud/startcloud_roles/refs/heads/main/roles/startcloud_theme/files/startcloud.svg" alt="Logo" width="200" height="100">
   </a>
 
   <h3 align="center">STARTcloud Roles</h3>
@@ -45,17 +45,27 @@ STARTcloud Roles is a collection of Ansible roles designed to secure and prepare
 - **Dependency Installation**: Handles the installation of required dependencies, reducing manual setup efforts.
 
 
-### ~~Including STARTcloud Roles~~
+### Including STARTcloud Roles
 
-1. **~~Add STARTcloud Roles as a Git Submodule~~**: ~~First, ensure that STARTcloud Roles is added as a submodule to your project. This can be done using the following command:~~
+Releases are built by release-please from conventional commits: every release
+carries an immutable `startcloud-startcloud_roles-<version>.tar.gz` (plus a
+mutable `startcloud-startcloud_roles.tar.gz` "latest" alias) with `.sha256`
+sidecars — the same artifact contract the provisioner catalog uses. Vendor
+the collection into a provisioner from the artifact instead of a git
+submodule:
 
-~~git submodule add -b submodule https://github.com/STARTcloud/startcloud_roles startcloud_roles~~
-   ~~Replace `path/to/submodule` with the desired path within your project where you want to include STARTcloud Roles.~~
+```bash
+ansible-galaxy collection install \
+  https://github.com/STARTcloud/startcloud_roles/releases/latest/download/startcloud-startcloud_roles.tar.gz \
+  -p provisioners/ansible_collections
+```
 
-2. **~~Update the Submodule~~**: 
-~~After cloning your project, navigate to the submodule directory and pull the latest changes:~~
+Or pin a version in a `requirements.yml`:
 
-~~bash cd path/to/submodule git pull origin main~~
+```yaml
+collections:
+  - name: https://github.com/STARTcloud/startcloud_roles/releases/download/v1.0.3/startcloud-startcloud_roles-1.0.3.tar.gz
+```
 
 ### Interacting with `Hosts.yml` and `Hosts.rb`
 

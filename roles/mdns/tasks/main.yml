@@ -19,14 +19,9 @@
             cache_valid_time: 3600
             update_cache: true
 
-        - name: "Upgrading all apt packages"
+        - name: "Adding Additional Dependencies {{ mdns_packages }}"
           ansible.builtin.apt:
-            upgrade: dist
-            update_cache: true
-
-        - name: "Adding Additional Dependencies avahi-daemon"
-          ansible.builtin.apt:
-            name: avahi-daemon
+            name: "{{ mdns_packages }}"
             state: present
 
         - name: "Enabling and starting Avahi daemon"

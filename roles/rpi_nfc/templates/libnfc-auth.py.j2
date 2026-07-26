@@ -19,7 +19,7 @@ GPIO.setmode(GPIO.BCM)
 GPIO.setup(BUZZER_PIN, GPIO.OUT)
 
 badgeID = sys.argv[1].replace('  ', ' ').rstrip().replace(' ', '-')
-userSource = "/data/users.yml"
+userSource = "{{ rpi_nfc_user_source }}"
 
 try:
     cmd = "last -w | grep 'logged in' | grep ':1' | awk '{print $1}'"

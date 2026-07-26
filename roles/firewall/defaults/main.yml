@@ -1,2 +1,7 @@
 ---
 run_tasks: true
+
+## FreeBSD firewall appliances (pfSense/OPNsense): exclude the CGNAT range
+## (100.64.0.0/10) from the bogons table and refresh the CA bundle the
+## update script depends on. Off by default; fleets using CGNAT enable it.
+firewall_bogon_exclusions: false

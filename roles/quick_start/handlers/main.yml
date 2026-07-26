@@ -1,1 +1,10 @@
 ---
+# In a container there is no cockpit unit to restart - the same gate
+# roles/web_terminal and roles/supervisord use for their container paths.
+- name: "Restarting Cockpit"
+  when: not (ansible_module_running_in_container | default(false))
+  become: true
+  ansible.builtin.systemd_service:
+    name: cockpit
+    state: restarted
+    daemon_reload: true

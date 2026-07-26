@@ -1,0 +1,259 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    web_terminal_expected_proxy_url: "web-terminal.startcloud-web-terminal.local.startcloud.com"
+  tasks:
+    - name: "Stating the APT keyrings directory"
+      ansible.builtin.stat:
+        path: /etc/apt/keyrings
+      register: web_terminal_keyring_dir
+
+    - name: "Asserting the keyrings directory was created as a 0755 directory"
+      ansible.builtin.assert:
+        that:
+          - web_terminal_keyring_dir.stat.exists
+          - web_terminal_keyring_dir.stat.isdir
+          - web_terminal_keyring_dir.stat.mode == '0755'
+        fail_msg: "/etc/apt/keyrings was not created as a 0755 directory"
+        success_msg: "The keyrings directory exists with the expected mode"
+
+    - name: "Stating the dearmored STARTcloud keyring"
+      ansible.builtin.stat:
+        path: /etc/apt/keyrings/startcloud-archive-keyring.gpg
+      register: web_terminal_keyring
+
+    - name: "Asserting the armored key was dearmored into a non-empty 0644 binary keyring"
+      ansible.builtin.assert:
+        that:
+          - web_terminal_keyring.stat.exists
+          - web_terminal_keyring.stat.size > 0
+          - web_terminal_keyring.stat.mode == '0644'
+        fail_msg: "gpg --dearmor did not produce a 0644 /etc/apt/keyrings/startcloud-archive-keyring.gpg"
+        success_msg: "The dearmored STARTcloud keyring is present, non-empty, and 0644"
+
+    - name: "Reading the APT source file written by the role"
+      ansible.builtin.slurp:
+        src: /etc/apt/sources.list.d/startcloud.list
+      register: web_terminal_source_file
+
+    - name: "Asserting the source line is signed-by the dearmored keyring"
+      ansible.builtin.assert:
+        that:
+          - "'signed-by=/etc/apt/keyrings/startcloud-archive-keyring.gpg' in web_terminal_source_content"
+          - "'debian.startcloud.com/public/debian' in web_terminal_source_content"
+          - "'public.debian.packages.startcloud.com' not in web_terminal_source_content"
+          - "ansible_distribution_release in web_terminal_source_content"
+          - "web_terminal_source_content.rstrip().endswith('main')"
+        fail_msg: "startcloud.list does not carry the expected signed-by STARTcloud repository line"
+        success_msg: "The STARTcloud APT source line is correct"
+      vars:
+        web_terminal_source_content: "{{ web_terminal_source_file.content | b64decode }}"
+
+    - name: "Stating the dearmored NodeSource keyring"
+      ansible.builtin.stat:
+        path: /etc/apt/keyrings/nodesource.gpg
+      register: web_terminal_nodesource_keyring
+
+    - name: "Asserting the role laid down a non-empty 0644 NodeSource keyring"
+      ansible.builtin.assert:
+        that:
+          - web_terminal_nodesource_keyring.stat.exists
+          - web_terminal_nodesource_keyring.stat.size > 0
+          - web_terminal_nodesource_keyring.stat.mode == '0644'
+        fail_msg: "The role did not produce a 0644 /etc/apt/keyrings/nodesource.gpg"
+        success_msg: "The dearmored NodeSource keyring is present, non-empty, and 0644"
+
+    - name: "Reading the NodeSource source file written by the role"
+      ansible.builtin.slurp:
+        src: /etc/apt/sources.list.d/nodesource.list
+      register: web_terminal_nodesource_file
+
+    - name: "Asserting the NodeSource source line points at Node.js 22.x and is signed-by its keyring"
+      ansible.builtin.assert:
+        that:
+          - "'signed-by=/etc/apt/keyrings/nodesource.gpg' in web_terminal_nodesource_content"
+          - "'https://deb.nodesource.com/node_22.x' in web_terminal_nodesource_content"
+          - "'nodistro main' in web_terminal_nodesource_content"
+        fail_msg: "nodesource.list does not carry the expected Node.js 22.x repository line"
+        success_msg: "The NodeSource 22.x APT source line is correct"
+      vars:
+        web_terminal_nodesource_content: "{{ web_terminal_nodesource_file.content | b64decode }}"
+
+    - name: "Reading the nodejs APT pin written by the role"
+      ansible.builtin.slurp:
+        src: /etc/apt/preferences.d/nodejs
+      register: web_terminal_nodejs_pin
+
+    - name: "Asserting the nodejs package is pinned to the NodeSource origin"
+      ansible.builtin.assert:
+        that:
+          - "'Package: nodejs' in web_terminal_nodejs_pin_content"
+          - "'Pin: origin deb.nodesource.com' in web_terminal_nodejs_pin_content"
+          - "'Pin-Priority: 600' in web_terminal_nodejs_pin_content"
+        fail_msg: "/etc/apt/preferences.d/nodejs does not pin nodejs to the NodeSource origin"
+        success_msg: "The nodejs package is pinned to the NodeSource origin"
+      vars:
+        web_terminal_nodejs_pin_content: "{{ web_terminal_nodejs_pin.content | b64decode }}"
+
+    - name: "Stating the temporary armored keys the role downloads"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - /tmp/startcloud-archive-keyring.asc
+        - /tmp/nodesource-key.asc
+      register: web_terminal_tmp_keys
+
+    - name: "Asserting the role cleaned up both temporary armored keys"
+      ansible.builtin.assert:
+        that:
+          - not item.stat.exists
+        fail_msg: "The role left the temporary armored key {{ item.item }} behind"
+        success_msg: "The temporary armored key {{ item.item }} was cleaned up"
+      loop: "{{ web_terminal_tmp_keys.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: apt
+
+    - name: "Asserting the web-terminal package is installed from the STARTcloud repository"
+      ansible.builtin.assert:
+        that:
+          - "'web-terminal' in ansible_facts.packages"
+        fail_msg: "The web-terminal package is not installed"
+        success_msg: "The web-terminal package is installed"
+
+    - name: "Asserting the installed nodejs satisfies the web-terminal dependency (>= 22)"
+      ansible.builtin.assert:
+        that:
+          - "'nodejs' in ansible_facts.packages"
+          - ansible_facts.packages['nodejs'][0].version.split('.')[0] | int >= 22
+        fail_msg: "The installed nodejs is older than the version the web-terminal package depends on"
+        success_msg: "Node.js {{ ansible_facts.packages['nodejs'][0].version | default('') }} satisfies the dependency"
+
+    - name: "Asserting the role installed the tooling it shells out to and the supervisor it configures"
+      ansible.builtin.assert:
+        that:
+          - "'gnupg' in ansible_facts.packages"
+          - "'openssl' in ansible_facts.packages"
+          - "'supervisor' in ansible_facts.packages"
+        fail_msg: "The role did not install gnupg, openssl, and supervisor itself"
+        success_msg: "gnupg, openssl, and supervisor are installed by the role"
+
+    - name: "Stating every configuration file the role renders"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - /etc/web-terminal/config.yaml
+        - /etc/web-terminal/dev-config.yaml
+        - /opt/web-terminal/config.yaml
+        - /opt/web-terminal/dev-config.yaml
+      register: web_terminal_config_files
+
+    - name: "Asserting all four configuration files exist as non-empty 0640 files"
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.isreg
+          - item.stat.size > 0
+          - item.stat.mode == '0640'
+          - item.stat.pw_name == 'root'
+        fail_msg: "{{ item.item }} was not rendered as a non-empty root-owned 0640 file"
+        success_msg: "{{ item.item }} was rendered as a non-empty root-owned 0640 file"
+      loop: "{{ web_terminal_config_files.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "Stating the persisted secret files the role generates once"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - /etc/web-terminal/jwt-secret
+        - /etc/web-terminal/admin-password
+      register: web_terminal_secret_files
+
+    - name: "Asserting both generated secrets were persisted as non-empty 0600 files"
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.isreg
+          - item.stat.size > 0
+          - item.stat.mode == '0600'
+        fail_msg: "{{ item.item }} was not persisted as a non-empty 0600 file"
+        success_msg: "{{ item.item }} was persisted as a non-empty 0600 file"
+      loop: "{{ web_terminal_secret_files.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "Reading the persisted JWT secret"
+      ansible.builtin.slurp:
+        src: /etc/web-terminal/jwt-secret
+      register: web_terminal_jwt_secret_raw
+
+    - name: "Reading the persisted admin password"
+      ansible.builtin.slurp:
+        src: /etc/web-terminal/admin-password
+      register: web_terminal_admin_password_raw
+
+    - name: "Reading the rendered web-terminal configuration"
+      ansible.builtin.slurp:
+        src: /etc/web-terminal/config.yaml
+      register: web_terminal_config_raw
+
+    - name: "Asserting the rendered configuration carries the templated values and the persisted secrets"
+      ansible.builtin.assert:
+        that:
+          - web_terminal_config.server.port == 8090
+          - web_terminal_config.server.domain == web_terminal_expected_proxy_url
+          - "'https://' ~ web_terminal_expected_proxy_url in web_terminal_config.server.cors.whitelist"
+          - web_terminal_config.ssl.cert == '/etc/ssl/crt/startcloud-web-terminal.local.startcloud.com.crt'
+          - web_terminal_config.ssl.key == '/etc/ssl/key/startcloud-web-terminal.local.startcloud.com.key'
+          - web_terminal_config.authentication.jwt_secret | length == 64
+          - web_terminal_config.authentication.jwt_secret == web_terminal_persisted_jwt_secret
+          - web_terminal_config.authentication.local.users | length == 1
+          - web_terminal_config.authentication.local.users[0].username == 'admin'
+          - web_terminal_config.authentication.local.users[0].password == web_terminal_persisted_admin_password
+          - web_terminal_config.authentication.local.users[0].password | length == 20
+          - web_terminal_config.authentication.local.users[0].role == 'admin'
+          - "'*@local.startcloud.com' in web_terminal_config.authentication.domain_mappings.terminal_access"
+        fail_msg: "The rendered config.yaml does not carry the expected templated values or the persisted secrets"
+        success_msg: "config.yaml is valid YAML and carries the port, proxy domain, TLS paths, persisted JWT secret and generated admin user"
+      vars:
+        web_terminal_config: "{{ web_terminal_config_raw.content | b64decode | from_yaml }}"
+        web_terminal_persisted_jwt_secret: "{{ web_terminal_jwt_secret_raw.content | b64decode | trim }}"
+        web_terminal_persisted_admin_password: "{{ web_terminal_admin_password_raw.content | b64decode | trim }}"
+
+    - name: "Reading the supervisord program file written on the container path"
+      ansible.builtin.slurp:
+        src: /etc/supervisor/conf.d/supervisord.webterminal.conf
+      register: web_terminal_supervisord_raw
+
+    - name: "Asserting the supervisord program runs the app from the install directory"
+      ansible.builtin.assert:
+        that:
+          - "'[program:web_terminal]' in web_terminal_supervisord"
+          - "'directory=/opt/web-terminal' in web_terminal_supervisord"
+          - "'command=/usr/bin/node app.js' in web_terminal_supervisord"
+          - "'autostart=true' in web_terminal_supervisord"
+          - "'/home/startcloud/.local/bin' in web_terminal_supervisord"
+        fail_msg: "The supervisord program file does not point at the web-terminal install"
+        success_msg: "The supervisord program file points at the web-terminal install"
+      vars:
+        web_terminal_supervisord: "{{ web_terminal_supervisord_raw.content | b64decode }}"
+
+    - name: "Stating the node entrypoint the supervisord program and systemd unit invoke"
+      ansible.builtin.stat:
+        path: /opt/web-terminal/app.js
+      register: web_terminal_app_js
+
+    - name: "Asserting the packaged application entrypoint exists"
+      ansible.builtin.assert:
+        that:
+          - web_terminal_app_js.stat.exists
+          - web_terminal_app_js.stat.size > 0
+        fail_msg: "/opt/web-terminal/app.js is missing, so the configured command cannot start"
+        success_msg: "The packaged /opt/web-terminal/app.js entrypoint is present"

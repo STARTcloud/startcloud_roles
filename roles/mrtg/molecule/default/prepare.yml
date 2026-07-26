@@ -1,0 +1,15 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Ensuring apt cache is populated"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: "Installing cron, which the role's cron task assumes is present"
+      ansible.builtin.apt:
+        name: cron
+        state: present

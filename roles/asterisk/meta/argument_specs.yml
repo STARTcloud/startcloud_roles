@@ -89,6 +89,10 @@ argument_specs:
         type: str
         default: asterisk
         description: Password for the asterisk user (hashed at creation).
+      service_group:
+        type: str
+        default: java_group
+        description: Supplementary group the asterisk account is added to; supplied by the service_user role in the provisioner.
       startcloud_asterisk_pjsip_udp_port:
         type: int
         default: 5060

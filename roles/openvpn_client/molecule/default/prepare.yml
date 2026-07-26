@@ -1,0 +1,74 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    easyrsa_pki: /etc/openvpn/easy-rsa/pki
+
+  tasks:
+    - name: "Updating apt cache"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: "Installing openssl only - the role must install openvpn itself"
+      ansible.builtin.apt:
+        name:
+          - openssl
+        state: present
+
+    - name: "Creating the easy-rsa PKI layout the role copies from"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+      loop:
+        - "{{ easyrsa_pki }}"
+        - "{{ easyrsa_pki }}/issued"
+        - "{{ easyrsa_pki }}/private"
+
+    - name: "Generating the CA key and certificate"
+      ansible.builtin.command:
+        cmd: >-
+          openssl req -x509 -newkey rsa:2048 -nodes
+          -keyout {{ easyrsa_pki }}/private/ca.key
+          -out {{ easyrsa_pki }}/ca.crt
+          -days 3650 -subj "/CN=molecule-openvpn-ca"
+        creates: "{{ easyrsa_pki }}/ca.crt"
+
+    - name: "Generating the client key and signing request"
+      ansible.builtin.command:
+        cmd: >-
+          openssl req -newkey rsa:2048 -nodes
+          -keyout {{ easyrsa_pki }}/private/client.key
+          -out {{ easyrsa_pki }}/private/client.csr
+          -subj "/CN=molecule-openvpn-client"
+        creates: "{{ easyrsa_pki }}/private/client.key"
+
+    - name: "Signing the client certificate with the CA"
+      ansible.builtin.command:
+        cmd: >-
+          openssl x509 -req
+          -in {{ easyrsa_pki }}/private/client.csr
+          -CA {{ easyrsa_pki }}/ca.crt
+          -CAkey {{ easyrsa_pki }}/private/ca.key
+          -CAcreateserial
+          -out {{ easyrsa_pki }}/issued/client.crt
+          -days 3650
+        creates: "{{ easyrsa_pki }}/issued/client.crt"
+
+    - name: "Generating the tls-auth shared secret without the openvpn binary"
+      ansible.builtin.shell:
+        cmd: >-
+          set -o pipefail &&
+          {
+          printf '%s\n' '-----BEGIN OpenVPN Static key V1-----' ;
+          openssl rand -hex 256 | tr -d '\n' | fold -w 32 ;
+          printf '\n%s\n' '-----END OpenVPN Static key V1-----' ;
+          } > {{ easyrsa_pki }}/ta.key
+        creates: "{{ easyrsa_pki }}/ta.key"
+        executable: /bin/bash

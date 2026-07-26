@@ -3,11 +3,46 @@ argument_specs:
   main:
     short_description: Install libnfc and the nfc-daemon service
     description:
-      - Installs the libnfc packages, renders the libnfc configuration, clones and builds the nfc-daemon source, installs
-        it, and registers the nfc-daemon systemd service for NFC reader support on Raspberry Pi.
+      - Installs the libnfc packages, clones and builds the nfc-daemon source, installs it, renders the libnfc
+        configuration and the daemon's hook scripts over the upstream samples, seeds the badge roster the
+        authentication script reads, and registers the nfc-daemon systemd service for NFC reader support on
+        Raspberry Pi.
     author: Mark Gilbert
     options:
       run_tasks:
         type: bool
         default: true
         description: Master gate — when false the role loads its vars but runs no tasks.
+      service_user:
+        type: str
+        default: startcloud
+        description: Account the nfc-daemon systemd unit runs as; supplied by the service_user role in the provisioner.
+      rpi_nfc_repo:
+        type: str
+        default: https://github.com/whotwagner/nfc-daemon
+        description: Git repository the nfc-daemon source is cloned from.
+      rpi_nfc_version:
+        type: str
+        default: main
+        description: Git branch, tag or commit of the nfc-daemon source to build.
+      rpi_nfc_source_dir:
+        type: str
+        default: /src/nfc-daemon
+        description: Directory the nfc-daemon source is checked out into and built in.
+      rpi_nfc_binary:
+        type: str
+        default: /usr/local/bin/nfc-daemon
+        description: Binary produced by "make install"; its presence gates the build and install tasks.
+      rpi_nfc_script_dir:
+        type: str
+        default: /usr/local/share/nfc-daemon
+        description: Directory nfc-daemon reads its run_script and end_script hooks from.
+      rpi_nfc_user_source:
+        type: str
+        default: /data/users.yml
+        description: YAML badge roster libnfc-auth.py matches scanned card IDs against; seeded empty when absent.
+      rpi_nfc_python_packages:
+        type: list
+        elements: str
+        description: Python modules libnfc-auth.py imports; python3-yaml and python3-smbus everywhere, plus
+          python3-rpi.gpio on arm hosts where the GPIO binding is packaged.

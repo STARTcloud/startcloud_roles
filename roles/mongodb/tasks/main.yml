@@ -2,15 +2,31 @@
 - name: "Blocking to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    - name: "Checking value of variable mongodb_net_ssl_host"
+    - name: "Establishing the MongoDB major version"
+      ansible.builtin.set_fact:
+        mongodb_major_version: "{{ mongodb_version.split('.')[0:2] | join('.') }}"
+
+    - name: "Failing when an unsupported mongodb_version is requested"
       ansible.builtin.fail:
-        msg: "Set mongodb_net_ssl_mode is preferSSL or set valid hostname for mongodb_net_ssl_host!"
-      when: ( mongodb_net_ssl_mode == 'requireSSL' and mongodb_net_ssl_host|length == 0 )
+        msg: "mongodb_version must be 7.0 or newer, got '{{ mongodb_version }}'"
+      when:
+        - mongodb_package == 'mongodb-org'
+        - mongodb_major_version is version('7.0', '<')
+
+    - name: "Checking value of variable mongodb_net_tls_certificate_key_file"
+      ansible.builtin.fail:
+        msg: "Set mongodb_net_tls_certificate_key_file when mongodb_net_tls_mode is not 'disabled'!"
+      when: ( mongodb_net_tls_mode != 'disabled' and mongodb_net_tls_certificate_key_file | length == 0 )
+
+    - name: "Checking value of variable mongodb_net_tls_host"
+      ansible.builtin.fail:
+        msg: "Set mongodb_net_tls_mode to preferTLS or set valid hostname for mongodb_net_tls_host!"
+      when: ( mongodb_net_tls_mode == 'requireTLS' and mongodb_net_tls_host | length == 0 )
 
     - name: "Checking value of variable mongodb_login_host"
       ansible.builtin.fail:
-        msg: "Set mongodb_login_host equal mongodb_net_ssl_host!"
-      when: ( mongodb_net_ssl_mode == 'requireSSL' and mongodb_net_ssl_host != mongodb_login_host and not mongodb_replication_replset )
+        msg: "Set mongodb_login_host equal mongodb_net_tls_host!"
+      when: ( mongodb_net_tls_mode == 'requireTLS' and mongodb_net_tls_host != mongodb_login_host and not mongodb_replication_replset )
 
     - name: "Including OS-specific variables"
       ansible.builtin.include_vars: "{{ item }}"
@@ -42,7 +58,7 @@
 
     - name: "Checking whether admin user is already exist"
       ansible.builtin.command: >
-        mongo --quiet {{ '--ssl --host ' + mongodb_net_ssl_host if mongodb_net_ssl_mode == 'requireSSL' else '' }} -u {{ mongodb_user_admin_name }} \
+        mongosh --quiet {{ '--tls --host ' + mongodb_net_tls_host if mongodb_net_tls_mode == 'requireTLS' else '' }} -u {{ mongodb_user_admin_name }} \
               -p {{ mongodb_user_admin_password }} --port {{ mongodb_net_port }} --eval 'db.version()' admin
       register: mongodb_user_admin_check
       changed_when: false
@@ -68,7 +84,7 @@
         login_password: "{{ mongodb_user_admin_password }}"
         login_port: "{{ mongodb_login_port | default(27017) }}"
         login_host: "{{ mongodb_login_host | default('localhost') }}"
-        ssl: "{{ True if mongodb_net_ssl_mode == 'requireSSL' else False }}"
+        ssl: "{{ True if mongodb_net_tls_mode == 'requireTLS' else False }}"
       with_items:
         - "{{ mongodb_users | default([]) }}"
       when: ( mongodb_replication_replset and mongodb_security_authorization == 'enabled' and mongodb_master is defined and mongodb_master )
@@ -86,7 +102,7 @@
         login_password: "{{ mongodb_user_admin_password }}"
         login_port: "{{ mongodb_net_port | int }}"
         login_host: "{{ mongodb_login_host | default('localhost') }}"
-        ssl: "{{ True if mongodb_net_ssl_mode == 'requireSSL' else False }}"
+        ssl: "{{ True if mongodb_net_tls_mode == 'requireTLS' else False }}"
       with_items:
         - "{{ mongodb_users | default([]) }}"
       when: ( mongodb_security_authorization == 'enabled' and not mongodb_replication_replset )
@@ -106,7 +122,7 @@
         login_password: "{{ mongodb_user_admin_password }}"
         login_port: "{{ mongodb_login_port | default(27017) }}"
         login_host: "{{ mongodb_login_host | default('localhost') }}"
-        ssl: "{{ True if mongodb_net_ssl_mode == 'requireSSL' else False }}"
+        ssl: "{{ True if mongodb_net_tls_mode == 'requireTLS' else False }}"
       with_items:
         - "{{ mongodb_oplog_users | default([]) }}"
       when: ( mongodb_replication_replset | length > 0 and mongodb_security_authorization == 'enabled' and mongodb_master is defined and mongodb_master )

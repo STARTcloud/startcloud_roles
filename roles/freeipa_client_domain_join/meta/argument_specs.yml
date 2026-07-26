@@ -11,3 +11,21 @@ argument_specs:
         type: bool
         default: true
         description: Master gate — when false the role loads its vars but runs no tasks.
+      freeipa_client_domain_join_firefox_dirs:
+        type: list
+        elements: str
+        default:
+          - /usr/lib/firefox-esr
+          - /usr/lib/firefox
+        description: >-
+          Candidate Firefox installation directories checked in order; the first one that exists on the target has its
+          NSS trust module repointed, and when none exist the Firefox trust work is skipped.
+      freeipa_client_domain_join_p11_kit_search_paths:
+        type: list
+        elements: str
+        default:
+          - /usr/lib
+          - /usr/lib64
+        description: >-
+          Library roots searched on the target for p11-kit-trust.so, so the architecture specific multiarch path is
+          discovered instead of hardcoded.

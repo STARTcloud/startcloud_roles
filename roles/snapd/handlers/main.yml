@@ -1,8 +1,20 @@
 ---
+- name: "Finding Cached APT Package Archives"
+  listen: "clean apt cache"
+  ansible.builtin.find:
+    paths:
+      - /var/cache/apt/archives
+      - /var/cache/apt/archives/partial
+    patterns: "*.deb"
+    file_type: file
+  register: snapd_apt_cached_archives
+
 - name: "Cleaning APT Cache"
   listen: "clean apt cache"
   ansible.builtin.apt:
     clean: true
+  when:
+    - snapd_apt_cached_archives.files | length > 0
 
 - name: "Updating Package Cache"
   listen: "update package cache"

@@ -1,0 +1,11 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Refreshing the apt package cache"
+      ansible.builtin.apt:
+        update_cache: true
+      changed_when: false
+      when: ansible_pkg_mgr == "apt"

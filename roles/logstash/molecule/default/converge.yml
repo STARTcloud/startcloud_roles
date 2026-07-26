@@ -1,0 +1,27 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+
+    logstash_version: "8.x"
+    logstash_apt_key_url: "https://artifacts.elastic.co/GPG-KEY-elasticsearch"
+    logstash_apt_keyring: "/usr/share/keyrings/elasticsearch-keyring.asc"
+    logstash_apt_repo: >-
+      deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.asc]
+      https://artifacts.elastic.co/packages/8.x/apt stable main
+
+    logstash_config_dir: "/etc/logstash"
+    logstash_pipeline_dir: "/etc/logstash/conf.d"
+    logstash_service_name: "logstash"
+    logstash_service_enabled: true
+    logstash_service_state: "started"
+
+    logstash_node_name: "startcloud-logstash-molecule"
+    logstash_pipeline_workers: 1
+    logstash_beats_port: 5044
+    logstash_elasticsearch_hosts:
+      - "http://localhost:9200"
+  roles:
+    - role: logstash

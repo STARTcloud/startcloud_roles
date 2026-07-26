@@ -13,4 +13,16 @@ argument_specs:
       flatpak_repos:
         type: list
         elements: dict
-        description: Flatpak remotes to register, each with a name and flatpakrepo url.
+        default:
+          - name: flathub
+            url: "https://flathub.org/repo/flathub.flatpakrepo"
+        description: Flatpak remotes to register system-wide, each with a name and a flatpakrepo url.
+        options:
+          name:
+            type: str
+            required: true
+            description: Name the remote is registered under in the system-wide flatpak installation.
+          url:
+            type: str
+            required: true
+            description: URL of the .flatpakrepo file describing the remote.

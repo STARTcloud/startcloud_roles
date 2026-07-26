@@ -1,0 +1,19 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    ## The role shells out to `gpg --dearmor` and feeds a .zip to
+    ## ansible.builtin.unarchive, and now installs that tooling itself. This
+    ## stage makes sure the image cannot silently satisfy those prerequisites,
+    ## so the role's own dependency task is what puts them there. apt keeps
+    ## working without gnupg — signature checking uses the separate gpgv.
+    - name: "Removing the tooling the role must install for itself"
+      ansible.builtin.apt:
+        name:
+          - gnupg
+          - unzip
+        state: absent
+        purge: true
+        autoremove: false

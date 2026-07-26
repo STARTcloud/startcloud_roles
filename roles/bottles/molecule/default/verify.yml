@@ -1,0 +1,58 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: "Gather package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Assert the flatpak client the role calls is present"
+      ansible.builtin.assert:
+        that:
+          - "'flatpak' in ansible_facts.packages"
+        fail_msg: "flatpak is not installed, so the role could not have installed anything"
+        success_msg: "flatpak client is installed"
+
+    - name: "Stat the system installation directory for the Bottles app"
+      ansible.builtin.stat:
+        path: /var/lib/flatpak/app/com.usebottles.bottles
+      register: bottles_app_dir
+
+    - name: "Stat the desktop entry flatpak exports for Bottles"
+      ansible.builtin.stat:
+        path: /var/lib/flatpak/exports/share/applications/com.usebottles.bottles.desktop
+      register: bottles_desktop_entry
+
+    - name: "List the applications installed into the system flatpak installation"
+      ansible.builtin.command: flatpak list --system --app --columns=application
+      register: bottles_installed_apps
+      changed_when: false
+
+    - name: "List the runtimes installed into the system flatpak installation"
+      ansible.builtin.command: flatpak list --system --runtime --columns=application
+      register: bottles_installed_runtimes
+      changed_when: false
+
+    - name: "Assert Bottles is installed as a system flatpak from flathub"
+      ansible.builtin.assert:
+        that:
+          - bottles_app_dir.stat.exists
+          - bottles_app_dir.stat.isdir
+          - bottles_desktop_entry.stat.exists
+          - "'com.usebottles.bottles' in bottles_installed_apps.stdout"
+        fail_msg: >-
+          Bottles flatpak is missing: app dir exists={{ bottles_app_dir.stat.exists }},
+          desktop entry exists={{ bottles_desktop_entry.stat.exists }},
+          installed apps={{ bottles_installed_apps.stdout }}
+        success_msg: "com.usebottles.bottles is installed in the system flatpak installation"
+
+    - name: "Assert the freedesktop runtime Bottles depends on was pulled in"
+      ansible.builtin.assert:
+        that:
+          - "'org.freedesktop.Platform' in bottles_installed_runtimes.stdout"
+        fail_msg: >-
+          Bottles was installed without its base runtime; runtimes present:
+          {{ bottles_installed_runtimes.stdout }}
+        success_msg: "Bottles runtime dependencies were resolved"

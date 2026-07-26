@@ -1,2 +1,17 @@
 ---
-# handlers file for ansible-mattermost
+- name: "Making the Mattermost install group writable"
+  ansible.builtin.file:
+    path: "{{ mattermost_root_dir }}"
+    state: directory
+    mode: "g+w"
+    recurse: true
+
+- name: "Restarting MySQL for the Mattermost fulltext configuration"
+  ansible.builtin.service:
+    name: mysql.service
+    state: restarted
+
+- name: "Reloading Nginx"
+  ansible.builtin.systemd:
+    name: nginx
+    state: reloaded

@@ -66,8 +66,8 @@ authentication:
   local:
     users:
 {% for username, password in web_terminal_users.items() %}
-      - username: {{ username }}
-        password: {{ password }}
+      - username: "{{ username }}"
+        password: "{{ password }}"
         role: admin
         id: {{ loop.index }}
 {% endfor %}

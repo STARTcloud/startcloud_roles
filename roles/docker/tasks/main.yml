@@ -75,9 +75,11 @@
       when: docker_daemon_options.keys() | length > 0
 
     - name: "Configuring Docker daemon options"
-      ansible.builtin.copy:
-        content: "{{ docker_daemon_options | to_nice_json }}"
-        dest: /etc/docker/daemon.json
+      ansible.builtin.template:
+        src: "daemon.json.j2"
+        dest: "/etc/docker/daemon.json"
+        owner: "root"
+        group: "root"
         mode: "0644"
       when: docker_daemon_options.keys() | length > 0
       notify: "Restarting Docker"
@@ -115,21 +117,3 @@
     - name: "Including docker-users tasks"
       ansible.builtin.include_tasks: docker-users.yml
       when: at_least_one_user_to_modify is defined
-
-    # -
-    #  name: "Setting Docker Daemon"
-    #  ansible.builtin.template:
-    #    src: "docker-daemon.json.j2"
-    #    dest: "/etc/docker/daemon.json"
-    #    owner: "root"
-    #    group: "root"
-    #    mode: "0644"
-
-    # -
-    #  name: "Setting Docker SSL/TLS Service Options"
-    #  ansible.builtin.template:
-    #    src: "startup_options.conf.j2"
-    #    dest: "/etc/systemd/system/docker.service.d/startup_options.conf"
-    #    owner: "root"
-    #    group: "root"
-    #    mode: "0644"

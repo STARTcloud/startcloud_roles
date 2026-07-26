@@ -10,6 +10,21 @@ argument_specs:
         type: bool
         default: true
         description: Master gate — when false the role loads its vars but runs no tasks.
+      vendor:
+        type: str
+        description: Vendor branding profile — when defined, vars/<vendor>.yml is loaded over the role defaults.
+      distro:
+        type: str
+        default: "{{ ansible_distribution | default('linux') | lower }}"
+        description: Distribution slug used in the boxvault template URL shown in the support box.
+      distro_version:
+        type: str
+        default: "{{ ansible_distribution_major_version | default('') }}"
+        description: Distribution major version used in the boxvault template URL shown in the support box.
+      vm_type:
+        type: str
+        default: server
+        description: Deployment profile used in the boxvault template URL shown in the support box.
       motd_remove_default_config:
         type: bool
         default: false

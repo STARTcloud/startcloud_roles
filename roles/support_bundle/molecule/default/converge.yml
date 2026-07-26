@@ -1,0 +1,12 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    run_tasks: true
+    settings:
+      hostname: startcloud-support-bundle
+      domain: startcloud.test
+  roles:
+    - role: support_bundle

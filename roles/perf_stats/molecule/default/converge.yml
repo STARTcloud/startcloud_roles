@@ -1,0 +1,36 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    run_tasks: true
+    settings:
+      hostname: startcloud-perf-stats
+      domain: molecule.local
+    perf_stats_hostname: startcloud-perf-stats-debian12
+    perf_stats_interval: "15s"
+    perf_stats_flush_interval: "20s"
+    perf_stats_metric_batch_size: 500
+    perf_stats_metric_buffer_limit: 5000
+    perf_stats_global_tags:
+      environment: molecule
+      role: perf_stats
+    # File output into a directory prepare created, so verify can prove the
+    # agent is not merely "started" but actually collecting and flushing.
+    perf_stats_outputs:
+      - type: file
+        config:
+          - files = ["/var/log/perf_stats/metrics.out"]
+          - data_format = "influx"
+    perf_stats_input_plugins:
+      - plugin: cpu
+        config:
+          - percpu = true
+          - totalcpu = true
+      - plugin: mem
+      - plugin: swap
+      - plugin: system
+      - plugin: processes
+  roles:
+    - role: perf_stats

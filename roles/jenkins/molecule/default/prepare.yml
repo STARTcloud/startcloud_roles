@@ -1,0 +1,80 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Updating the apt cache"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: "Installing the desktop/session tooling the role assumes a workstation image already carries"
+      ansible.builtin.apt:
+        name:
+          - dbus
+          - dbus-x11
+          - libglib2.0-bin
+          - ca-certificates
+          - acl
+        state: present
+
+    - name: "Creating the provisioning group the role chowns everything to"
+      ansible.builtin.group:
+        name: startcloud
+        state: present
+
+    - name: "Creating the provisioning user the role chowns everything to"
+      ansible.builtin.user:
+        name: startcloud
+        group: startcloud
+        home: /home/startcloud
+        shell: /bin/bash
+        create_home: true
+        state: present
+
+    - name: "Creating the shell profile files SDKMAN persists its settings into"
+      ansible.builtin.file:
+        path: "/home/startcloud/{{ item }}"
+        state: touch
+        owner: startcloud
+        group: startcloud
+        mode: "0644"
+        modification_time: preserve
+        access_time: preserve
+      loop:
+        - .bash_profile
+        - .profile
+        - .bashrc
+        - .zshrc
+
+    - name: "Creating the desktop directories the role writes launchers into"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: startcloud
+        group: startcloud
+        mode: "0755"
+      loop:
+        - /home/startcloud/Desktop
+        - /usr/share/applications
+
+    - name: "Creating the Vagrant synced folder the role copies jobs from"
+      ansible.builtin.file:
+        path: /vagrant/jobs
+        state: directory
+        owner: startcloud
+        group: startcloud
+        mode: "0755"
+
+    - name: "Seeding a job definition inside the synced folder"
+      ansible.builtin.copy:
+        dest: /vagrant/jobs/molecule-job.xml
+        content: |
+          <?xml version='1.1' encoding='UTF-8'?>
+          <project>
+            <description>molecule placeholder job</description>
+          </project>
+        owner: startcloud
+        group: startcloud
+        mode: "0644"

@@ -8,10 +8,23 @@
         name:
           - conky-all
 
+    - name: "Creating the XDG autostart directory"
+      when: ansible_os_family == 'Debian'
+      ansible.builtin.file:
+        path: /etc/xdg/autostart
+        state: directory
+        mode: "0755"
+
+    ## conky-all drops the desktop entry on the target, so this copy has to read
+    ## the file from the remote host. Without remote_src the source is resolved
+    ## against the controller, which only holds that path when the controller
+    ## happens to be the target as well.
     - name: "Setting Conky Start for All Users"
+      when: ansible_os_family == 'Debian'
       ansible.builtin.copy:
         src: /usr/share/applications/conky.desktop
-        dest: /etc/xdg/autostart/
+        dest: /etc/xdg/autostart/conky.desktop
+        remote_src: true
         mode: "0644"
 
     - name: "Setting Conky Configuration"

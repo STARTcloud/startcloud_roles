@@ -1,0 +1,355 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  vars:
+    pkg_base: /local
+    pkg_repo: /local/public/debian
+    pkg_domain: debian.startcloud.test
+    pkg_vhost: /etc/nginx/sites-available/debian.startcloud.test
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: apt
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting the repository build dependencies are installed"
+      ansible.builtin.assert:
+        that:
+          - "'nginx' in ansible_facts.packages"
+          - "'dpkg-dev' in ansible_facts.packages"
+          - "'gpg' in ansible_facts.packages"
+          - "'debmirror' in ansible_facts.packages"
+        fail_msg: "The base and mirror tasks did not install nginx/dpkg-dev/gpg/debmirror"
+
+    - name: "Asserting the startcloud package was installed from the published repository"
+      ansible.builtin.assert:
+        that:
+          - "'startcloud' in ansible_facts.packages"
+          - ansible_facts.packages['startcloud'][0].version == '0.0.1-1'
+        fail_msg: "The end-to-end build -> publish -> sign -> consume chain did not install startcloud"
+
+    - name: "Asserting nginx is running"
+      ansible.builtin.assert:
+        that:
+          - "'nginx.service' in ansible_facts.services"
+          - ansible_facts.services['nginx.service'].state == 'running'
+        fail_msg: "nginx is not running, the package server vhost is not being served"
+
+    - name: "Statting the published repository artefacts and the signing key"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: pkg_repo_files
+      loop:
+        - "{{ pkg_base }}/pgp/pgp-key.public"
+        - "{{ pkg_base }}/pgp/pgp-key.private"
+        - "{{ pkg_repo }}/pool/main/startcloud_0.0.1-1_amd64.deb"
+        - "{{ pkg_repo }}/startcloud-archive-keyring.asc"
+        - "{{ pkg_repo }}/dists/stable/main/binary-amd64/Packages"
+        - "{{ pkg_repo }}/dists/stable/main/binary-amd64/Packages.gz"
+        - "{{ pkg_repo }}/dists/stable/Release"
+        - "{{ pkg_repo }}/dists/stable/Release.gpg"
+        - "{{ pkg_repo }}/dists/stable/InRelease"
+
+    - name: "Asserting every repository artefact exists and is non-empty"
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.size > 0
+        fail_msg: "Missing or empty repository artefact: {{ item.item }}"
+      loop: "{{ pkg_repo_files.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "Reading the exported public PGP key"
+      ansible.builtin.slurp:
+        src: "{{ pkg_base }}/pgp/pgp-key.public"
+      register: pkg_pgp_public
+
+    - name: "Reading the signed InRelease file"
+      ansible.builtin.slurp:
+        src: "{{ pkg_repo }}/dists/stable/InRelease"
+      register: pkg_inrelease
+
+    - name: "Asserting the PGP key and the clearsigned InRelease are real armoured blocks"
+      ansible.builtin.assert:
+        that:
+          - "'BEGIN PGP PUBLIC KEY BLOCK' in (pkg_pgp_public.content | b64decode)"
+          - "'BEGIN PGP SIGNED MESSAGE' in (pkg_inrelease.content | b64decode)"
+          - "'BEGIN PGP SIGNATURE' in (pkg_inrelease.content | b64decode)"
+          - "'Origin: STARTcloud' in (pkg_inrelease.content | b64decode)"
+          - "'SHA256:' in (pkg_inrelease.content | b64decode)"
+        fail_msg: "The Release file was not clearsigned with the generated repository key"
+
+    - name: "Statting the enabled package server vhost symlink"
+      ansible.builtin.stat:
+        path: "/etc/nginx/sites-enabled/{{ pkg_domain }}"
+      register: pkg_vhost_link
+
+    - name: "Statting the distribution default nginx site"
+      ansible.builtin.stat:
+        path: /etc/nginx/sites-enabled/default
+      register: pkg_default_site
+
+    - name: "Asserting the package server vhost is the only enabled site"
+      ansible.builtin.assert:
+        that:
+          - pkg_vhost_link.stat.exists
+          - pkg_vhost_link.stat.islnk
+          - pkg_vhost_link.stat.lnk_target == pkg_vhost
+          - not pkg_default_site.stat.exists
+        fail_msg: "The package server vhost is not enabled, or the distribution default site is still in the way"
+
+    - name: "Reading the rendered package server vhost"
+      ansible.builtin.slurp:
+        src: "{{ pkg_vhost }}"
+      register: pkg_vhost_slurp
+
+    - name: "Decoding the rendered vhost"
+      ansible.builtin.set_fact:
+        pkg_vhost_text: "{{ pkg_vhost_slurp.content | b64decode }}"
+
+    - name: "Asserting the vhost is one server block for every legacy name"
+      ansible.builtin.assert:
+        that:
+          - >-
+            'server_name debian.startcloud.test public.debian.startcloud.test
+            private.debian.packages.startcloud.test;' in pkg_vhost_text
+          - "'root /local;' in pkg_vhost_text"
+          - pkg_vhost_text.count('server {') == 1
+        fail_msg: "The single path-based server block was not rendered with the legacy server names"
+
+    - name: "Asserting the vhost carries the path locations"
+      ansible.builtin.assert:
+        that:
+          - "'location = / {' in pkg_vhost_text"
+          - "'return 302 /public/;' in pkg_vhost_text"
+          - "'location /public/ {' in pkg_vhost_text"
+          - "'location /mirror/ {' in pkg_vhost_text"
+          - "'location /private/ {' in pkg_vhost_text"
+          - "'location /certs/ {' in pkg_vhost_text"
+          - "'alias /local/clients/$client_cn/certs/;' in pkg_vhost_text"
+          - "'autoindex off;' in pkg_vhost_text"
+        fail_msg: "The path-based locations of the production layout are missing from the vhost"
+
+    - name: "Asserting the private locations are guarded and everything else is refused"
+      ansible.builtin.assert:
+        that:
+          - "'if ($ssl_client_verify != \"SUCCESS\") {' in pkg_vhost_text"
+          - pkg_vhost_text.count('if ($ssl_client_verify != "SUCCESS") {') == 2
+          - pkg_vhost_text.count('return 403;') == 2
+          - "'if ($ssl_client_s_dn ~ \"CN=([^,]+)\") {' in pkg_vhost_text"
+          - "'return 404;' in pkg_vhost_text"
+        fail_msg: "The 403 client-certificate guards or the 404 catch-all are missing from the vhost"
+
+    - name: "Asserting the cert-less render emits a plain port-80 block only"
+      ansible.builtin.assert:
+        that:
+          - "'listen 80;' in pkg_vhost_text"
+          - "'listen 443' not in pkg_vhost_text"
+          - "'ssl_certificate' not in pkg_vhost_text"
+          - "'ssl_verify_client' not in pkg_vhost_text"
+          - "'return 301 https://' not in pkg_vhost_text"
+        fail_msg: "pkg_server_ssl_enabled: false did not suppress the TLS server block"
+
+    - name: "Validating the whole nginx configuration"
+      ansible.builtin.command: nginx -t
+      register: pkg_nginx_t
+      changed_when: false
+
+    - name: "Asserting nginx accepts the configuration the role produced"
+      ansible.builtin.assert:
+        that:
+          - "'syntax is ok' in pkg_nginx_t.stderr"
+          - "'test is successful' in pkg_nginx_t.stderr"
+        fail_msg: "nginx rejected the configuration written by the role"
+
+    - name: "Waiting for the package server vhost port"
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 80
+        state: started
+        timeout: 30
+
+    - name: "Fetching the site root over the vhost"
+      ansible.builtin.uri:
+        url: http://127.0.0.1/
+        headers:
+          Host: "{{ pkg_domain }}"
+        follow_redirects: none
+        status_code: 302
+      register: pkg_root_http
+
+    ## nginx expands the URI of a return into an absolute URL off the request
+    ## Host, so the header is matched on its tail rather than on equality.
+    - name: "Asserting the site root redirects into the public tree"
+      ansible.builtin.assert:
+        that:
+          - pkg_root_http.location is defined
+          - pkg_root_http.location.endswith('/public/')
+        fail_msg: "The vhost root does not redirect to /public/ (Location: {{ pkg_root_http.location | default('none') }})"
+
+    - name: "Fetching the signed Release over the vhost"
+      ansible.builtin.uri:
+        url: http://127.0.0.1/public/debian/dists/stable/InRelease
+        headers:
+          Host: "{{ pkg_domain }}"
+        return_content: true
+      register: pkg_release_http
+
+    - name: "Fetching the published archive keyring over the vhost"
+      ansible.builtin.uri:
+        url: http://127.0.0.1/public/debian/startcloud-archive-keyring.asc
+        headers:
+          Host: "{{ pkg_domain }}"
+        return_content: true
+      register: pkg_keyring_http
+
+    - name: "Asserting the vhost serves the signed repository at /public/debian/"
+      ansible.builtin.assert:
+        that:
+          - pkg_release_http.status == 200
+          - "'BEGIN PGP SIGNED MESSAGE' in pkg_release_http.content"
+          - pkg_keyring_http.status == 200
+          - "'BEGIN PGP PUBLIC KEY BLOCK' in pkg_keyring_http.content"
+        fail_msg: "The package server vhost is not serving the signed repository and its keyring at /public/debian/"
+
+    - name: "Fetching the mirror tree over the vhost"
+      ansible.builtin.uri:
+        url: http://127.0.0.1/mirror/
+        headers:
+          Host: "{{ pkg_domain }}"
+        return_content: true
+      register: pkg_mirror_http
+
+    - name: "Asserting the vhost serves the mirror tree at /mirror/"
+      ansible.builtin.assert:
+        that:
+          - pkg_mirror_http.status == 200
+          - "'STARTcloud' in pkg_mirror_http.content"
+        fail_msg: "The package server vhost is not serving the mirror tree at /mirror/"
+
+    - name: "Fetching the client-certificate gated paths without a certificate"
+      ansible.builtin.uri:
+        url: "http://127.0.0.1{{ item }}"
+        headers:
+          Host: "{{ pkg_domain }}"
+        status_code: 403
+      register: pkg_guarded_http
+      loop:
+        - /private/
+        - /private/debian/
+        - /certs/
+
+    - name: "Asserting the private tree and the certificate drops refuse an unverified client"
+      ansible.builtin.assert:
+        that:
+          - item.status == 403
+        fail_msg: "An unverified client was not refused at {{ item.item }}"
+      loop: "{{ pkg_guarded_http.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "Fetching the material that sits beside the published trees"
+      ansible.builtin.uri:
+        url: "http://127.0.0.1{{ item }}"
+        headers:
+          Host: "{{ pkg_domain }}"
+        status_code: 404
+      register: pkg_hidden_http
+      loop:
+        - /ca/ca.key
+        - /ca/ca.crt
+        - /clients/
+        - /pgp/pgp-key.private
+        - /staging/dists/stable/Release
+        - /generate_client_cert.sh
+
+    - name: "Asserting the CA, the client keys, the PGP key pair and the scripts are never served"
+      ansible.builtin.assert:
+        that:
+          - item.status == 404
+        fail_msg: "The catch-all did not hide {{ item.item }}"
+      loop: "{{ pkg_hidden_http.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "Reading the apt source list the role added"
+      ansible.builtin.slurp:
+        src: /etc/apt/sources.list.d/startcloud-package-server.list
+      register: pkg_apt_source
+
+    - name: "Asserting the apt source points at the served repository and is key-pinned"
+      ansible.builtin.assert:
+        that:
+          - "'http://127.0.0.1/public/debian stable main' in (pkg_apt_source.content | b64decode)"
+          - "'signed-by=/local/pgp/pgp-key.public' in (pkg_apt_source.content | b64decode)"
+        fail_msg: "The signed-by apt source for the published repository was not written correctly"
+
+    - name: "Statting the private repository tree, the CA and the mirror tooling"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: pkg_tree_files
+      loop:
+        - "{{ pkg_base }}/ca/ca.key"
+        - "{{ pkg_base }}/ca/ca.crt"
+        - "{{ pkg_base }}/clients"
+        - "{{ pkg_base }}/private/debian"
+        - "{{ pkg_base }}/private/index.html"
+        - "{{ pkg_base }}/private/assets/bootstrap-icons.css"
+        - "{{ pkg_base }}/public/index.html"
+        - "{{ pkg_base }}/public/css/STARTcloud.css"
+        - "{{ pkg_base }}/generate_client_cert.sh"
+        - "{{ pkg_base }}/mirror_deb_repo.sh"
+        - "{{ pkg_base }}/mirror/index.html"
+        - /etc/cron.d/local-debmirror
+
+    - name: "Asserting every provisioned tree was created"
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+        fail_msg: "The role did not create: {{ item.item }}"
+      loop: "{{ pkg_tree_files.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "Asserting the CA key is private and the clients directory is group-only"
+      ansible.builtin.assert:
+        that:
+          - pkg_tree_files.results[0].stat.mode == '0600'
+          - pkg_tree_files.results[2].stat.mode == '0750'
+        fail_msg: "The CA key or clients directory permissions are wrong"
+
+    - name: "Reading the generated CA certificate subject"
+      ansible.builtin.command: "openssl x509 -noout -subject -in {{ pkg_base }}/ca/ca.crt"
+      register: pkg_ca_subject
+      changed_when: false
+
+    - name: "Asserting the CA certificate carries the configured common name"
+      ansible.builtin.assert:
+        that:
+          - "'CN = STARTcloud Package Repository CA' in pkg_ca_subject.stdout"
+          - "'O = STARTcloud' in pkg_ca_subject.stdout"
+        fail_msg: "The repository CA certificate was not issued with pkg_server_ca_cn"
+
+    - name: "Reading the rendered client certificate generation script"
+      ansible.builtin.slurp:
+        src: "{{ pkg_base }}/generate_client_cert.sh"
+      register: pkg_client_script
+
+    - name: "Decoding the rendered client certificate generation script"
+      ansible.builtin.set_fact:
+        pkg_client_script_text: "{{ pkg_client_script.content | b64decode }}"
+
+    - name: "Asserting the client tooling mints into the served path scheme"
+      ansible.builtin.assert:
+        that:
+          - "'SERVER_CN=\"debian.startcloud.test\"' in pkg_client_script_text"
+          - "'PRIVATE_REPO_URL=\"https://debian.startcloud.test/private/debian\"' in pkg_client_script_text"
+          - "'CLIENT_DIR=\"${CLIENTS_DIR}/${CLIENT_NAME}/certs\"' in pkg_client_script_text"
+          - "'Acquire::https::${SERVER_CN}::SslCert' in pkg_client_script_text"
+          - "'prominic.net' not in pkg_client_script_text"
+          - "'packages.startcloud.com' not in pkg_client_script_text"
+        fail_msg: "generate_client_cert.sh still emits the retired subdomain scheme"

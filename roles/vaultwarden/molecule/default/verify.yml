@@ -1,0 +1,99 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    ## Must mirror the values converge.yml hands the role.
+    vaultwarden_data_dir: /opt/vaultwarden/data
+    vaultwarden_container_name: vaultwarden
+    vaultwarden_image: "vaultwarden/server:latest"
+    vaultwarden_web_port: 8080
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting the Docker engine the role depends on is installed"
+      ansible.builtin.assert:
+        that:
+          - "'docker-ce' in ansible_facts.packages"
+          - "'containerd.io' in ansible_facts.packages"
+        fail_msg: "docker-ce / containerd.io are missing, the docker meta dependency did not run"
+        success_msg: "docker-ce and containerd.io are installed"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting the docker service is running"
+      ansible.builtin.assert:
+        that:
+          - "'docker.service' in ansible_facts.services"
+          - ansible_facts.services['docker.service'].state == 'running'
+        fail_msg: "docker.service is not running"
+        success_msg: "docker.service is running"
+
+    - name: "Stating the Vaultwarden data directory"
+      ansible.builtin.stat:
+        path: "{{ vaultwarden_data_dir }}"
+      register: vaultwarden_data_dir_stat
+
+    - name: "Asserting the data directory was created with mode 0750"
+      ansible.builtin.assert:
+        that:
+          - vaultwarden_data_dir_stat.stat.exists
+          - vaultwarden_data_dir_stat.stat.isdir
+          - vaultwarden_data_dir_stat.stat.mode == '0750'
+        fail_msg: "{{ vaultwarden_data_dir }} is missing or not a directory with mode 0750"
+        success_msg: "{{ vaultwarden_data_dir }} exists as a directory with mode 0750"
+
+    - name: "Inspecting the Vaultwarden container"
+      community.docker.docker_container_info:
+        name: "{{ vaultwarden_container_name }}"
+      register: vaultwarden_container
+
+    - name: "Asserting the container runs with the configured image, policy, port map and bind mount"
+      ansible.builtin.assert:
+        that:
+          - vaultwarden_container.exists
+          - vaultwarden_container.container.State.Running
+          - "'vaultwarden/server' in vaultwarden_container.container.Config.Image"
+          - vaultwarden_container.container.HostConfig.RestartPolicy.Name == 'unless-stopped'
+          - "'80/tcp' in vaultwarden_container.container.HostConfig.PortBindings"
+          - vaultwarden_container.container.HostConfig.PortBindings['80/tcp'][0].HostPort == '8080'
+          - "'/data' in (vaultwarden_container.container.Mounts | map(attribute='Destination') | list)"
+          - vaultwarden_data_dir in (vaultwarden_container.container.Mounts | map(attribute='Source') | list)
+        fail_msg: "The Vaultwarden container is missing or was not deployed with the configured image, restart policy, port map and bind mount"
+        success_msg: "The Vaultwarden container is running with the configured image, restart policy, port map and bind mount"
+
+    - name: "Asserting the built-in and extra environment variables were merged into the container"
+      ansible.builtin.assert:
+        that:
+          - "'DOMAIN=https://vault.molecule.test' in vaultwarden_container.container.Config.Env"
+          - "'ADMIN_TOKEN=CHANGEME' in vaultwarden_container.container.Config.Env"
+          - "'SIGNUPS_ALLOWED=false' in vaultwarden_container.container.Config.Env"
+          - "'WEBSOCKET_ENABLED=true' in vaultwarden_container.container.Config.Env"
+          - "'LOG_LEVEL=warn' in vaultwarden_container.container.Config.Env"
+          - "'SHOW_PASSWORD_HINT=false' in vaultwarden_container.container.Config.Env"
+        fail_msg: "The container environment does not carry the templated DOMAIN/ADMIN_TOKEN/SIGNUPS_ALLOWED/WEBSOCKET_ENABLED plus vaultwarden_extra_env"
+        success_msg: "The container environment carries the templated settings merged with vaultwarden_extra_env"
+
+    - name: "Waiting for the published Vaultwarden web port"
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: "{{ vaultwarden_web_port }}"
+        state: started
+        timeout: 30
+
+    - name: "Stating the SQLite database Vaultwarden creates in the bind-mounted data directory"
+      ansible.builtin.stat:
+        path: "{{ vaultwarden_data_dir }}/db.sqlite3"
+      register: vaultwarden_db_stat
+
+    - name: "Asserting the container wrote its database through the bind mount"
+      ansible.builtin.assert:
+        that:
+          - vaultwarden_db_stat.stat.exists
+          - vaultwarden_db_stat.stat.size > 0
+        fail_msg: "{{ vaultwarden_data_dir }}/db.sqlite3 was not created, the /data bind mount is not writable by the container"
+        success_msg: "Vaultwarden initialised its database inside the bind-mounted data directory"

@@ -1,0 +1,63 @@
+---
+# Second phase of the scenario: re-run the role on the same node with
+# net.tls.mode = requireTLS, using the throwaway CA and server certificate that
+# prepare.yml generated. converge.yml (and therefore the idempotence check)
+# stays on the default TLS-disabled path; this play proves the TLS path renders
+# a config mongod 8.0 actually accepts and serves.
+- name: Side effect
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+
+    mongodb_package: mongodb-org
+    mongodb_package_state: present
+    mongodb_version: "8.0"
+
+    # Single standalone node, no auth, no replica set.
+    mongodb_net_bindip: "127.0.0.1"
+    mongodb_net_port: 27017
+    mongodb_security_authorization: "disabled"
+    mongodb_replication_replset: ""
+
+    # TLS phase — net.tls.*, the only TLS surface mongod 7.0+ understands.
+    mongodb_net_tls_mode: "requireTLS"
+    mongodb_net_tls_certificate_key_file: /etc/ssl/mongodb/mongodb.pem
+    mongodb_net_tls_ca_file: /etc/ssl/mongodb/ca.crt
+    # mongosh connects without a client certificate, so mongod must accept that.
+    mongodb_net_tls_allow_connections_without_certificates: true
+    mongodb_net_tls_host: "127.0.0.1"
+    mongodb_login_host: "127.0.0.1"
+
+    # Container-friendly choices.
+    mongodb_use_numa: false
+    mongodb_disable_transparent_hugepages: false
+    mongodb_pymongo_from_pip: false
+    mongodb_manage_service: true
+    mongodb_manage_systemd_unit: true
+
+    mongodb_storage_engine: "wiredTiger"
+    mongodb_storage_dbpath: /var/lib/mongodb
+    mongodb_systemlog_destination: "file"
+
+    # Credentials — literal placeholder secrets for the test container only.
+    mongodb_user_admin_name: siteUserAdmin
+    mongodb_user_admin_password: "CHANGEME"
+    mongodb_root_admin_name: siteRootAdmin
+    mongodb_root_admin_password: "CHANGEME"
+    mongodb_root_backup_name: backupuser
+    mongodb_root_backup_password: "CHANGEME"
+
+    # MMS monitoring agent stays off (empty api key gates the include).
+    mongodb_mms_api_key: ""
+    mongodb_mms_group_id: ""
+
+    mongodb_set_parameters: {}
+    mongodb_config: {}
+
+    # Minimal provisioner-context stand-ins so the role runs standalone.
+    settings:
+      hostname: startcloud-mongodb-debian12
+      domain: local
+  roles:
+    - role: mongodb

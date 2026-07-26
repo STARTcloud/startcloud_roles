@@ -1,0 +1,10 @@
+---
+run_tasks: true
+## This file stores the lowest precedence of variables.
+## These can be overridden by variables in vars/main.yml, playbook variables, and Ansible environment variables.
+## If you are confused about how variable precedence works,
+## please see this article: https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_variables.html
+## Watchdog entries for the pfSense Service_Watchdog package. Each item:
+##   name, rcfile, status_command (PHP), executable, description, notify ('' or 'yes')
+## Empty by default — the consuming playbook supplies its services.
+firewall_watchdog_services: []

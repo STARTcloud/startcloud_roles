@@ -7,19 +7,42 @@ web_terminal_path: "/opt/web-terminal"
 web_terminal_build_from_source: false
 
 # STARTcloud APT repository the web-terminal package is installed from
-# (matches roles/dependencies/vars/debian.yml).
-web_terminal_apt_key_url: "https://public.debian.packages.startcloud.com/debian/startcloud-archive-keyring.asc"
-web_terminal_apt_repo_url: "https://public.debian.packages.startcloud.com/debian/"
+# (matches roles/dependencies/vars/debian.yml). Short-path scheme (2026-07);
+# legacy *.debian.packages.startcloud.com serves only until ~2027-07.
+web_terminal_apt_key_url: "https://debian.startcloud.com/public/debian/startcloud-archive-keyring.asc"
+web_terminal_apt_repo_url: "https://debian.startcloud.com/public/debian/"
+web_terminal_apt_keyring_path: "/etc/apt/keyrings/startcloud-archive-keyring.gpg"
 web_terminal_package: web-terminal
+
+# The web-terminal package declares "Depends: nodejs (>= 22)", which the stock
+# Debian 12 nodejs (18.x) cannot satisfy, so the role lays down NodeSource
+# itself instead of assuming roles/nodejs ran first. Paths and pin priority
+# match roles/nodejs/tasks/setup-Debian.yml and roles/boxvault so the roles are
+# a no-op for each other when several of them run.
+web_terminal_nodejs_version: "22.x"
+web_terminal_nodejs_key_url: "https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key"
+web_terminal_nodejs_keyring_path: "/etc/apt/keyrings/nodesource.gpg"
 
 # Source build settings.
 web_terminal_git_repo: "https://github.com/STARTcloud/web-terminal.git"
 web_terminal_git_version: main
 
-web_terminal_jwt_secret: "{{ lookup('password', '/dev/null length=64 chars=ascii_letters,digits') }}"
+# Secrets — generate-once semantics.
+#
+# Both values default to empty, which means "generate one on the target and
+# keep it": the role writes a 0600 file under web_terminal_secret_dir with
+# `creates`, so the value survives every later run, config.yaml stops churning,
+# and the generated admin password stays retrievable (root can read the file).
+# Supplying either variable from the provisioner or a vault takes full control
+# and disables the generation entirely.
+web_terminal_secret_dir: "/etc/web-terminal"
+web_terminal_jwt_secret: ""
+web_terminal_jwt_secret_file: "/etc/web-terminal/jwt-secret"
+web_terminal_admin_user: "admin"
+web_terminal_admin_password_file: "/etc/web-terminal/admin-password"
+web_terminal_users: {}
+
 web_terminal_config_path: "/etc/web-terminal/config.yaml"
-web_terminal_users:
-  admin: "{{ lookup('password', '/dev/null length=20 chars=ascii_letters,digits') }}"
 
 startcloud_web_terminal_port_forwards:
   - guest: 8090

@@ -1,0 +1,27 @@
+import xml.etree.ElementTree as ET
+import argparse
+
+# Parse the command line argument
+parser = argparse.ArgumentParser()
+parser.add_argument('-f', '--file',  default='/conf/config.xml', help='Path to the XML file')
+parser.add_argument('-d', '--descr', help='Value of the descr element to match', required=True)
+parser.add_argument('-s', '--ssl_certref', action="store_true", help='Set the Webconfigurator to use the selected refid')
+parser.add_argument('-r', '--read_ssl_certref', action="store_true", help='Read certrefid of selected descriptor')
+args = parser.parse_args()
+
+# Parse the XML file
+tree = ET.parse(args.file)
+
+# Get the root element
+root = tree.getroot()
+
+for cert in root.findall('cert'):
+    if cert.find('descr').text == args.descr:
+        refid = cert.find('refid').text
+        if args.read_ssl_certref:
+            print(refid)
+
+if args.ssl_certref:
+    for webgui in root.findall('.//webgui'):
+        webgui.find('ssl-certref').text = refid
+    tree.write(args.file)

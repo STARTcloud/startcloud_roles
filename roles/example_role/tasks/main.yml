@@ -18,14 +18,26 @@
         name: "uploadserver" # Specifies the pip package name.
         extra_args: --user --break-system-packages # Installs the package for the current user and allows breaking system packages if necessary.
 
-    - name: "Grabbing External IP address"
+    # Probes for the adapter first so hosts that never received one do not hard-fail on the address lookup below.
+    - name: "Checking for the public adapter the networking role provides"
+      ansible.builtin.command: "ip -o link show {{ example_role_public_adapter }}" # Looks the link up by name.
+      register: example_role_adapter_check # Stores the probe result for the guard below.
+      changed_when: false # Read-only probe, never a system change.
+      failed_when: false # A host without the adapter is a supported condition, not a failure.
+
+    - name: "Grabbing External IP address" # Reads the IPv4 address off the public adapter for the welcome page.
+      when: example_role_adapter_check.rc == 0 # Only runs when the adapter actually exists on this host.
       ansible.builtin.shell: |
         set -o pipefail
-        ip addr show public_adapter | awk '/inet / {print $2}' | cut -d'/' -f1
+        ip addr show {{ example_role_public_adapter }} | awk '/inet / {print $2}' | cut -d'/' -f1
       args:
         executable: /bin/bash
-      register: netoutput
-      changed_when: false
+      register: example_role_adapter_address # Stores the discovered address.
+      changed_when: false # Read-only query, never a system change.
+
+    - name: "Recording the address the welcome page advertises" # Normalises the lookup so the template always has a value.
+      ansible.builtin.set_fact:
+        example_role_local_ip: "{{ example_role_adapter_address.stdout | default('', true) | trim }}" # Empty when no public adapter exists.
 
     - name: "Placing Python Simple HTTP Server Service file" # Copies service configuration files to their respective locations.
       become: true # Executes the task with elevated privileges.
@@ -39,13 +51,22 @@
         - { src: "environment.j2", dest: "/etc/pythonserv", owner: "{{ service_user }}" }
         - { src: "index.html.j2", dest: "{{ python_simple_web_server_path }}/welcome.html", owner: "{{ service_user }}" }
         - { src: "styles.css", dest: "{{ python_simple_web_server_path }}/styles.css", owner: "{{ service_user }}" }
-        - { src: "cockpit.conf.j2", dest: "/etc/cockpit/cockpit.conf", owner: "{{ service_user }}" }
+
+    - name: "Placing Cockpit configuration file" # Renders the Cockpit web console configuration on its own so a change can notify the handler.
+      become: true # Executes the task with elevated privileges.
+      notify: "Restarting Cockpit" # Restarts Cockpit only when the configuration actually changes.
+      ansible.builtin.template:
+        owner: "{{ service_user }}" # Sets the owner of the file.
+        src: "cockpit.conf.j2" # Specifies the source file.
+        dest: "/etc/cockpit/cockpit.conf" # Specifies the destination file.
+        mode: "0644" # Sets the file permissions.
 
     - name: "Starting Python Simple HTTP server" # Starts the Python Simple HTTP server service.
-      ansible.builtin.service:
+      ansible.builtin.systemd_service:
         name: pythonserve # Specifies the service name.
         state: started # Ensures the service is running.
         enabled: true # Enables the service to start on boot.
+        daemon_reload: true # Picks up the unit file rendered above before acting on it.
 
     - name: "Ansible Playbook Into Support Bundle" # Archives the Ansible roles directory into a ZIP file for support purposes.
       community.general.archive:
@@ -105,9 +126,3 @@
         path: "/vagrant/support-bundle" # Specifies the directory to archive.
         dest: "{{ python_simple_web_server_path }}/support-bundle.zip" # Specifies the destination of the archive.
         format: zip # Uses ZIP format for the archive.
-
-    - name: "Restarting Cockpit" # Restarts the Cockpit service.
-      ansible.builtin.systemd:
-        state: restarted # Restarts the service.
-        daemon_reload: true # Reloads the systemd manager configuration.
-        name: cockpit # Specifies the service name.

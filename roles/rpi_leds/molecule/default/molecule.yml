@@ -1,0 +1,27 @@
+---
+driver:
+  name: docker
+platforms:
+  - name: startcloud-rpi-leds-debian12
+    image: geerlingguy/docker-debian12-ansible:latest
+    command: /lib/systemd/systemd
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    cgroupns_mode: host
+    privileged: true
+    pre_build_image: true
+provisioner:
+  name: ansible
+  env:
+    ANSIBLE_ROLES_PATH: "${MOLECULE_PROJECT_DIRECTORY}/.."
+  ## The role registers `deb_architecture` itself (dpkg --print-architecture),
+  ## which on this x86_64 container reports `amd64` and would skip the only
+  ## task in the role. Extra vars (precedence 22) are the only level that
+  ## outranks a registered var (19) without being a role param — role params
+  ## (20) are rejected by validate_argument_spec because `deb_architecture` is
+  ## a runtime register, not a documented role input. Forcing arm64 here makes
+  ## the Raspberry Pi code path genuinely run and be verified.
+  ansible_args:
+    - '--extra-vars={"deb_architecture":{"stdout":"arm64"}}'
+verifier:
+  name: ansible

@@ -1,6 +1,14 @@
 ---
 run_tasks: true
 
+# Boxvault template coordinates rendered into the optional support box. The
+# provisioner sets these globally for a whole build; fact-derived here so the
+# role stands on its own instead of exploding on an undefined variable when
+# motd_show_support is true.
+distro: "{{ ansible_distribution | default('linux') | lower }}"
+distro_version: "{{ ansible_distribution_major_version | default('') }}"
+vm_type: server
+
 motd_remove_default_config: false
 motd_restore_default_config: false
 motd_add_footer: false

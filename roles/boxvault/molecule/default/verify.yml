@@ -1,0 +1,134 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Stating the APT keyrings directory"
+      ansible.builtin.stat:
+        path: /etc/apt/keyrings
+      register: boxvault_keyring_dir
+
+    - name: "Asserting the keyrings directory was created as a 0755 directory"
+      ansible.builtin.assert:
+        that:
+          - boxvault_keyring_dir.stat.exists
+          - boxvault_keyring_dir.stat.isdir
+          - boxvault_keyring_dir.stat.mode == '0755'
+        fail_msg: "/etc/apt/keyrings was not created as a 0755 directory"
+        success_msg: "The keyrings directory exists with the expected mode"
+
+    - name: "Stating the dearmored STARTcloud keyring"
+      ansible.builtin.stat:
+        path: /etc/apt/keyrings/startcloud-archive-keyring.gpg
+      register: boxvault_keyring
+
+    - name: "Asserting the armored key was dearmored into a non-empty 0644 binary keyring"
+      ansible.builtin.assert:
+        that:
+          - boxvault_keyring.stat.exists
+          - boxvault_keyring.stat.size > 0
+          - boxvault_keyring.stat.mode == '0644'
+        fail_msg: "gpg --dearmor did not produce a 0644 /etc/apt/keyrings/startcloud-archive-keyring.gpg"
+        success_msg: "The dearmored STARTcloud keyring is present, non-empty, and 0644"
+
+    - name: "Reading the APT source file written by the role"
+      ansible.builtin.slurp:
+        src: /etc/apt/sources.list.d/startcloud.list
+      register: boxvault_source_file
+
+    - name: "Asserting the source line is signed-by the dearmored keyring"
+      ansible.builtin.assert:
+        that:
+          - "'signed-by=/etc/apt/keyrings/startcloud-archive-keyring.gpg' in boxvault_source_content"
+          - "'debian.startcloud.com/public/debian' in boxvault_source_content"
+          - "'public.debian.packages.startcloud.com' not in boxvault_source_content"
+          - "ansible_distribution_release in boxvault_source_content"
+          - "boxvault_source_content.rstrip().endswith('main')"
+        fail_msg: "startcloud.list does not carry the expected signed-by repository line for the canonical host"
+        success_msg: "The STARTcloud APT source line is correct and uses the canonical short-path host"
+      vars:
+        boxvault_source_content: "{{ boxvault_source_file.content | b64decode }}"
+
+    - name: "Stating the dearmored NodeSource keyring"
+      ansible.builtin.stat:
+        path: /etc/apt/keyrings/nodesource.gpg
+      register: boxvault_nodesource_keyring
+
+    - name: "Asserting the role laid down a non-empty 0644 NodeSource keyring"
+      ansible.builtin.assert:
+        that:
+          - boxvault_nodesource_keyring.stat.exists
+          - boxvault_nodesource_keyring.stat.size > 0
+          - boxvault_nodesource_keyring.stat.mode == '0644'
+        fail_msg: "The role did not produce a 0644 /etc/apt/keyrings/nodesource.gpg"
+        success_msg: "The dearmored NodeSource keyring is present, non-empty, and 0644"
+
+    - name: "Reading the NodeSource source file written by the role"
+      ansible.builtin.slurp:
+        src: /etc/apt/sources.list.d/nodesource.list
+      register: boxvault_nodesource_file
+
+    - name: "Asserting the NodeSource source line points at Node.js 22.x and is signed-by its keyring"
+      ansible.builtin.assert:
+        that:
+          - "'signed-by=/etc/apt/keyrings/nodesource.gpg' in boxvault_nodesource_content"
+          - "'https://deb.nodesource.com/node_22.x' in boxvault_nodesource_content"
+          - "'nodistro main' in boxvault_nodesource_content"
+        fail_msg: "nodesource.list does not carry the expected Node.js 22.x repository line"
+        success_msg: "The NodeSource 22.x APT source line is correct"
+      vars:
+        boxvault_nodesource_content: "{{ boxvault_nodesource_file.content | b64decode }}"
+
+    - name: "Reading the nodejs APT pin written by the role"
+      ansible.builtin.slurp:
+        src: /etc/apt/preferences.d/nodejs
+      register: boxvault_nodejs_pin
+
+    - name: "Asserting the nodejs package is pinned to the NodeSource origin"
+      ansible.builtin.assert:
+        that:
+          - "'Package: nodejs' in boxvault_nodejs_pin_content"
+          - "'Pin: origin deb.nodesource.com' in boxvault_nodejs_pin_content"
+          - "'Pin-Priority: 600' in boxvault_nodejs_pin_content"
+        fail_msg: "/etc/apt/preferences.d/nodejs does not pin nodejs to the NodeSource origin"
+        success_msg: "The nodejs package is pinned to the NodeSource origin"
+      vars:
+        boxvault_nodejs_pin_content: "{{ boxvault_nodejs_pin.content | b64decode }}"
+
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: apt
+
+    - name: "Asserting the BoxVault package is installed from the STARTcloud repository"
+      ansible.builtin.assert:
+        that:
+          - "'boxvault' in ansible_facts.packages"
+        fail_msg: "The boxvault package is not installed"
+        success_msg: "The boxvault package is installed"
+
+    - name: "Asserting the installed nodejs satisfies the boxvault dependency (>= 22)"
+      ansible.builtin.assert:
+        that:
+          - "'nodejs' in ansible_facts.packages"
+          - ansible_facts.packages['nodejs'][0].version.split('.')[0] | int >= 22
+        fail_msg: "The installed nodejs is older than the version the boxvault package depends on"
+        success_msg: "Node.js {{ ansible_facts.packages['nodejs'][0].version | default('') }} satisfies the boxvault dependency"
+
+    - name: "Stating the temporary armored keys the role downloads"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - /tmp/startcloud-archive-keyring.asc
+        - /tmp/nodesource-key.asc
+      register: boxvault_tmp_keys
+
+    - name: "Asserting the role cleaned up both temporary armored keys"
+      ansible.builtin.assert:
+        that:
+          - not item.stat.exists
+        fail_msg: "The role left the temporary armored key {{ item.item }} behind"
+        success_msg: "The temporary armored key {{ item.item }} was cleaned up"
+      loop: "{{ boxvault_tmp_keys.results }}"
+      loop_control:
+        label: "{{ item.item }}"

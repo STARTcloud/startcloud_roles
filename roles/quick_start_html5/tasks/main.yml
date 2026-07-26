@@ -37,7 +37,15 @@
         - { src: "environment.j2", dest: "/etc/pythonserv", owner: "{{ service_user }}" }
         - { src: "index.html.j2", dest: "{{ python_simple_web_server_path }}/welcome.html", owner: "{{ service_user }}" }
         - { src: "styles.css", dest: "{{ python_simple_web_server_path }}/styles.css", owner: "{{ service_user }}" }
-        - { src: "cockpit.conf.j2", dest: "/etc/cockpit/cockpit.conf", owner: "{{ service_user }}" }
+
+    - name: "Placing Cockpit Configuration"
+      become: true
+      ansible.builtin.template:
+        owner: "{{ service_user }}"
+        src: "cockpit.conf.j2"
+        dest: "/etc/cockpit/cockpit.conf"
+        mode: "0644"
+      notify: "Restarting Cockpit"
 
     - name: "Copying Intermediate CA to {{ service_home_dir }}"
       ansible.builtin.copy:
@@ -132,9 +140,3 @@
         path: "/vagrant/support-bundle"
         dest: "/vagrant/support-bundle.zip"
         format: zip
-
-    - name: "Restarting Cockpit"
-      ansible.builtin.systemd:
-        state: restarted
-        daemon_reload: true
-        name: cockpit

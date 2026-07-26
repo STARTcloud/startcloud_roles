@@ -25,15 +25,39 @@
     mode: "0755"
   when: extra_repos | default([]) | length > 0
 
-- name: "Downloading armored GPG keys for extra repositories"
-  ansible.builtin.get_url:
-    url: "{{ item.gpg_key_url }}"
-    dest: "/tmp/{{ item.name }}-key.asc"
-    mode: "0644"
+- name: "Ensuring gnupg is present for key dearmoring"
+  ansible.builtin.apt:
+    name: gnupg
+    state: present
+    cache_valid_time: 3600
+    update_cache: true
+  when: extra_repos | default([]) | map(attribute='needs_dearmor', default=false) | select | list | length > 0
+
+# The download/cleanup pair is gated on the keyring the flow produces —
+# without this, every rerun re-downloaded and re-deleted the temp key,
+# reporting two changes forever.
+- name: "Checking for existing dearmored keyrings"
+  ansible.builtin.stat:
+    path: "{{ item.gpg_keyring_path }}"
   loop: "{{ extra_repos | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: dependencies_keyring_stats
   when:
     - extra_repos | default([]) | length > 0
     - item.needs_dearmor | default(false)
+
+- name: "Downloading armored GPG keys for extra repositories"
+  ansible.builtin.get_url:
+    url: "{{ item.item.gpg_key_url }}"
+    dest: "/tmp/{{ item.item.name }}-key.asc"
+    mode: "0644"
+  loop: "{{ dependencies_keyring_stats.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.name | default('skipped') }}"
+  when:
+    - not (item.skipped | default(false))
+    - not item.stat.exists
 
 - name: "Dearmoring GPG keys for extra repositories"
   ansible.builtin.command:
@@ -55,12 +79,14 @@
 
 - name: "Cleaning up temporary armored key files"
   ansible.builtin.file:
-    path: "/tmp/{{ item.name }}-key.asc"
+    path: "/tmp/{{ item.item.name }}-key.asc"
     state: absent
-  loop: "{{ extra_repos | default([]) }}"
+  loop: "{{ dependencies_keyring_stats.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.name | default('skipped') }}"
   when:
-    - extra_repos | default([]) | length > 0
-    - item.needs_dearmor | default(false)
+    - not (item.skipped | default(false))
+    - not item.stat.exists
 
 - name: "Downloading GPG keys for extra repositories (non-armored)"
   ansible.builtin.get_url:

@@ -1,0 +1,7 @@
+---
+- name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    - name: "Including OS-specific tasks"
+      when: ansible_os_family == 'FreeBSD'
+      ansible.builtin.include_tasks: freebsd.yml

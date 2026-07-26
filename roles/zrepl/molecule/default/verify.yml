@@ -1,0 +1,114 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  vars:
+    zrepl_apt_key_dst: /usr/share/keyrings/zrepl.asc
+    zrepl_apt_repo_file: /etc/apt/sources.list.d/zrepl.list
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting the zrepl package and its prerequisites are installed"
+      ansible.builtin.assert:
+        that:
+          - "'zrepl' in ansible_facts.packages"
+          - "'curl' in ansible_facts.packages"
+          - "'gnupg' in ansible_facts.packages"
+          - "'lsb-release' in ansible_facts.packages"
+        fail_msg: "Expected zrepl plus curl/gnupg/lsb-release to be installed by the role"
+
+    - name: "Stat the zrepl apt signing key"
+      ansible.builtin.stat:
+        path: "{{ zrepl_apt_key_dst }}"
+      register: zrepl_key_stat
+
+    - name: "Asserting the apt signing key was downloaded with mode 0644"
+      ansible.builtin.assert:
+        that:
+          - zrepl_key_stat.stat.exists
+          - zrepl_key_stat.stat.isreg
+          - zrepl_key_stat.stat.size > 0
+          - zrepl_key_stat.stat.mode == '0644'
+        fail_msg: "{{ zrepl_apt_key_dst }} missing, empty or wrong mode"
+
+    - name: "Reading the zrepl apt signing key"
+      ansible.builtin.slurp:
+        src: "{{ zrepl_apt_key_dst }}"
+      register: zrepl_key_content
+
+    - name: "Asserting the key is stored ASCII-armored under a .asc path apt can parse"
+      ansible.builtin.assert:
+        that:
+          - zrepl_apt_key_dst.endswith('.asc')
+          - "'-----BEGIN PGP PUBLIC KEY BLOCK-----' in zrepl_key_decoded"
+        fail_msg: "{{ zrepl_apt_key_dst }} is not an ASCII-armored key at a .asc path; apt would reject it with NO_PUBKEY"
+      vars:
+        zrepl_key_decoded: "{{ zrepl_key_content.content | b64decode }}"
+
+    - name: "Refreshing the apt cache to prove the zrepl repo verifies against the key"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 0
+      register: zrepl_apt_update
+      changed_when: false
+      failed_when: false
+
+    - name: "Asserting apt verified the zrepl repository signature with no missing public key"
+      ansible.builtin.assert:
+        that:
+          - zrepl_apt_update is not failed
+          - "'NO_PUBKEY' not in zrepl_apt_update_msg"
+          - "'is not signed' not in zrepl_apt_update_msg"
+        fail_msg: "apt could not verify the zrepl repo signature: {{ zrepl_apt_update_msg }}"
+      vars:
+        zrepl_apt_update_msg: "{{ zrepl_apt_update.msg | default('') }}"
+
+    - name: "Stat the zrepl apt sources list"
+      ansible.builtin.stat:
+        path: "{{ zrepl_apt_repo_file }}"
+      register: zrepl_repo_stat
+
+    - name: "Asserting the zrepl apt sources list exists"
+      ansible.builtin.assert:
+        that:
+          - zrepl_repo_stat.stat.exists
+          - zrepl_repo_stat.stat.isreg
+        fail_msg: "{{ zrepl_apt_repo_file }} was not created by apt_repository"
+
+    - name: "Reading the zrepl apt sources list"
+      ansible.builtin.slurp:
+        src: "{{ zrepl_apt_repo_file }}"
+      register: zrepl_repo_content
+
+    - name: "Asserting the repository line points at the signed upstream zrepl repo"
+      ansible.builtin.assert:
+        that:
+          - "'https://zrepl.cschwarz.com/apt/debian bookworm main' in zrepl_repo_decoded"
+          - "'signed-by=' ~ zrepl_apt_key_dst in zrepl_repo_decoded"
+          - "'arch=amd64' in zrepl_repo_decoded or 'arch=arm64' in zrepl_repo_decoded"
+        fail_msg: "Unexpected repo line: {{ zrepl_repo_decoded }}"
+      vars:
+        zrepl_repo_decoded: "{{ zrepl_repo_content.content | b64decode }}"
+
+    - name: "Stat the installed zrepl binary"
+      ansible.builtin.stat:
+        path: /usr/bin/zrepl
+      register: zrepl_bin_stat
+
+    - name: "Asserting the zrepl binary is installed and executable"
+      ansible.builtin.assert:
+        that:
+          - zrepl_bin_stat.stat.exists
+          - zrepl_bin_stat.stat.executable
+        fail_msg: "/usr/bin/zrepl not present or not executable"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting the zrepl systemd unit was shipped by the package"
+      ansible.builtin.assert:
+        that:
+          - "'zrepl.service' in ansible_facts.services"
+        fail_msg: "zrepl.service unit not registered with systemd"

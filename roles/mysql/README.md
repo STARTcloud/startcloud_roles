@@ -79,7 +79,16 @@ Databases to create: `name` plus optional `encoding` (utf8), `collation`
     mysql_users: []
 
 Users and their privileges: `name`, `host` (localhost), `password` (plaintext or
-encrypted with `encrypted: true`), `priv` (`*.*:USAGE`), `append_privs`, `state`.
+encrypted with `encrypted: true`), `priv` (`*.*:USAGE`), `append_privs`, `state`,
+`password_update`.
+
+    mysql_users_password_update: false
+
+Whether the passwords in `mysql_users` are re-applied to accounts that already
+exist. Passwords are applied when the account is created; MySQL 8 salts and
+hashes them server-side, so they cannot be compared against the configured
+cleartext on later runs. Set this (or `password_update: true` on a single
+`mysql_users` entry) to rotate a password.
 
     mysql_packages: [OS-specific]
 

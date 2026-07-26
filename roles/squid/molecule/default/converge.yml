@@ -1,0 +1,19 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    squid_packages:
+      - squid
+    # Port the role renders into http_port; pinned here so verify.yml can
+    # assert the exact directive.
+    proxy_port: 3128
+    # Minimal provisioner-context stand-in so the role runs standalone.
+    settings:
+      hostname: startcloud-squid
+      domain: local
+  tasks:
+    - name: "Include the squid role"
+      ansible.builtin.include_role:
+        name: squid

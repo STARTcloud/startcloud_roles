@@ -1,0 +1,114 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting Firefox ESR is installed from the Debian repositories"
+      ansible.builtin.assert:
+        that:
+          - "'firefox-esr' in ansible_facts.packages"
+        fail_msg: "firefox-esr was not installed by the role"
+
+    - name: "Stating the Firefox ESR binary"
+      ansible.builtin.stat:
+        path: /usr/bin/firefox-esr
+      register: firefox_binary
+
+    - name: "Asserting the Firefox ESR binary is present"
+      ansible.builtin.assert:
+        that:
+          - firefox_binary.stat.exists
+        fail_msg: "/usr/bin/firefox-esr is missing after installation"
+
+    - name: "Stating the Firefox policies directory"
+      ansible.builtin.stat:
+        path: /etc/firefox/policies
+      register: firefox_policies_dir
+
+    - name: "Asserting the policies directory exists with mode 0755"
+      ansible.builtin.assert:
+        that:
+          - firefox_policies_dir.stat.exists
+          - firefox_policies_dir.stat.isdir
+          - firefox_policies_dir.stat.mode == '0755'
+        fail_msg: "/etc/firefox/policies is missing or has the wrong mode"
+
+    - name: "Stating the deployed policies.json"
+      ansible.builtin.stat:
+        path: /etc/firefox/policies/policies.json
+      register: firefox_policies_file
+
+    - name: "Asserting policies.json ownership and mode"
+      ansible.builtin.assert:
+        that:
+          - firefox_policies_file.stat.exists
+          - firefox_policies_file.stat.pw_name == 'root'
+          - firefox_policies_file.stat.gr_name == 'root'
+          - firefox_policies_file.stat.mode == '0644'
+        fail_msg: "/etc/firefox/policies/policies.json is missing or has wrong ownership/mode"
+
+    - name: "Slurping policies.json"
+      ansible.builtin.slurp:
+        src: /etc/firefox/policies/policies.json
+      register: firefox_policies_raw
+
+    - name: "Asserting policies.json is valid JSON with the hardening policies applied"
+      vars:
+        firefox_policies: "{{ firefox_policies_raw.content | b64decode | from_json }}"
+      ansible.builtin.assert:
+        that:
+          - firefox_policies.policies.DisableTelemetry
+          - firefox_policies.policies.DisablePocket
+          - firefox_policies.policies.DisableFirefoxStudies
+          - not firefox_policies.policies.PasswordManagerEnabled
+          - firefox_policies.policies.EnableTrackingProtection.Value
+          - firefox_policies.policies.EnableTrackingProtection.Locked
+          - firefox_policies.policies.Cookies.AcceptThirdParty == 'never'
+          - "'uBlock0@raymondhill.net' in firefox_policies.policies.ExtensionSettings"
+          - firefox_policies.policies.ExtensionSettings['uBlock0@raymondhill.net'].installation_mode == 'force_installed'
+        fail_msg: "policies.json did not contain the expected hardened enterprise policies"
+
+    - name: "Stating the deployed syspref.js"
+      ansible.builtin.stat:
+        path: /etc/firefox/syspref.js
+      register: firefox_syspref_file
+
+    - name: "Asserting syspref.js ownership and mode"
+      ansible.builtin.assert:
+        that:
+          - firefox_syspref_file.stat.exists
+          - firefox_syspref_file.stat.pw_name == 'root'
+          - firefox_syspref_file.stat.mode == '0644'
+        fail_msg: "/etc/firefox/syspref.js is missing or has wrong ownership/mode"
+
+    - name: "Slurping syspref.js"
+      ansible.builtin.slurp:
+        src: /etc/firefox/syspref.js
+      register: firefox_syspref_raw
+
+    - name: "Asserting syspref.js locks down the first run and start page"
+      vars:
+        firefox_syspref: "{{ firefox_syspref_raw.content | b64decode }}"
+      ansible.builtin.assert:
+        that:
+          - "'browser.aboutwelcome.enabled' in firefox_syspref"
+          - "'browser.startup.homepage' in firefox_syspref"
+          - "'browser.ssb.enabled' in firefox_syspref"
+        fail_msg: "syspref.js did not contain the expected locked preferences"
+
+    - name: "Stating the Ubuntu-only Mozilla Team PPA pin file"
+      ansible.builtin.stat:
+        path: /etc/apt/preferences.d/mozilla-firefox
+      register: firefox_ppa_pin
+
+    - name: "Asserting the Ubuntu-only PPA artefacts were skipped on Debian"
+      ansible.builtin.assert:
+        that:
+          - not firefox_ppa_pin.stat.exists
+          - "'firefox' not in ansible_facts.packages"
+        fail_msg: "Ubuntu Mozilla Team PPA artefacts were applied on a Debian host"

@@ -10,10 +10,18 @@ argument_specs:
         type: bool
         default: true
         description: Master gate — when false the role loads its vars but runs no tasks.
+      installer_dir:
+        type: str
+        default: /vagrant/installers
+        description: Directory where installer artifacts are staged; the Chromedriver archive is downloaded beneath it.
       chrome_signing_key_url:
         type: str
         default: https://dl-ssl.google.com/linux/linux_signing_key.pub
         description: URL of the Google apt signing key.
+      chrome_apt_repository:
+        type: str
+        default: deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] https://dl.google.com/linux/chrome/deb/ stable main
+        description: Sole deb line written to /etc/apt/sources.list.d/google-chrome.list, which the role owns outright.
       chrome_driver_version:
         type: str
         default: "2.41"
@@ -26,3 +34,7 @@ argument_specs:
         type: str
         default: https://chromedriver.storage.googleapis.com/
         description: Base URL Chromedriver is downloaded from.
+      chrome_driver_install_dir:
+        type: str
+        default: /usr/local/bin
+        description: PATH directory the chromedriver binary is extracted into.

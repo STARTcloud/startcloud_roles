@@ -1,0 +1,47 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  tasks:
+    - name: "Updating the apt cache"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    # The role assumes a MySQL server is already present: it restarts
+    # mysql.service, drops a file into /etc/mysql/conf.d, and shells out to
+    # `mysql -uroot`. The collection's own mysql role provides exactly that
+    # (Oracle MySQL 8.0 plus /root/.my.cnf for the root client). The base image
+    # needs ca-certificates/gnupg/lsb-release before that repo setup works.
+    - name: "Installing the tooling the MySQL APT repository setup expects"
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - gnupg
+          - lsb-release
+        state: present
+
+    - name: "Installing the MySQL server the role expects to already exist"
+      ansible.builtin.include_role:
+        name: mysql
+      vars:
+        mysql_root_password: "CHANGEME"
+        mysql_user_password: "CHANGEME"
+        mysql_innodb_buffer_pool_size: "64M"
+        mysql_innodb_log_file_size: "16M"
+        mysql_key_buffer_size: "32M"
+        mysql_max_connections: "50"
+        mysql_table_open_cache: "64"
+
+    # The role templates a vhost into /etc/nginx/sites-available and reloads
+    # nginx, but never installs nginx itself.
+    - name: "Installing the nginx server the role expects to already exist"
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+
+    - name: "Ensuring nginx is running so the role's reload succeeds"
+      ansible.builtin.systemd:
+        name: nginx
+        state: started
+        enabled: true

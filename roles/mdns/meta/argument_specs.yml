@@ -13,4 +13,5 @@ argument_specs:
       mdns_packages:
         type: list
         elements: str
-        description: Packages associated with the role (avahi-daemon).
+        default: ["avahi-daemon"]
+        description: APT packages installed to provide the Avahi mDNS daemon.

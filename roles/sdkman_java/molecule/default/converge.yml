@@ -1,0 +1,83 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    # Minimal provisioner-context stand-ins so the role runs standalone.
+    settings:
+      hostname: startcloud-sdkman-java-debian12
+      domain: startcloud.test
+    # Service account context the role expects from the provisioner.
+    service_user: startcloud
+    service_group: startcloud
+    service_home_dir: /home/startcloud
+    # Role variables (defaults/main.yml + meta/argument_specs.yml).
+    run_tasks: true
+    # LATEST exercises the "resolve newest Zulu 8 from sdk list java" branch,
+    # which is the shipped default and is guaranteed installable at run time.
+    java_version: "LATEST"
+    java_jvm: jre-8u251-linux-x64.tar.gz
+    sdkman_update_alternatives:
+      - candidate: java
+        name: java
+        link: /usr/bin/java
+      - candidate: java
+        name: javac
+        link: /usr/bin/javac
+      - candidate: java
+        name: javadoc
+        link: /usr/bin/javadoc
+  pre_tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install acl so Ansible can become the unprivileged service user
+      ansible.builtin.apt:
+        name:
+          - acl
+          - ca-certificates
+        state: present
+
+    - name: Create the service group
+      ansible.builtin.group:
+        name: "{{ service_group }}"
+        state: present
+
+    - name: Create the service user SDKMAN and Java are installed for
+      ansible.builtin.user:
+        name: "{{ service_user }}"
+        group: "{{ service_group }}"
+        home: "{{ service_home_dir }}"
+        shell: /bin/bash
+        create_home: true
+        state: present
+
+    - name: Create the shell profile files SDKMAN persists its settings into
+      ansible.builtin.file:
+        path: "{{ service_home_dir }}/{{ item }}"
+        state: touch
+        owner: "{{ service_user }}"
+        group: "{{ service_group }}"
+        mode: "0644"
+        modification_time: preserve
+        access_time: preserve
+      loop:
+        - .bash_profile
+        - .profile
+        - .bashrc
+        - .zshrc
+
+    # sdkman_java assumes SDKMAN already exists in the service user home; the
+    # sibling sdkman_install role is the supported way to get it there.
+    - name: Install SDKMAN itself as the prerequisite for the role under test
+      ansible.builtin.include_role:
+        name: sdkman_install
+      vars:
+        sdkman_install_packages: []
+        sdkman_uninstall_packages: []
+        sdkman_update_alternatives: []
+  roles:
+    - role: sdkman_java

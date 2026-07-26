@@ -1,0 +1,13 @@
+---
+- name: "Converge"
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    run_tasks: true
+    php_version: "8.2"
+    php_versions_install_recommends: false
+
+  roles:
+    - role: php_versions

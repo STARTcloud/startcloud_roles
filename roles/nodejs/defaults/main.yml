@@ -5,8 +5,9 @@ run_tasks: true
 # Version numbers from Nodesource: https://github.com/nodesource/distributions
 nodejs_version: "22.x"
 
-# The user for whom the npm packages will be installed.
-nodejs_install_npm_user: "{{ service_user }}"
+# The user for whom the npm packages will be installed. Follows the service_user
+# set by the service_user role; falls back so the role is standalone-safe.
+nodejs_install_npm_user: "{{ service_user | default('startcloud') }}"
 
 # The directory for global installations.
 npm_config_prefix: "/usr/local/lib/npm"

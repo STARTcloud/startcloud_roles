@@ -1,0 +1,53 @@
+---
+- name: "Detecting pfSense Appliance"
+  ansible.builtin.stat:
+    path: /etc/inc/globals.inc
+  register: firewall_notifications_pfsense_check
+
+- name: "Configuring SMTP Notifications"
+  when: firewall_notifications_pfsense_check.stat.exists
+  block:
+    - name: "Stripping Previous SMTP Configuration from config.xml"
+      ansible.builtin.replace:
+        path: /conf/config.xml
+        regexp: '[\s\S]'
+        replace: ''
+        after: '<smtp>.*?\n'
+        before: '\s*<\/smtp>'
+
+    - name: "Writing SMTP Notification Configuration"
+      ansible.builtin.blockinfile:
+        path: /conf/config.xml
+        marker: "                  <!-- {mark} ANSIBLE SMTP MANAGED BLOCK -->"
+        insertafter: '<smtp>'
+        state: present
+        content: |2
+                            <ipaddress>{{ firewall_notifications_smtp_server }}</ipaddress>
+                            <port>{{ firewall_notifications_smtp_port }}</port>
+                            <ssl></ssl>
+                            <sslvalidate>disabled</sslvalidate>
+                            <timeout>20</timeout>
+                            <notifyemailaddress>{{ firewall_notifications_notify_address }}</notifyemailaddress>
+                            <username>{{ firewall_notifications_user }}</username>
+                            <password>{{ firewall_notifications_pass }}</password>
+                            <authentication_mechanism>LOGIN</authentication_mechanism>
+                            <fromaddress>{{ firewall_notifications_user }}</fromaddress>
+
+    - name: "Removing the blockinfile Markers"
+      ansible.builtin.lineinfile:
+        path: /conf/config.xml
+        state: absent
+        regexp: '.*MANAGED BLOCK.*'
+
+    - name: "Invalidating pfSense Configuration Cache"
+      ansible.builtin.file:
+        path: /tmp/config.cache
+        state: absent
+
+    - name: "Reloading pfSense Configuration"
+      ansible.builtin.command: /etc/rc.reload_all
+      changed_when: true
+
+    - name: "Waiting for pfSense Cache to Regenerate"
+      ansible.builtin.wait_for:
+        path: /tmp/config.cache

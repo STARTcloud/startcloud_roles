@@ -1,0 +1,85 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: false
+  vars:
+    expected_timezone: "Europe/Berlin"
+  tasks:
+    - name: "Stat /etc/localtime"
+      ansible.builtin.stat:
+        path: /etc/localtime
+        follow: false
+      register: localtime_stat
+
+    - name: "Read /etc/timezone"
+      ansible.builtin.slurp:
+        src: /etc/timezone
+      register: timezone_file
+      failed_when: false
+
+    - name: "Assert the system timezone was set by the role"
+      ansible.builtin.assert:
+        that:
+          - localtime_stat.stat.exists
+          - (timezone_file.content is defined and
+             (timezone_file.content | b64decode).strip() == expected_timezone)
+            or
+            (localtime_stat.stat.lnk_source is defined and
+             localtime_stat.stat.lnk_source.endswith(expected_timezone))
+        fail_msg: >-
+          Timezone was not set to {{ expected_timezone }}
+          (/etc/localtime -> {{ localtime_stat.stat.lnk_source | default('n/a') }})
+
+    - name: "Stat the completed directory"
+      ansible.builtin.stat:
+        path: /vagrant/completed
+      register: completed_dir_stat
+
+    - name: "Stat the ansible tmp directory"
+      ansible.builtin.stat:
+        path: /root/.ansible/tmp
+      register: ansible_tmp_stat
+
+    - name: "Assert the role created its directories with the expected mode"
+      ansible.builtin.assert:
+        that:
+          - completed_dir_stat.stat.exists
+          - completed_dir_stat.stat.isdir
+          - completed_dir_stat.stat.mode == '0777'
+          - ansible_tmp_stat.stat.exists
+          - ansible_tmp_stat.stat.isdir
+        fail_msg: "Expected /vagrant/completed (mode 0777) and /root/.ansible/tmp to exist"
+
+    - name: "Read the provisioner version file"
+      ansible.builtin.slurp:
+        src: /vagrant/support-bundle/molecule-provisioner-version.json
+      register: provisioner_version_file
+
+    - name: "Read the core_provisioner version file"
+      ansible.builtin.slurp:
+        src: /vagrant/support-bundle/core_provisioner-version.json
+      register: core_provisioner_version_file
+
+    - name: "Assert the support-bundle version files carry the converge values"
+      ansible.builtin.assert:
+        that:
+          - (provisioner_version_file.content | b64decode).strip() == 'v1.2.3'
+          - (core_provisioner_version_file.content | b64decode).strip() == 'v4.5.6'
+        fail_msg: "Support-bundle version files do not match the vars supplied in converge"
+
+    - name: "Read the exported ansible system variables"
+      ansible.builtin.slurp:
+        src: /vagrant/support-bundle/ansible-system-variables.json
+      register: system_variables_file
+
+    - name: "Assert the variable export is valid JSON containing the role vars"
+      vars:
+        exported: "{{ system_variables_file.content | b64decode | from_json }}"
+      ansible.builtin.assert:
+        that:
+          - exported is mapping
+          - exported['timezone'] == expected_timezone
+          - exported['provisioner_name'] == 'molecule-provisioner'
+          - exported['completed_dir'] == '/vagrant/completed'
+        fail_msg: "ansible-system-variables.json is missing the expected exported variables"

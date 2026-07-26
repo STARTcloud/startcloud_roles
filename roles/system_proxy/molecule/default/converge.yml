@@ -1,0 +1,23 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    proxy_systemwide: true
+    proxy_systemwide_proxy: squid
+    proxy:
+      - dante:
+          user: danteuser
+          pass: CHANGEME
+          host: dante.startcloud.test
+          port: 1080
+      - squid:
+          user: squiduser
+          pass: CHANGEME
+          host: squid.startcloud.test
+          port: 3128
+  tasks:
+    - name: "Include role system_proxy"
+      ansible.builtin.include_role:
+        name: system_proxy

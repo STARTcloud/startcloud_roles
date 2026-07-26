@@ -1,0 +1,11 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Ensuring the locales package is present (baseline on a real Debian 12 host)"
+      ansible.builtin.apt:
+        name: locales
+        state: present
+        update_cache: true

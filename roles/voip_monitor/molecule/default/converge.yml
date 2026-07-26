@@ -1,0 +1,27 @@
+---
+- name: "Converge"
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    settings:
+      hostname: "startcloud-voip-monitor-debian12"
+      domain: "molecule.local"
+    voipmonitor_sniffer_url: "https://download.voipmonitor.org/current-stable-sniffer-static-64bit.tar.gz"
+    voipmonitor_src_dir: "/usr/src/voipmonitor"
+    voipmonitor_binary_path: "/usr/local/sbin/voipmonitor"
+    voipmonitor_config_path: "/etc/voipmonitor.conf"
+    voipmonitor_spool_dir: "/var/spool/voipmonitor"
+    voipmonitor_interface: "eth0"
+    voipmonitor_sip_port: 5060
+    voipmonitor_maxpoolsize: 10240
+    voipmonitor_cleandatabase: 7
+    voipmonitor_mysql_host: "localhost"
+    voipmonitor_mysql_db: "voipmonitor"
+    voipmonitor_mysql_user: "voipmonitor"
+    voipmonitor_mysql_password: "CHANGEME"
+    voipmonitor_dependencies:
+      - libpcap0.8
+      - tcpdump
+  roles:
+    - role: voip_monitor

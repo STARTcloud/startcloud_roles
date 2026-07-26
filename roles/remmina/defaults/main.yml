@@ -1,8 +1,11 @@
 ---
 run_tasks: true
-remmina_packages:
-  - remmina
-  - remmina-plugin-rdp
-  - remmina-plugin-vnc
-  - remmina-plugin-secret
-  - remmina-plugin-spice
+## Debian 12 (bookworm) is the one supported release whose remmina source package builds no
+## remmina-plugin-spice binary; the SPICE plugin returned in Debian 13 (trixie) and ships on
+## every supported Ubuntu release. Set this false to skip the SPICE plugin everywhere.
+remmina_spice_plugin_available: "{{ not (ansible_distribution == 'Debian' and ansible_distribution_major_version | int == 12) }}"
+## Protocol plugin set — override to add plugins such as remmina-plugin-www, remmina-plugin-exec,
+## remmina-plugin-python, remmina-plugin-x2go or remmina-plugin-kwallet.
+remmina_plugins: "{{ ['remmina-plugin-rdp', 'remmina-plugin-vnc', 'remmina-plugin-secret'] + (['remmina-plugin-spice'] if remmina_spice_plugin_available | bool else []) }}"
+## Full apt install set: the client plus the selected plugins.
+remmina_packages: "{{ ['remmina'] + remmina_plugins }}"

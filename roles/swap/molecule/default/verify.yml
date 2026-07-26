@@ -1,0 +1,84 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: false
+  vars:
+    swap_file_path: /swapfile
+    swap_file_size_mb: "128"
+    swap_swappiness: "10"
+  tasks:
+    - name: "Stat the swap file"
+      ansible.builtin.stat:
+        path: "{{ swap_file_path }}"
+        get_checksum: false
+      register: swap_verify_stat
+
+    - name: "Assert the swap file exists with the requested size and permissions"
+      ansible.builtin.assert:
+        that:
+          - swap_verify_stat.stat.exists
+          - swap_verify_stat.stat.isreg
+          - swap_verify_stat.stat.size == (swap_file_size_mb | int) * 1024 * 1024
+          - swap_verify_stat.stat.mode == '0600'
+          - swap_verify_stat.stat.pw_name == 'root'
+          - swap_verify_stat.stat.gr_name == 'root'
+        fail_msg: >-
+          Swap file {{ swap_file_path }} missing or wrong:
+          exists={{ swap_verify_stat.stat.exists }}
+          size={{ swap_verify_stat.stat.size | default('n/a') }}
+          mode={{ swap_verify_stat.stat.mode | default('n/a') }}
+
+    - name: "Reading the swap signature from the swap file header"
+      ansible.builtin.command:
+        cmd: "dd if={{ swap_file_path }} bs=1 skip=4086 count=10 status=none"
+      register: swap_verify_magic
+      changed_when: false
+
+    - name: "Assert mkswap formatted the file as swap space"
+      ansible.builtin.assert:
+        that:
+          - swap_verify_magic.stdout == 'SWAPSPACE2'
+        fail_msg: >-
+          {{ swap_file_path }} does not carry the mkswap SWAPSPACE2 signature
+          (found '{{ swap_verify_magic.stdout }}')
+
+    - name: "Reading /etc/fstab"
+      ansible.builtin.slurp:
+        src: /etc/fstab
+      register: swap_verify_fstab
+
+    - name: "Assert the swap file has an fstab entry"
+      ansible.builtin.assert:
+        that:
+          - swap_verify_fstab_lines | length > 0
+          - swap_verify_fstab_lines[0].split()[1] == 'none'
+          - swap_verify_fstab_lines[0].split()[2] == 'swap'
+          - "'sw' in swap_verify_fstab_lines[0].split()[3]"
+        fail_msg: >-
+          No usable swap entry for {{ swap_file_path }} in /etc/fstab:
+          {{ swap_verify_fstab.content | b64decode }}
+      vars:
+        swap_verify_fstab_lines: >-
+          {{ (swap_verify_fstab.content | b64decode).splitlines()
+             | select('match', '^' ~ swap_file_path ~ '\s')
+             | list }}
+
+    - name: "Reading /etc/sysctl.conf"
+      ansible.builtin.slurp:
+        src: /etc/sysctl.conf
+      register: swap_verify_sysctl
+
+    - name: "Assert vm.swappiness was written to sysctl.conf"
+      ansible.builtin.assert:
+        that:
+          - swap_verify_sysctl_lines | length > 0
+          - swap_verify_sysctl_lines[0].split('=')[1] | trim == swap_swappiness
+        fail_msg: >-
+          vm.swappiness={{ swap_swappiness }} not found in /etc/sysctl.conf:
+          {{ swap_verify_sysctl.content | b64decode }}
+      vars:
+        swap_verify_sysctl_lines: >-
+          {{ (swap_verify_sysctl.content | b64decode).splitlines()
+             | select('match', '^\s*vm\.swappiness\s*=')
+             | list }}

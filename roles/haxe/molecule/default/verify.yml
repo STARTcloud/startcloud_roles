@@ -1,0 +1,119 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    haxe_home_path: "/opt/haxe/haxe-4.3.6"
+    haxelib_store: "/opt/haxe/haxelib_default"
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting the build dependencies and Neko were installed"
+      ansible.builtin.assert:
+        that:
+          - "'neko' in ansible_facts.packages"
+          - "'libxinerama-dev' in ansible_facts.packages"
+          - "'libxrandr-dev' in ansible_facts.packages"
+          - "'mesa-common-dev' in ansible_facts.packages"
+          - "'libasound2-dev' in ansible_facts.packages"
+          - "'gcc-multilib' in ansible_facts.packages"
+          - "'g++-multilib' in ansible_facts.packages"
+          - "'libfuse2' in ansible_facts.packages"
+        fail_msg: "The role did not install the Haxe build dependencies and/or Neko"
+
+    - name: "Stat the installed haxe binary"
+      ansible.builtin.stat:
+        path: "{{ haxe_home_path }}/haxe"
+      register: haxe_binary
+
+    - name: "Stat the installed haxelib binary"
+      ansible.builtin.stat:
+        path: "{{ haxe_home_path }}/haxelib"
+      register: haxelib_binary
+
+    - name: "Stat the bundled Haxe standard library"
+      ansible.builtin.stat:
+        path: "{{ haxe_home_path }}/std/StringTools.hx"
+      register: haxe_std
+
+    - name: "Asserting the release tarball was unpacked into haxe_home"
+      ansible.builtin.assert:
+        that:
+          - haxe_binary.stat.exists
+          - haxe_binary.stat.isreg
+          - haxe_binary.stat.xusr
+          - haxelib_binary.stat.exists
+          - haxelib_binary.stat.isreg
+          - haxelib_binary.stat.xusr
+          - haxe_std.stat.exists
+          - haxe_std.stat.isreg
+        fail_msg: "haxe/haxelib binaries or the std library are missing from {{ haxe_home_path }}"
+
+    - name: "Running the installed haxe compiler"
+      ansible.builtin.command: "{{ haxe_home_path }}/haxe -version"
+      register: haxe_version_out
+      changed_when: false
+      environment:
+        HAXE_STD_PATH: "{{ haxe_home_path }}/std"
+
+    - name: "Asserting the requested Haxe version is the one installed"
+      ansible.builtin.assert:
+        that:
+          - haxe_version_out.rc == 0
+          - "'4.3.6' in haxe_version_out.stdout"
+        fail_msg: "haxe -version did not report 4.3.6 (got: {{ haxe_version_out.stdout }})"
+
+    - name: "Stat the haxelib library store"
+      ansible.builtin.stat:
+        path: "{{ haxelib_store }}"
+      register: haxelib_store_dir
+
+    - name: "Asserting the haxelib store directory exists"
+      ansible.builtin.assert:
+        that:
+          - haxelib_store_dir.stat.exists
+          - haxelib_store_dir.stat.isdir
+        fail_msg: "The haxelib store {{ haxelib_store }} was not created"
+
+    - name: "Asking haxelib which repository it is configured against"
+      ansible.builtin.command: "{{ haxe_home_path }}/haxelib config"
+      register: haxelib_config_out
+      changed_when: false
+      environment:
+        PATH: "{{ haxe_home_path }}:/usr/local/bin:/usr/bin:/bin"
+
+    - name: "Asserting haxelib setup pointed haxelib at haxelib_dir"
+      ansible.builtin.assert:
+        that:
+          - haxelib_config_out.rc == 0
+          - haxelib_store in haxelib_config_out.stdout
+        fail_msg: "haxelib is not configured against {{ haxelib_store }} (got: {{ haxelib_config_out.stdout }})"
+
+    - name: "Listing the libraries haxelib knows about"
+      ansible.builtin.command: "{{ haxe_home_path }}/haxelib list"
+      register: haxelib_list_out
+      changed_when: false
+      environment:
+        PATH: "{{ haxe_home_path }}:/usr/local/bin:/usr/bin:/bin"
+
+    - name: "Asserting the configured libraries were installed"
+      ansible.builtin.assert:
+        that:
+          - haxelib_list_out.rc == 0
+          - "'pako' in haxelib_list_out.stdout"
+          - "'mxhx-component' in haxelib_list_out.stdout"
+        fail_msg: "haxelib list is missing the configured libraries (got: {{ haxelib_list_out.stdout }})"
+
+    - name: "Stat the extraction scratch directory"
+      ansible.builtin.stat:
+        path: /tmp/haxe_temp
+      register: haxe_scratch
+
+    - name: "Asserting the extraction scratch directory was cleaned up"
+      ansible.builtin.assert:
+        that:
+          - not haxe_scratch.stat.exists
+        fail_msg: "/tmp/haxe_temp was left behind on the target"

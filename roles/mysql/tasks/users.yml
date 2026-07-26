@@ -1,9 +1,12 @@
 ---
 ## MySQL 8.4 no longer loads the mysql_native_password plugin that
-## community.mysql's cleartext-password path falls back to, so on 8.x+ users
-## are created explicitly with caching_sha2_password via plugin_auth_string.
-## The module cannot hash-compare a cleartext auth string, so those users
-## report changed on every run.
+## community.mysql's cleartext-password path falls back to, so on 8.x+ users are
+## created explicitly with caching_sha2_password via plugin_auth_string. The
+## server salts and hashes that string, so it can never be compared against the
+## cleartext again — the module is therefore told to apply credentials only when
+## it creates the account, and privileges keep being reconciled on every run.
+## Set mysql_users_password_update to re-apply the configured passwords to
+## accounts that already exist.
 - name: "Ensuring MySQL users are present"
   community.mysql.mysql_user:
     name: "{{ item.name }}"
@@ -15,6 +18,7 @@
     state: "{{ item.state | default('present') }}"
     append_privs: "{{ item.append_privs | default('no') }}"
     encrypted: "{{ item.encrypted | default('no') }}"
+    update_password: "{{ 'always' if (item.password_update | default(mysql_users_password_update)) else 'on_create' }}"
     column_case_sensitive: true
   with_items: "{{ mysql_users }}"
   no_log: "{{ mysql_hide_passwords }}"

@@ -1,0 +1,17 @@
+---
+- name: "Converge"
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    grafana_packages:
+      - apt-transport-https
+    grafana_package: grafana
+    # Provisioner-context stand-ins: the ssl role owns cert_dir and the core
+    # provisioner owns settings, so molecule supplies both for a standalone run.
+    cert_dir: "/secure"
+    settings:
+      hostname: startcloud-grafana-debian12
+      domain: startcloud.test
+  roles:
+    - role: grafana

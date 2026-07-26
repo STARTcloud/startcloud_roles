@@ -1,0 +1,151 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    nodejs_prefix: /usr/local/lib/npm
+    nodejs_keyring: /etc/apt/keyrings/nodesource.gpg
+  tasks:
+    - name: Gather installed package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Assert the nodejs package was installed from NodeSource
+      ansible.builtin.assert:
+        that:
+          - "'nodejs' in ansible_facts.packages"
+          - ansible_facts.packages['nodejs'][0].version is match('^22\\.')
+        fail_msg: >-
+          nodejs is missing or not on the requested 22.x line:
+          {{ ansible_facts.packages['nodejs'] | default('absent') }}
+
+    - name: Stat the dearmored NodeSource keyring
+      ansible.builtin.stat:
+        path: "{{ nodejs_keyring }}"
+      register: nodejs_keyring_stat
+
+    - name: Assert the keyring exists, is binary GPG and world readable
+      ansible.builtin.assert:
+        that:
+          - nodejs_keyring_stat.stat.exists
+          - nodejs_keyring_stat.stat.isreg
+          - nodejs_keyring_stat.stat.size > 0
+          - nodejs_keyring_stat.stat.mode == '0644'
+        fail_msg: "{{ nodejs_keyring }} is missing or has the wrong mode"
+
+    - name: Assert the superseded key and list locations were cleaned up
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: nodejs_old_paths
+      failed_when: nodejs_old_paths.stat.exists
+      loop:
+        - /usr/share/keyrings/nodesource.gpg
+        - /etc/apt/signing-key-nodesource-repo.asc
+        - /tmp/nodesource-key.asc
+
+    - name: Read the NodeSource apt source list
+      ansible.builtin.slurp:
+        src: /etc/apt/sources.list.d/nodesource.list
+      register: nodejs_sources
+
+    - name: Assert the source list is signed-by the new keyring and pinned to 22.x
+      ansible.builtin.assert:
+        that:
+          - "'https://deb.nodesource.com/node_22.x' in nodejs_sources.content | b64decode"
+          - "'signed-by=' + nodejs_keyring in nodejs_sources.content | b64decode"
+        fail_msg: >-
+          Unexpected nodesource.list contents:
+          {{ nodejs_sources.content | b64decode }}
+
+    - name: Read the nodejs apt pin
+      ansible.builtin.slurp:
+        src: /etc/apt/preferences.d/nodejs
+      register: nodejs_pin
+
+    - name: Assert the nodejs package is pinned to the NodeSource origin
+      ansible.builtin.assert:
+        that:
+          - "'Pin: origin deb.nodesource.com' in nodejs_pin.content | b64decode"
+          - "'Pin-Priority: 600' in nodejs_pin.content | b64decode"
+        fail_msg: "/etc/apt/preferences.d/nodejs does not pin the NodeSource origin"
+
+    - name: Look up the npm prefix owner in passwd
+      ansible.builtin.getent:
+        database: passwd
+        key: startcloud
+
+    - name: Stat the global npm prefix directory
+      ansible.builtin.stat:
+        path: "{{ nodejs_prefix }}"
+      register: nodejs_prefix_stat
+
+    - name: Assert the npm prefix exists and is owned by the npm user
+      ansible.builtin.assert:
+        that:
+          - nodejs_prefix_stat.stat.exists
+          - nodejs_prefix_stat.stat.isdir
+          - nodejs_prefix_stat.stat.pw_name == 'startcloud'
+          - nodejs_prefix_stat.stat.gr_name == 'startcloud'
+          - nodejs_prefix_stat.stat.mode == '0755'
+        fail_msg: "{{ nodejs_prefix }} is missing, wrongly owned or wrongly moded"
+
+    - name: Read the generated profile snippet
+      ansible.builtin.slurp:
+        src: /etc/profile.d/npm.sh
+      register: nodejs_profile
+
+    - name: Assert the profile exports the prefix, its bin dir and NODE_PATH
+      ansible.builtin.assert:
+        that:
+          - "'export PATH=$PATH:' + nodejs_prefix + '/bin' in nodejs_profile.content | b64decode"
+          - "'export NPM_CONFIG_PREFIX=' + nodejs_prefix in nodejs_profile.content | b64decode"
+          - "nodejs_prefix + '/lib/node_modules' in nodejs_profile.content | b64decode"
+        fail_msg: >-
+          Unexpected /etc/profile.d/npm.sh contents:
+          {{ nodejs_profile.content | b64decode }}
+
+    - name: Run node and npm from the installed packages
+      ansible.builtin.command:
+        cmd: "{{ item }} --version"
+      changed_when: false
+      register: nodejs_versions
+      loop:
+        - node
+        - npm
+
+    - name: Assert node reports a v22 runtime and npm is usable
+      ansible.builtin.assert:
+        that:
+          - nodejs_versions.results[0].stdout is match('^v22\\.')
+          - nodejs_versions.results[1].stdout is match('^[0-9]+\\.')
+        fail_msg: >-
+          Unexpected version output:
+          node={{ nodejs_versions.results[0].stdout }}
+          npm={{ nodejs_versions.results[1].stdout }}
+
+    - name: Stat the globally installed npm packages
+      ansible.builtin.stat:
+        path: "{{ nodejs_prefix }}/lib/node_modules/{{ item }}/package.json"
+      register: nodejs_global_pkgs
+      loop:
+        - left-pad
+        - is-odd
+
+    - name: Assert both global packages landed under the configured prefix
+      ansible.builtin.assert:
+        that:
+          - nodejs_global_pkgs.results[0].stat.exists
+          - nodejs_global_pkgs.results[1].stat.exists
+        fail_msg: "Global npm packages were not installed into {{ nodejs_prefix }}/lib/node_modules"
+
+    - name: Read the pinned global package manifest
+      ansible.builtin.slurp:
+        src: "{{ nodejs_prefix }}/lib/node_modules/left-pad/package.json"
+      register: nodejs_left_pad_manifest
+
+    - name: Assert the pinned version was honoured
+      ansible.builtin.assert:
+        that:
+          - (nodejs_left_pad_manifest.content | b64decode | from_json).version == '1.3.0'
+        fail_msg: "left-pad was not installed at the pinned version 1.3.0"

@@ -1,0 +1,17 @@
+---
+- name: "Prepare"
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    ## The geerlingguy base image ships with the apt lists cleaned out. The role
+    ## installs nfs-common with ansible.builtin.apt but never sets update_cache,
+    ## so it assumes a host with populated package indexes.
+    - name: "Populating the apt cache"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+      register: nfs_client_prepare_apt
+      until: nfs_client_prepare_apt is succeeded
+      retries: 3
+      delay: 5

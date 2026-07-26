@@ -11,20 +11,18 @@ Ansible role to install and manage [MongoDB](http://www.mongodb.org/).
 
 MongoDB support matrix:
 
-| Distribution   | < MongoDB 3.4 |    MongoDB 3.6     |    MongoDB 4.0     |   MongoDB 4.2      |   MongoDB 4.4      |
-| -------------- | :-----------: | :----------------: | :----------------: | :----------------: | :----------------: |
-| Ubuntu 16.04   |  :no_entry:   | :white_check_mark: | :white_check_mark: | :white_check_mark: |        :x:         |
-| Ubuntu 18.04   |  :no_entry:   | :white_check_mark: | :white_check_mark: | :white_check_mark: |        :x:         |
-| Ubuntu 20.04   |  :no_entry:   |        :x:         |        :x:         |        :x:         | :white_check_mark: |
-| Debian 9.x     |  :no_entry:   | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| Debian 10.x    |  :no_entry:   |        :x:         |        :x:         | :white_check_mark: | :white_check_mark: |
-| RHEL 7.x       |  :no_entry:   | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| RHEL 8.x       |  :no_entry:   | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| Amazon Linux 2 |  :no_entry:   | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Distribution   |    MongoDB 7.0     |    MongoDB 8.0     |
+| -------------- | :----------------: | :----------------: |
+| Debian 12      | :white_check_mark: | :white_check_mark: |
+| Ubuntu 22.04   | :white_check_mark: | :white_check_mark: |
+| Ubuntu 24.04   | :white_check_mark: | :white_check_mark: |
+| RHEL 8.x       | :white_check_mark: | :white_check_mark: |
+| RHEL 9.x       | :white_check_mark: | :white_check_mark: |
+| Amazon Linux 2 | :white_check_mark: | :white_check_mark: |
 
-- :white_check_mark: - fully tested
-- :x: - don't have official support
-- :no_entry: - MongoDB has reached EOL
+- :white_check_mark: - supported
+- MongoDB releases before 7.0 have reached EOL and are rejected by the role.
+- MongoDB 5.0 and newer require a CPU with AVX support.
 
 #### Variables
 
@@ -36,12 +34,14 @@ MongoDB support matrix:
 mongodb_package: mongodb-org
 
 # `mongodb_version` variable sets version of MongoDB.
-# Should be '3.6', '4.0', '4.2' or '4.4'. This role doesn't support MongoDB < 3.6.
-# I would recommend you to use the latest version of MongoDB.
-mongodb_version: "4.4"
+# Must be '7.0' or newer. The APT/YUM repository, the signing key URL and the
+# /etc/apt/keyrings keyring path are all derived from this value.
+mongodb_version: "8.0"
 
-mongodb_pymongo_from_pip: true # Install latest PyMongo via PIP or package manager
-mongodb_pymongo_pip_version: 3.6.1 # Choose PyMong version to install from pip. If not set use latest
+# Install PyMongo from the distribution packages by default; pip installs into
+# the system interpreter fail on PEP 668 ("externally managed") systems.
+mongodb_pymongo_from_pip: false
+mongodb_pymongo_pip_version: # Choose PyMongo version to install from pip. If not set use latest
 mongodb_user_update_password: "on_create" # MongoDB user password update default policy
 mongodb_manage_service: true
 mongodb_manage_systemd_unit: true
@@ -58,10 +58,18 @@ mongodb_gid:
 mongodb_daemon_name: "{{ 'mongod' if ('mongodb-org' in mongodb_package) else 'mongodb' }}"
 ## net Options
 mongodb_net_bindip: 127.0.0.1 # Comma separated list of ip addresses to listen on
-mongodb_net_http_enabled: false # Enable http interface
 mongodb_net_ipv6: false # Enable IPv6 support (disabled by default)
 mongodb_net_maxconns: 65536 # Max number of simultaneous connections
 mongodb_net_port: 27017 # Specify port number
+
+## net TLS Options
+# net.ssl was removed in MongoDB 7.0 — mongod rejects it as an unknown option — so the
+# role only writes the net.tls stanza. Any mode other than 'disabled' enables it.
+mongodb_net_tls_mode: "disabled" # disabled / allowTLS / preferTLS / requireTLS
+mongodb_net_tls_certificate_key_file: "" # PEM with the server certificate and its private key (net.tls.certificateKeyFile)
+mongodb_net_tls_ca_file: "" # CA used to validate client certificates (net.tls.CAFile)
+mongodb_net_tls_allow_connections_without_certificates: false # Accept clients that present no certificate
+mongodb_net_tls_host: "" # Hostname clients use to reach this member; must match the server certificate
 
 ## processManagement Options
 mongodb_processmanagement_fork: false # Fork server process
@@ -75,15 +83,9 @@ mongodb_security_keyfile: /etc/mongodb-keyfile # Specify path to keyfile with pa
 mongodb_storage_dbpath: /data/db # Directory for datafiles
 mongodb_storage_dirperdb: false # Use one directory per DB
 
-# The storage engine for the mongod database
+# The storage engine for the mongod database.
+# wiredTiger is the only engine supported by MongoDB 7.0 and newer.
 mongodb_storage_engine: "wiredTiger"
-# mmapv1 specific options
-mongodb_storage_quota_enforced: false # Limits each database to a certain number of files
-mongodb_storage_quota_maxfiles: 8 # Number of quota files per DB
-mongodb_storage_smallfiles: false # Very useful for non-data nodes
-
-mongodb_storage_journal_enabled: true # Enable journaling
-mongodb_storage_prealloc: true # Disable data file preallocation
 
 # WiredTiger Options
 mongodb_wiredtiger_cache_size: 1 # Cache size for wiredTiger in GB
@@ -97,7 +99,6 @@ mongodb_systemlog_path: /var/log/mongodb/{{ mongodb_daemon_name }}.log # Log fil
 
 ## replication Options
 mongodb_replication_replset: # Enable replication <setname>[/<optionalseedhostlist>]
-mongodb_replication_replindexprefetch: "all" # specify index prefetching behavior (if secondary) [none|_id_only|all]
 mongodb_replication_oplogsize: 1024 # specifies a maximum size in megabytes for the replication operation log
 
 ## setParameter options

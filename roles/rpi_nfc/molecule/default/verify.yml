@@ -1,0 +1,142 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Gather package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Assert the libnfc packages are installed
+      ansible.builtin.assert:
+        that:
+          - "'libnfc-bin' in ansible_facts.packages"
+          - "'libnfc6' in ansible_facts.packages"
+          - "'libnfc-dev' in ansible_facts.packages"
+        fail_msg: "libnfc packages missing from the target"
+
+    - name: Stat the rendered libnfc configuration
+      ansible.builtin.stat:
+        path: /etc/nfc/libnfc.conf
+      register: libnfc_conf
+
+    - name: Slurp the rendered libnfc configuration
+      ansible.builtin.slurp:
+        src: /etc/nfc/libnfc.conf
+      register: libnfc_conf_content
+
+    - name: Assert libnfc.conf is present and points at the PN532 SPI device
+      ansible.builtin.assert:
+        that:
+          - libnfc_conf.stat.exists
+          - "'pn532_spi:/dev/spidev0.0:500000' in (libnfc_conf_content.content | b64decode)"
+          - "'device.name = \"_PN532_SPI\"' in (libnfc_conf_content.content | b64decode)"
+        fail_msg: "/etc/nfc/libnfc.conf was not rendered from the role template"
+
+    - name: Stat the built nfc-daemon binary
+      ansible.builtin.stat:
+        path: /usr/local/bin/nfc-daemon
+      register: nfc_daemon_bin
+
+    - name: Assert nfc-daemon was built and installed
+      ansible.builtin.assert:
+        that:
+          - nfc_daemon_bin.stat.exists
+          - nfc_daemon_bin.stat.executable
+        fail_msg: "nfc-daemon binary was not produced by make install"
+
+    - name: Stat the helper scripts installed by the role
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: nfc_helpers
+      loop:
+        - /usr/local/share/nfc-daemon/run_script
+        - /usr/local/share/nfc-daemon/end_script
+        - /usr/local/bin/libnfc-auth.py
+
+    - name: Assert the helper scripts exist and are executable with a numeric mode
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.executable
+          - item.stat.mode == '0755'
+        fail_msg: "{{ item.item }} is missing, not executable, or not mode 0755"
+      loop: "{{ nfc_helpers.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Slurp the hook script the daemon runs on a card scan
+      ansible.builtin.slurp:
+        src: /usr/local/share/nfc-daemon/run_script
+      register: nfc_run_script
+
+    # make install lays the upstream sample run_script into the same path the
+    # role renders into, so this is what catches the build clobbering the role.
+    - name: Assert run_script is the role's copy and not the upstream sample
+      ansible.builtin.assert:
+        that:
+          - "'libnfc-auth.py' in (nfc_run_script.content | b64decode)"
+        fail_msg: "/usr/local/share/nfc-daemon/run_script is not the copy rendered by the role"
+
+    - name: Slurp the authentication script
+      ansible.builtin.slurp:
+        src: /usr/local/bin/libnfc-auth.py
+      register: nfc_auth_script
+
+    - name: Assert the authentication script points at the managed badge roster
+      ansible.builtin.assert:
+        that:
+          - "'userSource = \"/data/users.yml\"' in (nfc_auth_script.content | b64decode)"
+        fail_msg: "libnfc-auth.py was not rendered with the configured badge roster path"
+
+    - name: Stat the badge roster the authentication script reads
+      ansible.builtin.stat:
+        path: /data/users.yml
+      register: nfc_user_source
+
+    - name: Slurp the badge roster
+      ansible.builtin.slurp:
+        src: /data/users.yml
+      register: nfc_user_source_content
+
+    - name: Assert the badge roster exists and parses with a users key
+      ansible.builtin.assert:
+        that:
+          - nfc_user_source.stat.exists
+          - "'users' in (nfc_user_source_content.content | b64decode | from_yaml)"
+        fail_msg: "/data/users.yml was not seeded, so libnfc-auth.py has no roster to read"
+
+    - name: Stat the nfc-daemon systemd unit
+      ansible.builtin.stat:
+        path: /etc/systemd/system/nfc-daemon.service
+      register: nfc_unit_stat
+
+    - name: Slurp the nfc-daemon systemd unit
+      ansible.builtin.slurp:
+        src: /etc/systemd/system/nfc-daemon.service
+      register: nfc_unit
+
+    - name: Assert the unit runs as the configured service user
+      ansible.builtin.assert:
+        that:
+          - "'User=startcloud' in (nfc_unit.content | b64decode)"
+          - "'ExecStart=/usr/bin/sudo /usr/local/bin/nfc-daemon' in (nfc_unit.content | b64decode)"
+          - nfc_unit_stat.stat.mode == '0644'
+        fail_msg: "nfc-daemon.service was not rendered with the expected service user and mode"
+
+    - name: Assert libnfc.conf carries a numeric non-executable mode
+      ansible.builtin.assert:
+        that:
+          - libnfc_conf.stat.mode == '0644'
+        fail_msg: "/etc/nfc/libnfc.conf is not mode 0644"
+
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Assert nfc-daemon is registered and enabled at boot
+      ansible.builtin.assert:
+        that:
+          - "'nfc-daemon.service' in ansible_facts.services"
+          - ansible_facts.services['nfc-daemon.service'].status == 'enabled'
+        fail_msg: "nfc-daemon.service is not enabled"

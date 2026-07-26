@@ -1,0 +1,73 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting the squid package is installed"
+      ansible.builtin.assert:
+        that:
+          - "'squid' in ansible_facts.packages"
+        fail_msg: "squid package is not installed"
+
+    - name: "Stat the rendered squid configuration"
+      ansible.builtin.stat:
+        path: /etc/squid/squid.conf
+      register: squid_conf_stat
+
+    - name: "Asserting squid.conf exists with mode 0644"
+      ansible.builtin.assert:
+        that:
+          - squid_conf_stat.stat.exists
+          - squid_conf_stat.stat.isreg
+          - squid_conf_stat.stat.mode == '0644'
+        fail_msg: "/etc/squid/squid.conf missing or wrong mode"
+
+    - name: "Reading the rendered squid configuration"
+      ansible.builtin.slurp:
+        src: /etc/squid/squid.conf
+      register: squid_conf_raw
+
+    - name: "Asserting the template rendered the expected directives"
+      ansible.builtin.assert:
+        that:
+          - "'http_port 3128' in squid_conf_content"
+          - "'http_access deny all' in squid_conf_content"
+          - "'coredump_dir /var/spool/squid' in squid_conf_content"
+          - "'acl SSL_ports port 443' in squid_conf_content"
+        fail_msg: "squid.conf did not render the expected directives"
+      vars:
+        squid_conf_content: "{{ squid_conf_raw.content | b64decode }}"
+
+    - name: "Validating the installed configuration with squid -k parse"
+      ansible.builtin.command: squid -k parse
+      register: squid_verify_parse
+      changed_when: false
+
+    - name: "Asserting squid -k parse succeeded"
+      ansible.builtin.assert:
+        that:
+          - squid_verify_parse.rc == 0
+        fail_msg: "squid -k parse rejected the installed configuration"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting the squid service is running and enabled"
+      ansible.builtin.assert:
+        that:
+          - "'squid.service' in ansible_facts.services"
+          - ansible_facts.services['squid.service'].state == 'running'
+          - ansible_facts.services['squid.service'].status == 'enabled'
+        fail_msg: "squid.service is not running and enabled"
+
+    - name: "Asserting the proxy port is accepting connections"
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 3128
+        state: started
+        timeout: 30

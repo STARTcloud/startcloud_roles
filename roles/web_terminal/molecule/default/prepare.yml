@@ -1,0 +1,14 @@
+---
+- name: "Prepare"
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    ## Nothing here provides the role's prerequisites any more: the role now
+    ## installs gnupg and openssl itself, lays down the NodeSource 22.x
+    ## repository the web-terminal package's "Depends: nodejs (>= 22)" needs,
+    ## and installs supervisor before writing its program file, so all of it is
+    ## under test. Only the bare image's apt lists are primed.
+    - name: "Priming the apt cache in the bare image"
+      ansible.builtin.apt:
+        update_cache: true

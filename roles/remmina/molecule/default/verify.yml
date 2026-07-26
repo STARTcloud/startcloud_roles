@@ -1,0 +1,90 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  vars:
+    ## Recomputed independently of the role so the scenario proves the defaults, not the role's own vars.
+    expected_spice_available: "{{ not (ansible_distribution == 'Debian' and ansible_distribution_major_version | int == 12) }}"
+    expected_remmina_plugins: "{{ ['remmina-plugin-rdp', 'remmina-plugin-vnc', 'remmina-plugin-secret'] + (['remmina-plugin-spice'] if expected_spice_available | bool else []) }}"
+    expected_remmina_packages: "{{ ['remmina'] + expected_remmina_plugins }}"
+  tasks:
+    - name: "Gathering installed package facts"
+      ansible.builtin.package_facts:
+        manager: apt
+
+    - name: "Asserting every package from remmina_packages is installed"
+      ansible.builtin.assert:
+        that:
+          - item in ansible_facts.packages
+        fail_msg: "Package {{ item }} was not installed by the remmina role"
+        success_msg: "Package {{ item }} is installed (version {{ ansible_facts.packages[item][0].version | default('unknown') }})"
+      loop: "{{ expected_remmina_packages }}"
+
+    - name: "Querying apt for a remmina-plugin-spice candidate"
+      ansible.builtin.command:
+        argv:
+          - apt-cache
+          - policy
+          - remmina-plugin-spice
+      register: remmina_spice_policy
+      changed_when: false
+
+    - name: "Asserting the SPICE plugin default matches what apt actually offers"
+      ansible.builtin.assert:
+        that:
+          - (spice_candidate != '(none)') == (expected_spice_available | bool)
+        fail_msg: >-
+          remmina_spice_plugin_available resolved to {{ expected_spice_available }} on
+          {{ ansible_distribution }} {{ ansible_distribution_major_version }}, but apt offers
+          candidate '{{ spice_candidate }}' for remmina-plugin-spice
+        success_msg: >-
+          apt agrees with the default: remmina-plugin-spice candidate is '{{ spice_candidate }}' on
+          {{ ansible_distribution }} {{ ansible_distribution_major_version }}
+      vars:
+        spice_candidate: '{{ remmina_spice_policy.stdout_lines | select("search", "^\s*Candidate:") | map("regex_replace", "^\s*Candidate:\s*", "") | list | first | default("(none)") }}'
+
+    - name: "Stat the remmina client binary"
+      ansible.builtin.stat:
+        path: /usr/bin/remmina
+      register: remmina_binary
+
+    - name: "Asserting the remmina binary exists and is executable"
+      ansible.builtin.assert:
+        that:
+          - remmina_binary.stat.exists
+          - remmina_binary.stat.isreg
+          - remmina_binary.stat.executable
+        fail_msg: "/usr/bin/remmina is missing or not an executable regular file"
+        success_msg: "/usr/bin/remmina is present and executable"
+
+    - name: "Finding installed Remmina protocol plugin shared objects"
+      ansible.builtin.find:
+        paths: /usr/lib
+        patterns: "remmina-plugin-*.so"
+        recurse: true
+        file_type: file
+      register: remmina_plugin_objects
+
+    - name: "Asserting every installed plugin package dropped its shared object on disk"
+      ansible.builtin.assert:
+        that:
+          - remmina_plugin_objects.matched | int >= expected_remmina_plugins | length
+          - (item ~ '.so') in plugin_names
+        fail_msg: "Expected {{ item }}.so under /usr/lib, found: {{ plugin_names }}"
+        success_msg: "{{ item }}.so is installed"
+      loop: "{{ expected_remmina_plugins }}"
+      vars:
+        plugin_names: "{{ remmina_plugin_objects.files | map(attribute='path') | map('basename') | list }}"
+
+    - name: "Reading the remmina desktop entry"
+      ansible.builtin.slurp:
+        src: /usr/share/applications/org.remmina.Remmina.desktop
+      register: remmina_desktop_entry
+
+    - name: "Asserting the desktop entry declares the Remmina executable"
+      ansible.builtin.assert:
+        that:
+          - "'Exec=' in (remmina_desktop_entry.content | b64decode)"
+          - "'remmina' in (remmina_desktop_entry.content | b64decode)"
+        fail_msg: "org.remmina.Remmina.desktop does not reference the remmina executable"
+        success_msg: "Remmina desktop entry is installed and references the remmina executable"

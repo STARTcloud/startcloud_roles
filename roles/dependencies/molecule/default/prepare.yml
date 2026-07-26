@@ -1,0 +1,22 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    ## gnupg is deliberately NOT installed here. tasks/debian.yml now has its own
+    ## "Ensuring gnupg is present for key dearmoring" task, gated on any
+    ## extra_repos entry with needs_dearmor. Leaving the container without gnupg
+    ## is the stronger test: it proves the role self-provisions the `gpg` binary
+    ## it shells out to, instead of the scenario hiding the gap.
+    ##
+    ## The role removes source files listed in extra_repos[].stale_source_files.
+    ## Plant one so that task is exercised against a file that really exists.
+    ## Comment-only content keeps `apt update` happy until the role deletes it.
+    - name: "Planting a stale duplicate APT source file for the role to remove"
+      ansible.builtin.copy:
+        dest: /etc/apt/sources.list.d/molecule-docker-stale.list
+        content: |
+          # Stale duplicate source file planted by molecule prepare.
+          # The dependencies role must remove this file.
+        mode: "0644"

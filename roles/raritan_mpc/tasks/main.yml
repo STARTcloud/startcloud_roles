@@ -5,21 +5,77 @@
     - name: "Configuring Raritan PDU SNMP Tooling on Debian"
       when: "ansible_os_family == 'Debian'"
       block:
-        - name: "Ensuring apt cache is updated"
-          ansible.builtin.apt:
-            cache_valid_time: 3600
-            update_cache: true
-
+        # snmp-mibs-downloader ships in Debian's non-free component, so the archive
+        # has to be declared a second time with that component added. apt merges
+        # such a declaration with the base entries for the same URI/suite only when
+        # the Signed-By option matches; otherwise every apt run dies with
+        # "Conflicting values set for option Signed-By". The stanzas below are
+        # therefore written in deb822 form reusing whatever Signed-By the host's own
+        # base sources declare - a keyring path on deb822 hosts (bookworm/trixie
+        # images), and nothing at all on hosts whose base sources are the one-line
+        # layout that trusts /etc/apt/trusted.gpg.d. main is deliberately not
+        # repeated here: the base sources already serve it, and duplicating it makes
+        # apt report the same target configured multiple times.
         - name: "Enabling the Debian non-free component which provides snmp-mibs-downloader"
-          ansible.builtin.apt_repository:
-            repo: "{{ item }}"
-            state: present
-            filename: raritan-mpc-non-free
-          with_items:
-            - "deb http://deb.debian.org/debian {{ ansible_distribution_release }} non-free"
-            - "deb http://deb.debian.org/debian {{ ansible_distribution_release }}-updates non-free"
-            - "deb http://security.debian.org/debian-security {{ ansible_distribution_release }}-security non-free"
-          when: ansible_distribution == "Debian"
+          when: "ansible_distribution == 'Debian'"
+          vars:
+            raritan_mpc_base_sources_text: '{{ (raritan_mpc_base_sources_content.content | b64decode) if raritan_mpc_base_sources.stat.exists else "" }}'
+            raritan_mpc_signed_by_line: '{{ raritan_mpc_base_sources_text | regex_search("(?m)^Signed-By:.*") | default("", true) }}'
+            raritan_mpc_signed_by: '{{ raritan_mpc_signed_by_line | regex_replace("^Signed-By:", "") | trim }}'
+          block:
+            - name: "Ensuring python3-debian is present for deb822 apt source management"
+              ansible.builtin.apt:
+                name: python3-debian
+                state: present
+                cache_valid_time: 3600
+                update_cache: true
+
+            - name: "Checking whether the host ships deb822 base apt sources"
+              ansible.builtin.stat:
+                path: /etc/apt/sources.list.d/debian.sources
+              register: raritan_mpc_base_sources
+
+            - name: "Reading the base apt sources to reuse their signing key"
+              ansible.builtin.slurp:
+                src: /etc/apt/sources.list.d/debian.sources
+              register: raritan_mpc_base_sources_content
+              when: raritan_mpc_base_sources.stat.exists
+
+            - name: "Removing the unsigned one-line non-free sources file"
+              ansible.builtin.file:
+                path: /etc/apt/sources.list.d/raritan-mpc-non-free.list
+                state: absent
+
+            - name: "Adding the non-free component for the Debian archive"
+              ansible.builtin.deb822_repository:
+                name: raritan-mpc-non-free
+                types:
+                  - deb
+                uris:
+                  - "{{ raritan_mpc_debian_archive_uri }}"
+                suites:
+                  - "{{ ansible_distribution_release }}"
+                  - "{{ ansible_distribution_release }}-updates"
+                components: "{{ raritan_mpc_non_free_components }}"
+                signed_by: "{{ raritan_mpc_signed_by | default(omit, true) }}"
+                enabled: true
+                state: present
+                mode: "0644"
+
+            - name: "Adding the non-free component for the Debian security archive"
+              ansible.builtin.deb822_repository:
+                name: raritan-mpc-non-free-security
+                types:
+                  - deb
+                uris:
+                  - "{{ raritan_mpc_debian_security_uri }}"
+                suites:
+                  - "{{ ansible_distribution_release }}-security"
+                components: "{{ raritan_mpc_non_free_components }}"
+                signed_by: "{{ raritan_mpc_signed_by | default(omit, true) }}"
+                enabled: true
+                state: present
+                mode: "0644"
 
         - name: "Installing Raritan PDU SNMP management packages"
           ansible.builtin.apt:

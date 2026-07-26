@@ -1,0 +1,45 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  vars:
+    softphone_expected_packages: "{{ ['linphone-cli'] if (ansible_distribution == 'Debian' and ansible_distribution_major_version | int >= 13) else ['linphone'] }}"
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: apt
+
+    - name: "Asserting the softphone package is installed"
+      ansible.builtin.assert:
+        that:
+          - item in ansible_facts.packages
+        fail_msg: "Expected softphone package {{ item }} to be installed, but it is not present in the package facts."
+        success_msg: "Softphone package {{ item }} is installed (version {{ ansible_facts.packages[item][0].version | default('unknown') }})."
+      loop: "{{ softphone_expected_packages }}"
+
+    - name: "Querying dpkg selection state for the softphone package"
+      ansible.builtin.command:
+        argv: "{{ ['dpkg', '--get-selections'] + softphone_expected_packages }}"
+      register: softphone_dpkg_status
+      changed_when: false
+
+    - name: "Asserting the softphone package is held at its installed version"
+      ansible.builtin.assert:
+        that:
+          - softphone_dpkg_status.stdout is search(item ~ '\s+hold')
+        fail_msg: "Expected {{ item }} to carry a dpkg 'hold' selection; dpkg reported: {{ softphone_dpkg_status.stdout_lines }}"
+        success_msg: "Softphone package {{ item }} is pinned with a dpkg hold selection."
+      loop: "{{ softphone_expected_packages }}"
+
+    - name: "Checking the linphone SIP client library directory exists"
+      ansible.builtin.stat:
+        path: /usr/share/doc/{{ softphone_expected_packages[0] }}
+      register: softphone_doc_dir
+
+    - name: "Asserting the softphone package payload was unpacked on disk"
+      ansible.builtin.assert:
+        that:
+          - softphone_doc_dir.stat.exists
+          - softphone_doc_dir.stat.isdir
+        fail_msg: "Expected /usr/share/doc/{{ softphone_expected_packages[0] }} to exist after installation."
+        success_msg: "Softphone package files are present on disk."

@@ -1,0 +1,61 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    ## Dummy provisioner-context vars so the role runs standalone.
+    settings:
+      hostname: startcloud-ipsec-debian12
+      domain: example.test
+    ## Host namespace: the netns drop-in path is exercised on real hosts only.
+    ipsec_namespace: ""
+    ipsec_base_if_id: 158
+    ipsec_proposals: aes256-sha256-modp2048
+    ipsec_esp_proposals: aes256-sha256-modp2048
+    ipsec_peers:
+      - name: sitea
+        me: 198.51.100.10
+        other: 203.0.113.20
+        psk: CHANGEME
+        ipsec_net: 10.10.0.1/30
+        routes:
+          - 192.168.50.0/24
+          - 192.168.51.0/24
+      - name: siteb
+        me: 198.51.100.10
+        other: 203.0.113.40
+        myid: vpn-a.example.test
+        otherid: vpn-b.example.test
+        psk: CHANGEME
+        ipsec_net: 10.10.0.5/30
+        ipsec_net6: "fd00:10:10::1/126"
+  pre_tasks:
+    - name: "Updating apt cache so the role's strongSwan install can resolve"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+      changed_when: false
+
+    - name: "Creating /etc/network, which the base image ships without ifupdown does not"
+      ansible.builtin.file:
+        path: /etc/network
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: "Providing the ifupdown /etc/network/interfaces the role appends its xfrm block to"
+      ansible.builtin.copy:
+        dest: /etc/network/interfaces
+        content: |
+          # molecule fixture: stands in for the ifupdown configuration a real
+          # Debian host ships; the role only appends its own managed block.
+          auto lo
+          iface lo inet loopback
+        owner: root
+        group: root
+        mode: "0644"
+        force: false
+  roles:
+    - role: ipsec

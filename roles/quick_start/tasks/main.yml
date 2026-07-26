@@ -29,13 +29,8 @@
         name: "uploadserver" # Specifies the pip package name.
         extra_args: --user --break-system-packages # Installs the package for the current user and allows breaking system packages if necessary.
 
-    - name: "Installing uploadserver for Python Web Server" # Installs the uploadserver package for the Python web server.
-      ansible.builtin.pip:
-        name: "uploadserver" # Specifies the pip package name.
-        extra_args: --user --break-system-packages # Installs the package for the current user and allows breaking system packages if necessary.
-
     - name: "Running in-container tasks"
-      when: ansible_module_running_in_container
+      when: ansible_module_running_in_container | default(false)
       block:
         - name: "Grabbing External IP address"
           ansible.builtin.shell: |
@@ -57,7 +52,7 @@
 
     - name: "Gathering Networking Configurations"
       when:
-        - not ansible_module_running_in_container
+        - not (ansible_module_running_in_container | default(false))
         - ansible_virtualization_type != "virtualbox"
       become: true
       block:
@@ -70,7 +65,7 @@
 
     - name: "Configuring Virtualbox networking"
       when:
-        - not ansible_module_running_in_container
+        - not (ansible_module_running_in_container | default(false))
         - ansible_virtualization_type == "virtualbox"
       become: true
       block:
@@ -92,7 +87,15 @@
         - { src: "pythonserve.service.j2", dest: "/etc/systemd/system/pythonserve.service", owner: "{{ service_user }}" }
         - { src: "environment.j2", dest: "/etc/pythonserv", owner: "{{ service_user }}" }
         - { src: "styles.css", dest: "{{ python_simple_web_server_path }}/styles.css", owner: "{{ service_user }}" }
-        - { src: "cockpit.conf.j2", dest: "/etc/cockpit/cockpit.conf", owner: "{{ service_user }}" }
+
+    - name: "Placing Cockpit configuration file" # Renders the Cockpit web console configuration and restarts Cockpit only when it changes.
+      become: true # Executes the task with elevated privileges.
+      notify: "Restarting Cockpit" # Restarts Cockpit through a handler so reruns stay idempotent.
+      ansible.builtin.template:
+        owner: "{{ service_user }}" # Sets the owner of the file.
+        src: "cockpit.conf.j2" # Specifies the source file.
+        dest: "/etc/cockpit/cockpit.conf" # Specifies the destination file.
+        mode: "0644" # Sets the file permissions.
 
     - name: "Placing Python Simple HTTP Server Service file" # Copies service configuration files to their respective locations.
       become: true # Executes the task with elevated privileges.
@@ -131,14 +134,14 @@
         owner: "{{ service_user }}"
 
     - name: "Starting Python Simple HTTP server" # Starts the Python Simple HTTP server service.
-      when: not ansible_module_running_in_container
+      when: not (ansible_module_running_in_container | default(false))
       ansible.builtin.service:
         name: pythonserve # Specifies the service name.
         state: started # Ensures the service is running.
         enabled: true # Enables the service to start on boot.
 
     - name: "Checking if Python HTTP server is listening on port {{ startcloud_quick_start_port_forwards[0].guest }}" # Checks if Python HTTP server is listening
-      when: not ansible_module_running_in_container
+      when: not (ansible_module_running_in_container | default(false))
       ansible.builtin.wait_for:
         port: "{{ startcloud_quick_start_port_forwards[0].guest }}" # Specifies the port to check.
         delay: 5 # Waits for 5 seconds before checking.
@@ -147,15 +150,8 @@
       register: port_check # Stores the result for later use.
       ignore_errors: true # Ignores errors if the port check fails.
 
-    - name: "Restarting Cockpit" # Restarts the Cockpit service.
-      when: not ansible_module_running_in_container
-      ansible.builtin.systemd:
-        state: restarted # Restarts the service.
-        daemon_reload: true # Reloads the systemd manager configuration.
-        name: cockpit # Specifies the service name.
-
     - name: "Copying pythonserver supervisord configuration file"
-      when: ansible_module_running_in_container
+      when: ansible_module_running_in_container | default(false)
       ansible.builtin.template:
         src: supervisord.pythonserver.conf.j2
         dest: /etc/supervisor/conf.d/supervisord.pythonserver.conf

@@ -1,0 +1,78 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Stat the generated SSH private key"
+      ansible.builtin.stat:
+        path: /home/startcloud/.ssh/id_ssh_rsa
+      register: lockdown_private_key
+
+    - name: "Stat the generated SSH public key"
+      ansible.builtin.stat:
+        path: /home/startcloud/.ssh/id_ssh_rsa.pub
+      register: lockdown_public_key
+
+    - name: "Assert the SSH keypair was generated and owned by startcloud"
+      ansible.builtin.assert:
+        that:
+          - lockdown_private_key.stat.exists
+          - lockdown_private_key.stat.pw_name == 'startcloud'
+          - lockdown_private_key.stat.mode == '0600'
+          - lockdown_public_key.stat.exists
+          - lockdown_public_key.stat.size > 0
+        fail_msg: "openssh_keypair did not produce an owned keypair at /home/startcloud/.ssh/id_ssh_rsa"
+
+    - name: "Read the generated public key"
+      ansible.builtin.slurp:
+        src: /home/startcloud/.ssh/id_ssh_rsa.pub
+      register: lockdown_pubkey_content
+
+    - name: "Read the authorized_keys file"
+      ansible.builtin.slurp:
+        src: /home/startcloud/.ssh/authorized_keys
+      register: lockdown_authorized_keys
+
+    - name: "Assert the generated public key is installed in authorized_keys"
+      ansible.builtin.assert:
+        that:
+          - ((lockdown_pubkey_content.content | b64decode).split(' ')[1])
+            in (lockdown_authorized_keys.content | b64decode)
+        fail_msg: "The generated public key is not present in /home/startcloud/.ssh/authorized_keys"
+
+    - name: "Read the startcloud shadow entry"
+      ansible.builtin.command:
+        cmd: getent shadow startcloud
+      changed_when: false
+      register: lockdown_shadow_entry
+
+    - name: "Assert the startcloud password was rotated to a SHA-512 hash"
+      ansible.builtin.assert:
+        that:
+          - lockdown_shadow_entry.stdout.split(':')[1] is match('^\\$6\\$')
+        fail_msg: "startcloud password is not a SHA-512 crypt hash: role did not rotate it"
+
+    - name: "Stat the sensitive file targeted by the cleanup list"
+      ansible.builtin.stat:
+        path: /var/log/startcloud-debug.log
+      register: lockdown_cleanup_target
+
+    - name: "Assert the sensitive file was removed by the cleanup step"
+      ansible.builtin.assert:
+        that:
+          - not lockdown_cleanup_target.stat.exists
+        fail_msg: "/var/log/startcloud-debug.log still exists: lockdown_file_cleanups_list was not honoured"
+
+    - name: "Stat the .ssh directory"
+      ansible.builtin.stat:
+        path: /home/startcloud/.ssh
+      register: lockdown_ssh_dir
+
+    - name: "Assert the .ssh directory is owned by startcloud"
+      ansible.builtin.assert:
+        that:
+          - lockdown_ssh_dir.stat.isdir
+          - lockdown_ssh_dir.stat.pw_name == 'startcloud'
+          - lockdown_ssh_dir.stat.gr_name == 'startcloud'
+        fail_msg: "/home/startcloud/.ssh ownership was not enforced by the role"

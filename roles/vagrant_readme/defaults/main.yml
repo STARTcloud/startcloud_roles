@@ -1,3 +1,4 @@
 ---
 run_tasks: true
 show_help: true
+ansible_module_running_in_container: false

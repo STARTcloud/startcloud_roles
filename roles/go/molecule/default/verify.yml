@@ -1,0 +1,123 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    go_expected_version: "1.17.3"
+    go_expected_checksum: "550f9845451c0c94be679faf116291e7807a8d78b43149f9506c1b15eb89008c"
+    go_bin: /usr/local/go/bin/go
+    go_profile_file: /etc/profile.d/go-path.sh
+    go_expected_tarball: /usr/local/src/go1.17.3.linux-amd64.tar.gz
+  tasks:
+    - name: Stat the installed Go binary
+      ansible.builtin.stat:
+        path: "{{ go_bin }}"
+      register: go_binary_stat
+
+    - name: Assert the Go binary was extracted and is executable
+      ansible.builtin.assert:
+        that:
+          - go_binary_stat.stat.exists
+          - go_binary_stat.stat.isreg
+          - go_binary_stat.stat.xusr
+        fail_msg: "{{ go_bin }} is missing or not executable"
+
+    - name: Run go version
+      ansible.builtin.command:
+        cmd: "{{ go_bin }} version"
+      changed_when: false
+      register: go_version_out
+
+    - name: Assert Go reports the version the role was asked to install
+      ansible.builtin.assert:
+        that:
+          - "('go' ~ go_expected_version) in go_version_out.stdout"
+          - "'linux/amd64' in go_version_out.stdout"
+        fail_msg: "Unexpected go version output: {{ go_version_out.stdout }}"
+
+    - name: Stat a standard library source file from the tarball
+      ansible.builtin.stat:
+        path: /usr/local/go/src/net/http/server.go
+      register: go_stdlib_stat
+
+    - name: Assert the full Go distribution was unpacked, not just the binary
+      ansible.builtin.assert:
+        that:
+          - go_stdlib_stat.stat.exists
+          - go_stdlib_stat.stat.isreg
+        fail_msg: "/usr/local/go/src/net/http/server.go is missing, the tarball was not fully extracted"
+
+    - name: Stat the downloaded Go tarball
+      ansible.builtin.stat:
+        path: "{{ go_expected_tarball }}"
+        checksum_algorithm: sha256
+      register: go_tarball_stat
+
+    - name: Assert the downloaded tarball is present with the checksum the role pins
+      ansible.builtin.assert:
+        that:
+          - go_tarball_stat.stat.exists
+          - go_tarball_stat.stat.checksum == go_expected_checksum
+        fail_msg: "{{ go_expected_tarball }} is missing or does not match the pinned SHA256"
+
+    - name: Stat the system-wide PATH profile snippet
+      ansible.builtin.stat:
+        path: "{{ go_profile_file }}"
+      register: go_profile_stat
+
+    - name: Assert the profile snippet exists world-readable
+      ansible.builtin.assert:
+        that:
+          - go_profile_stat.stat.exists
+          - go_profile_stat.stat.isreg
+          - go_profile_stat.stat.mode == '0644'
+        fail_msg: "{{ go_profile_file }} is missing or has the wrong mode"
+
+    - name: Read the system-wide PATH profile snippet
+      ansible.builtin.slurp:
+        src: "{{ go_profile_file }}"
+      register: go_profile_content
+
+    - name: Assert the profile snippet exports the Go bin directory
+      ansible.builtin.assert:
+        that:
+          - "'/usr/local/go/bin' in go_profile_content.content | b64decode"
+          - "'export PATH=' in go_profile_content.content | b64decode"
+        fail_msg: "{{ go_profile_file }} does not add /usr/local/go/bin to PATH"
+
+    - name: Resolve go through a login shell that sources /etc/profile.d
+      ansible.builtin.command:
+        argv:
+          - bash
+          - -lc
+          - command -v go
+      changed_when: false
+      register: go_login_path
+
+    - name: Assert a login shell finds go on PATH
+      ansible.builtin.assert:
+        that:
+          - go_login_path.stdout == '/usr/local/go/bin/go'
+        fail_msg: "A login shell did not resolve go to /usr/local/go/bin/go (got: {{ go_login_path.stdout }})"
+
+    - name: Compile and run a hello-world program with the installed toolchain
+      ansible.builtin.command:
+        argv:
+          - bash
+          - -lc
+          - >-
+            set -e;
+            d=$(mktemp -d);
+            printf 'package main\nimport "fmt"\nfunc main(){fmt.Print("startcloud-go-ok")}\n' > "$d/main.go";
+            cd "$d";
+            GO111MODULE=off GOPATH="$d/gopath" GOCACHE="$d/cache" HOME="$d"
+            /usr/local/go/bin/go run main.go
+      changed_when: false
+      register: go_hello
+
+    - name: Assert the toolchain actually builds and runs Go code
+      ansible.builtin.assert:
+        that:
+          - go_hello.stdout == 'startcloud-go-ok'
+        fail_msg: "go run failed to produce the expected output (got: {{ go_hello.stdout }})"

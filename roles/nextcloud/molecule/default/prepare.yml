@@ -1,0 +1,32 @@
+---
+# The role installs mariadb-server and then immediately talks to it with the
+# mysql client, i.e. it assumes the init system started the database as part of
+# the package install. The container image does not honour that assumption, so
+# the database service is brought up here as an image prerequisite.
+- name: Prepare
+  hosts: all
+  become: true
+  tasks:
+    - name: "Ensuring apt cache is updated"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: "Installing the database server the role expects to be reachable"
+      ansible.builtin.apt:
+        name:
+          - mariadb-server
+          - python3-pymysql
+        state: present
+
+    - name: "Starting the database server"
+      ansible.builtin.systemd_service:
+        name: mariadb
+        state: started
+        enabled: true
+        daemon_reload: true
+
+    - name: "Waiting for the database socket to appear"
+      ansible.builtin.wait_for:
+        path: /run/mysqld/mysqld.sock
+        timeout: 30

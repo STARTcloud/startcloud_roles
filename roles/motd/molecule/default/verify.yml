@@ -1,0 +1,114 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: "Stat the artefacts the role installs"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: motd_artefacts
+      loop:
+        - /etc/update-motd.d/20-update
+        - /etc/update-motd.d/99-footer
+        - /etc/update-motd.d/backups
+        - /usr/local/bin/sysinfo
+        - /etc/startcloud/motd-services.conf
+        - /etc/motd.tail
+        - /etc/motd
+
+    - name: "Asserting update-motd.d scripts, sysinfo and services config exist and are executable"
+      ansible.builtin.assert:
+        that:
+          - (motd_artefacts.results[0].stat.exists | bool)
+          - (motd_artefacts.results[0].stat.xusr | bool)
+          - (motd_artefacts.results[1].stat.exists | bool)
+          - motd_artefacts.results[1].stat.mode == '0755'
+          - (motd_artefacts.results[2].stat.isdir | bool)
+          - (motd_artefacts.results[3].stat.exists | bool)
+          - motd_artefacts.results[3].stat.mode == '0755'
+          - (motd_artefacts.results[4].stat.exists | bool)
+          - motd_artefacts.results[4].stat.mode == '0644'
+          - (motd_artefacts.results[5].stat.exists | bool)
+          - not (motd_artefacts.results[6].stat.exists | bool)
+        fail_msg: >-
+          Expected 20-update + 99-footer + backups dir + sysinfo +
+          motd-services.conf + motd.tail present and /etc/motd removed
+          (motd_add_update is true), got:
+          {{ motd_artefacts.results | map(attribute='stat.exists') | list }}
+
+    - name: "Slurping the rendered files"
+      ansible.builtin.slurp:
+        src: "{{ item }}"
+      register: motd_slurped
+      loop:
+        - /etc/motd.tail
+        - /etc/update-motd.d/20-update
+        - /usr/local/bin/sysinfo
+        - /etc/ssh/sshd_config
+        - /etc/issue
+        - /etc/issue.net
+
+    - name: "Asserting rendered content matches the configured branding"
+      ansible.builtin.assert:
+        that:
+          # motd.j2 emits motd_content only
+          - "'Molecule managed node - STARTcloud motd role' in (motd_slurped.results[0].content | b64decode)"
+          # 20-update.j2 rendered with the STARTcloud vendor vars + support box
+          - "'OWN YOUR DATA' in (motd_slurped.results[1].content | b64decode)"
+          - "'This system is managed by' in (motd_slurped.results[1].content | b64decode)"
+          - "'vagrantup-startcloud@prominic.net' in (motd_slurped.results[1].content | b64decode)"
+          - "'boxvault.startcloud.com/STARTcloud/debian12-server' in (motd_slurped.results[1].content | b64decode)"
+          # sysinfo took the non-Windows branch of the template
+          - "'ss -tlnp' in (motd_slurped.results[2].content | b64decode)"
+          - "'/etc/startcloud/motd-services.conf' in (motd_slurped.results[2].content | b64decode)"
+          - "'ipconfig /all' not in (motd_slurped.results[2].content | b64decode)"
+          # sshd PrintMotd disabled, issue banners prefixed
+          - "'PrintMotd no' in (motd_slurped.results[3].content | b64decode)"
+          - (motd_slurped.results[4].content | b64decode) is search('^Booted - STARTcloud - ')
+          - (motd_slurped.results[5].content | b64decode) is search('^Booted - STARTcloud - ')
+          # Applied exactly once: verify runs after the idempotence run, so a
+          # re-prepending regexp would show the prefix twice by now.
+          - (motd_slurped.results[4].content | b64decode).count('Booted - STARTcloud - ') == 1
+          - (motd_slurped.results[5].content | b64decode).count('Booted - STARTcloud - ') == 1
+        fail_msg: "Rendered motd/sysinfo/sshd_config/issue content did not match the configured branding"
+
+    - name: "Executing the rendered 20-update motd script"
+      ansible.builtin.command: /etc/update-motd.d/20-update
+      register: motd_update_run
+      changed_when: false
+
+    - name: "Executing the rendered sysinfo command"
+      ansible.builtin.command: /usr/local/bin/sysinfo
+      register: motd_sysinfo_run
+      changed_when: false
+
+    - name: "Asserting both generated scripts actually run and print their banners"
+      ansible.builtin.assert:
+        that:
+          - motd_update_run.rc == 0
+          - "'This system is managed by' in motd_update_run.stdout"
+          - "'OWN YOUR DATA' in motd_update_run.stdout"
+          - "'Run' in motd_update_run.stdout"
+          - motd_sysinfo_run.rc == 0
+          - "'Distribution:' in motd_sysinfo_run.stdout"
+          - "'Open Ports:' in motd_sysinfo_run.stdout"
+          - "'Disk Usage:' in motd_sysinfo_run.stdout"
+        fail_msg: >-
+          Generated scripts failed to execute cleanly.
+          20-update rc={{ motd_update_run.rc }},
+          sysinfo rc={{ motd_sysinfo_run.rc }}
+
+    - name: "Reading the moved-away distribution motd scripts"
+      ansible.builtin.find:
+        paths: /etc/update-motd.d
+        file_type: file
+      register: motd_remaining
+
+    - name: "Asserting only the role's own scripts remain in /etc/update-motd.d"
+      ansible.builtin.assert:
+        that:
+          - (motd_remaining.files | map(attribute='path') | map('basename') | sort) == ['20-update', '99-footer']
+        fail_msg: >-
+          Expected only 20-update and 99-footer to remain, found
+          {{ motd_remaining.files | map(attribute='path') | map('basename') | sort }}

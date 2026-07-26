@@ -16,7 +16,7 @@ argument_specs:
         description: NodeSource release line to install (e.g. "20.x", "22.x").
       nodejs_install_npm_user:
         type: str
-        description: User who owns the global npm prefix and for whom packages are installed.
+        description: User who owns the global npm prefix and for whom packages are installed; defaults to service_user, or "startcloud" when service_user is undefined.
       npm_config_prefix:
         type: str
         default: /usr/local/lib/npm

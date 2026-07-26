@@ -1,0 +1,68 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    expected_packages:
+      - htop
+      - lynx
+      - lshw
+      - libxml2-utils
+      - tree
+      - python3-pexpect
+      - python3-pymongo
+      - python3-pymysql
+      - psutils
+      - python3-psutil
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: apt
+
+    - name: "Asserting every session_observer package is installed"
+      ansible.builtin.assert:
+        that:
+          - item in ansible_facts.packages
+        fail_msg: "Expected apt package '{{ item }}' to be installed by session_observer, but it is absent"
+        success_msg: "Package '{{ item }}' is installed"
+      loop: "{{ expected_packages }}"
+
+    - name: "Stat-ing the binaries the installed packages must provide"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: session_observer_binaries
+      loop:
+        - /usr/bin/htop
+        - /usr/bin/lynx
+        - /usr/bin/lshw
+        - /usr/bin/tree
+        - /usr/bin/xmllint
+
+    - name: "Asserting each expected binary exists and is executable"
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.isreg
+          - item.stat.executable
+        fail_msg: "Expected executable {{ item.item }} to exist after session_observer ran"
+        success_msg: "{{ item.item }} is present and executable"
+      loop: "{{ session_observer_binaries.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "Importing the Python modules the role installs"
+      ansible.builtin.command: >-
+        python3 -c "import psutil, pymongo, pymysql, pexpect"
+      register: session_observer_python_import
+      changed_when: false
+      failed_when: false
+
+    - name: "Asserting the Python monitoring modules import cleanly"
+      ansible.builtin.assert:
+        that:
+          - session_observer_python_import.rc == 0
+        fail_msg: >-
+          python3 could not import psutil/pymongo/pymysql/pexpect:
+          {{ session_observer_python_import.stderr }}
+        success_msg: "psutil, pymongo, pymysql and pexpect all import under python3"

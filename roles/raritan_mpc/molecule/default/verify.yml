@@ -1,0 +1,167 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  tasks:
+    - name: "Gather installed package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Assert SNMP tooling packages are installed"
+      ansible.builtin.assert:
+        that:
+          - "'snmp' in ansible_facts.packages"
+          - "'snmp-mibs-downloader' in ansible_facts.packages"
+        fail_msg: "Expected snmp and snmp-mibs-downloader to be installed by raritan_mpc"
+
+    - name: "Stat the deb822 non-free sources files created by the role"
+      ansible.builtin.stat:
+        path: "{{ raritan_mpc_source_file }}"
+      loop:
+        - /etc/apt/sources.list.d/raritan-mpc-non-free.sources
+        - /etc/apt/sources.list.d/raritan-mpc-non-free-security.sources
+      loop_control:
+        loop_var: raritan_mpc_source_file
+      register: raritan_mpc_sources_stats
+
+    - name: "Assert both deb822 non-free sources files are 0644 regular files"
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.isreg
+          - item.stat.mode == '0644'
+        fail_msg: "Expected {{ item.raritan_mpc_source_file }} to be a 0644 regular file"
+      loop: "{{ raritan_mpc_sources_stats.results }}"
+      loop_control:
+        label: "{{ item.raritan_mpc_source_file }}"
+
+    - name: "Stat the unsigned one-line sources file the role must not leave behind"
+      ansible.builtin.stat:
+        path: /etc/apt/sources.list.d/raritan-mpc-non-free.list
+      register: raritan_mpc_legacy_list
+
+    - name: "Assert the unsigned one-line sources file is absent"
+      ansible.builtin.assert:
+        that:
+          - not raritan_mpc_legacy_list.stat.exists
+        fail_msg: "Expected /etc/apt/sources.list.d/raritan-mpc-non-free.list to be absent"
+
+    - name: "Read the deb822 non-free sources file for the Debian archive"
+      ansible.builtin.slurp:
+        src: /etc/apt/sources.list.d/raritan-mpc-non-free.sources
+      register: raritan_mpc_archive_source
+
+    - name: "Read the deb822 non-free sources file for the Debian security archive"
+      ansible.builtin.slurp:
+        src: /etc/apt/sources.list.d/raritan-mpc-non-free-security.sources
+      register: raritan_mpc_security_source
+
+    - name: "Read the base deb822 apt sources shipped by the image"
+      ansible.builtin.slurp:
+        src: /etc/apt/sources.list.d/debian.sources
+      register: raritan_mpc_base_source
+
+    - name: "Assert the image really presents deb822 base sources with a signing key"
+      ansible.builtin.assert:
+        that:
+          - "'Types: deb' in raritan_mpc_base_text"
+          - "'Signed-By:' in raritan_mpc_base_text"
+        fail_msg: "The scenario must exercise the role against deb822 base sources carrying Signed-By"
+      vars:
+        raritan_mpc_base_text: "{{ raritan_mpc_base_source.content | b64decode }}"
+
+    - name: "Assert the archive source enables non-free for the running suite"
+      ansible.builtin.assert:
+        that:
+          - "'Types: deb' in raritan_mpc_archive_text"
+          - "'URIs: http://deb.debian.org/debian' in raritan_mpc_archive_text"
+          - "'Suites: ' ~ ansible_distribution_release ~ ' ' ~ ansible_distribution_release ~ '-updates' in raritan_mpc_archive_text"
+          - "'Components: non-free' in raritan_mpc_archive_text"
+        fail_msg: "raritan-mpc-non-free.sources does not enable non-free for {{ ansible_distribution_release }} and -updates"
+      vars:
+        raritan_mpc_archive_text: "{{ raritan_mpc_archive_source.content | b64decode }}"
+
+    - name: "Assert the security source enables non-free for the running suite"
+      ansible.builtin.assert:
+        that:
+          - "'Types: deb' in raritan_mpc_security_text"
+          - "'URIs: http://security.debian.org/debian-security' in raritan_mpc_security_text"
+          - "'Suites: ' ~ ansible_distribution_release ~ '-security' in raritan_mpc_security_text"
+          - "'Components: non-free' in raritan_mpc_security_text"
+        fail_msg: "raritan-mpc-non-free-security.sources does not enable non-free for {{ ansible_distribution_release }}-security"
+      vars:
+        raritan_mpc_security_text: "{{ raritan_mpc_security_source.content | b64decode }}"
+
+    - name: "Assert the role's sources carry the same Signed-By as the base sources"
+      ansible.builtin.assert:
+        that:
+          - raritan_mpc_base_signed_by | length > 0
+          - raritan_mpc_archive_signed_by == raritan_mpc_base_signed_by
+          - raritan_mpc_security_signed_by == raritan_mpc_base_signed_by
+        fail_msg: "Signed-By mismatch - base '{{ raritan_mpc_base_signed_by }}', archive '{{ raritan_mpc_archive_signed_by }}', security '{{ raritan_mpc_security_signed_by }}'"
+      vars:
+        raritan_mpc_base_text: "{{ raritan_mpc_base_source.content | b64decode }}"
+        raritan_mpc_archive_text: "{{ raritan_mpc_archive_source.content | b64decode }}"
+        raritan_mpc_security_text: "{{ raritan_mpc_security_source.content | b64decode }}"
+        raritan_mpc_base_signed_by: '{{ raritan_mpc_base_text | regex_search("(?m)^Signed-By:.*") | default("", true) | regex_replace("^Signed-By:", "") | trim }}'
+        raritan_mpc_archive_signed_by: '{{ raritan_mpc_archive_text | regex_search("(?m)^Signed-By:.*") | default("", true) | regex_replace("^Signed-By:", "") | trim }}'
+        raritan_mpc_security_signed_by: '{{ raritan_mpc_security_text | regex_search("(?m)^Signed-By:.*") | default("", true) | regex_replace("^Signed-By:", "") | trim }}'
+
+    # A conflicting Signed-By makes this refresh fail outright, so the task
+    # itself is the coexistence test; the assert pins that the cache really was
+    # rebuilt rather than skipped.
+    - name: "Refresh the apt indexes with the role's sources in place"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 0
+      register: raritan_mpc_apt_update
+
+    - name: "Assert the apt refresh with the role's sources in place did not fail"
+      ansible.builtin.assert:
+        that:
+          - raritan_mpc_apt_update is succeeded
+        fail_msg: "apt refused to refresh its indexes with the role's non-free sources present"
+
+    - name: "Find the non-free package indexes apt downloaded"
+      ansible.builtin.find:
+        paths: /var/lib/apt/lists
+        patterns: "*_non-free_*"
+      register: raritan_mpc_non_free_lists
+
+    - name: "Assert apt actually fetched the non-free component indexes"
+      ansible.builtin.assert:
+        that:
+          - raritan_mpc_non_free_lists.matched > 0
+        fail_msg: "No non-free indexes under /var/lib/apt/lists - the component was never fetched"
+
+    - name: "Query the apt candidate sources for snmp-mibs-downloader"
+      ansible.builtin.command:
+        cmd: apt-cache policy snmp-mibs-downloader
+      register: raritan_mpc_policy
+      changed_when: false
+
+    - name: "Assert snmp-mibs-downloader is served from the non-free component"
+      ansible.builtin.assert:
+        that:
+          - "'non-free' in raritan_mpc_policy.stdout"
+          - "'deb.debian.org/debian' in raritan_mpc_policy.stdout"
+        fail_msg: "apt does not offer snmp-mibs-downloader from the non-free component: {{ raritan_mpc_policy.stdout }}"
+
+    - name: "Stat the snmpwalk binary provided by the snmp package"
+      ansible.builtin.stat:
+        path: /usr/bin/snmpwalk
+      register: raritan_mpc_snmpwalk
+
+    - name: "Stat the MIB download configuration provided by snmp-mibs-downloader"
+      ansible.builtin.stat:
+        path: /etc/snmp-mibs-downloader
+      register: raritan_mpc_mibs_conf
+
+    - name: "Assert SNMP client tooling and MIB downloader config are on disk"
+      ansible.builtin.assert:
+        that:
+          - raritan_mpc_snmpwalk.stat.exists
+          - raritan_mpc_snmpwalk.stat.executable
+          - raritan_mpc_mibs_conf.stat.exists
+          - raritan_mpc_mibs_conf.stat.isdir
+        fail_msg: "Expected /usr/bin/snmpwalk and /etc/snmp-mibs-downloader to exist"

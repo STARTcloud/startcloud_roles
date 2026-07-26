@@ -1,0 +1,17 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    run_tasks: true
+    nfs_exports:
+      - "/export/public 10.42.0.0/24(rw,sync,no_subtree_check,no_root_squash)"
+      - "/export/readonly 10.42.0.0/24(ro,sync,no_subtree_check)"
+    nfs_rpcbind_state: started
+    nfs_rpcbind_enabled: true
+    settings:
+      hostname: startcloud-nfs
+      domain: local.startcloud.com
+  roles:
+    - role: nfs

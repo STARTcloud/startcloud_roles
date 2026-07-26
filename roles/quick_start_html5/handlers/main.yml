@@ -1,4 +1,9 @@
 ---
+- name: "Restarting Cockpit"
+  ansible.builtin.systemd_service:
+    name: cockpit
+    state: restarted
+
 - name: "Zipping Support Bundle"
   community.general.archive:
     mode: "0777"

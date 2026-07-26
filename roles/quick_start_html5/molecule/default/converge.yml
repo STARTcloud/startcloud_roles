@@ -1,0 +1,30 @@
+---
+- name: "Converge"
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    # Provisioner-context stand-ins: these come from the core provisioner and the
+    # dependencies/ssl/cockpit roles in a real STARTcloud run, not from this role.
+    service_user: "startcloud"
+    service_group: "startcloud"
+    service_home_dir: "/home/startcloud"
+    python_simple_web_server_path: "/home/startcloud"
+    cert_dir: "/secure"
+    selfsigned_enabled: false
+    generate_self_signed_certificate_authority: false
+    domino_organization: "STARTcloudMolecule"
+    provisioner_name: "STARTcloud-Molecule"
+    provisioner_version: "v0.0.0"
+    core_provisioner_version: "v0.0.0"
+    startcloud_quick_start_port_forwards:
+      - guest: 8000
+        url: "demo"
+    settings:
+      hostname: "startcloud-quick-start"
+      domain: "startcloud.test"
+      server_id: "molecule-0001"
+      vagrant_user: "startcloud"
+      vagrant_user_pass: "CHANGEME"
+  roles:
+    - role: quick_start_html5

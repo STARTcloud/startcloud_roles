@@ -1,0 +1,50 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+
+    # Packages come from the Debian 12 archive (PHP 8.2), no source build.
+    php_install_from_source: false
+    php_packages_state: present
+    php_install_recommends: false
+    php_packages_extra: []
+
+    # No Apache/Nginx in the test container, so the webserver handler must stay
+    # out of the way; PHP-FPM is what this scenario exercises.
+    php_enable_webserver: false
+    php_enable_php_fpm: true
+    php_fpm_state: started
+    php_fpm_handler_state: restarted
+    php_fpm_enabled_on_boot: true
+    php_fpm_listen: "127.0.0.1:9000"
+    php_fpm_listen_allowed_clients: "127.0.0.1"
+    php_fpm_pm_max_children: 10
+    php_fpm_pm_start_servers: 2
+    php_fpm_pm_min_spare_servers: 1
+    php_fpm_pm_max_spare_servers: 3
+    php_fpm_pm_max_requests: 500
+    php_fpm_pm_status_path: ""
+
+    # Managed php.ini values, deliberately different from the role defaults so
+    # the verify play proves the template really rendered these variables.
+    php_use_managed_ini: true
+    php_memory_limit: "512M"
+    php_max_execution_time: "90"
+    php_max_input_time: "90"
+    php_upload_max_filesize: "128M"
+    php_post_max_size: "128M"
+    php_date_timezone: "UTC"
+    php_display_errors: "Off"
+    php_expose_php: "Off"
+
+    # APCu and OpCache extension configuration.
+    php_enable_apc: true
+    php_apc_shm_size: "128M"
+    php_apc_enable_cli: "0"
+    php_opcache_enable: "1"
+    php_opcache_enable_cli: "0"
+    php_opcache_memory_consumption: "128"
+  roles:
+    - role: php

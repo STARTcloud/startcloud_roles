@@ -41,8 +41,8 @@ argument_specs:
         description: Server name for the nginx virtual host and Nextcloud trusted domain.
       nextcloud_php_fpm_socket:
         type: str
-        default: "unix:/run/php/php-fpm.sock"
-        description: PHP-FPM listen socket nginx passes PHP requests to.
+        default: "unix:/run/php/php8.2-fpm.sock"
+        description: PHP-FPM listen socket nginx passes PHP requests to; Debian names it after the PHP version, so override this when the installed PHP is not 8.2.
       nextcloud_php_bin:
         type: str
         default: "php"
@@ -67,6 +67,14 @@ argument_specs:
         type: str
         default: "SomeNextcloudDBPassword"
         description: Password for the Nextcloud database user.
+      nextcloud_db_admin_user:
+        type: str
+        default: "root"
+        description: Administrative database account used to create the Nextcloud database and grant its user; authenticates over the unix socket.
+      nextcloud_db_login_unix_socket:
+        type: str
+        default: "/run/mysqld/mysqld.sock"
+        description: Unix socket the administrative database connection uses.
       nextcloud_admin_user:
         type: str
         default: "admin"

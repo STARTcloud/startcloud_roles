@@ -1,2 +1,6 @@
 ---
 run_tasks: true
+
+## Empty = the dashboard's network meters follow the host's default IPv4
+## interface, resolved when the template is rendered.
+conky_network_interface: ""

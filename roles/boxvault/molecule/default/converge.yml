@@ -1,0 +1,20 @@
+---
+- name: "Converge"
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    ## Master gate stays on so the role actually runs.
+    run_tasks: true
+  roles:
+    ## The APT path is the production default and the only container-testable
+    ## one, so boxvault_build_from_source stays false: the source path clones
+    ## BoxVault from GitHub and runs two npm installs plus a frontend build,
+    ## which needs a service_user the role never creates.
+    ##
+    ## No URL overrides — the shipped defaults now point at the canonical
+    ## short-path host (debian.startcloud.com/public/debian, matching
+    ## roles/dependencies/vars/debian.yml), so the scenario exercises them.
+    - role: boxvault
+      boxvault_build_from_source: false
+      boxvault_package: boxvault

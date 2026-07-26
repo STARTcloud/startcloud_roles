@@ -1,0 +1,147 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting the strongSwan swanctl stack is installed"
+      ansible.builtin.assert:
+        that:
+          - "'strongswan' in ansible_facts.packages"
+          - "'charon-systemd' in ansible_facts.packages"
+          - "'strongswan-swanctl' in ansible_facts.packages"
+        fail_msg: "strongswan / charon-systemd / strongswan-swanctl were not all installed by the ipsec role"
+        success_msg: "strongswan, charon-systemd and strongswan-swanctl are installed"
+
+    - name: "Stat the rendered swanctl configuration"
+      ansible.builtin.stat:
+        path: /etc/swanctl/conf.d/ansible-managed.conf
+      register: ipsec_swanctl_conf
+
+    - name: "Asserting the swanctl configuration exists and is root-owned 0600"
+      ansible.builtin.assert:
+        that:
+          - ipsec_swanctl_conf.stat.exists
+          - ipsec_swanctl_conf.stat.pw_name == 'root'
+          - ipsec_swanctl_conf.stat.gr_name == 'root'
+          - ipsec_swanctl_conf.stat.mode == '0600'
+        fail_msg: "/etc/swanctl/conf.d/ansible-managed.conf is missing or not root:root 0600"
+        success_msg: "/etc/swanctl/conf.d/ansible-managed.conf exists as root:root 0600"
+
+    - name: "Reading the rendered swanctl configuration"
+      ansible.builtin.slurp:
+        src: /etc/swanctl/conf.d/ansible-managed.conf
+      register: ipsec_swanctl_conf_content
+
+    - name: "Asserting both peer connections, identities and if_ids were rendered"
+      ansible.builtin.assert:
+        that:
+          - "'to-sitea {' in ipsec_swanctl_text"
+          - "'to-siteb {' in ipsec_swanctl_text"
+          - "'local_addrs = 198.51.100.10' in ipsec_swanctl_text"
+          - "'remote_addrs = 203.0.113.20' in ipsec_swanctl_text"
+          - "'remote_addrs = 203.0.113.40' in ipsec_swanctl_text"
+          - "'id = vpn-a.example.test' in ipsec_swanctl_text"
+          - "'id = vpn-b.example.test' in ipsec_swanctl_text"
+          - "'if_id_in = 158' in ipsec_swanctl_text"
+          - "'if_id_out = 158' in ipsec_swanctl_text"
+          - "'if_id_in = 159' in ipsec_swanctl_text"
+          - "'if_id_out = 159' in ipsec_swanctl_text"
+          - "'proposals = aes256-sha256-modp2048' in ipsec_swanctl_text"
+          - "'esp_proposals = aes256-sha256-modp2048' in ipsec_swanctl_text"
+        fail_msg: "The swanctl connections block does not match the ipsec_peers supplied in converge"
+        success_msg: "Both peer connections rendered with the expected addresses, identities, proposals and if_ids"
+      vars:
+        ipsec_swanctl_text: "{{ ipsec_swanctl_conf_content.content | b64decode }}"
+
+    - name: "Asserting the PSK secrets block was rendered for both peers"
+      ansible.builtin.assert:
+        that:
+          - "'secrets {' in ipsec_swanctl_text"
+          - "'ike-1-1 {' in ipsec_swanctl_text"
+          - "'ike-2-2 {' in ipsec_swanctl_text"
+          - "'secret = \"CHANGEME\"' in ipsec_swanctl_text"
+        fail_msg: "The swanctl secrets block is missing entries for the configured peers"
+        success_msg: "The swanctl secrets block carries an entry per peer identity"
+      vars:
+        ipsec_swanctl_text: "{{ ipsec_swanctl_conf_content.content | b64decode }}"
+
+    - name: "Reading the charon configuration"
+      ansible.builtin.slurp:
+        src: /etc/strongswan.d/charon.conf
+      register: ipsec_charon_conf_content
+
+    - name: "Asserting charon automatic route installation was disabled"
+      ansible.builtin.assert:
+        that:
+          - "'install_routes = no' in ipsec_charon_conf_content.content | b64decode"
+        fail_msg: "install_routes = no was not written to /etc/strongswan.d/charon.conf"
+        success_msg: "charon has install_routes = no"
+
+    - name: "Reading /etc/network/interfaces"
+      ansible.builtin.slurp:
+        src: /etc/network/interfaces
+      register: ipsec_interfaces_content
+
+    - name: "Asserting one routed xfrm interface per peer was configured"
+      ansible.builtin.assert:
+        that:
+          - "'ANSIBLE MANAGED BLOCK - startcloud.startcloud_roles.ipsec' in ipsec_interfaces_text"
+          - "'auto ipsec0' in ipsec_interfaces_text"
+          - "'auto ipsec1' in ipsec_interfaces_text"
+          - "'ip link add ipsec0 type xfrm dev lo if_id 158' in ipsec_interfaces_text"
+          - "'ip link add ipsec1 type xfrm dev lo if_id 159' in ipsec_interfaces_text"
+          - "'ip addr add 10.10.0.1/30 dev ipsec0' in ipsec_interfaces_text"
+          - "'ip addr add 10.10.0.5/30 dev ipsec1' in ipsec_interfaces_text"
+          - "'ip -6 addr add fd00:10:10::1/126 dev ipsec1' in ipsec_interfaces_text"
+          - "'ip route replace 192.168.50.0/24 via 10.10.0.2' in ipsec_interfaces_text"
+          - "'ip route replace 192.168.51.0/24 via 10.10.0.2' in ipsec_interfaces_text"
+          - "'ip link del ipsec0' in ipsec_interfaces_text"
+        fail_msg: "The ifupdown xfrm block in /etc/network/interfaces does not match the configured peers"
+        success_msg: "Both xfrm interfaces, addresses and peer routes are configured in /etc/network/interfaces"
+      vars:
+        ipsec_interfaces_text: "{{ ipsec_interfaces_content.content | b64decode }}"
+
+    - name: "Asserting the fixture interfaces content was preserved"
+      ansible.builtin.assert:
+        that:
+          - "'iface lo inet loopback' in ipsec_interfaces_content.content | b64decode"
+        fail_msg: "The role overwrote pre-existing /etc/network/interfaces content instead of appending a block"
+        success_msg: "Pre-existing /etc/network/interfaces content survived the role run"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting strongswan is running and enabled"
+      ansible.builtin.assert:
+        that:
+          - "'strongswan.service' in ansible_facts.services"
+          - ansible_facts.services['strongswan.service'].state == 'running'
+          - ansible_facts.services['strongswan.service'].status == 'enabled'
+        fail_msg: "strongswan.service is not running and enabled"
+        success_msg: "strongswan.service is running and enabled"
+
+    - name: "Asserting the legacy strongswan-starter service is disabled"
+      ansible.builtin.assert:
+        that:
+          - "'strongswan-starter.service' in ansible_facts.services"
+          - ansible_facts.services['strongswan-starter.service'].status != 'enabled'
+        fail_msg: "strongswan-starter.service is still enabled"
+        success_msg: "strongswan-starter.service is disabled"
+
+    - name: "Stat the swanctl binary"
+      ansible.builtin.stat:
+        path: /usr/sbin/swanctl
+      register: ipsec_swanctl_binary
+
+    - name: "Asserting the swanctl binary is present and executable"
+      ansible.builtin.assert:
+        that:
+          - ipsec_swanctl_binary.stat.exists
+          - ipsec_swanctl_binary.stat.executable
+        fail_msg: "/usr/sbin/swanctl is missing or not executable"
+        success_msg: "/usr/sbin/swanctl is present and executable"

@@ -1,0 +1,126 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting the QEMU Guest Agent package is installed"
+      ansible.builtin.assert:
+        that:
+          - "'qemu-guest-agent' in ansible_facts.packages"
+        fail_msg: "qemu-guest-agent package is not installed"
+
+    - name: "Stating the qemu-ga binary"
+      ansible.builtin.stat:
+        path: /usr/sbin/qemu-ga
+      register: qemu_ga_binary
+
+    - name: "Asserting the qemu-ga binary is present and executable"
+      ansible.builtin.assert:
+        that:
+          - qemu_ga_binary.stat.exists
+          - qemu_ga_binary.stat.executable
+        fail_msg: "/usr/sbin/qemu-ga is missing or not executable"
+
+    - name: "Stating the virtio-serial transport unit"
+      ansible.builtin.stat:
+        path: /etc/systemd/system/qemu-ga-virtio.service
+      register: qemu_ga_virtio_unit
+
+    - name: "Stating the ISA serial transport unit"
+      ansible.builtin.stat:
+        path: /etc/systemd/system/qemu-ga-serial.service
+      register: qemu_ga_serial_unit
+
+    - name: "Asserting both transport units exist with mode 0644"
+      ansible.builtin.assert:
+        that:
+          - qemu_ga_virtio_unit.stat.exists
+          - qemu_ga_virtio_unit.stat.mode == '0644'
+          - qemu_ga_serial_unit.stat.exists
+          - qemu_ga_serial_unit.stat.mode == '0644'
+        fail_msg: "Transport unit files are missing or have the wrong mode"
+
+    - name: "Slurping the virtio-serial transport unit"
+      ansible.builtin.slurp:
+        src: /etc/systemd/system/qemu-ga-virtio.service
+      register: qemu_ga_virtio_content
+
+    - name: "Slurping the ISA serial transport unit"
+      ansible.builtin.slurp:
+        src: /etc/systemd/system/qemu-ga-serial.service
+      register: qemu_ga_serial_content
+
+    - name: "Asserting the virtio unit binds qemu-ga to the virtio-serial channel"
+      ansible.builtin.assert:
+        that:
+          - "'ConditionPathExists=/dev/virtio-ports/org.qemu.guest_agent.0' in virtio_unit_text"
+          - "'ExecStart=/usr/sbin/qemu-ga -m virtio-serial -p /dev/virtio-ports/org.qemu.guest_agent.0' in virtio_unit_text"
+          - "'WantedBy=multi-user.target' in virtio_unit_text"
+        fail_msg: "qemu-ga-virtio.service does not bind qemu-ga to the virtio-serial channel"
+      vars:
+        virtio_unit_text: "{{ qemu_ga_virtio_content.content | b64decode }}"
+
+    - name: "Asserting the serial unit binds qemu-ga to the ISA serial port"
+      ansible.builtin.assert:
+        that:
+          - "'ConditionPathExists=/dev/ttyS1' in serial_unit_text"
+          - "'ExecStart=/usr/sbin/qemu-ga -m isa-serial -p /dev/ttyS1' in serial_unit_text"
+          - "'WantedBy=multi-user.target' in serial_unit_text"
+        fail_msg: "qemu-ga-serial.service does not bind qemu-ga to the ISA serial port"
+      vars:
+        serial_unit_text: "{{ qemu_ga_serial_content.content | b64decode }}"
+
+    - name: "Stating the multi-user.target wants symlink for the virtio transport"
+      ansible.builtin.stat:
+        path: /etc/systemd/system/multi-user.target.wants/qemu-ga-virtio.service
+      register: qemu_ga_virtio_wants
+
+    - name: "Stating the multi-user.target wants symlink for the serial transport"
+      ansible.builtin.stat:
+        path: /etc/systemd/system/multi-user.target.wants/qemu-ga-serial.service
+      register: qemu_ga_serial_wants
+
+    - name: "Asserting both transports are enabled at boot"
+      ansible.builtin.assert:
+        that:
+          - qemu_ga_virtio_wants.stat.exists
+          - qemu_ga_virtio_wants.stat.islnk
+          - qemu_ga_virtio_wants.stat.lnk_target == '/etc/systemd/system/qemu-ga-virtio.service'
+          - qemu_ga_serial_wants.stat.exists
+          - qemu_ga_serial_wants.stat.islnk
+          - qemu_ga_serial_wants.stat.lnk_target == '/etc/systemd/system/qemu-ga-serial.service'
+        fail_msg: "Transport units are not enabled in multi-user.target"
+
+    - name: "Stating the stock qemu-guest-agent unit override"
+      ansible.builtin.stat:
+        path: /etc/systemd/system/qemu-guest-agent.service
+      register: qemu_ga_stock_mask
+
+    - name: "Asserting the stock qemu-guest-agent unit is masked"
+      ansible.builtin.assert:
+        that:
+          - qemu_ga_stock_mask.stat.exists
+          - qemu_ga_stock_mask.stat.islnk
+          - qemu_ga_stock_mask.stat.lnk_target == '/dev/null'
+        fail_msg: "The stock qemu-guest-agent unit is not masked"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting the stock qemu-guest-agent unit is not running"
+      ansible.builtin.assert:
+        that:
+          - "ansible_facts.services['qemu-guest-agent.service'].state | default('inactive') != 'running'"
+        fail_msg: "The stock qemu-guest-agent unit is still running"
+
+    - name: "Asserting systemd knows both transport units"
+      ansible.builtin.assert:
+        that:
+          - "'qemu-ga-virtio.service' in ansible_facts.services"
+          - "'qemu-ga-serial.service' in ansible_facts.services"
+        fail_msg: "systemd does not know about the transport units"

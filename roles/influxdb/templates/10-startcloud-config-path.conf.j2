@@ -1,0 +1,9 @@
+{{ ansible_managed | comment }}
+# influxd 2.x only reads the configuration file named by INFLUXD_CONFIG_PATH.
+# The influxdb2 package sets that variable from /etc/default/influxdb2, and a
+# unit EnvironmentFile= overrides a drop-in Environment=, so the file list is
+# reset here first. Without this the templated configuration file is only
+# consumed for as long as the packaged default happens to agree with it.
+[Service]
+EnvironmentFile=
+Environment=INFLUXD_CONFIG_PATH={{ influxdb_config_path }}

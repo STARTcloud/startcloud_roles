@@ -43,6 +43,10 @@ argument_specs:
         type: str
         default: "/etc/influxdb"
         description: Directory holding the InfluxDB configuration file.
+      influxdb_config_path:
+        type: str
+        default: "/etc/influxdb/config.toml"
+        description: Full path of the templated influxd configuration file. The role pins INFLUXD_CONFIG_PATH to it with a systemd drop-in so influxd consumes this file.
       influxdb_data_dir:
         type: str
         default: "/var/lib/influxdb"

@@ -1,0 +1,88 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: "Gathering Package Facts"
+      ansible.builtin.package_facts:
+        manager: "auto"
+
+    - name: "Asserting the openfortivpn Package is Installed"
+      ansible.builtin.assert:
+        that:
+          - "'openfortivpn' in ansible_facts.packages"
+        fail_msg: "openfortivpn package is not installed"
+
+    - name: "Stating the openfortivpn Client Binary"
+      ansible.builtin.stat:
+        path: "/usr/bin/openfortivpn"
+      register: openfortivpn_binary
+
+    - name: "Asserting the openfortivpn Client Binary Exists and is Executable"
+      ansible.builtin.assert:
+        that:
+          - openfortivpn_binary.stat.exists
+          - openfortivpn_binary.stat.executable
+        fail_msg: "/usr/bin/openfortivpn is missing or not executable"
+
+    - name: "Stating the openfortivpn Configuration Directory"
+      ansible.builtin.stat:
+        path: "/etc/openfortivpn"
+      register: openfortivpn_confdir
+
+    - name: "Asserting the Configuration Directory Ownership and Mode"
+      ansible.builtin.assert:
+        that:
+          - openfortivpn_confdir.stat.exists
+          - openfortivpn_confdir.stat.isdir
+          - openfortivpn_confdir.stat.pw_name == 'root'
+          - openfortivpn_confdir.stat.gr_name == 'root'
+          - openfortivpn_confdir.stat.mode == '0750'
+        fail_msg: "/etc/openfortivpn is missing or has unexpected ownership/mode"
+
+    - name: "Stating the Rendered Client Configuration"
+      ansible.builtin.stat:
+        path: "/etc/openfortivpn/config"
+      register: openfortivpn_config
+
+    - name: "Asserting the Client Configuration Mode is 0600"
+      ansible.builtin.assert:
+        that:
+          - openfortivpn_config.stat.exists
+          - openfortivpn_config.stat.isreg
+          - openfortivpn_config.stat.pw_name == 'root'
+          - openfortivpn_config.stat.mode == '0600'
+        fail_msg: "/etc/openfortivpn/config is missing or has unexpected ownership/mode"
+
+    - name: "Slurping the Rendered Client Configuration"
+      ansible.builtin.slurp:
+        src: "/etc/openfortivpn/config"
+      register: openfortivpn_config_raw
+
+    - name: "Asserting the Client Configuration Content"
+      ansible.builtin.assert:
+        that:
+          - "'host = vpn.startcloud.test' in openfortivpn_config_content"
+          - "'port = 10443' in openfortivpn_config_content"
+          - "'username = startcloud' in openfortivpn_config_content"
+          - "'password = CHANGEME' in openfortivpn_config_content"
+          - >-
+            'trusted-cert = de6f2b1a1d4f6f9a0c5b7e8d3a2c1b0f9e8d7c6b5a4938271605f4e3d2c1b0a9'
+            in openfortivpn_config_content
+          - "'set-dns = 0' in openfortivpn_config_content"
+          - "'pppd-use-peerdns = 0' in openfortivpn_config_content"
+        fail_msg: "Rendered /etc/openfortivpn/config does not contain the expected settings"
+      vars:
+        openfortivpn_config_content: "{{ openfortivpn_config_raw.content | b64decode }}"
+
+    - name: "Stating the openfortivpn systemd Unit"
+      ansible.builtin.stat:
+        path: "/etc/systemd/system/openfortivpn.service"
+      register: openfortivpn_unit
+
+    - name: "Asserting the systemd Unit is Absent when the Service is Disabled"
+      ansible.builtin.assert:
+        that:
+          - not openfortivpn_unit.stat.exists
+        fail_msg: "openfortivpn.service unit was deployed even though openfortivpn_enable_service is false"

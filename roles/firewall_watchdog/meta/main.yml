@@ -1,0 +1,20 @@
+---
+galaxy_info:
+  role_name: firewall_watchdog
+  author: Mark Gilbert
+  description: Configures the Service_Watchdog package on pfSense firewall appliances.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: GPL-2.0-or-later
+  min_ansible_version: "2.15"
+  platforms:
+    - name: FreeBSD
+      versions: ["11.3", "14.0"]
+  galaxy_tags:
+    - firewall
+    - pfsense
+    - watchdog
+    - monitoring
+dependencies: []
+collections:
+  - startcloud.startcloud_roles

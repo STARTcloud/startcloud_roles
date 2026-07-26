@@ -1,0 +1,13 @@
+---
+- name: "Prepare"
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    ## Nothing here provides the role's prerequisites any more: the role now
+    ## installs gnupg itself and lays down the NodeSource 22.x repository the
+    ## boxvault package's "Depends: nodejs (>= 22)" needs, so both are under
+    ## test. Only the image's apt lists are primed.
+    - name: "Priming the apt cache in the bare image"
+      ansible.builtin.apt:
+        update_cache: true

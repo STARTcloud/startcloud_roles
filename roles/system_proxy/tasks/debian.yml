@@ -1,22 +1,41 @@
 ---
+## `proxy` entries are single-key dicts keyed by provider name, so the provider
+## has to be resolved by key before user/pass/host/port can be read. Indexing
+## `proxy[0]` flat could never see those keys.
+## /etc/apt/apt.conf.d/proxy.conf ships with no package, so the drop-in has to be
+## created rather than merely edited.
 - name: "Ensuring that Proxy is Set for APT"
+  vars:
+    proxy_pkg_entry: "{{ proxy | selectattr(proxy_package_manager_proxy, 'defined') | map(attribute=proxy_package_manager_proxy) | first }}"
+    proxy_pkg_url: "socks5h://{{ proxy_pkg_entry.user }}:{{ proxy_pkg_entry.pass }}@{{ proxy_pkg_entry.host }}:{{ proxy_pkg_entry.port }}"
   ansible.builtin.lineinfile:
     path: /etc/apt/apt.conf.d/proxy.conf
-    line: Acquire::http::Proxy "socks5h://{{ proxy[0].user }}:{{ proxy[0].pass }}@{{ proxy[0].host }}:{{ proxy[0].port }}";
+    regexp: '^Acquire::http::Proxy'
+    line: 'Acquire::http::Proxy "{{ proxy_pkg_url }}";'
+    create: true
+    owner: root
+    group: root
+    mode: "0644"
+  when: proxy_package_manager | bool
 
-- name: "Setting system-wide Squid proxy environment variables"
+## The provider is selected by `proxy_systemwide_proxy`; the old expression
+## selected by that variable and then read `.squid` regardless, which pinned the
+## task to squid no matter what the variable said.
+- name: "Setting system-wide proxy environment variables"
+  vars:
+    proxy_env_entry: "{{ proxy | selectattr(proxy_systemwide_proxy, 'defined') | map(attribute=proxy_systemwide_proxy) | first }}"
+    proxy_env_url: "http://{{ proxy_env_entry.user }}:{{ proxy_env_entry.pass }}@{{ proxy_env_entry.host }}:{{ proxy_env_entry.port }}"
   ansible.builtin.lineinfile:
     path: /etc/environment
+    regexp: "^{{ item.split('=') | first }}="
     line: "{{ item }}"
+    create: true
+    owner: root
+    group: root
+    mode: "0644"
   loop:
-    - "http_proxy=http://{{ (proxy | selectattr(proxy_systemwide_proxy,
-      'defined') | first).squid.user }}:{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.pass }}@{{ (proxy | selectattr(proxy_systemwide_proxy,
-      'defined') | first).squid.host }}:{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.port }}"
-    - "https_proxy=http://{{ (proxy | selectattr(proxy_systemwide_proxy,
-      'defined') | first).squid.user }}:{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.pass }}@{{ (proxy | selectattr(proxy_systemwide_proxy,
-      'defined') | first).squid.host }}:{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.port }}"
-    - "ftp_proxy=http://{{ (proxy | selectattr(proxy_systemwide_proxy,
-      'defined') | first).squid.user }}:{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.pass }}@{{ (proxy | selectattr(proxy_systemwide_proxy,
-      'defined') | first).squid.host }}:{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.port }}"
+    - "http_proxy={{ proxy_env_url }}"
+    - "https_proxy={{ proxy_env_url }}"
+    - "ftp_proxy={{ proxy_env_url }}"
     - "no_proxy=localhost,127.0.0.1,localaddress,.localdomain.com"
   when: proxy_systemwide | bool

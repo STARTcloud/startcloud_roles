@@ -1,0 +1,124 @@
+---
+# The guacamole role compiles guacamole-server and guacamole-client from
+# source and then drops the artefacts into an already-installed Tomcat and an
+# already-running MySQL/MariaDB. None of that is installed by the role itself:
+# in the STARTcloud provisioner the tomcat, mariadb, sdkman_java and
+# sdkman_maven roles have already run by the time this one does. This play
+# stands in for those roles so the guacamole role can run standalone.
+- name: Prepare
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    service_user: startcloud
+    service_group: startcloud
+    completed_dir: /vagrant/completed
+    tomcat_version: 10
+    mysql_root_user: root
+    mysql_root_password: "CHANGEME"
+    mysql_db_name: guacdb
+    guacamole_admin_user: guacadmin
+    guacamole_admin_pass: "CHANGEME"
+  tasks:
+    - name: "Refreshing the apt cache"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: "Installing the build toolchain the role's autotools/maven steps shell out to"
+      ansible.builtin.apt:
+        name:
+          # Ansible plumbing: `acl` is needed for become_user to an
+          # unprivileged account, python3-pymysql for community.mysql.
+          - acl
+          - ca-certificates
+          - python3-pymysql
+          # The role calls `autoreconf -fi` but only installs libtool-bin,
+          # so autoconf/automake/pkg-config have to come from elsewhere.
+          - autoconf
+          - automake
+          - pkg-config
+          - git
+          - rsync
+          - iproute2
+          # Java + Maven: the role runs `mvn clean package -U` but never
+          # installs either (sdkman_java / sdkman_maven do that upstream).
+          - default-jdk-headless
+          - maven
+          # Servlet container the role copies ROOT.war into and restarts.
+          - "tomcat{{ tomcat_version }}"
+          # Database the role imports the Guacamole schema into.
+          - mariadb-server
+          - mariadb-client
+        state: present
+
+    - name: "Creating the service group the role chowns its build tree to"
+      ansible.builtin.group:
+        name: "{{ service_group }}"
+        state: present
+
+    - name: "Creating the service user the role builds the client as"
+      ansible.builtin.user:
+        name: "{{ service_user }}"
+        group: "{{ service_group }}"
+        home: "/home/{{ service_user }}"
+        shell: /bin/bash
+        create_home: true
+        state: present
+
+    - name: "Creating the completed-marker directory the role touches"
+      ansible.builtin.file:
+        path: "{{ completed_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: "Creating the public_adapter interface the role reads its external IP from"
+      ansible.builtin.shell: |
+        set -e
+        ip link add public_adapter type veth peer name pa-peer
+        ip addr add 10.99.99.10/24 dev public_adapter
+        ip link set public_adapter up
+      args:
+        executable: /bin/bash
+        creates: /sys/class/net/public_adapter
+
+    - name: "Starting Tomcat so the role has a live webapps directory to deploy into"
+      ansible.builtin.service:
+        name: "tomcat{{ tomcat_version }}"
+        state: started
+        enabled: true
+
+    - name: "Starting MariaDB"
+      ansible.builtin.service:
+        name: mariadb
+        state: started
+        enabled: true
+
+    - name: "Giving the database root account a password the role can log in with"
+      ansible.builtin.command: >-
+        mysql -u root --protocol=socket -e
+        "ALTER USER '{{ mysql_root_user }}'@'localhost'
+        IDENTIFIED VIA mysql_native_password USING PASSWORD('{{ mysql_root_password }}');
+        FLUSH PRIVILEGES;"
+      register: guacamole_prepare_rootpw
+      changed_when: guacamole_prepare_rootpw.rc == 0
+      failed_when:
+        - guacamole_prepare_rootpw.rc != 0
+        - "'Access denied' not in guacamole_prepare_rootpw.stderr"
+
+    - name: "Creating the Guacamole database and account the schema import targets"
+      community.mysql.mysql_db:
+        login_user: "{{ mysql_root_user }}"
+        login_password: "{{ mysql_root_password }}"
+        name: "{{ mysql_db_name }}"
+        state: present
+
+    - name: "Granting the Guacamole account access to its database"
+      community.mysql.mysql_user:
+        login_user: "{{ mysql_root_user }}"
+        login_password: "{{ mysql_root_password }}"
+        name: "{{ guacamole_admin_user }}"
+        password: "{{ guacamole_admin_pass }}"
+        host: "%"
+        priv: "{{ mysql_db_name }}.*:ALL"
+        state: present

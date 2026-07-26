@@ -13,7 +13,7 @@
     hidden: "{{ item.hidden | default(false) }}"
     priority: "{{ item.priority | default(1.0) }}"
     votes: "{{ item.votes | default(omit) }}"
-    ssl: "{{ True if mongodb_net_ssl_mode == 'requireSSL' else False }}"
+    ssl: "{{ True if mongodb_net_tls_mode == 'requireTLS' else False }}"
   when: mongodb_security_authorization == 'enabled'
   with_items:
     - "{{ mongodb_replication_params | default([]) }}"
@@ -30,7 +30,7 @@
     hidden: "{{ item.hidden | default(false) }}"
     priority: "{{ item.priority | default(1.0) }}"
     votes: "{{ item.votes | default(omit) }}"
-    ssl: "{{ True if mongodb_net_ssl_mode == 'requireSSL' else False }}"
+    ssl: "{{ True if mongodb_net_tls_mode == 'requireTLS' else False }}"
   when: ( mongodb_security_authorization == 'disabled' and mongodb_master is defined and mongodb_master )
   with_items:
     - "{{ mongodb_replication_params | default([]) }}"
@@ -47,7 +47,7 @@
     hidden: "{{ item.hidden | default(false) }}"
     priority: "{{ item.priority | default(1.0) }}"
     votes: "{{ item.votes | default(omit) }}"
-    ssl: "{{ True if mongodb_net_ssl_mode == 'requireSSL' else False }}"
+    ssl: "{{ True if mongodb_net_tls_mode == 'requireTLS' else False }}"
   when: ( mongodb_security_authorization == 'disabled' and ( mongodb_master is not defined or not mongodb_master) )
   with_items:
     - "{{ mongodb_replication_params | default([]) }}"

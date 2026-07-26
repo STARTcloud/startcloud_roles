@@ -1,0 +1,30 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    ## Provisioner-context variables the role assumes the calling play supplies.
+    service_home_dir: /home/startcloud
+    settings:
+      hostname: packages
+      domain: startcloud.test
+    run_tasks: true
+    package_server_email: repo@startcloud.test
+    ## No certbot certificates exist in the container, so the single plain
+    ## port-80 server block is rendered — the documented cert-less mode.
+    pkg_server_ssl_enabled: false
+    pkg_server_base_dir: /local
+    pkg_server_domain: debian.startcloud.test
+    ## Retired hostnames the one vhost keeps answering to during the migration.
+    pkg_server_legacy_domains:
+      - public.debian.startcloud.test
+      - private.debian.packages.startcloud.test
+    ## Production serves all three trees from the one vhost; so does the
+    ## scenario, so every path location is exercised.
+    pkg_server_public_enabled: true
+    pkg_server_mirror_enabled: true
+    pkg_server_private_enabled: true
+    pkg_server_ca_cn: STARTcloud Package Repository CA
+    pkg_server_ca_days: 3650
+  roles:
+    - role: package_repository_server

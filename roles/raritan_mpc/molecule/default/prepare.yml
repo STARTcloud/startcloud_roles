@@ -1,0 +1,17 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    # No apt-sources surgery here on purpose: the image ships deb822
+    # /etc/apt/sources.list.d/debian.sources with a Signed-By keyring, which is
+    # exactly the layout the role has to coexist with.
+    - name: "Refreshing the apt package cache"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 0
+      register: raritan_mpc_apt_cache
+      until: raritan_mpc_apt_cache is succeeded
+      retries: 3
+      delay: 5

@@ -1,7 +1,7 @@
 ---
 namespace: startcloud
 name: startcloud_roles
-version: 1.0.3
+version: 1.0.3 # x-release-please-version
 readme: "README.md"
 repository: https://github.com/STARTcloud/startcloud_roles
 documentation: https://github.com/STARTcloud/startcloud_roles
@@ -12,7 +12,36 @@ authors:
   - "MarkProminic"
 license:
   - GPL-2.0-or-later
+# Runtime collection dependencies — ansible-galaxy installs these
+# automatically when the collection is installed from a release artifact.
+dependencies:
+  community.general: '*'
+  ansible.posix: '*'
+  ansible.utils: '*'
+  community.crypto: '*'
+  community.docker: '*'
+  community.mysql: '*'
+  community.mongodb: '*'
+  community.postgresql: '*'
+  ansible.windows: '*'
+  community.windows: '*'
+  chocolatey.chocolatey: '*'
 tags:
   - startcloud
   - roles
   - linux
+# Never package local secrets or repo plumbing into the release artifact.
+# .ansible matters doubly: molecule's pre-flight galaxy build sweeps the repo,
+# and packaging the nested .ansible/collections self-copy races concurrent runs.
+build_ignore:
+  - .ansible
+  - .claude
+  - .vscode
+  - vault.yml
+  - vault-Docova.yml
+  - DeployKey_rsa
+  - .github
+  - .vscode
+  - release-please-config.json
+  - .release-please-manifest.json
+  - lint-*.txt

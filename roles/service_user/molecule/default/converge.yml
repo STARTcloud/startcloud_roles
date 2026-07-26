@@ -1,0 +1,23 @@
+---
+- name: "Converge"
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    service_user: java_user
+    service_group: java_group
+    service_home_dir: /local/notesjava
+    service_user_soft_limit: "60000"
+    service_user_hard_limit: "80000"
+    service_user_password: "CHANGEME"
+    service_user_ssh_key: ""
+    settings:
+      hostname: startcloud-service-user
+      domain: local.startcloud.dev
+      vagrant_user: startcloud
+      vagrant_user_pass: "CHANGEME"
+      vagrant_user_home: /home/startcloud
+  tasks:
+    - name: "Applying the service_user role"
+      ansible.builtin.include_role:
+        name: service_user

@@ -16,7 +16,10 @@
 
     - name: "Including disable.yml"
       ansible.builtin.include_tasks: disable.yml
-      when: swap_file_state == 'absent' or (swap_file_state == 'present' and swap_file_existing_size_mb != swap_file_size_mb)
+      when: >-
+        swap_file_state == 'absent'
+        or (swap_file_state == 'present'
+            and (swap_file_existing_size_mb | default(swap_file_size_mb) | int) != (swap_file_size_mb | int))
 
     - name: "Including enable.yml"
       ansible.builtin.include_tasks: enable.yml

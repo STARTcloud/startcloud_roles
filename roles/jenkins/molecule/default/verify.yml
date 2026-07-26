@@ -1,0 +1,350 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting jenkins and its build dependencies are installed"
+      ansible.builtin.assert:
+        that:
+          - "'jenkins' in ansible_facts.packages"
+          - "'xmlstarlet' in ansible_facts.packages"
+          - "'gnupg' in ansible_facts.packages"
+          - "'git' in ansible_facts.packages"
+          - "'fontconfig' in ansible_facts.packages"
+        fail_msg: "The role did not install jenkins and its declared dependencies"
+
+    - name: "Stat the Java runtime SDKMAN installed for the jenkins service account"
+      ansible.builtin.stat:
+        path: /home/startcloud/.sdkman/candidates/java/current/bin/java
+      register: jenkins_sdkman_java
+
+    - name: "Stat the system-wide java alternative sdkman_java registers"
+      ansible.builtin.stat:
+        path: /usr/bin/java
+        follow: false
+      register: jenkins_java_alternative
+
+    - name: "Resolving what the system-wide java alternative points at"
+      ansible.builtin.command:
+        argv:
+          - readlink
+          - -f
+          - /usr/bin/java
+      register: jenkins_java_resolved
+      changed_when: false
+
+    - name: "Running the SDKMAN java as the account the jenkins service runs as"
+      ansible.builtin.command:
+        argv:
+          - /home/startcloud/.sdkman/candidates/java/current/bin/java
+          - -version
+      become: true
+      become_user: startcloud
+      register: jenkins_java_version
+      changed_when: false
+
+    - name: "Asserting jenkins runs on the SDKMAN-provided Java 21 runtime"
+      ansible.builtin.assert:
+        that:
+          - jenkins_sdkman_java.stat.exists
+          - jenkins_sdkman_java.stat.xusr
+          - jenkins_java_alternative.stat.exists
+          - jenkins_java_alternative.stat.islnk
+          - "'/home/startcloud/.sdkman/candidates/java/' in jenkins_java_resolved.stdout"
+          - "'21.' in jenkins_java_reported"
+        fail_msg: "Java is not the SDKMAN 21 candidate: /usr/bin/java resolves to {{ jenkins_java_resolved.stdout }}"
+      vars:
+        jenkins_java_reported: "{{ jenkins_java_version.stdout }}{{ jenkins_java_version.stderr }}"
+
+    - name: "Asserting no distribution JRE was installed alongside the SDKMAN runtime"
+      ansible.builtin.assert:
+        that:
+          - "'temurin-21-jre' not in ansible_facts.packages"
+        fail_msg: "The role installed an Adoptium JRE of its own instead of using the SDKMAN candidate"
+
+    - name: "Reading the jenkins apt source list"
+      ansible.builtin.slurp:
+        src: /etc/apt/sources.list.d/jenkins.list
+      register: jenkins_source_list
+
+    - name: "Stat the jenkins apt signing key"
+      ansible.builtin.stat:
+        path: /etc/apt/keyrings/jenkins.asc
+      register: jenkins_keyring
+
+    - name: "Asserting the jenkins apt repository is keyring-signed and points at debian-stable"
+      ansible.builtin.assert:
+        that:
+          - "'deb ' in jenkins_source_decoded"
+          - "'signed-by=/etc/apt/keyrings/jenkins.asc' in jenkins_source_decoded"
+          - "'pkg.jenkins.io/debian-stable binary/' in jenkins_source_decoded"
+          - jenkins_keyring.stat.exists
+          - jenkins_keyring.stat.isreg
+          - jenkins_keyring.stat.size > 0
+          - jenkins_keyring.stat.mode == '0644'
+        fail_msg: "The jenkins apt repository is not present as a signed-by entry backed by /etc/apt/keyrings/jenkins.asc"
+      vars:
+        jenkins_source_decoded: "{{ jenkins_source_list.content | b64decode }}"
+
+    - name: "Reading the jenkins systemd drop-in"
+      ansible.builtin.slurp:
+        src: /etc/systemd/system/jenkins.service.d/override.conf
+      register: jenkins_dropin
+
+    - name: "Reading the effective unit settings systemd resolved for jenkins"
+      ansible.builtin.command:
+        argv:
+          - systemctl
+          - show
+          - --property=User
+          - --property=Group
+          - --property=Environment
+          - jenkins
+      register: jenkins_unit_settings
+      changed_when: false
+
+    - name: "Asserting the service overrides live in the systemd drop-in and took effect"
+      ansible.builtin.assert:
+        that:
+          - "'-Djenkins.install.runSetupWizard=false' in jenkins_dropin_decoded"
+          - "'-Djava.awt.headless=true' in jenkins_dropin_decoded"
+          - "'User=startcloud' in jenkins_dropin_decoded"
+          - "'Group=startcloud' in jenkins_dropin_decoded"
+          - "'JAVA_HOME=/home/startcloud/.sdkman/candidates/java/current' in jenkins_dropin_decoded"
+          - "'PATH=/home/startcloud/.sdkman/candidates/java/current/bin:' in jenkins_dropin_decoded"
+          - "'User=startcloud' in jenkins_unit_settings.stdout_lines"
+          - "'Group=startcloud' in jenkins_unit_settings.stdout_lines"
+          - "'JAVA_HOME=/home/startcloud/.sdkman/candidates/java/current' in jenkins_unit_settings.stdout"
+          - "'PATH=/home/startcloud/.sdkman/candidates/java/current/bin:' in jenkins_unit_settings.stdout"
+        fail_msg: "The jenkins service is not running under the provisioning user on the SDKMAN Java via a systemd drop-in"
+      vars:
+        jenkins_dropin_decoded: "{{ jenkins_dropin.content | b64decode }}"
+
+    - name: "Stat the jenkins state directories the role must create"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: jenkins_state_dirs
+      loop:
+        - /var/cache/jenkins
+        - /var/lib/jenkins
+        - /var/run/jenkins
+        - /var/log/jenkins
+
+    - name: "Asserting the jenkins state directories exist and belong to the provisioning user"
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.isdir
+          - item.stat.pw_name == 'startcloud'
+          - item.stat.gr_name == 'startcloud'
+        fail_msg: "Jenkins state directory {{ item.item }} is missing or not owned by startcloud"
+      loop: "{{ jenkins_state_dirs.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting the jenkins service is running and enabled"
+      ansible.builtin.assert:
+        that:
+          - "'jenkins.service' in ansible_facts.services"
+          - ansible_facts.services['jenkins.service'].state == 'running'
+          - ansible_facts.services['jenkins.service'].status == 'enabled'
+        fail_msg: "jenkins.service is not running and enabled"
+
+    - name: "Asserting jenkins is listening on port 8080"
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 8080
+        state: started
+        timeout: 30
+
+    - name: "Stat the backup directory created for script outputs"
+      ansible.builtin.stat:
+        path: /backup
+      register: backup_dir
+
+    - name: "Stat the pristine config.xml backup"
+      ansible.builtin.stat:
+        path: /var/lib/jenkins/config.xml.orig
+      register: config_backup
+
+    - name: "Stat the jenkins CLI jar downloaded from the running instance"
+      ansible.builtin.stat:
+        path: /home/startcloud/jenkins-cli.jar
+      register: cli_jar
+
+    - name: "Stat the groovy startup bypass that must have been removed"
+      ansible.builtin.stat:
+        path: /var/lib/jenkins/init.groovy.d/basic-security.groovy
+      register: groovy_bypass
+
+    - name: "Asserting the filesystem artefacts are in the expected state"
+      ansible.builtin.assert:
+        that:
+          - backup_dir.stat.exists
+          - backup_dir.stat.isdir
+          - backup_dir.stat.pw_name == 'startcloud'
+          - config_backup.stat.exists
+          - config_backup.stat.isreg
+          - cli_jar.stat.exists
+          - cli_jar.stat.size > 0
+          - not groovy_bypass.stat.exists
+        fail_msg: "Jenkins filesystem artefacts are missing or the groovy security bypass was left behind"
+
+    - name: "Reading the rewritten jenkins config.xml"
+      ansible.builtin.slurp:
+        src: /var/lib/jenkins/config.xml
+      register: jenkins_config
+
+    # Jenkins 2.568.1 keeps neither <installStateName> nor <useSecurity> in
+    # config.xml any more -- the install state moved out of this file entirely --
+    # so what config.xml still proves is the security realm and the node mode.
+    # That the setup wizard is genuinely bypassed is asserted against the live
+    # instance below: an anonymous /api/json call is refused outright while the
+    # wizard still owns the instance.
+    - name: "Asserting the security realm was stripped from config.xml"
+      ansible.builtin.assert:
+        that:
+          - "'<mode>NORMAL</mode>' in jenkins_config_decoded"
+          - "'hudson.security.AuthorizationStrategy$Unsecured' in jenkins_config_decoded"
+          - "'hudson.security.SecurityRealm$None' in jenkins_config_decoded"
+          - "'HudsonPrivateSecurityRealm' not in jenkins_config_decoded"
+          - "'FullControlOnceLoggedInAuthorizationStrategy' not in jenkins_config_decoded"
+          - "'LegacyAuthorizationStrategy' not in jenkins_config_decoded"
+        fail_msg: |
+          config.xml was not rewritten by the xmlstarlet configuration step.
+          On-disk /var/lib/jenkins/config.xml is:
+          {{ jenkins_config_decoded }}
+      vars:
+        jenkins_config_decoded: "{{ jenkins_config.content | b64decode }}"
+
+    - name: "Requesting the Jenkins API anonymously"
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:8080/api/json"
+        return_content: true
+      register: jenkins_anonymous_api
+
+    - name: "Asserting the security realm really is off on the running instance"
+      ansible.builtin.assert:
+        that:
+          - jenkins_anonymous_api.status == 200
+          - "'mode' in jenkins_anonymous_api.json"
+          - jenkins_anonymous_api.json.mode == 'NORMAL'
+        fail_msg: "The running Jenkins instance did not answer an anonymous API call, so the security bypass did not take"
+
+    - name: "Reading the deployed Jenkins location configuration"
+      ansible.builtin.slurp:
+        src: /var/lib/jenkins/jenkins.model.JenkinsLocationConfiguration.xml
+      register: jenkins_location
+
+    - name: "Asserting the Jenkins root URL the CLI handshake requires was configured"
+      ansible.builtin.assert:
+        that:
+          - "'<jenkinsUrl>http://localhost:8080/</jenkinsUrl>' in jenkins_location_decoded"
+          - "'<adminAddress>admin@molecule.startcloud.test</adminAddress>' in jenkins_location_decoded"
+        fail_msg: "The Jenkins root URL was not configured, so the CLI would refuse every handshake with a 403"
+      vars:
+        jenkins_location_decoded: "{{ jenkins_location.content | b64decode }}"
+
+    - name: "Reading the deployed Xvfb plugin descriptor"
+      ansible.builtin.slurp:
+        src: /var/lib/jenkins/org.jenkinsci.plugins.xvfb.Xvfb.xml
+      register: xvfb_descriptor
+
+    - name: "Asserting the Xvfb installation descriptor was deployed"
+      ansible.builtin.assert:
+        that:
+          - "'<name>xvfb</name>' in (xvfb_descriptor.content | b64decode)"
+          - "'<home>/usr/bin</home>' in (xvfb_descriptor.content | b64decode)"
+        fail_msg: "org.jenkinsci.plugins.xvfb.Xvfb.xml was not deployed into /var/lib/jenkins"
+
+    - name: "Listing the plugin archives the role installed"
+      ansible.builtin.find:
+        paths: /var/lib/jenkins/plugins
+        patterns: "*.jpi,*.hpi"
+      register: jenkins_plugin_files
+
+    - name: "Asserting every requested plugin was installed through the Jenkins CLI"
+      ansible.builtin.assert:
+        that:
+          - item in installed_plugins
+        fail_msg: "Plugin {{ item }} is missing from /var/lib/jenkins/plugins"
+      vars:
+        installed_plugins: "{{ jenkins_plugin_files.files | map(attribute='path') | map('basename') | map('regex_replace', '\\.[jh]pi$', '') | list }}"
+      loop:
+        - xvfb
+        - xunit
+        - workflow-step-api
+        - scm-api
+        - structs
+        - junit
+        - script-security
+        - git
+        - email-ext
+        - email-ext-recipients-column
+        - mailer
+
+    - name: "Reading the global git configuration written by the role"
+      ansible.builtin.slurp:
+        src: /root/.gitconfig
+      register: global_gitconfig
+
+    - name: "Asserting global git identity and behaviour were configured"
+      ansible.builtin.assert:
+        that:
+          - "'admin@molecule.startcloud.test' in gitconfig_decoded"
+          - "'STARTcloud Molecule' in gitconfig_decoded"
+          - "'simple' in gitconfig_decoded"
+        fail_msg: "The role did not configure the global git identity"
+      vars:
+        gitconfig_decoded: "{{ global_gitconfig.content | b64decode }}"
+
+    - name: "Stat the jenkins desktop launchers"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: desktop_launchers
+      loop:
+        - /usr/share/applications/jenkins.desktop
+        - /home/startcloud/Desktop/jenkins.desktop
+
+    - name: "Asserting the desktop launchers were installed"
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.isreg
+          - item.stat.mode == '0755'
+        fail_msg: "Desktop launcher {{ item.item }} was not installed"
+      loop: "{{ desktop_launchers.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "Stat the seed job copied out of the Vagrant synced folder"
+      ansible.builtin.stat:
+        path: /home/startcloud/Desktop/jobs/molecule-job.xml
+      register: seed_job
+
+    - name: "Asserting the Vagrant-provided jobs were copied to the Desktop"
+      ansible.builtin.assert:
+        that:
+          - seed_job.stat.exists
+          - seed_job.stat.isreg
+          - seed_job.stat.pw_name == 'startcloud'
+        fail_msg: "The seed job from /vagrant/jobs was not copied to the Desktop"
+
+    - name: "Verifying the jenkins user account owns its home directory tree"
+      ansible.builtin.getent:
+        database: passwd
+        key: startcloud
+
+    - name: "Asserting the provisioning user resolves with the expected home"
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.getent_passwd['startcloud'][4] == '/home/startcloud'
+        fail_msg: "The startcloud user does not resolve to /home/startcloud"

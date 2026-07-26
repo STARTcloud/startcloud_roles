@@ -1,0 +1,20 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    snapd_purge: true
+    snapd_state: stopped
+    snapd_enabled: false
+    snapd_block_later_installation: true
+    snapd_services:
+      - snapd.service
+    snapd_files:
+      - /etc/apt/apt.conf.d/20snapd.conf
+    snapd_block_packages:
+      - snapd
+  tasks:
+    - name: "Including the snapd role"
+      ansible.builtin.include_role:
+        name: snapd

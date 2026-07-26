@@ -1,0 +1,110 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: false
+  vars:
+    expected_exports:
+      - "/export/public 10.42.0.0/24(rw,sync,no_subtree_check,no_root_squash)"
+      - "/export/readonly 10.42.0.0/24(ro,sync,no_subtree_check)"
+  tasks:
+    - name: "Gathering installed package facts"
+      ansible.builtin.package_facts:
+        manager: apt
+
+    - name: "Asserting the Debian NFS packages the role installs are present"
+      ansible.builtin.assert:
+        quiet: true
+        that:
+          - "'nfs-common' in ansible_facts.packages"
+          - "'nfs-kernel-server' in ansible_facts.packages"
+        fail_msg: "nfs-common / nfs-kernel-server were not installed by the role"
+
+    - name: "Stat-ing /etc/exports rendered from exports.j2"
+      ansible.builtin.stat:
+        path: /etc/exports
+      register: nfs_exports_file
+
+    - name: "Asserting /etc/exports exists with the ownership and mode the role sets"
+      ansible.builtin.assert:
+        quiet: true
+        that:
+          - nfs_exports_file.stat.exists
+          - nfs_exports_file.stat.isreg
+          - nfs_exports_file.stat.pw_name == 'root'
+          - nfs_exports_file.stat.gr_name == 'root'
+          - nfs_exports_file.stat.mode == '0644'
+        fail_msg: "/etc/exports missing or not root:root 0644"
+
+    - name: "Reading /etc/exports"
+      ansible.builtin.slurp:
+        src: /etc/exports
+      register: nfs_exports_content
+
+    - name: "Asserting every configured export line was written verbatim"
+      ansible.builtin.assert:
+        quiet: true
+        that:
+          - item in (nfs_exports_content.content | b64decode)
+        fail_msg: "Export line missing from /etc/exports: {{ item }}"
+      loop: "{{ expected_exports }}"
+
+    - name: "Stat-ing the exported directories the role creates"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: nfs_export_dirs
+      loop:
+        - /export/public
+        - /export/readonly
+
+    - name: "Asserting the exported directories exist as 0755 directories"
+      ansible.builtin.assert:
+        quiet: true
+        that:
+          - item.stat.exists
+          - item.stat.isdir
+          - item.stat.mode == '0755'
+        fail_msg: "Export directory {{ item.item }} missing or not a 0755 directory"
+      loop: "{{ nfs_export_dirs.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "Querying the NFS server unit through systemctl show so the Debian unit alias resolves" # noqa: command-instead-of-module
+      ansible.builtin.command: >-
+        systemctl show nfs-kernel-server.service
+        --property=Id --property=ActiveState --property=SubState --property=UnitFileState
+      register: nfs_unit_show
+      changed_when: false
+      failed_when: false
+
+    - name: "Parsing the NFS server unit properties"
+      ansible.builtin.set_fact:
+        nfs_unit_props: "{{ dict(nfs_unit_show.stdout_lines | map('split', '=', 1) | list) }}"
+
+    - name: "Asserting the NFS server daemon is active and enabled at boot"
+      ansible.builtin.assert:
+        quiet: true
+        that:
+          - nfs_unit_props.ActiveState == 'active'
+          - nfs_unit_props.UnitFileState == 'enabled'
+        fail_msg: "NFS server unit is not active/enabled: {{ nfs_unit_props }}"
+
+    - name: "Listing the kernel's active export table"
+      ansible.builtin.command: exportfs -s
+      register: nfs_exportfs
+      changed_when: false
+
+    - name: "Asserting exportfs -ra published both shares to the kernel"
+      ansible.builtin.assert:
+        quiet: true
+        that:
+          - "'/export/public' in nfs_exportfs.stdout"
+          - "'/export/readonly' in nfs_exportfs.stdout"
+        fail_msg: "Exports not active in the kernel export table: {{ nfs_exportfs.stdout }}"
+
+    - name: "Asserting the NFS server is listening on port 2049"
+      ansible.builtin.wait_for:
+        port: 2049
+        host: 127.0.0.1
+        state: started
+        timeout: 30

@@ -1,0 +1,16 @@
+---
+- name: Verify
+  hosts: all
+  tasks:
+    - name: "Applying the Role with run_tasks Disabled"
+      ansible.builtin.include_role:
+        name: hello_world
+      vars:
+        run_tasks: false
+        hello_world: "must not print"
+
+    - name: "Asserting the Gate Skipped the Role Tasks"
+      ansible.builtin.assert:
+        that:
+          - ansible_play_hosts | length == 1
+        success_msg: run_tasks=false skipped the block without failing the play.

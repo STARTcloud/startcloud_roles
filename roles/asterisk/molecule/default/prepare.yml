@@ -1,0 +1,41 @@
+---
+## The asterisk role's meta chain pulls in the fail2ban role, and fail2ban on
+## a bare Debian container is not a working service: the distro ships an sshd
+## jail that reads /var/log/auth.log, the image runs no rsyslog so that file
+## never exists, and fail2ban exits a second or two after every start. Each
+## converge then found the unit dead and started it again, which is why both
+## `fail2ban : Starting and Enabling fail2ban` and the asterisk role's own
+## fail2ban task reported changed forever. This is the same scaffolding the
+## standalone fail2ban scenario uses, and it runs in prepare so none of it
+## counts against the idempotence pass.
+- name: Prepare
+  hosts: all
+  become: true
+  tasks:
+    - name: Refresh the apt cache before installing the container prerequisites
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 600
+
+    - name: Install the base-system packages fail2ban expects on a real Debian host
+      ansible.builtin.apt:
+        name:
+          - rsyslog
+          - iptables
+          - python3-systemd
+        state: present
+        update_cache: false
+
+    - name: Start rsyslog so the system log files fail2ban jails read are produced
+      ansible.builtin.systemd:
+        name: rsyslog
+        state: started
+        enabled: true
+
+    - name: Ensure the auth log the shipped sshd jail reads exists
+      ansible.builtin.file:
+        path: /var/log/auth.log
+        state: touch
+        owner: root
+        group: adm
+        mode: "0640"

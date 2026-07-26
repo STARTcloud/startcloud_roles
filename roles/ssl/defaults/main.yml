@@ -46,3 +46,18 @@ certbot_create_method: standalone
 certbot_admin_email: "support@startcloud.com"
 certbot_create_standalone_stop_services:
   - nginx
+
+# FreeBSD firewall appliances (pfSense/OPNsense)
+# Existing-cert mode pushes from the controller-side cert store in the
+# fleet's per-host layout ({{ cert_dir }}/<fqdn>/{host.pem,host.key,cacert.pem});
+# the acme package path is driven by letsencrypt_enabled and the account vars
+# below. ssl_appliance_cert_dir is the on-appliance destination the acme
+# package, webConfigurator, fwauthserver and gbauthd all consume.
+ssl_appliance_cert_dir: /conf/acme
+ssl_appliance_tools_dir: /conf/ansible/tools
+ssl_appliance_keytool: /usr/local/openjdk8-jre/bin/keytool
+ssl_acme_cleanup: false
+ssl_acme_account_name: CHANGEME
+ssl_acme_account_email: changeme@example.com
+ssl_acme_account_key: "{{ vault_ssl_acme_account_key | default('CHANGEME') }}"
+ssl_acme_server: letsencrypt-production-2

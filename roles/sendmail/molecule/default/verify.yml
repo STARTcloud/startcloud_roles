@@ -1,0 +1,76 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: "Gathering installed package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting the Sendmail MTA and its m4 config macros are installed"
+      ansible.builtin.assert:
+        that:
+          - "'sendmail-bin' in ansible_facts.packages"
+          - "'sendmail-cf' in ansible_facts.packages"
+          - "'sendmail-base' in ansible_facts.packages"
+        fail_msg: "Sendmail packages missing from the package facts"
+
+    - name: "Stat the templated sendmail.mc"
+      ansible.builtin.stat:
+        path: /etc/mail/sendmail.mc
+      register: sendmail_mc
+
+    - name: "Asserting sendmail.mc exists with the ownership and mode the role sets"
+      ansible.builtin.assert:
+        that:
+          - sendmail_mc.stat.exists
+          - sendmail_mc.stat.isreg
+          - sendmail_mc.stat.pw_name == 'root'
+          - sendmail_mc.stat.gr_name == 'smmsp'
+          - sendmail_mc.stat.mode == '0644'
+        fail_msg: "sendmail.mc missing or not owned root:smmsp mode 0644"
+
+    - name: "Slurping the templated sendmail.mc"
+      ansible.builtin.slurp:
+        src: /etc/mail/sendmail.mc
+      register: sendmail_mc_content
+
+    - name: "Asserting the smart host and localhost-only daemon options were rendered"
+      ansible.builtin.assert:
+        that:
+          - "'SMART_HOST' in (sendmail_mc_content.content | b64decode)"
+          - "'smtp-relay.startcloud.test' in (sendmail_mc_content.content | b64decode)"
+          - "'Addr=127.0.0.1' in (sendmail_mc_content.content | b64decode)"
+          - "'MAILER(`smtp' in (sendmail_mc_content.content | b64decode)"
+        fail_msg: "sendmail.mc template did not render the expected smart host / daemon options"
+
+    - name: "Slurping the compiled sendmail.cf built by the make handler"
+      ansible.builtin.slurp:
+        src: /etc/mail/sendmail.cf
+      register: sendmail_cf_content
+
+    - name: "Asserting the compiled configuration carries the templated settings"
+      ansible.builtin.assert:
+        that:
+          - "'STARTcloud sendmail configuration' in (sendmail_cf_content.content | b64decode)"
+          - "'Addr=127.0.0.1' in (sendmail_cf_content.content | b64decode)"
+          - "'smtp-relay.startcloud.test' in (sendmail_cf_content.content | b64decode)"
+        fail_msg: "sendmail.cf was not rebuilt from the templated sendmail.mc"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting the Sendmail service is running"
+      ansible.builtin.assert:
+        that:
+          - "'sendmail.service' in ansible_facts.services"
+          - ansible_facts.services['sendmail.service'].state == 'running'
+        fail_msg: "sendmail.service is not running"
+
+    - name: "Waiting for the MTA to listen on the loopback SMTP port"
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 25
+        state: started
+        timeout: 30

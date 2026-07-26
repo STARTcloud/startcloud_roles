@@ -5,6 +5,9 @@ argument_specs:
     description:
       - Installs the STARTcloud web-terminal from the STARTcloud APT repository (default) or builds it from the GitHub
         source via git clone and npm, renders its config with TLS/auth settings, and starts it under systemd or supervisord.
+      - The APT path also lays down the NodeSource repository because the web-terminal package depends on nodejs (>= 22).
+      - The JWT secret and the local admin password are generated once on the target and persisted, so reruns render an
+        identical configuration and the generated password stays retrievable.
     author: Mark Gilbert
     options:
       run_tasks:
@@ -21,16 +24,32 @@ argument_specs:
         description: Build from source (git clone + npm) instead of installing the STARTcloud apt package.
       web_terminal_apt_key_url:
         type: str
-        default: "https://public.debian.packages.startcloud.com/debian/startcloud-archive-keyring.asc"
+        default: "https://debian.startcloud.com/public/debian/startcloud-archive-keyring.asc"
         description: URL of the armored STARTcloud APT signing key.
       web_terminal_apt_repo_url:
         type: str
-        default: "https://public.debian.packages.startcloud.com/debian/"
+        default: "https://debian.startcloud.com/public/debian/"
         description: Base URL of the STARTcloud APT repository.
+      web_terminal_apt_keyring_path:
+        type: str
+        default: /etc/apt/keyrings/startcloud-archive-keyring.gpg
+        description: Path of the dearmored STARTcloud keyring the APT source is signed by.
       web_terminal_package:
         type: str
         default: web-terminal
         description: Package name of the web-terminal in the STARTcloud repository.
+      web_terminal_nodejs_version:
+        type: str
+        default: "22.x"
+        description: NodeSource distribution branch installed to satisfy the web-terminal package's nodejs (>= 22) dependency.
+      web_terminal_nodejs_key_url:
+        type: str
+        default: "https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key"
+        description: URL of the armored NodeSource APT signing key.
+      web_terminal_nodejs_keyring_path:
+        type: str
+        default: /etc/apt/keyrings/nodesource.gpg
+        description: Path of the dearmored NodeSource keyring the NodeSource source is signed by.
       web_terminal_git_repo:
         type: str
         default: "https://github.com/STARTcloud/web-terminal.git"
@@ -39,16 +58,38 @@ argument_specs:
         type: str
         default: main
         description: Git branch, tag, or commit checked out when building from source.
+      web_terminal_secret_dir:
+        type: str
+        default: /etc/web-terminal
+        description: Directory holding the rendered configuration and the persisted generated secrets.
       web_terminal_jwt_secret:
         type: str
-        description: JWT signing secret for the web-terminal authentication layer.
+        default: ""
+        description: >-
+          JWT signing secret for the web-terminal authentication layer. Empty means the role generates one once on the
+          target into web_terminal_jwt_secret_file and reuses it on every later run.
+      web_terminal_jwt_secret_file:
+        type: str
+        default: /etc/web-terminal/jwt-secret
+        description: 0600 file the generated JWT secret is persisted in and read back from.
+      web_terminal_admin_user:
+        type: str
+        default: admin
+        description: Username of the local basic-auth account created when web_terminal_users is empty.
+      web_terminal_admin_password_file:
+        type: str
+        default: /etc/web-terminal/admin-password
+        description: 0600 file the generated admin password is persisted in and read back from.
+      web_terminal_users:
+        type: dict
+        default: {}
+        description: >-
+          Local basic-auth users mapping username to password. Empty means the role generates a password once for
+          web_terminal_admin_user and persists it in web_terminal_admin_password_file.
       web_terminal_config_path:
         type: str
         default: /etc/web-terminal/config.yaml
-        description: Path of the rendered web-terminal configuration file.
-      web_terminal_users:
-        type: dict
-        description: Local basic-auth users mapping username to password; the default admin password is randomly generated.
+        description: Path of the rendered web-terminal configuration file; its directory also receives dev-config.yaml.
       startcloud_web_terminal_port_forwards:
         type: list
         elements: dict
@@ -56,3 +97,26 @@ argument_specs:
       startcloud_web_terminal_proxy_url:
         type: str
         description: Fully qualified proxy URL for the web-terminal service.
+      settings:
+        type: dict
+        description: Provisioner context — supplies hostname and domain, used for the proxy URL, TLS paths, and OIDC domain mappings.
+      cert_dir:
+        type: str
+        description: Provisioner context — base directory holding the crt/ and key/ subdirectories referenced by the rendered TLS paths.
+      service_user:
+        type: str
+        description: Provisioner context — account the source build clones and npm-installs as, and that owns the source-mode configuration.
+      service_group:
+        type: str
+        description: Provisioner context — group applied alongside service_user in the source build.
+      service_home_dir:
+        type: str
+        description: Provisioner context — home directory whose .local/bin is prepended to the supervisord program PATH.
+      ansible_module_running_in_container:
+        type: bool
+        description: >-
+          Provisioner context — true when the target is a container. The role gathers it itself with
+          community.docker.current_container_facts at role start, so it never has to be supplied; when true the
+          web-terminal is run from a supervisord program file, when false it is started and enabled through systemd and
+          its unit is restarted on configuration changes. A value supplied by the provisioner as a play or extra var
+          outranks the gathered fact.

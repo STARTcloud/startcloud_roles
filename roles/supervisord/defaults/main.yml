@@ -1,2 +1,20 @@
 ---
 run_tasks: true
+# Container builds run supervisord itself as PID 1 (the provisioner sets
+# ansible_module_running_in_container), so there is no systemd unit to manage.
+# Everywhere else the role owns the service.
+supervisord_manage_service: "{{ not (ansible_module_running_in_container | default(false)) }}"
+supervisord_service_name: supervisor
+supervisord_packages:
+  - python3
+  - python3-pip
+  - supervisor
+supervisord_config_file: /etc/supervisor/supervisord.conf
+supervisord_include_dir: /etc/supervisor/conf.d
+supervisord_include_files: "{{ supervisord_include_dir }}/*.conf"
+supervisord_socket_path: /var/run/supervisor.sock
+supervisord_socket_mode: "0700"
+supervisord_nodaemon: true
+supervisord_log_file: /var/log/supervisor/supervisord.log
+supervisord_pid_file: /var/run/supervisord.pid
+supervisord_child_log_dir: /var/log/supervisor

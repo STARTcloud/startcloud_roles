@@ -15,11 +15,15 @@
         dest: "/vagrant/support-bundle/ansible-roles.zip"
         format: zip
 
+    ## Every optional stage in this role is gated on the presence of the directory
+    ## it reads, never on the kind of environment the play is running in.
+    ## /vagrant/installers is a Vagrant synced folder that only exists when the
+    ## build bundled installers, so the stat + find pair below is the real
+    ## condition - identical to the /vagrant/completed branch further down.
     - name: "Checking if /vagrant/installers directory exists"
       ansible.builtin.stat:
         path: /vagrant/installers
       register: installers_dir_stat
-      when: not ansible_module_running_in_container
 
     - name: "Checking if /vagrant/installers directory is empty"
       ansible.builtin.find:
@@ -27,13 +31,11 @@
         file_type: any
       register: installers_dir_contents
       when:
-        - not ansible_module_running_in_container
         - installers_dir_stat.stat.exists
         - installers_dir_stat.stat.isdir
 
     - name: "Recording Installers"
       when:
-        - not ansible_module_running_in_container
         - installers_dir_stat.stat.exists
         - installers_dir_stat.stat.isdir
         - installers_dir_contents.matched > 0
@@ -44,7 +46,6 @@
 
     - name: "Writing included installers to /vagrant/support-bundle/installers.json"
       when:
-        - not ansible_module_running_in_container
         - installers_dir_stat.stat.exists
         - installers_dir_stat.stat.isdir
         - installers_dir_contents.matched > 0

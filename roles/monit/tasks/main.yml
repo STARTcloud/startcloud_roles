@@ -19,11 +19,6 @@
             cache_valid_time: 3600
             update_cache: true
 
-        - name: "Upgrading all apt packages"
-          ansible.builtin.apt:
-            upgrade: dist
-            update_cache: true
-
         - name: "Adding Additional Dependencies {{ monit_packages }}"
           ansible.builtin.apt:
             name: "{{ monit_packages }}"
@@ -35,6 +30,7 @@
         state: started
 
     - name: "Adding nginx monitoring"
+      notify: Restart monit
       ansible.builtin.blockinfile:
         path: /etc/monit/monitrc
         marker_begin: "nginx BEGIN"
@@ -56,20 +52,17 @@
             include /etc/monit/templates/rootbin
 
     - name: "Configuring Monit web interface"
+      notify: Restart monit
       ansible.builtin.lineinfile:
         path: /etc/monit/monitrc
-        regexp: "^# set httpd port 2812"
+        regexp: "^#\\s*set httpd port 2812"
         line: "set httpd port 2812 and"
         state: present
 
     - name: "Allowing admin access to Monit web interface"
+      notify: Restart monit
       ansible.builtin.lineinfile:
         path: /etc/monit/monitrc
-        regexp: "^# allow admin:monit"
+        regexp: "^#\\s*allow admin:monit"
         line: "allow admin:monit"
         state: present
-
-    - name: "Restarting monit service"
-      ansible.builtin.systemd:
-        name: monit.service
-        state: restarted

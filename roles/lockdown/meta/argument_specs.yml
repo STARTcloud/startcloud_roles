@@ -38,3 +38,19 @@ argument_specs:
         type: bool
         default: false
         description: Gate for the sensitive-file cleanup step.
+      vagrant_user:
+        type: str
+        description: >-
+          Provisioner context. Windows account whose password is rotated; supplied by the provisioner's
+          settings block, falling back to Administrator when absent.
+      vagrant_user_pass:
+        type: str
+        description: >-
+          Provisioner context. Password taken from the provisioner's settings block and used instead of
+          lockdown_new_password when lockdown_use_settings_password is true. No role default by design.
+      ansible_module_running_in_container:
+        type: bool
+        description: >-
+          Provisioner context. Runtime fact set by community.docker.current_container_facts at the top of
+          the Debian tasks; true inside a container, where the host owns the init units and the service
+          lockdown stage is skipped. Gathered by the role, never passed in.

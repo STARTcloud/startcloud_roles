@@ -1,0 +1,117 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    installer_dir: /opt/installers
+    chrome_driver_install_dir: /usr/local/bin
+  tasks:
+    - name: "Gathering installed package facts"
+      ansible.builtin.package_facts:
+        manager: apt
+
+    - name: "Stat-ing the artefacts the role is supposed to leave behind"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: chrome_artefacts
+      loop:
+        - /usr/share/keyrings/google-chrome.gpg
+        - /etc/apt/sources.list.d/google-chrome.list
+        - /usr/bin/google-chrome-stable
+        - "{{ installer_dir }}/chrome/archives/chromedriver_linux64.zip"
+        - "{{ chrome_driver_install_dir }}/chromedriver"
+        - /etc/default/google-chrome
+
+    - name: "Reading the rendered Chrome apt source"
+      ansible.builtin.slurp:
+        src: /etc/apt/sources.list.d/google-chrome.list
+      register: chrome_source
+
+    - name: "Reading the Chrome package defaults file"
+      ansible.builtin.slurp:
+        src: /etc/default/google-chrome
+      register: chrome_package_defaults
+
+    - name: "Invoking Chromedriver through PATH"
+      ansible.builtin.command: chromedriver --version
+      register: chromedriver_version
+      changed_when: false
+      failed_when: false
+
+    - name: "Asserting google-chrome-stable is installed from the Google repo"
+      ansible.builtin.assert:
+        that:
+          - "'google-chrome-stable' in ansible_facts.packages"
+          - ansible_facts.packages['google-chrome-stable'][0].version is defined
+        fail_msg: >-
+          google-chrome-stable is not present in the apt package facts;
+          the 'Installing Chrome' task did not install the browser.
+
+    - name: "Asserting the signing keyring is a real dearmored keyring"
+      ansible.builtin.assert:
+        that:
+          - chrome_artefacts.results[0].stat.exists
+          - chrome_artefacts.results[0].stat.size > 0
+        fail_msg: >-
+          /usr/share/keyrings/google-chrome.gpg is missing or empty;
+          `gpg --dearmor` of the downloaded signing key did not produce a keyring.
+
+    - name: "Asserting the apt source points at dl.google.com and is signed-by the keyring"
+      ansible.builtin.assert:
+        that:
+          - chrome_artefacts.results[1].stat.exists
+          - "'dl.google.com/linux/chrome/deb/' in (chrome_source.content | b64decode)"
+          - "'signed-by=/usr/share/keyrings/google-chrome.gpg' in (chrome_source.content | b64decode)"
+        fail_msg: >-
+          /etc/apt/sources.list.d/google-chrome.list does not contain the
+          expected signed-by Google Chrome deb line.
+
+    - name: "Asserting the Chrome package did not clobber the role-owned apt source"
+      ansible.builtin.assert:
+        that:
+          - "'AUTOMATICALLY CONFIGURED' not in (chrome_source.content | b64decode)"
+          - ((chrome_source.content | b64decode).splitlines() | select('search', '^deb ') | list | length) == 1
+        fail_msg: >-
+          /etc/apt/sources.list.d/google-chrome.list was rewritten or appended to
+          by google-chrome-stable's own postinst/cron repository management, so
+          the role's repository definition does not survive a rerun.
+
+    - name: "Asserting the package repository switches are off in /etc/default/google-chrome"
+      ansible.builtin.assert:
+        that:
+          - chrome_artefacts.results[5].stat.exists
+          - "'repo_add_once=\"false\"' in (chrome_package_defaults.content | b64decode)"
+          - "'repo_reenable_on_distupgrade=\"false\"' in (chrome_package_defaults.content | b64decode)"
+        fail_msg: >-
+          /etc/default/google-chrome does not disable the package's own apt
+          repository management, so the postinst and the daily cron job are still
+          free to rewrite /etc/apt/sources.list.d/google-chrome.list.
+
+    - name: "Asserting the chrome binary is installed and executable"
+      ansible.builtin.assert:
+        that:
+          - chrome_artefacts.results[2].stat.exists
+          - chrome_artefacts.results[2].stat.executable
+        fail_msg: /usr/bin/google-chrome-stable is missing or not executable.
+
+    - name: "Asserting the Chromedriver archive was downloaded into installer_dir"
+      ansible.builtin.assert:
+        that:
+          - chrome_artefacts.results[3].stat.exists
+          - chrome_artefacts.results[3].stat.size > 0
+        fail_msg: >-
+          {{ installer_dir }}/chrome/archives/chromedriver_linux64.zip is missing;
+          the Chromedriver download task did not produce its artefact.
+
+    - name: "Asserting Chromedriver was extracted onto PATH and runs"
+      ansible.builtin.assert:
+        that:
+          - chrome_artefacts.results[4].stat.exists
+          - chrome_artefacts.results[4].stat.executable
+          - chromedriver_version.rc == 0
+          - "'ChromeDriver' in chromedriver_version.stdout"
+        fail_msg: >-
+          {{ chrome_driver_install_dir }}/chromedriver is missing, not executable,
+          or `chromedriver --version` could not be resolved through PATH; the
+          unarchive task did not put a usable driver where the creates: guard says.

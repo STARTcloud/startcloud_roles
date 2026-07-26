@@ -20,7 +20,7 @@
     <link rel="stylesheet" href="https://startcloud.com/assets/css/bootstrap-custom.css" />
     <link href="https://startcloud.com/assets/css/impact.css" rel="stylesheet">
     <link href="https://startcloud.com/assets/libs/startcloud/startcloud.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://public.debian.startcloud.com/css/STARTcloud.css" />
+    <link rel="stylesheet" href="css/STARTcloud.css" />
 </head>
 
 <body>
@@ -31,7 +31,7 @@
                     <img src="https://startcloud.com/assets/images/logos/startcloud-logo40.png" width="40" alt="" />
                 </a>
                 <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
-                    <li><a href="https://mirror.debian.packages.startcloud.com/" class="nav-link px-2">Mirror</a></li>
+                    <li><a href="/mirror/" class="nav-link px-2">Mirror</a></li>
                     <li><a href="https://github.com/STARTcloud/" class="nav-link px-2">GitHub</a></li>
                     <li><a href="https://startcloud.com/#contact" class="nav-link px-2">Contact</a></li>
                 </ul>
@@ -82,10 +82,10 @@
                     <div class="col-lg-6">
                         <h2>Useful Links</h2>
                         <ul>
-                            <li><a href="https://public.debian.packages.startcloud.com/debian/" target="_blank">View the
+                            <li><a href="/public/debian/" target="_blank">View the
                                     Repository Directory</a></li>
                             <li><a href="https://github.com/STARTcloud/" target="_blank">GitHub Page</a></li>
-                            <li><a href="https://mirror.debian.packages.startcloud.com/" target="_blank">Mirror
+                            <li><a href="/mirror/" target="_blank">Mirror
                                     Repository</a></li>
                         </ul>
                     </div>
@@ -181,7 +181,7 @@
                 <h4>2. Download the GPG key</h4>
                 <div class="input-group mb-3">
                     <input type="text" class="form-control" id="gpg-key-command"
-                        value="curl -fsSL https://public.debian.packages.startcloud.com/debian/startcloud-archive-keyring.asc | sudo gpg --dearmor -o /etc/apt/keyrings/startcloud-archive-keyring.gpg"
+                        value="curl -fsSL https://debian.startcloud.com/public/debian/startcloud-archive-keyring.asc | sudo gpg --dearmor -o /etc/apt/keyrings/startcloud-archive-keyring.gpg"
                         readonly>
                     <button class="btn btn-outline-secondary copy-btn" type="button" data-target="gpg-key-command">
                         <i class="bi bi-clipboard"></i>
@@ -200,7 +200,7 @@
                 <h4>4. Add the repository with reference to the key</h4>
                 <div class="input-group mb-3">
                     <input type="text" class="form-control" id="repo-command"
-                        value="echo &quot;deb [arch=amd64 signed-by=/etc/apt/keyrings/startcloud-archive-keyring.gpg] https://public.debian.packages.startcloud.com/debian/ stable main&quot; | sudo tee /etc/apt/sources.list.d/startcloud-public.list"
+                        value="echo &quot;deb [arch=amd64 signed-by=/etc/apt/keyrings/startcloud-archive-keyring.gpg] https://debian.startcloud.com/public/debian/ stable main&quot; | sudo tee /etc/apt/sources.list.d/startcloud-public.list"
                         readonly>
                     <button class="btn btn-outline-secondary copy-btn" type="button" data-target="repo-command">
                         <i class="bi bi-clipboard"></i>
@@ -240,7 +240,7 @@
                             <h5>1. Add the repository to your sources list (NOT RECOMMENDED)</h5>
                             <div class="input-group mb-3">
                                 <input type="text" class="form-control" id="legacy-repo-command"
-                                    value="echo &quot;deb [trusted=yes] https://public.debian.packages.startcloud.com/debian/ stable main&quot; | sudo tee /etc/apt/sources.list.d/startcloud-public.list"
+                                    value="echo &quot;deb [trusted=yes] https://debian.startcloud.com/public/debian/ stable main&quot; | sudo tee /etc/apt/sources.list.d/startcloud-public.list"
                                     readonly>
                                 <button class="btn btn-outline-secondary copy-btn" type="button"
                                     data-target="legacy-repo-command">
@@ -365,7 +365,7 @@
         let filteredPackages = [];
 
         async function fetchVersions() {
-            const url = `${window.location.origin}/debian/dists/`;
+            const url = `${window.location.origin}/public/debian/dists/`;
             const response = await fetch(url);
             const text = await response.text();
             const parser = new DOMParser();
@@ -388,7 +388,7 @@
                 let decompressed = '';
 
                 if (arch === 'all') {
-                    const amd64Url = `${window.location.origin}/debian/dists/${version}/main/binary-amd64/Packages.gz`;
+                    const amd64Url = `${window.location.origin}/public/debian/dists/${version}/main/binary-amd64/Packages.gz`;
                     const amd64Response = await fetch(amd64Url);
                     if (amd64Response.ok) {
                         const amd64ArrayBuffer = await amd64Response.arrayBuffer();
@@ -397,7 +397,7 @@
                         decompressed += '\n\n';
                     }
 
-                    const arm64Url = `${window.location.origin}/debian/dists/${version}/main/binary-arm64/Packages.gz`;
+                    const arm64Url = `${window.location.origin}/public/debian/dists/${version}/main/binary-arm64/Packages.gz`;
                     const arm64Response = await fetch(arm64Url);
                     if (arm64Response.ok) {
                         const arm64ArrayBuffer = await arm64Response.arrayBuffer();
@@ -405,7 +405,7 @@
                         decompressed += pako.ungzip(arm64Uint8Array, { to: 'string' });
                     }
                 } else {
-                    const url = `${window.location.origin}/debian/dists/${version}/main/binary-${arch}/Packages.gz`;
+                    const url = `${window.location.origin}/public/debian/dists/${version}/main/binary-${arch}/Packages.gz`;
                     const response = await fetch(url);
                     if (!response.ok) throw new Error(`Failed to fetch packages: ${response.statusText}`);
                     const arrayBuffer = await response.arrayBuffer();
@@ -543,8 +543,8 @@
                     const filename = this.getAttribute('data-filename');
 
                     const downloadUrl = filename ?
-                        `${window.location.origin}/debian/${filename}` :
-                        `${window.location.origin}/debian/pool/main/${packageName.charAt(0)}/${packageName}/${packageName}_${version}_${architecture}.deb`;
+                        `${window.location.origin}/public/debian/${filename}` :
+                        `${window.location.origin}/public/debian/pool/main/${packageName.charAt(0)}/${packageName}/${packageName}_${version}_${architecture}.deb`;
 
                     document.getElementById('basicInstallCommand').value = `sudo apt install ${packageName}`;
                     document.getElementById('advancedInstallCommand').value = `sudo apt install ${packageName}:${architecture}=${version}`;
@@ -641,7 +641,7 @@
 
             archSelectKey.addEventListener('change', function () {
                 const arch = this.value;
-                repoCommand.value = `echo "deb [arch=${arch} signed-by=/etc/apt/keyrings/startcloud-archive-keyring.gpg] ${window.location.origin}/debian/ stable main" | sudo tee /etc/apt/sources.list.d/startcloud-public.list`;
+                repoCommand.value = `echo "deb [arch=${arch} signed-by=/etc/apt/keyrings/startcloud-archive-keyring.gpg] ${window.location.origin}/public/debian/ stable main" | sudo tee /etc/apt/sources.list.d/startcloud-public.list`;
             });
         });
     </script>

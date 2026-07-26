@@ -11,22 +11,18 @@ argument_specs:
         type: bool
         default: true
         description: Master gate — when false the role loads its vars but runs no tasks.
-      snmp_access_adress:
-        type: str
-        default: "0.0.0.0"
-        description: Address allowed to query the SNMP agent.
       snmp_additional_packages:
         type: list
         elements: str
         default: []
         description: Extra packages to install alongside the base SNMP packages.
-      snmp_agentadress_adress:
+      snmp_agentaddress_address:
         type: dict
         description: IPv4 and IPv6 addresses the SNMP agent listens on.
-      snmp_agentadress_port:
+      snmp_agentaddress_port:
         type: dict
         description: IPv4 and IPv6 ports the SNMP agent listens on.
-      snmp_agentadress_protocol:
+      snmp_agentaddress_protocol:
         type: dict
         description: IPv4 and IPv6 transport protocols the SNMP agent uses.
       snmp_encryption:
@@ -45,10 +41,6 @@ argument_specs:
         type: str
         default: ""
         description: Command-line logging options passed to the snmpd daemon.
-      snmp_monitoring_server:
-        type: str
-        default: "0.0.0.0"
-        description: Address of the monitoring server permitted to poll the agent.
       snmp_password:
         type: str
         default: snmp_password

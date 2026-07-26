@@ -1,0 +1,40 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    show_help: true
+
+    # --- Deliberate test values ---
+    #
+    # The role gathers `ansible_module_running_in_container` itself with
+    # community.docker.current_container_facts, and inside this docker guest
+    # that gather returns true. Play vars outrank gathered facts, so pinning it
+    # false here is the test's chosen value, not a crash crutch: leaving the
+    # container truth in place makes every block skip and leaves nothing to
+    # verify. The guarded work - reading /sys/class/net, `ip addr show`, and
+    # rendering templates/cloud.txt.j2 - is perfectly container-safe; the guard
+    # exists so the help file is not generated for container guests, not
+    # because the code cannot run there. Overriding it exercises the role's
+    # real code path end to end.
+    ansible_module_running_in_container: false
+
+    # Vagrantfile/settings.yml-supplied networking definition. The role gates
+    # interface sorting on `(networks | default([])) | length > 0`; supplying it
+    # keeps that stage in the run instead of skipping it.
+    networks:
+      - nic_type: virtio
+        type: external
+        bridge: eth0
+        ip: 10.0.0.100
+        netmask: 255.255.255.0
+
+    # Consumed by templates/cloud.txt.j2 for the generated host-record line.
+    settings:
+      hostname: startcloud-vagrant-readme
+      domain: molecule.test
+      vagrant_user: startcloud
+      vagrant_user_pass: CHANGEME
+  roles:
+    - role: vagrant_readme

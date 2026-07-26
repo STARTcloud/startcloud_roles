@@ -1,6 +1,24 @@
+; {{ ansible_managed }}
+; Rendered by the startcloud.startcloud_roles supervisord role — local edits are overwritten.
+
+[unix_http_server]
+file={{ supervisord_socket_path }}
+chmod={{ supervisord_socket_mode }}
+
 [supervisord]
-nodaemon=true
+nodaemon={{ 'true' if supervisord_nodaemon | bool else 'false' }}
+logfile={{ supervisord_log_file }}
+pidfile={{ supervisord_pid_file }}
+childlogdir={{ supervisord_child_log_dir }}
+
+; The rpcinterface and supervisorctl sections must stay in this file: the packaged
+; service unit stops and reloads supervisord with "supervisorctl shutdown" /
+; "supervisorctl reload", which talk to supervisord over the unix socket above.
+[rpcinterface:supervisor]
+supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+
+[supervisorctl]
+serverurl=unix://{{ supervisord_socket_path }}
 
 [include]
-files = /etc/supervisor/conf.d/*.conf
-
+files = {{ supervisord_include_files }}

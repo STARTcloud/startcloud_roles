@@ -1,0 +1,58 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Stat /etc/modules"
+      ansible.builtin.stat:
+        path: /etc/modules
+      register: modules_file
+
+    - name: "Assert /etc/modules exists as a regular file with mode 0644"
+      ansible.builtin.assert:
+        that:
+          - modules_file.stat.exists
+          - modules_file.stat.isreg
+          - modules_file.stat.mode == '0644'
+        fail_msg: "/etc/modules is missing or not a 0644 regular file"
+        success_msg: "/etc/modules is a regular file with mode 0644"
+
+    - name: "Read /etc/modules"
+      ansible.builtin.slurp:
+        src: /etc/modules
+      register: modules_content
+
+    - name: "Assert the rtc-ds1307 module is enabled exactly once"
+      vars:
+        modules_lines: "{{ (modules_content.content | b64decode).splitlines() | map('trim') | list }}"
+      ansible.builtin.assert:
+        that:
+          - "'rtc-ds1307' in modules_lines"
+          - (modules_lines | select('equalto', 'rtc-ds1307') | list | length) == 1
+        fail_msg: >-
+          /etc/modules does not contain exactly one rtc-ds1307 line:
+          {{ modules_lines }}
+        success_msg: "/etc/modules contains exactly one rtc-ds1307 line"
+
+    - name: "Assert the pre-existing /etc/modules content survived untouched"
+      vars:
+        modules_lines: "{{ (modules_content.content | b64decode).splitlines() | map('trim') | list }}"
+      ansible.builtin.assert:
+        that:
+          - "'loop' in modules_lines"
+          - "'# /etc/modules: kernel modules to load at boot time.' in modules_lines"
+        fail_msg: >-
+          The role rewrote /etc/modules instead of appending; the planted
+          entries are gone: {{ modules_lines }}
+        success_msg: "The pre-existing /etc/modules entries were preserved"
+
+    - name: "Assert the role did not disturb the rest of /etc/modules"
+      vars:
+        raw_modules: "{{ modules_content.content | b64decode }}"
+      ansible.builtin.assert:
+        that:
+          - raw_modules | length > 0
+          - raw_modules.endswith('\n')
+        fail_msg: "/etc/modules is empty or not newline terminated"
+        success_msg: "/etc/modules is well formed"

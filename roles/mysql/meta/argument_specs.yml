@@ -43,6 +43,12 @@ argument_specs:
         type: bool
         default: false
         description: When true, forcibly update the login user's password even if MySQL is already configured.
+      mysql_users_password_update:
+        type: bool
+        default: false
+        description:
+          - When true, re-apply the passwords in mysql_users to accounts that already exist.
+          - By default credentials are only applied when the account is created, because MySQL 8 hashes them server-side and they cannot be compared afterwards.
       mysql_enabled_on_startup:
         type: bool
         default: true

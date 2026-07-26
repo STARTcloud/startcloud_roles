@@ -50,6 +50,14 @@ argument_specs:
         type: str
         default: "/var/lib/authelia"
         description: Directory holding the SQLite storage and notifier files.
+      authelia_ntp_address:
+        type: str
+        default: "udp://time.cloudflare.com:123"
+        description: Connector address of the NTP server Authelia probes at startup; the scheme must be udp, udp4 or udp6.
+      authelia_ntp_disable_startup_check:
+        type: bool
+        default: false
+        description: Skip the NTP clock-sync probe Authelia runs at startup; set true on hosts with no reachable time source, where the failed probe otherwise exits fatal and crash-loops the service.
       authelia_listen_address:
         type: str
         default: "0.0.0.0"

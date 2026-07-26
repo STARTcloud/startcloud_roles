@@ -1,0 +1,155 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting the elasticsearch package is installed from the 7.x repository"
+      ansible.builtin.assert:
+        that:
+          - "'elasticsearch' in ansible_facts.packages"
+          - ansible_facts.packages['elasticsearch'][0].version is match('^7\\.')
+        fail_msg: "The elasticsearch 7.x package was not installed by the role"
+
+    - name: "Stat the Elastic apt keyring installed by setup-Debian.yml"
+      ansible.builtin.stat:
+        path: /usr/share/keyrings/elasticsearch-keyring.gpg
+      register: es_keyring
+
+    - name: "Asserting the dearmored Elastic signing key is present"
+      ansible.builtin.assert:
+        that:
+          - es_keyring.stat.exists
+          - es_keyring.stat.isreg
+          - es_keyring.stat.size > 0
+        fail_msg: "The Elasticsearch signing keyring was not created"
+
+    - name: "Finding the Elastic apt source list"
+      ansible.builtin.find:
+        paths: /etc/apt/sources.list.d
+        patterns: "*.list"
+        contains: ".*artifacts\\.elastic\\.co/packages/7\\.x/apt.*"
+      register: es_repo_files
+
+    - name: "Asserting the Elastic 7.x apt repository was added"
+      ansible.builtin.assert:
+        that:
+          - es_repo_files.matched > 0
+        fail_msg: "No apt source list references artifacts.elastic.co/packages/7.x/apt"
+
+    - name: "Looking up the elasticsearch system group"
+      ansible.builtin.getent:
+        database: group
+        key: elasticsearch
+
+    - name: "Asserting the elasticsearch group exists"
+      ansible.builtin.assert:
+        that:
+          - "'elasticsearch' in ansible_facts.getent_group"
+        fail_msg: "The elasticsearch system group was not created by the package"
+
+    - name: "Stat the rendered elasticsearch.yml"
+      ansible.builtin.stat:
+        path: /etc/elasticsearch/elasticsearch.yml
+      register: es_config
+
+    - name: "Stat the rendered jvm.options.d/heap.options"
+      ansible.builtin.stat:
+        path: /etc/elasticsearch/jvm.options.d/heap.options
+      register: es_heap
+
+    - name: "Asserting both templates were written with root:elasticsearch 0660"
+      ansible.builtin.assert:
+        that:
+          - es_config.stat.exists
+          - es_config.stat.isreg
+          - es_config.stat.pw_name == 'root'
+          - es_config.stat.gr_name == 'elasticsearch'
+          - es_config.stat.mode == '0660'
+          - es_heap.stat.exists
+          - es_heap.stat.isreg
+          - es_heap.stat.pw_name == 'root'
+          - es_heap.stat.gr_name == 'elasticsearch'
+          - es_heap.stat.mode == '0660'
+        fail_msg: "elasticsearch.yml / heap.options are missing or have the wrong ownership or mode"
+
+    - name: "Reading the rendered elasticsearch.yml"
+      ansible.builtin.slurp:
+        src: /etc/elasticsearch/elasticsearch.yml
+      register: es_config_content
+
+    - name: "Asserting elasticsearch.yml matches the supplied variables"
+      ansible.builtin.assert:
+        that:
+          - "'network.host: localhost' in es_config_decoded"
+          - "'http.port: 9200' in es_config_decoded"
+          - "'path.data: /var/lib/elasticsearch' in es_config_decoded"
+          - "'path.logs: /var/log/elasticsearch' in es_config_decoded"
+          - "'cluster.name: molecule-startcloud' in es_config_decoded"
+          - "'node.name: molecule-node-1' in es_config_decoded"
+          - "'discovery.type: single-node' in es_config_decoded"
+        fail_msg: "Rendered elasticsearch.yml does not contain the expected settings"
+      vars:
+        es_config_decoded: "{{ es_config_content.content | b64decode }}"
+
+    - name: "Reading the rendered heap.options"
+      ansible.builtin.slurp:
+        src: /etc/elasticsearch/jvm.options.d/heap.options
+      register: es_heap_content
+
+    - name: "Asserting the JVM heap bounds were rendered"
+      ansible.builtin.assert:
+        that:
+          - "'-Xms512m' in es_heap_decoded"
+          - "'-Xmx512m' in es_heap_decoded"
+        fail_msg: "heap.options does not contain the configured -Xms/-Xmx values"
+      vars:
+        es_heap_decoded: "{{ es_heap_content.content | b64decode }}"
+
+    - name: "Reading the package-supplied jvm.options"
+      ansible.builtin.slurp:
+        src: /etc/elasticsearch/jvm.options
+      register: es_jvm_content
+
+    - name: "Asserting the Elasticsearch 6-and-below jvm.options path was not used"
+      ansible.builtin.assert:
+        that:
+          - "'-Xms512m' not in (es_jvm_content.content | b64decode)"
+        fail_msg: "The role wrote heap settings into jvm.options instead of jvm.options.d/heap.options"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting elasticsearch.service is running and enabled"
+      ansible.builtin.assert:
+        that:
+          - "'elasticsearch.service' in ansible_facts.services"
+          - ansible_facts.services['elasticsearch.service'].state == 'running'
+          - ansible_facts.services['elasticsearch.service'].status == 'enabled'
+        fail_msg: "elasticsearch.service is not running and enabled"
+
+    - name: "Asserting Elasticsearch is listening on the configured HTTP port"
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 9200
+        state: started
+        timeout: 30
+
+    - name: "Querying the Elasticsearch HTTP root endpoint"
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:9200/"
+        return_content: true
+      register: es_root
+
+    - name: "Asserting the running node reports the configured cluster and 7.x version"
+      ansible.builtin.assert:
+        that:
+          - es_root.status == 200
+          - es_root.json.cluster_name == 'molecule-startcloud'
+          - es_root.json.name == 'molecule-node-1'
+          - es_root.json.version.number is match('^7\\.')
+        fail_msg: "The running Elasticsearch node does not match the rendered configuration"

@@ -1,0 +1,87 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  vars:
+    expected_docker_packages:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting the Docker packages are installed"
+      ansible.builtin.assert:
+        that:
+          - item in ansible_facts.packages
+        fail_msg: "Package {{ item }} is not installed"
+        success_msg: "Package {{ item }} is installed"
+      loop: "{{ expected_docker_packages }}"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting the docker service is running and enabled"
+      ansible.builtin.assert:
+        that:
+          - "'docker.service' in ansible_facts.services"
+          - ansible_facts.services['docker.service'].state == 'running'
+          - ansible_facts.services['docker.service'].status == 'enabled'
+        fail_msg: "docker.service is not running and enabled"
+        success_msg: "docker.service is running and enabled"
+
+    - name: "Stating the Docker daemon configuration file"
+      ansible.builtin.stat:
+        path: /etc/docker/daemon.json
+      register: daemon_json_stat
+
+    - name: "Reading the Docker daemon configuration file"
+      ansible.builtin.slurp:
+        src: /etc/docker/daemon.json
+      register: daemon_json_content
+
+    - name: "Asserting the daemon configuration was written with the configured options"
+      ansible.builtin.assert:
+        that:
+          - daemon_json_stat.stat.exists
+          - daemon_json_stat.stat.mode == '0644'
+          - (daemon_json_content.content | b64decode | from_json)['log-driver'] == 'json-file'
+          - (daemon_json_content.content | b64decode | from_json)['log-level'] == 'warn'
+          - (daemon_json_content.content | b64decode | from_json)['default-address-pools'][0]['base'] == '172.31.0.0/16'
+        fail_msg: "/etc/docker/daemon.json is missing or does not carry the configured daemon options"
+        success_msg: "/etc/docker/daemon.json carries the configured daemon options"
+
+    - name: "Stating the Docker apt sources list"
+      ansible.builtin.stat:
+        path: /etc/apt/sources.list.d/docker.list
+      register: docker_apt_list_stat
+
+    - name: "Asserting the Docker apt repository was added"
+      ansible.builtin.assert:
+        that:
+          - docker_apt_list_stat.stat.exists
+        fail_msg: "/etc/apt/sources.list.d/docker.list was not created"
+        success_msg: "/etc/apt/sources.list.d/docker.list was created"
+
+    - name: "Getting the docker group entry"
+      ansible.builtin.getent:
+        database: group
+        key: docker
+        split: ":"
+
+    - name: "Asserting the docker group exists and contains the configured user"
+      ansible.builtin.assert:
+        that:
+          - "'docker' in ansible_facts.getent_group"
+          - "'startcloud' in ansible_facts.getent_group['docker'][2]"
+        fail_msg: "The docker group is missing or does not contain the startcloud user"
+        success_msg: "The docker group contains the startcloud user"
+
+    - name: "Waiting for the Docker daemon socket"
+      ansible.builtin.wait_for:
+        path: /var/run/docker.sock
+        timeout: 30

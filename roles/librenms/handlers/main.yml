@@ -13,3 +13,13 @@
   ansible.builtin.systemd:
     name: "mariadb"
     state: restarted
+
+- name: "Restart snmpd"
+  ansible.builtin.systemd:
+    name: "snmpd"
+    state: restarted
+
+- name: "Restart rrdcached"
+  ansible.builtin.systemd:
+    name: "rrdcached"
+    state: restarted

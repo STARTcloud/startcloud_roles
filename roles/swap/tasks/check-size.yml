@@ -13,5 +13,5 @@
 
 - name: "Setting default value for existing swap file size when it does not exist"
   ansible.builtin.set_fact:
-    swap_file_existing_size_mb: "{{ swap_file_size_mb }}"
+    swap_file_existing_size_mb: "{{ swap_file_size_mb | int }}"
   when: not swap_file_check.stat.exists

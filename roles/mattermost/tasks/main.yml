@@ -14,6 +14,8 @@
             group: root
             mode: "0755"
             remote_src: true
+            creates: "{{ mattermost_root_dir }}/bin/mattermost"
+          notify: "Making the Mattermost install group writable"
 
         - name: "Renaming Mattermost Directory to Team Path"
           ansible.builtin.command: "mv /opt/mattermost '{{ mattermost_root_dir }}'"
@@ -28,11 +30,12 @@
             owner: root
             group: root
             mode: "0644"
+          notify: "Restarting MySQL for the Mattermost fulltext configuration"
 
-        - name: "Restarting MySQL Service"
-          ansible.builtin.service:
-            name: mysql.service
-            state: restarted
+        # MySQL has to pick up the fulltext token sizes, and a fresh unpack has to be
+        # made group writable, before the database is provisioned and the server runs.
+        - name: "Applying the pending MySQL and install permission changes"
+          ansible.builtin.meta: flush_handlers
 
         - name: "Creating Mattermost Database and User"
           ansible.builtin.command: 'mysql -uroot -e "{{ item }}"'
@@ -69,23 +72,19 @@
             state: directory
             recurse: true
 
-        - name: "Setting Mattermost Directory Permissions"
-          ansible.builtin.file:
-            path: "{{ mattermost_root_dir }}"
-            state: directory
-            mode: "g+w"
-            recurse: true
-
         - name: "Configuring Mattermost Database DriverName"
           ansible.builtin.replace:
             path: "{{ mattermost_root_dir }}/config/config.json"
             regexp: '"DriverName": "postgres"'
             replace: '"DriverName": "mysql"'
 
+        # Anchored on the shipped postgres DSN so the task stops matching once the
+        # MySQL DSN is in place; the server re-escapes the query string on startup
+        # and a greedy match would rewrite the file on every run.
         - name: "Configuring Mattermost Database DataSource"
           ansible.builtin.replace:
             path: "{{ mattermost_root_dir }}/config/config.json"
-            regexp: '"DataSource": "[^"]*"'
+            regexp: '"DataSource": "postgres://[^"]*"'
             replace: '"DataSource": "{{ mattermost_db_user }}:{{ mattermost_db_password }}@tcp(localhost:3306)/{{ mattermost_db_name }}?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s"'
 
         - name: "Configuring Mattermost Site URL"
@@ -136,11 +135,9 @@
             owner: root
             group: root
             mode: "0644"
-
-        - name: "Reloading Nginx"
-          ansible.builtin.systemd:
-            name: nginx
-            state: reloaded
+          notify: "Reloading Nginx"
 
         - name: "Configuring Database Fulltext Index"
           ansible.builtin.script: "alter_db_index.sh {{ mattermost_db_name }}"
+          register: mattermost_fulltext_index
+          changed_when: "'ngram-index-rebuilt' in mattermost_fulltext_index.stdout"

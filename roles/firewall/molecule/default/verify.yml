@@ -1,0 +1,70 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting ufw package is installed"
+      ansible.builtin.assert:
+        that:
+          - "'ufw' in ansible_facts.packages"
+        fail_msg: "ufw package was not installed by the firewall role"
+        success_msg: "ufw package is installed"
+
+    - name: "Stat the ufw binary"
+      ansible.builtin.stat:
+        path: /usr/sbin/ufw
+      register: firewall_ufw_binary
+
+    - name: "Asserting the ufw binary is present and executable"
+      ansible.builtin.assert:
+        that:
+          - firewall_ufw_binary.stat.exists
+          - firewall_ufw_binary.stat.executable
+        fail_msg: "/usr/sbin/ufw is missing or not executable"
+        success_msg: "/usr/sbin/ufw is present and executable"
+
+    - name: "Stat the ufw IPv4 user rules file"
+      ansible.builtin.stat:
+        path: /etc/ufw/user.rules
+      register: firewall_user_rules
+
+    - name: "Asserting the ufw IPv4 user rules file exists"
+      ansible.builtin.assert:
+        that:
+          - firewall_user_rules.stat.exists
+        fail_msg: "/etc/ufw/user.rules does not exist"
+        success_msg: "/etc/ufw/user.rules exists"
+
+    - name: "Reading the ufw IPv4 user rules file"
+      ansible.builtin.slurp:
+        src: /etc/ufw/user.rules
+      register: firewall_user_rules_content
+
+    - name: "Asserting the XRDP, SSH, Cockpit and VNC allow rules were written"
+      ansible.builtin.assert:
+        that:
+          - "'dport 3389' in firewall_rules_text"
+          - "'dport 22' in firewall_rules_text"
+          - "'dport 9090' in firewall_rules_text"
+          - "'dport 5900' in firewall_rules_text"
+        fail_msg: >-
+          One or more of the expected allow rules (3389/22/9090/5900 tcp)
+          is missing from /etc/ufw/user.rules
+        success_msg: "All four remote-access allow rules are present in /etc/ufw/user.rules"
+      vars:
+        firewall_rules_text: "{{ firewall_user_rules_content.content | b64decode }}"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting the ufw service unit is known to systemd"
+      ansible.builtin.assert:
+        that:
+          - "'ufw.service' in ansible_facts.services"
+        fail_msg: "ufw.service is not registered with systemd"
+        success_msg: "ufw.service is registered with systemd"

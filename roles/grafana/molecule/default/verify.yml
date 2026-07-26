@@ -1,0 +1,122 @@
+---
+- name: "Verify"
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting the prerequisite and Grafana packages are installed"
+      ansible.builtin.assert:
+        that:
+          - "'apt-transport-https' in ansible_facts.packages"
+          - "'grafana' in ansible_facts.packages"
+        fail_msg: "apt-transport-https and/or grafana were not installed by the role"
+        success_msg: "apt-transport-https and grafana are installed"
+
+    - name: "Stating the Grafana repository signing key"
+      ansible.builtin.stat:
+        path: /usr/share/keyrings/grafana.key
+      register: grafana_keyring
+
+    - name: "Asserting the Grafana signing key was downloaded with mode 0644"
+      ansible.builtin.assert:
+        that:
+          - grafana_keyring.stat.exists
+          - grafana_keyring.stat.size > 0
+          - grafana_keyring.stat.mode == '0644'
+        fail_msg: "/usr/share/keyrings/grafana.key is missing, empty or has the wrong mode"
+        success_msg: "/usr/share/keyrings/grafana.key exists with mode 0644"
+
+    - name: "Finding the Grafana APT source list entry"
+      ansible.builtin.find:
+        paths: /etc/apt/sources.list.d
+        patterns: "*.list"
+        contains: '^deb .*packages\.grafana\.com/oss/deb stable main'
+      register: grafana_apt_source
+
+    - name: "Asserting the Grafana APT repository is configured with the signed-by keyring"
+      ansible.builtin.assert:
+        that:
+          - grafana_apt_source.matched > 0
+        fail_msg: "No /etc/apt/sources.list.d entry pointing at packages.grafana.com/oss/deb was found"
+        success_msg: "The Grafana OSS APT repository is configured"
+
+    - name: "Stating the rendered Grafana configuration file"
+      ansible.builtin.stat:
+        path: /etc/grafana/grafana.ini
+      register: grafana_ini
+
+    - name: "Asserting grafana.ini was rendered with mode 0644"
+      ansible.builtin.assert:
+        that:
+          - grafana_ini.stat.exists
+          - grafana_ini.stat.mode == '0644'
+        fail_msg: "/etc/grafana/grafana.ini is missing or has the wrong mode"
+        success_msg: "/etc/grafana/grafana.ini exists with mode 0644"
+
+    - name: "Reading the rendered Grafana configuration file"
+      ansible.builtin.slurp:
+        src: /etc/grafana/grafana.ini
+      register: grafana_ini_content
+
+    - name: "Asserting the [server] section was rendered into grafana.ini"
+      ansible.builtin.assert:
+        that:
+          - "'[server]' in (grafana_ini_content.content | b64decode)"
+          - "(grafana_ini_content.content | b64decode).split('[server]')[1] is search('\\nprotocol = http\\n')"
+          - "(grafana_ini_content.content | b64decode).split('[server]')[1] is search('\\nhttp_port = 3000\\n')"
+          - "(grafana_ini_content.content | b64decode).split('[server]')[1] is search('\\ndomain = startcloud-grafana-debian12.startcloud.test\\n')"
+        fail_msg: "grafana.ini has no [server] section carrying the protocol, port and domain the role renders"
+        success_msg: "grafana.ini carries a [server] section with protocol, port and domain"
+
+    - name: "Asserting the certificate paths are parameterised from cert_dir and settings"
+      ansible.builtin.assert:
+        that:
+          - "'cert_file = /secure/crt/startcloud-grafana-debian12.startcloud.test.crt' in (grafana_ini_content.content | b64decode)"
+          - "'cert_key = /secure/key/startcloud-grafana-debian12.startcloud.test.key' in (grafana_ini_content.content | b64decode)"
+          - "'dlp.srv.world' not in (grafana_ini_content.content | b64decode)"
+        fail_msg: "grafana.ini does not carry the cert paths built from cert_dir and settings, or still carries hardcoded tutorial paths"
+        success_msg: "grafana.ini carries cert paths built from cert_dir and settings"
+
+    - name: "Querying the grafana-server unit state"
+      ansible.builtin.systemd_service:
+        name: grafana-server
+      register: grafana_unit
+      check_mode: true
+
+    - name: "Asserting grafana-server was explicitly enabled and started by the role"
+      ansible.builtin.assert:
+        that:
+          - grafana_unit.status.LoadState == 'loaded'
+          - grafana_unit.status.ActiveState == 'active'
+          - grafana_unit.status.UnitFileState == 'enabled'
+        fail_msg: >-
+          grafana-server is not enabled and active
+          (LoadState={{ grafana_unit.status.LoadState }},
+          ActiveState={{ grafana_unit.status.ActiveState }},
+          UnitFileState={{ grafana_unit.status.UnitFileState }})
+        success_msg: "grafana-server is loaded, enabled and active"
+
+    - name: "Waiting for the Grafana HTTP port to listen"
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 3000
+        state: started
+        timeout: 30
+
+    - name: "Checking the Grafana health endpoint"
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:3000/api/health"
+        return_content: true
+      register: grafana_health
+
+    - name: "Asserting the Grafana API reports a healthy database"
+      ansible.builtin.assert:
+        that:
+          - grafana_health.status == 200
+          - grafana_health.json.database == 'ok'
+        fail_msg: "The Grafana /api/health endpoint did not report an ok database"
+        success_msg: "The Grafana /api/health endpoint reports an ok database"

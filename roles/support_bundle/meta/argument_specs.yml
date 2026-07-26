@@ -11,3 +11,7 @@ argument_specs:
         type: bool
         default: true
         description: Master gate — when false the role loads its vars but runs no tasks.
+      domino_home_dir:
+        type: str
+        required: false
+        description: Domino data directory from earlier Domino roles; when defined its IBM_TECHNICAL_SUPPORT/autoconfigure.log is added to the bundle. No role default, so their value wins.

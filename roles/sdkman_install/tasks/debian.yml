@@ -30,10 +30,12 @@
       tags:
         - sdkman_privilege
 
+    # 0755 matches service_user's "Creating Installation Directories" on the same
+    # path — differing modes made the two roles flip it forever in combined plays.
     - name: "Creating Ansible Temp Directory"
       become: true
       ansible.builtin.file:
-        mode: "0777"
+        mode: "0755"
         path: "{{ item }}"
         state: directory
         owner: "{{ sdk_service_user }}"
@@ -92,14 +94,6 @@
 
 - name: "Configuring SDKMAN"
   block:
-    - name: "Configuring SDKMAN config file"
-      ansible.builtin.template:
-        src: templates/sdkman_config.j2
-        dest: "{{ sdkman_dir }}/etc/config"
-        owner: "{{ sdk_service_user }}"
-        group: "{{ sdk_service_group }}"
-        mode: "0755"
-
     - name: "Flushing SDK caches before install"
       become: true
       become_user: "{{ sdk_service_user }}"
@@ -120,6 +114,16 @@
       register: sdk_selfupdate
       changed_when: sdk_selfupdate.stdout != 'No update available at this time.'
       when: sdkman_update
+
+    # After selfupdate — SDKMAN's installer rewrites etc/config with its own
+    # defaults, so rendering first meant permanent drift on update runs.
+    - name: "Configuring SDKMAN config file"
+      ansible.builtin.template:
+        src: templates/sdkman_config.j2
+        dest: "{{ sdkman_dir }}/etc/config"
+        owner: "{{ sdk_service_user }}"
+        group: "{{ sdk_service_group }}"
+        mode: "0755"
 
     - name: "Installing SDK candidates/versions"
       become: true

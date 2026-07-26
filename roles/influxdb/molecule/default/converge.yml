@@ -1,0 +1,53 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    # Minimal provisioner-context stand-ins so the role runs standalone.
+    settings:
+      hostname: startcloud-influxdb
+      domain: startcloud.test
+    service_user: startcloud
+    # Package selection: track the stable channel, newest available build.
+    influxdb_version: latest
+    influxdb_channel: stable
+    influxdb_package: influxdb2
+    influxdb_cli_package: influxdb2-cli
+    influxdb_package_state: present
+    # HTTP API bind address and port. Loopback-only on purpose: the verify
+    # proves influxd actually consumed the templated config by showing the API
+    # answers on 127.0.0.1 and refuses connections on the container address.
+    influxdb_http_bind_address: "127.0.0.1"
+    influxdb_http_port: 8086
+    # On-disk locations.
+    influxdb_config_dir: /etc/influxdb
+    influxdb_config_path: /etc/influxdb/config.toml
+    influxdb_data_dir: /var/lib/influxdb
+    influxdb_bolt_path: /var/lib/influxdb/influxd.bolt
+    influxdb_engine_path: /var/lib/influxdb/engine
+    # systemd service management.
+    influxdb_service_name: influxdb
+    influxdb_service_state: started
+    influxdb_service_enabled: true
+    # InfluxData repository definition.
+    influxdb_apt_key_url: https://repos.influxdata.com/influxdata-archive.key
+    influxdb_apt_keyring_path: /usr/share/keyrings/influxdata-archive.gpg
+    influxdb_apt_repo: >-
+      deb [signed-by=/usr/share/keyrings/influxdata-archive.gpg]
+      https://repos.influxdata.com/debian stable main
+    # Exercise the initial onboarding path so the org/bucket/admin branch runs.
+    influxdb_setup: true
+    influxdb_org: startcloud
+    influxdb_bucket: default
+    influxdb_username: admin
+    influxdb_password: CHANGEME
+    influxdb_retention: "0"
+  pre_tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+      changed_when: false
+  roles:
+    - role: influxdb

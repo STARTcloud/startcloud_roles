@@ -1,0 +1,47 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    # Minimal provisioner-context stand-ins so the role runs standalone.
+    settings:
+      hostname: startcloud-composer-debian12
+      domain: startcloud.test
+    # Role variables (defaults/main.yml + meta/argument_specs.yml).
+    run_tasks: true
+    php_executable: php
+    composer_path: /usr/local/bin/composer
+    composer_keep_updated: false
+    composer_version: ""
+    composer_version_branch: "--2"
+    composer_home_path: /usr/local/share/composer
+    composer_home_owner: root
+    composer_home_group: root
+    composer_global_packages:
+      - name: psr/log
+        release: "@stable"
+    composer_add_to_path: true
+    composer_add_project_to_path: true
+    composer_project_path: /opt/startcloud/app/vendor/bin
+    # Left empty on purpose: a literal CHANGEME token in auth.json makes
+    # Composer authenticate to api.github.com with bad credentials and the
+    # global require below would fail with HTTP 401.
+    composer_github_oauth_token: ""
+  pre_tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install PHP and the tooling Composer requires
+      ansible.builtin.apt:
+        name:
+          - php-cli
+          - php-zip
+          - unzip
+          - git
+          - ca-certificates
+        state: present
+  roles:
+    - role: composer

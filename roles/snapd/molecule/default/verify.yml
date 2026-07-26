@@ -1,0 +1,116 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  vars:
+    snapd_expected_pinned_packages:
+      - snapd
+      - snap-confine
+      - ubuntu-core-snapd-units
+      - ubuntu-core-launcher
+      - libsnapd-glib1
+      - gir1.2-snapd-1
+      - libsnapd-qt1
+      - snapd-xdg-open
+      - qml-module-snapd
+    snapd_expected_absent_paths:
+      - /snap
+      - /var/snap
+      - /var/lib/snapd
+      - /var/cache/snapd
+      - /run/snapd-snap.socket
+      - /run/snapd.socket
+      - /etc/apt/apt.conf.d/20snapd.conf
+  tasks:
+    - name: "Stating the APT preferences pin written by the role"
+      ansible.builtin.stat:
+        path: /etc/apt/preferences.d/snapd.pref
+      register: snapd_pref_stat
+
+    - name: "Asserting the APT preferences pin exists as a 0644 regular file"
+      ansible.builtin.assert:
+        that:
+          - snapd_pref_stat.stat.exists
+          - snapd_pref_stat.stat.isreg
+          - snapd_pref_stat.stat.mode == '0644'
+        fail_msg: >-
+          /etc/apt/preferences.d/snapd.pref missing or wrong type/mode:
+          {{ snapd_pref_stat.stat }}
+
+    - name: "Slurping the APT preferences pin"
+      ansible.builtin.slurp:
+        src: /etc/apt/preferences.d/snapd.pref
+      register: snapd_pref_slurp
+
+    - name: "Asserting every default snapd package is pinned to priority -1"
+      ansible.builtin.assert:
+        that:
+          - "'Package: ' ~ item in snapd_pref_content"
+          - "'Pin-Priority: -1' in snapd_pref_content"
+        fail_msg: "Package {{ item }} is not pinned in /etc/apt/preferences.d/snapd.pref"
+      loop: "{{ snapd_expected_pinned_packages }}"
+      vars:
+        snapd_pref_content: "{{ snapd_pref_slurp.content | b64decode }}"
+
+    - name: "Asserting the pin block count matches the merged package list"
+      vars:
+        snapd_pin_block_count: "{{ (snapd_pref_slurp.content | b64decode).split('Pin-Priority: -1') | length - 1 }}"
+      ansible.builtin.assert:
+        that:
+          - snapd_pin_block_count | int == snapd_expected_pinned_packages | length
+        fail_msg: >-
+          Expected {{ snapd_expected_pinned_packages | length }} pin blocks,
+          found {{ snapd_pin_block_count }}
+
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting no snapd package remains installed"
+      ansible.builtin.assert:
+        that:
+          - item not in ansible_facts.packages
+        fail_msg: "Package {{ item }} is still installed after the purge"
+      loop: "{{ snapd_expected_pinned_packages }}"
+
+    - name: "Stating the snapd paths the role removes"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: snapd_path_stats
+      loop: "{{ snapd_expected_absent_paths }}"
+      loop_control:
+        label: "{{ item }}"
+
+    - name: "Asserting every snapd path is gone"
+      ansible.builtin.assert:
+        that:
+          - not item.stat.exists
+        fail_msg: "{{ item.item }} still exists after the purge"
+      loop: "{{ snapd_path_stats.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "Querying APT policy for snapd"
+      ansible.builtin.command:
+        cmd: apt-cache policy snapd
+      register: snapd_apt_policy
+      changed_when: false
+
+    - name: "Asserting APT reports snapd as unavailable due to the pin"
+      ansible.builtin.assert:
+        that:
+          - "'Candidate: (none)' in snapd_apt_policy.stdout"
+        fail_msg: >-
+          APT still offers a snapd candidate, the pin is not effective:
+          {{ snapd_apt_policy.stdout }}
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting snapd.service is not running"
+      ansible.builtin.assert:
+        that:
+          - >-
+            'snapd.service' not in ansible_facts.services
+            or ansible_facts.services['snapd.service'].state != 'running'
+        fail_msg: "snapd.service is still running"

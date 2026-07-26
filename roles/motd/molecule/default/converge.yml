@@ -1,0 +1,26 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    run_tasks: true
+    vendor: STARTcloud
+    distro: debian
+    distro_version: "12"
+    vm_type: server
+    email: "support@startcloud.com"
+    motd_remove_default_config: true
+    motd_restore_default_config: false
+    motd_add_footer: true
+    motd_add_update: true
+    motd_show_support: true
+    motd_org: STARTcloud
+    motd_sysadmins_signature: STARTcloud Contact Email
+    motd_sysadmins_email: "vagrantup-startcloud@prominic.net"
+    motd_content: "Molecule managed node - STARTcloud motd role"
+    settings:
+      hostname: startcloud-motd-debian12
+      domain: molecule.local
+  roles:
+    - role: motd

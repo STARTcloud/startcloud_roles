@@ -1,0 +1,17 @@
+---
+- name: Prepare
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Prepare | Updating the apt cache"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: "Prepare | Removing gnupg so the role has to install its own prerequisites"
+      ansible.builtin.apt:
+        name:
+          - gnupg
+        state: absent
+        purge: true
