@@ -27,11 +27,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      # No release-type input here: setting it makes the action ignore the
+      # config/manifest files entirely. The release type lives in
+      # release-please-config.json.
       - name: Release Please
         uses: googleapis/release-please-action@v5
         id: release
         with:
-          release-type: simple
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
