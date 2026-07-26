@@ -29,7 +29,7 @@
       ansible.builtin.apt:
         name:
           # Ansible plumbing: `acl` is needed for become_user to an
-          # unprivileged account, python3-pymysql for community.mysql.
+          # unprivileged account, python3-pymysql for ansible.mysql.
           - acl
           - ca-certificates
           - python3-pymysql
@@ -107,14 +107,14 @@
         - "'Access denied' not in guacamole_prepare_rootpw.stderr"
 
     - name: "Creating the Guacamole database and account the schema import targets"
-      community.mysql.mysql_db:
+      ansible.mysql.mysql_db:
         login_user: "{{ mysql_root_user }}"
         login_password: "{{ mysql_root_password }}"
         name: "{{ mysql_db_name }}"
         state: present
 
     - name: "Granting the Guacamole account access to its database"
-      community.mysql.mysql_user:
+      ansible.mysql.mysql_user:
         login_user: "{{ mysql_root_user }}"
         login_password: "{{ mysql_root_password }}"
         name: "{{ guacamole_admin_user }}"

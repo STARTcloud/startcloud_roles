@@ -20,7 +20,7 @@ dependencies:
   ansible.utils: '*'
   community.crypto: '*'
   community.docker: '*'
-  community.mysql: '*'
+  ansible.mysql: '*'
   community.mongodb: '*'
   community.postgresql: '*'
   ansible.windows: '*'

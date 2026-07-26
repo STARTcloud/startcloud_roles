@@ -41,7 +41,7 @@
             mode: "0750"
 
         - name: "Creating Nextcloud Database"
-          community.mysql.mysql_db:
+          ansible.mysql.mysql_db:
             name: "{{ nextcloud_db_name }}"
             encoding: "utf8mb4"
             collation: "utf8mb4_general_ci"
@@ -50,7 +50,7 @@
             login_unix_socket: "{{ nextcloud_db_login_unix_socket }}"
 
         - name: "Creating Nextcloud Database User and Grants"
-          community.mysql.mysql_user:
+          ansible.mysql.mysql_user:
             name: "{{ nextcloud_db_user }}"
             host: "{{ nextcloud_db_host }}"
             password: "{{ nextcloud_db_password }}"

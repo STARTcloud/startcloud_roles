@@ -205,7 +205,7 @@
         fail_msg: "/root/.my.cnf missing or not 0600"
 
     - name: "Querying MariaDB for the databases and accounts the role created"
-      community.mysql.mysql_info:
+      ansible.mysql.mysql_info:
         login_unix_socket: /run/mysqld/mysqld.sock
         config_file: ""
         # The role creates the database but never migrates a schema into it, and

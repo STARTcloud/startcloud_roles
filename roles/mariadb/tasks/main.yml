@@ -21,7 +21,7 @@
     # socket-authenticated, which stops being true once the password is applied.
     - name: "Checking whether the test database still exists"
       become: true
-      community.mysql.mysql_info:
+      ansible.mysql.mysql_info:
         login_user: "{{ mariadb_admin_user }}"
         login_password: "{{ mariadb_admin_pass }}"
         login_unix_socket: "{{ mariadb_login_unix_socket }}"
@@ -52,7 +52,7 @@
     # credentials cover the run after the password has been applied.
     - name: "Setting the password for {{ mariadb_admin_user }}"
       become: true
-      community.mysql.mysql_user:
+      ansible.mysql.mysql_user:
         name: "{{ mariadb_admin_user }}"
         password: "{{ mariadb_admin_pass }}"
         host: localhost

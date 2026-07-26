@@ -113,7 +113,7 @@
         timeout: 30
 
     - name: "Asserting the Guacamole schema was imported into the database"
-      community.mysql.mysql_query:
+      ansible.mysql.mysql_query:
         login_user: root
         login_password: "CHANGEME"
         login_db: guacdb

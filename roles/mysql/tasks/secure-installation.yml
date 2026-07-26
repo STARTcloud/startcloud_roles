@@ -1,6 +1,6 @@
 ---
 - name: "Ensuring default user is present"
-  community.mysql.mysql_user:
+  ansible.mysql.mysql_user:
     name: "{{ mysql_user_name }}"
     host: "localhost"
     password: "{{ mysql_user_password }}"
@@ -91,13 +91,13 @@
   check_mode: false
 
 - name: "Removing anonymous MySQL users"
-  community.mysql.mysql_user:
+  ansible.mysql.mysql_user:
     name: ""
     host: "{{ item }}"
     state: absent
   with_items: "{{ mysql_anonymous_hosts.stdout_lines | default([]) }}"
 
 - name: "Removing MySQL test database"
-  community.mysql.mysql_db:
+  ansible.mysql.mysql_db:
     name: "test"
     state: absent

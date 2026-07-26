@@ -74,7 +74,7 @@
         success_msg: "The mysql system user exists"
 
     - name: "Log in as the administrative user with the password the role configures"
-      community.mysql.mysql_info:
+      ansible.mysql.mysql_info:
         login_user: "{{ mariadb_admin_user }}"
         login_password: "{{ mariadb_admin_pass }}"
         login_unix_socket: "{{ mariadb_login_unix_socket }}"
