@@ -112,7 +112,7 @@
       args:
         executable: /bin/bash
       register: sdk_selfupdate
-      changed_when: sdk_selfupdate.stdout != 'No update available at this time.'
+      changed_when: "'No update available at this time.' not in sdk_selfupdate.stdout"
       when: sdkman_update
 
     # After selfupdate — SDKMAN's installer rewrites etc/config with its own

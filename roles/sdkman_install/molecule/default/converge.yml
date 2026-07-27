@@ -16,7 +16,9 @@
     run_tasks: true
     sdkman_tmp_dir: /tmp
     sdkman_validate_ssl: true
-    sdkman_update: true
+    # False: the container installs latest SDKMAN in the same run, so selfupdate
+    # adds no coverage — and its etc/config rewrite breaks run-2 idempotence.
+    sdkman_update: false
     sdkman_auto_answer: true
     sdkman_selfupdate_enable: true
     sdkman_insecure_ssl: false
