@@ -15,9 +15,13 @@ jobs:
     name: Lint
     uses: ./.github/workflows/lint.yml
 
+  molecule:
+    name: Molecule
+    uses: ./.github/workflows/molecule.yml
+
   release-please:
     name: Release Please
-    needs: lint
+    needs: [lint, molecule]
     runs-on: ubuntu-latest
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
@@ -89,3 +93,42 @@ jobs:
             "${{ steps.build.outputs.artifact }}.sha256" \
             startcloud-startcloud_roles.tar.gz \
             startcloud-startcloud_roles.tar.gz.sha256 --clobber
+
+  # Announces the published release to the provisioners that vendor this
+  # collection. The consumer's dependency-bump.yml (repository_dispatch:
+  # dependency-update) pins itself to the tag and opens its own bump PR —
+  # all bump logic lives consumer-side; this job only notifies.
+  #
+  # needs build-collection: the dispatch must never fire before the collection
+  # artifacts are uploaded, or the consumer's dev-release build would race a
+  # half-published release.
+  #
+  # App token, not GITHUB_TOKEN: dispatches sent with GITHUB_TOKEN cannot
+  # cross repos. The startcloud-bot App (org secrets BOT_APP_ID /
+  # BOT_PRIVATE_KEY) is installed on this repo and every consumer.
+  notify-consumers:
+    name: Notify consumers
+    needs: [release-please, build-collection]
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mint App token
+        id: app
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+          owner: STARTcloud
+          repositories: startcloud_generic_provisioner
+
+      - name: Dispatch dependency-update
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          TAG: ${{ needs.release-please.outputs.tag_name }}
+        run: |
+          SHA="$(gh api "repos/${{ github.repository }}/commits/$TAG" --jq .sha)"
+          gh api repos/STARTcloud/startcloud_generic_provisioner/dispatches \
+            -f event_type=dependency-update \
+            -f "client_payload[repo]=${{ github.repository }}" \
+            -f "client_payload[tag]=$TAG" \
+            -f "client_payload[sha]=$SHA"
