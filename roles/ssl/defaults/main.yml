@@ -11,6 +11,16 @@ generate_self_signed_certificate_authority: false
 letsencrypt_enabled: false
 letsencrypt_staging_enabled: false
 
+# Names of every role this deployment runs, derived from the provision_roles list
+# the core_provisioner driver passes to every play. Roles gated run_tasks: false are
+# excluded. Overridable from Hosts.yml.
+enabled_roles: "{{ ((provision_roles | default([]) | selectattr('vars.run_tasks', 'undefined') | list) + (provision_roles | default([]) | selectattr('vars.run_tasks', 'defined') | selectattr('vars.run_tasks') | list)) | map(attribute='name') | list }}"
+
+# True when the haproxy role fronts this host, so Let's Encrypt validation goes
+# through HAProxy's 8181 backend instead of standalone port 80. Auto-detected;
+# overridable from Hosts.yml.
+haproxy_enabled: "{{ 'startcloud.startcloud_roles.haproxy' in enabled_roles }}"
+
 # Certificate passwords
 cert_pass: ThisNeedstoBeSecure!
 # Matches the encrypted intermediate key shipped in the driver's ssls/ca
