@@ -17,27 +17,50 @@ jobs:
 
   molecule:
     name: Molecule
+    # The push that merges a release PR changes only version + changelog —
+    # molecule proves nothing there. Lint still gates that push, and the
+    # release-please job below explicitly tolerates the skip.
+    if: "${{ !startsWith(github.event.head_commit.message, 'chore(main): release') }}"
     uses: ./.github/workflows/molecule.yml
 
   release-please:
     name: Release Please
     needs: [lint, molecule]
+    # molecule is skipped on release-merge pushes; without this result check a
+    # skipped need would silently skip this job too and no release would cut.
+    if: >-
+      ${{ !cancelled() && needs.lint.result == 'success' &&
+          contains(fromJSON('["success", "skipped"]'), needs.molecule.result) }}
     runs-on: ubuntu-latest
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
       full_version: ${{ steps.compose.outputs.version }}
     steps:
+      - name: Mint App token
+        id: app
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+
       - name: Checkout code
         uses: actions/checkout@v7
 
       # No release-type input here: setting it makes the action ignore the
       # config/manifest files entirely. The release type lives in
       # release-please-config.json.
+      #
+      # App token, not GITHUB_TOKEN: PRs created with GITHUB_TOKEN never fire
+      # pull_request workflows (GitHub recursion guard) — release PRs sat with
+      # checks stuck on "Expected" until run by hand. With the App token the
+      # release PR runs CI on its own; molecule.yml skips its matrix on
+      # release-please-- branches so that CI is lint-cheap.
       - name: Release Please
         uses: googleapis/release-please-action@v5
         id: release
         with:
+          token: ${{ steps.app.outputs.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 

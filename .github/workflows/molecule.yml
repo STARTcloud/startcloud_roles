@@ -23,6 +23,12 @@ permissions:
 jobs:
   molecule:
     name: Molecule (${{ matrix.role }})
+    # Release-please PRs change only version + changelog; their CI stays
+    # lint-cheap. A skipped job still counts as PASSING for required checks,
+    # so release PRs never sit stuck on "Expected". When called via
+    # workflow_call the event is the caller's push — the caller applies its
+    # own guard there.
+    if: ${{ github.event_name != 'pull_request' || !startsWith(github.head_ref, 'release-please--') }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -85,7 +91,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Fail if any matrix leg failed
+        # skipped counts as OK — that's the release-PR path above.
         run: |
           RESULT="${{ needs.molecule.result }}"
           echo "molecule matrix result: $RESULT"
-          [ "$RESULT" = "success" ]
+          [ "$RESULT" = "success" ] || [ "$RESULT" = "skipped" ]
