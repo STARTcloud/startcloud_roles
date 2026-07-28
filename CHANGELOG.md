@@ -3,6 +3,20 @@
 All notable changes to the `startcloud.startcloud_roles` collection are
 documented here.
 
+## [0.1.1](https://github.com/STARTcloud/startcloud_roles/compare/v0.1.0...v0.1.1) (2026-07-28)
+
+
+### Bug Fixes
+
+* asterisk role ([c168a2b](https://github.com/STARTcloud/startcloud_roles/commit/c168a2bf7b5b961cf07941e8e1ee86c0172bfbe4))
+* CI/CD ([694e183](https://github.com/STARTcloud/startcloud_roles/commit/694e1838c41de2ca95a04efc96b60fab698b0c1f))
+* haxe role ([092490d](https://github.com/STARTcloud/startcloud_roles/commit/092490decd58d5136f376c31631e939ae64aad80))
+* networking for domino ([97ee290](https://github.com/STARTcloud/startcloud_roles/commit/97ee2903e86631b442c98b5563ab74d6e3b6c70f))
+* networking for domino ([5c6c0d3](https://github.com/STARTcloud/startcloud_roles/commit/5c6c0d3cf5190aa126a0fb811d4857a8c787b89d))
+* networking for domino ([97c924d](https://github.com/STARTcloud/startcloud_roles/commit/97c924db13597510ba1cdebc45baeb7fd873a243))
+* updating sdkman role ([9381be5](https://github.com/STARTcloud/startcloud_roles/commit/9381be58ef13d668200dc64f8d3fd4a8be20f676))
+* wrap overlong enabled_roles expression for ansible-lint ([55e5299](https://github.com/STARTcloud/startcloud_roles/commit/55e5299b37b787ef4707a21f463d810a523aa85d))
+
 ## [0.1.0](https://github.com/STARTcloud/startcloud_roles/compare/v0.0.1...v0.1.0) (2026-07-26)
 
 
