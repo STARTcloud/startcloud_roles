@@ -3,6 +3,13 @@
 All notable changes to the `startcloud.startcloud_roles` collection are
 documented here.
 
+## [0.1.2](https://github.com/STARTcloud/startcloud_roles/compare/v0.1.1...v0.1.2) (2026-07-28)
+
+
+### Bug Fixes
+
+* update provisioner system ([0437fdd](https://github.com/STARTcloud/startcloud_roles/commit/0437fddc4ca1eab9064eb135f6f5c006986ab1d4))
+
 ## [0.1.1](https://github.com/STARTcloud/startcloud_roles/compare/v0.1.0...v0.1.1) (2026-07-28)
 
 
