@@ -42,5 +42,9 @@
             regexp: "{{ item.regex }}"
             replace: "{{ item.replace }}"
           with_items:
-            - { regex: "(^127.0.0.1)(.*)$", replace: "127.0.0.1   localhost {{ settings.hostname }}.{{ settings.domain }} {{ settings.hostname }}" }
-            - { regex: "(^127.0.1.1)(.*)$", replace: "127.0.1.1   localhost {{ settings.hostname }}.{{ settings.domain }} {{ settings.hostname }}" }
+            # The FQDN must never ride the loopback lines: getaddrinfo canonicalizes the
+            # machine's own name to localhost/127.0.0.1, which breaks daemons that resolve
+            # their own identity (Domino One Touch Setup among them). The real-IP mapping
+            # comes from the networking role's managed /etc/hosts block.
+            - { regex: "(^127.0.0.1)(.*)$", replace: "127.0.0.1   localhost" }
+            - { regex: "(^127.0.1.1)(.*)$", replace: "127.0.1.1   localhost" }
