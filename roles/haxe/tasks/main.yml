@@ -127,7 +127,8 @@
         PATH: "$PATH:{{ haxe_home }}:/usr/bin"
       when: >-
         haxelib_config_result.rc != 0
-        or haxelib_dir not in haxelib_config_result.stdout
+        or (haxelib_config_result.stdout | trim | regex_replace('/$', ''))
+           != (haxelib_dir | regex_replace('/$', ''))
 
     - name: "Listing the Haxe libraries that are already installed"
       ansible.builtin.command: "{{ haxelib }} list"
