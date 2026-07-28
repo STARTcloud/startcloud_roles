@@ -160,8 +160,8 @@
         create: true
         mode: "0644"
       loop:
-        - "127.0.0.1   localhost {{ settings.hostname }}.{{ settings.domain }} {{ settings.hostname }}"
-        - "127.0.1.1   localhost {{ settings.hostname }}.{{ settings.domain }} {{ settings.hostname }}"
+        - "127.0.0.1   localhost"
+        - "127.0.1.1   localhost"
 
     ## Only the two directories the dependency chain does not create itself.
     ## The setup role creates /vagrant/completed and /vagrant/support-bundle
