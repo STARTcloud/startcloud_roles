@@ -270,3 +270,62 @@
     - "/var/snap"
     - "/etc/cloud"
     - "/var/lib/cloud"
+
+- name: "Recreating cloud-init configuration directory"
+  ansible.builtin.file:
+    path: /etc/cloud
+    state: directory
+    mode: "0755"
+
+- name: "Writing DigitalOcean-gated cloud-init configuration"
+  ansible.builtin.copy:
+    dest: /etc/cloud/cloud.cfg
+    mode: "0644"
+    content: |
+      # One dormant config shipped in every image: ds-identify only finds the
+      # DigitalOcean datasource on DigitalOcean hardware (DMI sys-vendor). On
+      # VirtualBox, bhyve, AWS and UTM nothing is found and cloud-init disables
+      # itself at boot, matching the prior behavior of deleting /etc/cloud.
+      datasource_list: [ DigitalOcean ]
+
+      users:
+        - default
+      disable_root: true
+      preserve_hostname: false
+      manage_etc_hosts: false
+
+      cloud_init_modules:
+        - migrator
+        - seed_random
+        - bootcmd
+        - write-files
+        - growpart
+        - resizefs
+        - set_hostname
+        - update_hostname
+        - users-groups
+        - ssh
+
+      cloud_config_modules:
+        - timezone
+        - runcmd
+
+      cloud_final_modules:
+        - scripts-per-once
+        - scripts-per-boot
+        - scripts-per-instance
+        - scripts-user
+        - final-message
+
+      system_info:
+        distro: debian
+        default_user:
+          name: "{{ vagrant_user | default('startcloud') }}"
+          lock_passwd: false
+          gecos: STARTcloud
+          groups: [adm, cdrom, dip, plugdev, sudo]
+          sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+          shell: /bin/bash
+        network:
+          renderers: ['netplan', 'eni', 'networkd']
+        ssh_svcname: ssh
