@@ -1,0 +1,24 @@
+---
+## Resolver-visible confirmation so later roles (SSL HTTP-01 challenges) never
+## race propagation. DNS-over-HTTPS keeps this OS-agnostic — no dig/nslookup.
+## Address records must answer with the published value; proxied and non-address
+## records only need to answer at all.
+- name: "Waiting for DNS records to propagate"
+  ansible.builtin.uri:
+    url: "{{ dns_doh_url }}?name={{ record.name }}.{{ record.zone }}&type={{ record.type }}"
+    method: GET
+    headers:
+      Accept: application/dns-json
+    return_content: true
+  register: doh_result
+  until: >-
+    ((doh_result.content | from_json).Answer | default([]) | length > 0)
+    and (record.proxied | default(false)
+         or record.type not in ['A', 'AAAA']
+         or ((doh_result.content | from_json).Answer | map(attribute='data') | select('equalto', record.value | default(dns_default_value)) | list | length > 0))
+  retries: "{{ dns_verify_retries }}"
+  delay: "{{ dns_verify_delay }}"
+  loop: "{{ dns_effective_records }}"
+  loop_control:
+    loop_var: record
+    label: "{{ record.name }}.{{ record.zone }} {{ record.type }}"

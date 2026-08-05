@@ -1,0 +1,59 @@
+---
+## Wix Domain DNS API — https://dev.wix.com/docs/rest/account-level/domains/domain-dns/introduction
+## Requires an account-level API key; standard OAuth headers are not accepted.
+## Wix stores ONE record object per hostName+type (values are a list inside it),
+## so an update is expressed as deletion of the existing object plus an addition.
+- name: "Ensuring Wix API credentials are present"
+  ansible.builtin.assert:
+    that:
+      - secrets.wix_api_key is defined
+      - secrets.wix_account_id is defined
+    fail_msg: "Wix DNS records need wix_api_key and wix_account_id in .secrets.yml"
+
+- name: "Fetching current Wix DNS zones"
+  ansible.builtin.uri:
+    url: "https://www.wixapis.com/domains/v1/dns-zones/{{ wix_zone }}"
+    method: GET
+    headers:
+      Authorization: "{{ secrets.wix_api_key }}"
+      wix-account-id: "{{ secrets.wix_account_id }}"
+    return_content: true
+  register: wix_zone_result
+  loop: "{{ dns_effective_records | selectattr('provider', 'equalto', 'wix') | map(attribute='zone') | unique | list }}"
+  loop_control:
+    loop_var: wix_zone
+
+- name: "Publishing Wix DNS records"
+  ansible.builtin.uri:
+    url: "https://www.wixapis.com/domains/v1/dns-zones/{{ record.zone }}"
+    method: PATCH
+    headers:
+      Authorization: "{{ secrets.wix_api_key }}"
+      wix-account-id: "{{ secrets.wix_account_id }}"
+    body_format: json
+    body:
+      domainName: "{{ record.zone }}"
+      additions:
+        - hostName: "{{ record.name }}.{{ record.zone }}"
+          type: "{{ record.type }}"
+          ttl: "{{ record.ttl | default(dns_default_ttl) }}"
+          ## records without an explicit value publish dns_default_value
+          ## (adapter IP or external lookup per dns_value_source)
+          values:
+            - "{{ record.value | default(dns_default_value) }}"
+      deletions: "{{ wix_existing }}"
+    status_code: [200]
+  vars:
+    wix_existing: >-
+      {{ ((wix_zone_result.results
+           | selectattr('wix_zone', 'equalto', record.zone)
+           | map(attribute='json')
+           | first
+           | default({})).dnsZone | default({})).records | default([])
+         | selectattr('hostName', 'equalto', record.name + '.' + record.zone)
+         | selectattr('type', 'equalto', record.type)
+         | list }}
+  loop: "{{ dns_effective_records | selectattr('provider', 'equalto', 'wix') | list }}"
+  loop_control:
+    loop_var: record
+    label: "{{ record.name }}.{{ record.zone }} {{ record.type }}"

@@ -1,0 +1,17 @@
+---
+## API calls run on the guest — the machine registers its own DNS.
+## Implemented with plain uri calls against the Cloudflare v4 API because the
+## bundled community.general cloudflare_dns module predates Cloudflare dropping
+## zone_id from DNS record responses and crashes with KeyError: 'zone_id'.
+- name: "Ensuring Cloudflare API credentials are present"
+  ansible.builtin.assert:
+    that:
+      - secrets.cloudflare_api_token is defined
+    fail_msg: "Cloudflare DNS records need cloudflare_api_token in .secrets.yml"
+
+- name: "Publishing Cloudflare DNS records"
+  ansible.builtin.include_tasks: cloudflare_record.yml
+  loop: "{{ dns_effective_records | selectattr('provider', 'equalto', 'cloudflare') | list }}"
+  loop_control:
+    loop_var: record
+    label: "{{ record.name }}.{{ record.zone }} {{ record.type }}"

@@ -24,6 +24,9 @@
         name: systemd-networkd
 
     - name: "Deleting /etc/netplan/50-cloud-init.yaml"
+      ## On DigitalOcean this file holds the cloud-init-rendered droplet network
+      ## config — deleting it leaves nothing to bring eth0 up on the next boot
+      when: ansible_system_vendor | default('') != "DigitalOcean"
       ansible.builtin.file:
         path: /etc/netplan/50-cloud-init.yaml
         state: absent
@@ -51,12 +54,23 @@
   when:
     - ansible_virtualization_type == "kvm"
     - ansible_bios_vendor != "BHYVE"
+    - ansible_system_vendor | default('') != "DigitalOcean"
     - not (ansible_module_running_in_container | default(false))
   become: true
   tags: once
   block:
     - name: "Including OS-specific tasks"
       ansible.builtin.include_tasks: "utm/{{ ansible_os_family | lower }}.yml"
+
+- name: "Loading DigitalOcean Tasks"
+  when:
+    - ansible_system_vendor | default('') == "DigitalOcean"
+    - not (ansible_module_running_in_container | default(false))
+  become: true
+  tags: once
+  block:
+    - name: "Including OS-specific tasks"
+      ansible.builtin.include_tasks: "digitalocean/{{ ansible_os_family | lower }}.yml"
 
 - name: "Loading Bhyve Tasks"
   when:

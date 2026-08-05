@@ -88,9 +88,11 @@
         - disks.additional_disks | length > 0
       block:
         - name: "Identifying available disks"
+          ## iso9660 filter keeps metadata/config drives (e.g. DigitalOcean's
+          ## cloud-init drive) out of the format-and-mount candidates
           ansible.builtin.shell: |
             set -o pipefail
-            lsblk -dno NAME,TYPE -x NAME | awk '$2 == "disk" && $1 != "{{ root_disk }}" {print $1}'
+            lsblk -dno NAME,TYPE,FSTYPE -x NAME | awk '$2 == "disk" && $1 != "{{ root_disk }}" && $3 != "iso9660" {print $1}'
           args:
             executable: /bin/bash
           register: lsblk_output

@@ -1,0 +1,6 @@
+---
+## Intentionally empty, mirroring bhyve: DigitalOcean droplets are fully
+## configured by cloud-init from the DO metadata service before Ansible runs.
+- name: "Noting that DigitalOcean applies no RedHat-specific network configuration"
+  ansible.builtin.debug:
+    msg: "DigitalOcean on RedHat: networking is managed by cloud-init from the metadata service."

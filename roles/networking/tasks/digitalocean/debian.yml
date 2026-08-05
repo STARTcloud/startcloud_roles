@@ -1,0 +1,9 @@
+---
+## Intentionally empty, mirroring bhyve: DigitalOcean droplets are fully
+## configured by cloud-init from the DO metadata service (public + VPC
+## adapters, gateway, DNS) before Ansible ever runs. The generic Debian path
+## (gather.yml, host records) still applies; no provider netplan drop-ins are
+## needed and the cloud-init-rendered 50-cloud-init.yaml must stay in place.
+- name: "Noting that DigitalOcean applies no Debian-specific network configuration"
+  ansible.builtin.debug:
+    msg: "DigitalOcean on Debian: networking is managed by cloud-init from the metadata service."

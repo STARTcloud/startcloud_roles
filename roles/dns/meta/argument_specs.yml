@@ -1,0 +1,75 @@
+---
+argument_specs:
+  main:
+    short_description: Provider-API DNS record publication
+    description:
+      - Publishes DNS records through provider APIs, dispatching per provider the way networking dispatches per OS.
+      - All API calls run on the guest — the machine registers its own DNS records. No guest configuration files are written, so no per-OS task files are needed.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      show_help:
+        type: bool
+        default: true
+        description: Whether to display help/debug output during the run.
+      dns_records:
+        type: list
+        elements: dict
+        default: []
+        description: >-
+          Records to publish. Each entry carries provider (cloudflare or wix), zone, name, type and
+          optionally value, ttl, proxied and solo. When value is omitted the record publishes the machine's
+          own public adapter IP (gathered by the networking role) at run time — keep templates out of
+          Hosts.yml, the playbook generator renders it before facts exist. An empty list makes the role a
+          no-op — the expected state for locally built machines that accept the generated key.
+      dns_default_ttl:
+        type: int
+        default: 300
+        description: TTL applied when a record does not specify its own.
+      dns_publish_aliases:
+        type: bool
+        default: true
+        description: >-
+          Publish each dns_entries_list label as a CNAME of the first dns_records entry
+          (label.<primary name>.<zone> -> <primary name>.<zone>), so SSL challenges can validate
+          every SAN the ssl role requests.
+      dns_entries_list:
+        type: list
+        elements: str
+        description: Service subdomain labels — same list and override point as the networking and ssl roles.
+      dns_value_source:
+        type: str
+        default: adapter
+        choices: [adapter, external]
+        description: >-
+          Source for record values when a record omits value. adapter uses the public adapter IP gathered
+          by the networking role; external queries dns_external_ip_url from the guest for the IP as the
+          internet sees it — the right choice for NAT'd machines.
+      dns_external_ip_url:
+        type: str
+        default: https://api.ipify.org
+        description: Plain-text what-is-my-ip endpoint used when dns_value_source is external.
+      dns_verify_propagation:
+        type: bool
+        default: true
+        description: Poll a public resolver over DNS-over-HTTPS until published records answer.
+      dns_verify_retries:
+        type: int
+        default: 30
+        description: Propagation poll attempts per record.
+      dns_verify_delay:
+        type: int
+        default: 10
+        description: Seconds between propagation poll attempts.
+      dns_doh_url:
+        type: str
+        default: https://cloudflare-dns.com/dns-query
+        description: DNS-over-HTTPS endpoint used for propagation checks (OS-agnostic, no dig dependency).
+      secrets:
+        type: dict
+        description: >-
+          Provisioner context — merged secrets supplied by the provisioner. Consumed keys: cloudflare_api_token
+          for Cloudflare records; wix_api_key and wix_account_id for Wix records.

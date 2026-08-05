@@ -1,0 +1,84 @@
+---
+- name: "Setting record facts for {{ record.name }}.{{ record.zone }}"
+  ansible.builtin.set_fact:
+    cf_fqdn: "{{ record.name }}.{{ record.zone }}"
+    cf_value: "{{ record.value | default(dns_default_value) }}"
+    cf_ttl: "{{ record.ttl | default(dns_default_ttl) }}"
+    cf_proxied: "{{ record.proxied | default(false) }}"
+    ## solo replaces any stale record of the same name/type — right for address
+    ## records that change per rebuild, wrong for TXT where values accumulate
+    cf_solo: "{{ record.solo | default(record.type in ['A', 'AAAA', 'CNAME']) }}"
+    cf_headers:
+      Authorization: "Bearer {{ secrets.cloudflare_api_token }}"
+      Content-Type: "application/json"
+
+- name: "Looking up Cloudflare zone id for {{ record.zone }}"
+  ansible.builtin.uri:
+    url: "https://api.cloudflare.com/client/v4/zones?name={{ record.zone }}"
+    headers: "{{ cf_headers }}"
+    return_content: true
+  register: cf_zone_result
+
+- name: "Ensuring the Cloudflare zone was found"
+  ansible.builtin.assert:
+    that: cf_zone_result.json.result | length > 0
+    fail_msg: "Cloudflare zone {{ record.zone }} not found — check the zone name and that the token has Zone Read"
+
+- name: "Setting Cloudflare zone id"
+  ansible.builtin.set_fact:
+    cf_zone_id: "{{ cf_zone_result.json.result[0].id }}"
+
+- name: "Listing existing {{ record.type }} records for {{ cf_fqdn }}"
+  ansible.builtin.uri:
+    url: "https://api.cloudflare.com/client/v4/zones/{{ cf_zone_id }}/dns_records?type={{ record.type }}&name={{ cf_fqdn }}"
+    headers: "{{ cf_headers }}"
+    return_content: true
+  register: cf_existing
+
+- name: "Setting record payload"
+  ## Built as one Jinja expression so ttl stays an integer and proxied a boolean
+  ## in the JSON body — Cloudflare's API rejects them as strings
+  ansible.builtin.set_fact:
+    cf_body: >-
+      {{ {'type': record.type, 'name': cf_fqdn, 'content': cf_value, 'ttl': cf_ttl | int, 'proxied': cf_proxied | bool}
+         if record.type in ['A', 'AAAA', 'CNAME']
+         else {'type': record.type, 'name': cf_fqdn, 'content': cf_value, 'ttl': cf_ttl | int} }}
+
+- name: "Creating {{ record.type }} record for {{ cf_fqdn }}"
+  when: cf_existing.json.result | length == 0
+  ansible.builtin.uri:
+    url: "https://api.cloudflare.com/client/v4/zones/{{ cf_zone_id }}/dns_records"
+    method: POST
+    headers: "{{ cf_headers }}"
+    body_format: json
+    body: "{{ cf_body }}"
+    status_code: [200]
+  changed_when: true
+
+- name: "Updating {{ record.type }} record for {{ cf_fqdn }}"
+  when:
+    - cf_existing.json.result | length > 0
+    - >-
+      cf_existing.json.result[0].content != cf_value
+      or (record.type in ['A', 'AAAA', 'CNAME'] and cf_existing.json.result[0].proxied != (cf_proxied | bool))
+      or (not (cf_proxied | bool) and (cf_existing.json.result[0].ttl | int) != (cf_ttl | int))
+  ansible.builtin.uri:
+    url: "https://api.cloudflare.com/client/v4/zones/{{ cf_zone_id }}/dns_records/{{ cf_existing.json.result[0].id }}"
+    method: PUT
+    headers: "{{ cf_headers }}"
+    body_format: json
+    body: "{{ cf_body }}"
+    status_code: [200]
+  changed_when: true
+
+- name: "Removing surplus {{ record.type }} records for {{ cf_fqdn }}"
+  when: cf_solo | bool
+  ansible.builtin.uri:
+    url: "https://api.cloudflare.com/client/v4/zones/{{ cf_zone_id }}/dns_records/{{ surplus.id }}"
+    method: DELETE
+    headers: "{{ cf_headers }}"
+  loop: "{{ cf_existing.json.result[1:] }}"
+  loop_control:
+    loop_var: surplus
+    label: "{{ surplus.id }}"
+  changed_when: true
