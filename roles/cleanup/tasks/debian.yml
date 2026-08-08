@@ -277,16 +277,18 @@
     state: directory
     mode: "0755"
 
-- name: "Writing DigitalOcean-gated cloud-init configuration"
+- name: "Writing cloud-gated cloud-init configuration"
   ansible.builtin.copy:
     dest: /etc/cloud/cloud.cfg
     mode: "0644"
     content: |
       # One dormant config shipped in every image: ds-identify only finds the
-      # DigitalOcean datasource on DigitalOcean hardware (DMI sys-vendor). On
-      # VirtualBox, bhyve, AWS and UTM nothing is found and cloud-init disables
-      # itself at boot, matching the prior behavior of deleting /etc/cloud.
-      datasource_list: [ DigitalOcean ]
+      # DigitalOcean datasource on DigitalOcean hardware (DMI sys-vendor) and the
+      # Ec2 datasource on EC2 hardware (DMI uuid), where cloud-init then injects
+      # the per-launch keypair via the ssh module. On VirtualBox, bhyve and UTM
+      # nothing is found and cloud-init disables itself at boot, matching the
+      # prior behavior of deleting /etc/cloud.
+      datasource_list: [ DigitalOcean, Ec2 ]
 
       users:
         - default
