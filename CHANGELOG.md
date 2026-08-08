@@ -3,6 +3,18 @@
 All notable changes to the `startcloud.startcloud_roles` collection are
 documented here.
 
+## [0.1.3](https://github.com/STARTcloud/startcloud_roles/compare/v0.1.2...v0.1.3) (2026-08-08)
+
+
+### Bug Fixes
+
+* adding cloud-init support for Digitial Ocean VMs ([6dac5e5](https://github.com/STARTcloud/startcloud_roles/commit/6dac5e5c690f33ec92f184190395e2400bddabca))
+* adding more cloud providers to amazon ([9bb94ec](https://github.com/STARTcloud/startcloud_roles/commit/9bb94ec6ec802529707e644608810037c9296b52))
+* adding some switchboard related vars to the base roels ([9c253e9](https://github.com/STARTcloud/startcloud_roles/commit/9c253e9c13506b7d40d45464c8dc922623b94b8b))
+* Cleaning up Roles and adding molecule tests ([c861f8c](https://github.com/STARTcloud/startcloud_roles/commit/c861f8cc12d707dbffca6eaaeffdd445bfa72d34))
+* MPP Digital Ocean based Wix DNS'd stie changes and Switchboard changes ([4c1e806](https://github.com/STARTcloud/startcloud_roles/commit/4c1e8062cb5ba28bcebdd4b6c6edce5bc14c5916))
+* startcloud DNS role ([fc318cd](https://github.com/STARTcloud/startcloud_roles/commit/fc318cde7b61e332e8216cbc42b65dcc0abd13c4))
+
 ## [0.1.2](https://github.com/STARTcloud/startcloud_roles/compare/v0.1.1...v0.1.2) (2026-07-28)
 
 
