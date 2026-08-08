@@ -20,7 +20,7 @@ argument_specs:
         elements: dict
         default: []
         description: >-
-          Records to publish. Each entry carries provider (cloudflare or wix), zone, name, type and
+          Records to publish. Each entry carries provider (cloudflare, wix or amazon), zone, name, type and
           optionally value, ttl, proxied and solo. When value is omitted the record publishes the machine's
           own public adapter IP (gathered by the networking role) at run time — keep templates out of
           Hosts.yml, the playbook generator renders it before facts exist. An empty list makes the role a
@@ -72,4 +72,5 @@ argument_specs:
         type: dict
         description: >-
           Provisioner context — merged secrets supplied by the provisioner. Consumed keys: cloudflare_api_token
-          for Cloudflare records; wix_api_key and wix_account_id for Wix records.
+          for Cloudflare records; wix_api_key and wix_account_id for Wix records; route53_access_key and
+          route53_secret_key for Amazon records.

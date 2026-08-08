@@ -5,7 +5,50 @@
 # jail.d/defaults-debian.conf. Jails shipped by other roles land in
 # /etc/fail2ban/jail.d/ and are left alone.
 [DEFAULT]
+{% if fail2ban_default_bantime | length > 0 %}
+bantime = {{ fail2ban_default_bantime }}
+{% endif %}
+{% if fail2ban_default_findtime | length > 0 %}
+findtime = {{ fail2ban_default_findtime }}
+{% endif %}
+{% if fail2ban_default_maxretry | string | length > 0 %}
+maxretry = {{ fail2ban_default_maxretry }}
+{% endif %}
+{% if fail2ban_ignoreip | length > 0 %}
+ignoreip = 127.0.0.1/8 ::1 {{ fail2ban_ignoreip }}
+{% endif %}
 
 [sshd]
 backend = systemd
-enabled = false
+enabled = {{ fail2ban_sshd_enabled | bool | lower }}
+{% for jail in fail2ban_jails %}
+
+[{{ jail.name }}]
+{% if jail.enabled is defined %}
+enabled = {{ jail.enabled | bool | lower }}
+{% endif %}
+{% if jail.port is defined %}
+port = {{ jail.port }}
+{% endif %}
+{% if jail.logpath is defined %}
+logpath = {{ jail.logpath }}
+{% endif %}
+{% if jail.backend is defined %}
+backend = {{ jail.backend }}
+{% endif %}
+{% if jail.filter is defined %}
+filter = {{ jail.filter }}
+{% endif %}
+{% if jail.maxretry is defined %}
+maxretry = {{ jail.maxretry }}
+{% endif %}
+{% if jail.bantime is defined %}
+bantime = {{ jail.bantime }}
+{% endif %}
+{% if jail.findtime is defined %}
+findtime = {{ jail.findtime }}
+{% endif %}
+{% if jail.action is defined %}
+action = {{ jail.action }}
+{% endif %}
+{% endfor %}

@@ -1,0 +1,42 @@
+---
+## Route 53 via the amazon.aws.route53 module — the guest publishes its own
+## records like the other providers. SigV4 signing rules out plain uri calls,
+## so this provider leans on the module plus python3-boto3, both satisfied on
+## the Debian guests this role targets (ansible community bundle + apt).
+- name: "Ensuring Route 53 API credentials are present"
+  ansible.builtin.assert:
+    that:
+      - secrets.route53_access_key is defined
+      - secrets.route53_secret_key is defined
+    fail_msg: "Amazon DNS records need route53_access_key and route53_secret_key in .secrets.yml"
+
+- name: "Installing boto3 for the Route 53 module"
+  ansible.builtin.apt:
+    name: python3-boto3
+    state: present
+    update_cache: false
+  register: boto3_result
+  retries: 10
+  delay: 5
+  until: boto3_result is success or ('Unable to acquire the dpkg frontend lock' not in boto3_result.msg and '/var/lib/dpkg/lock-frontend' not in boto3_result.msg)
+
+- name: "Publishing Route 53 DNS records"
+  amazon.aws.route53:
+    access_key: "{{ secrets.route53_access_key }}"
+    secret_key: "{{ secrets.route53_secret_key }}"
+    state: present
+    zone: "{{ record.zone }}"
+    record: "{{ record.name }}.{{ record.zone }}"
+    type: "{{ record.type }}"
+    ttl: "{{ record.ttl | default(dns_default_ttl) }}"
+    ## TXT record data must reach Route 53 wrapped in literal double quotes
+    value: >-
+      {{ ('"' ~ (record.value | default(dns_default_value)) ~ '"')
+         if record.type == 'TXT'
+         else (record.value | default(dns_default_value)) }}
+    overwrite: "{{ record.solo | default(record.type in ['A', 'AAAA', 'CNAME']) }}"
+    wait: false
+  loop: "{{ dns_effective_records | selectattr('provider', 'equalto', 'amazon') | list }}"
+  loop_control:
+    loop_var: record
+    label: "{{ record.name }}.{{ record.zone }} {{ record.type }}"

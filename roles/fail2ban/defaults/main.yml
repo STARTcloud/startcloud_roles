@@ -7,3 +7,18 @@ fail2ban_socket: /var/run/fail2ban/fail2ban.sock
 fail2ban_pidfile: /var/run/fail2ban/fail2ban.pid
 fail2ban_dbfile: /var/lib/fail2ban/fail2ban.sqlite3
 fail2ban_dbpurgeage: 1d
+
+fail2ban_default_bantime: ""
+fail2ban_default_findtime: ""
+fail2ban_default_maxretry: ""
+fail2ban_ignoreip: ""
+fail2ban_sshd_enabled: false
+
+# Consumer-supplied filters written to /etc/fail2ban/filter.d/<name>.conf.
+# Each item: { name: <str>, content: <str> }
+fail2ban_filters: []
+
+# Consumer-supplied jails appended to jail.local. Each item supports:
+# name (required), enabled, port, logpath, backend, filter, action,
+# maxretry, bantime, findtime — omitted keys are not rendered.
+fail2ban_jails: []

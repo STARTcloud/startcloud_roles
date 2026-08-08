@@ -37,3 +37,33 @@ argument_specs:
         type: str
         default: 1d
         description: Age after which old bans are purged from the database, rendered as dbpurgeage in the [Definition] section of /etc/fail2ban/fail2ban.local.
+      fail2ban_default_bantime:
+        type: str
+        default: ""
+        description: Optional [DEFAULT] bantime rendered into jail.local; omitted when empty.
+      fail2ban_default_findtime:
+        type: str
+        default: ""
+        description: Optional [DEFAULT] findtime rendered into jail.local; omitted when empty.
+      fail2ban_default_maxretry:
+        type: str
+        default: ""
+        description: Optional [DEFAULT] maxretry rendered into jail.local; omitted when empty.
+      fail2ban_ignoreip:
+        type: str
+        default: ""
+        description: Space-separated extra ignoreip entries appended after the loopback addresses in jail.local's [DEFAULT]; the line is omitted when empty.
+      fail2ban_sshd_enabled:
+        type: bool
+        default: false
+        description: Whether the packaged Debian [sshd] jail stays enabled; jail.local always carries the block so this value wins over jail.d/defaults-debian.conf.
+      fail2ban_filters:
+        type: list
+        elements: dict
+        default: []
+        description: Consumer-supplied filter definitions; each item's name and content are written to /etc/fail2ban/filter.d/<name>.conf, letting service-specific roles or playbooks (Asterisk, HAProxy, etc.) ship filters through this role without the role hardcoding any service.
+      fail2ban_jails:
+        type: list
+        elements: dict
+        default: []
+        description: Consumer-supplied jail blocks appended to jail.local. Each item requires name and may set enabled, port, logpath, backend, filter, action, maxretry, bantime and findtime; omitted keys are not rendered.

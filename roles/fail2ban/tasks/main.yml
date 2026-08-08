@@ -36,6 +36,18 @@
         mode: "0644"
       notify: "Restarting fail2ban"
 
+    - name: "Writing consumer-supplied filter definitions"
+      ansible.builtin.copy:
+        content: "{{ item.content }}"
+        dest: "/etc/fail2ban/filter.d/{{ item.name }}.conf"
+        owner: root
+        group: root
+        mode: "0644"
+      loop: "{{ fail2ban_filters }}"
+      loop_control:
+        label: "{{ item.name }}"
+      notify: "Restarting fail2ban"
+
     ## jail.local is read after jail.d/*.conf, so this is the file that decides
     ## the [sshd] jail Debian enables in jail.d/defaults-debian.conf.
     - name: "Copying jail.local template"
