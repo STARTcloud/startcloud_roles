@@ -26,6 +26,31 @@
   register: dir_contents
   when: postgresql_data_dir is defined
 
+## Debian splits cluster CONFIG (/etc/postgresql/<v>/main) from DATA
+## (/var/lib/postgresql/<v>/main). An image whose data dir was scrubbed keeps
+## the config and the cluster registration, and a raw initdb does not
+## re-register with Debian's service wrapper — the cluster stays unstartable.
+## Rebuild through the wrapper so registration and data agree again.
+- name: "Rebuilding a scrubbed PostgreSQL cluster (Debian)"
+  when:
+    - ansible_os_family == 'Debian'
+    - not pgdata_dir_version.stat.exists
+  block:
+    - name: "Dropping the stale cluster registration"
+      ansible.builtin.command: "pg_dropcluster --stop {{ postgresql_version }} main"
+      register: pg_drop_result
+      failed_when: false
+      changed_when: pg_drop_result.rc == 0
+
+    - name: "Creating a fresh PostgreSQL cluster"
+      ansible.builtin.command: "pg_createcluster --start {{ postgresql_version }} main"
+      changed_when: true
+
+- name: "Re-checking PostgreSQL data directory initialization"
+  ansible.builtin.stat:
+    path: "{{ postgresql_data_dir }}/PG_VERSION"
+  register: pgdata_dir_version
+
 - name: "Ensuring PostgreSQL database is initialized"
   ansible.builtin.command: "{{ postgresql_bin_path }}/initdb -D {{ postgresql_data_dir }}"
   when: not pgdata_dir_version.stat.exists and (dir_contents.files | default([]) | length == 0 or dir_contents is not defined)

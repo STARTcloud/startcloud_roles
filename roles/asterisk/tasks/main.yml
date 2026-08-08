@@ -94,11 +94,18 @@
 - name: "Asterisk Compilation and Installation"
   when: run_tasks and (ansible_os_family == 'Debian') and not asterisk_bin_path.stat.exists
   block:
+    ## shell (not command) so $(nproc) expands. BUILD_NATIVE must stay disabled:
+    ## Asterisk's default -march=native tunes the binary to the build host's
+    ## CPU, so an image baked on a newer CPU emits instructions (AVX-512) that
+    ## crash with SIGILL on older tenant hardware. Building generic x86-64
+    ## keeps the binary portable across machines.
     - name: "Installing Asterisk Packages"
-      ansible.builtin.command: "{{ item }}"
+      ansible.builtin.shell: "{{ item }}"
       with_items:
         - ./configure --with-jansson-bundled
-        - make
+        - make -j$(nproc) menuselect.makeopts
+        - menuselect/menuselect --enable app_voicemail_odbc --disable BUILD_NATIVE menuselect.makeopts
+        - make -j$(nproc)
         - make install
         - make config
         - make install-logrotate

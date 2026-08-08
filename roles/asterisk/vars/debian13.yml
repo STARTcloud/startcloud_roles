@@ -76,3 +76,5 @@ asterisk_packages:
   - subversion
   - bzip2 # Asterisk: for ./configure --with-pjproject-bundled:
   - patch
+  - unixodbc # Asterisk: ODBC voicemail storage runtime
+  - odbc-postgresql # Asterisk: PostgreSQL ODBC driver registered in /etc/odbcinst.ini
