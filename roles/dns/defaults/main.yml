@@ -26,14 +26,18 @@ dns_entries_list:
   - web-terminal
 ## TTL applied when a record does not specify its own (Cloudflare: 1 = automatic)
 dns_default_ttl: 300
+## Wix silently raises any lower TTL to this value, so requests are clamped to it
+dns_wix_minimum_ttl: 600
 ## Where records without an explicit value get their IP from:
 ##   adapter  - the public adapter IP gathered by the networking role
 ##   external - the IP as the internet sees it (NAT-safe), queried from dns_external_ip_url
 dns_value_source: adapter
 dns_external_ip_url: https://api.ipify.org
 ## Poll a public resolver over DNS-over-HTTPS until published records answer,
-## so later roles (SSL HTTP-01 challenges) never race propagation
+## so later roles (SSL HTTP-01 challenges) never race propagation.
+## The window must outlast Wix's 600s TTL floor, which also bounds how long a
+## resolver may negatively cache a name queried before it existed
 dns_verify_propagation: true
-dns_verify_retries: 30
+dns_verify_retries: 63
 dns_verify_delay: 10
 dns_doh_url: https://cloudflare-dns.com/dns-query

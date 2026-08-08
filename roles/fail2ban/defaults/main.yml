@@ -11,8 +11,10 @@ fail2ban_dbpurgeage: 1d
 fail2ban_default_bantime: ""
 fail2ban_default_findtime: ""
 fail2ban_default_maxretry: ""
+fail2ban_default_banaction: ""
 fail2ban_ignoreip: ""
 fail2ban_sshd_enabled: false
+fail2ban_sshd_mode: ""
 
 # Consumer-supplied filters written to /etc/fail2ban/filter.d/<name>.conf.
 # Each item: { name: <str>, content: <str> }

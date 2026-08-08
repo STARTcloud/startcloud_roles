@@ -14,6 +14,9 @@ findtime = {{ fail2ban_default_findtime }}
 {% if fail2ban_default_maxretry | string | length > 0 %}
 maxretry = {{ fail2ban_default_maxretry }}
 {% endif %}
+{% if fail2ban_default_banaction | length > 0 %}
+banaction = {{ fail2ban_default_banaction }}
+{% endif %}
 {% if fail2ban_ignoreip | length > 0 %}
 ignoreip = 127.0.0.1/8 ::1 {{ fail2ban_ignoreip }}
 {% endif %}
@@ -21,6 +24,9 @@ ignoreip = 127.0.0.1/8 ::1 {{ fail2ban_ignoreip }}
 [sshd]
 backend = systemd
 enabled = {{ fail2ban_sshd_enabled | bool | lower }}
+{% if fail2ban_sshd_mode | length > 0 %}
+mode = {{ fail2ban_sshd_mode }}
+{% endif %}
 {% for jail in fail2ban_jails %}
 
 [{{ jail.name }}]

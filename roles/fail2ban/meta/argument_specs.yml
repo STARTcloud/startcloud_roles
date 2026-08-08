@@ -49,6 +49,12 @@ argument_specs:
         type: str
         default: ""
         description: Optional [DEFAULT] maxretry rendered into jail.local; omitted when empty.
+      fail2ban_default_banaction:
+        type: str
+        default: ""
+        description: >-
+          Optional [DEFAULT] banaction rendered into jail.local; omitted when empty, leaving the packaged default.
+          nftables-allports cuts a banned source off from every port rather than only the one it probed.
       fail2ban_ignoreip:
         type: str
         default: ""
@@ -57,6 +63,10 @@ argument_specs:
         type: bool
         default: false
         description: Whether the packaged Debian [sshd] jail stays enabled; jail.local always carries the block so this value wins over jail.d/defaults-debian.conf.
+      fail2ban_sshd_mode:
+        type: str
+        default: ""
+        description: Optional filter mode of the [sshd] jail (normal, ddos, extra or aggressive); omitted when empty. aggressive also matches pre-auth probes and banner scans.
       fail2ban_filters:
         type: list
         elements: dict

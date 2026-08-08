@@ -1,6 +1,10 @@
 ---
 ## Wix Domain DNS API — https://dev.wix.com/docs/rest/account-level/domains/domain-dns/introduction
 ## Requires an account-level API key; standard OAuth headers are not accepted.
+## The key must be minted by the account Owner. A key minted by a Co-Owner is
+## refused with 403 DOMAINS_PERMISSION_DENIED even with every permission granted.
+## PATCH is a delta and leaves untouched records intact; POST (Create DNS Zone)
+## destroys the zone before writing and must never be used here.
 ## Wix stores ONE record object per hostName+type (values are a list inside it),
 ## so an update is expressed as deletion of the existing object plus an addition.
 - name: "Ensuring Wix API credentials are present"
@@ -9,6 +13,20 @@
       - secrets.wix_api_key is defined
       - secrets.wix_account_id is defined
     fail_msg: "Wix DNS records need wix_api_key and wix_account_id in .secrets.yml"
+
+- name: "Refusing to publish Wix records at the zone apex"
+  ansible.builtin.assert:
+    that:
+      - record.name is defined
+      - record.name | string | length > 0
+      - (record.name ~ '.' ~ record.zone) != record.zone
+    fail_msg: >-
+      Wix records must target a subdomain. An apex hostName would supersede the
+      zone's own NS, SOA, MX and SPF entries.
+  loop: "{{ dns_effective_records | selectattr('provider', 'equalto', 'wix') | list }}"
+  loop_control:
+    loop_var: record
+    label: "{{ record.name | default('<empty>') }}.{{ record.zone }}"
 
 - name: "Fetching current Wix DNS zones"
   ansible.builtin.uri:
@@ -24,6 +42,11 @@
     loop_var: wix_zone
 
 - name: "Publishing Wix DNS records"
+  when: >-
+    wix_superseded | length != 1
+    or wix_superseded[0].type != record.type
+    or (wix_superseded[0].values | default([])) != [record.value | default(dns_default_value)]
+    or (wix_superseded[0].ttl | default(0) | int) != (wix_ttl | int)
   ansible.builtin.uri:
     url: "https://www.wixapis.com/domains/v1/dns-zones/{{ record.zone }}"
     method: PATCH
@@ -31,29 +54,45 @@
       Authorization: "{{ secrets.wix_api_key }}"
       wix-account-id: "{{ secrets.wix_account_id }}"
     body_format: json
-    body:
-      domainName: "{{ record.zone }}"
-      additions:
-        - hostName: "{{ record.name }}.{{ record.zone }}"
-          type: "{{ record.type }}"
-          ttl: "{{ record.ttl | default(dns_default_ttl) }}"
-          ## records without an explicit value publish dns_default_value
-          ## (adapter IP or external lookup per dns_value_source)
-          values:
-            - "{{ record.value | default(dns_default_value) }}"
-      deletions: "{{ wix_existing }}"
+    ## built as one Jinja expression so ttl reaches Wix as a JSON number;
+    ## templating it field by field would stringify it and Wix rejects that
+    body: >-
+      {{ {
+           'additions': [
+             {
+               'hostName': wix_host,
+               'type': record.type,
+               'ttl': wix_ttl | int,
+               'values': [record.value | default(dns_default_value)]
+             }
+           ],
+           'deletions': wix_superseded
+         } }}
     status_code: [200]
   vars:
-    wix_existing: >-
+    wix_host: "{{ record.name }}.{{ record.zone }}"
+    wix_ttl: "{{ [record.ttl | default(dns_default_ttl) | int, dns_wix_minimum_ttl | int] | max }}"
+    ## GET intermittently omits type on a record; a deletion without type is
+    ## rejected, so records missing it are left alone rather than sent back
+    wix_present: >-
       {{ ((wix_zone_result.results
            | selectattr('wix_zone', 'equalto', record.zone)
            | map(attribute='json')
            | first
            | default({})).dnsZone | default({})).records | default([])
-         | selectattr('hostName', 'equalto', record.name + '.' + record.zone)
-         | selectattr('type', 'equalto', record.type)
+         | selectattr('type', 'defined')
+         | selectattr('hostName', 'defined')
+         | selectattr('hostName', 'equalto', wix_host)
          | list }}
+    ## a CNAME cannot share a name with any other type, so publishing one
+    ## supersedes everything at that name, and publishing anything else
+    ## supersedes its own type plus a CNAME squatting the name
+    wix_superseded: >-
+      {{ wix_present
+         if record.type == 'CNAME'
+         else wix_present | selectattr('type', 'in', [record.type, 'CNAME']) | list }}
   loop: "{{ dns_effective_records | selectattr('provider', 'equalto', 'wix') | list }}"
   loop_control:
     loop_var: record
     label: "{{ record.name }}.{{ record.zone }} {{ record.type }}"
+  changed_when: true

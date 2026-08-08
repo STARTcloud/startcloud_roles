@@ -28,7 +28,13 @@ argument_specs:
       dns_default_ttl:
         type: int
         default: 300
-        description: TTL applied when a record does not specify its own.
+        description: >-
+          TTL applied when a record does not specify its own. Wix silently raises anything below
+          dns_wix_minimum_ttl, so Wix records are clamped to that floor before sending.
+      dns_wix_minimum_ttl:
+        type: int
+        default: 600
+        description: Wix's TTL floor — requested TTLs below it are raised to it before the API call.
       dns_publish_aliases:
         type: bool
         default: true
@@ -58,8 +64,10 @@ argument_specs:
         description: Poll a public resolver over DNS-over-HTTPS until published records answer.
       dns_verify_retries:
         type: int
-        default: 30
-        description: Propagation poll attempts per record.
+        default: 63
+        description: >-
+          Propagation poll attempts per record. With dns_verify_delay the window must outlast
+          Wix's 600s TTL floor, which also bounds resolver negative caching of new names.
       dns_verify_delay:
         type: int
         default: 10
