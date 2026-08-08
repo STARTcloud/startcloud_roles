@@ -1,5 +1,5 @@
 ---
-- name: "Setting record facts for {{ record.name }}.{{ record.zone }}"
+- name: "Setting record facts for {{ record.name }}"
   ansible.builtin.set_fact:
     cf_fqdn: "{{ record.name }}.{{ record.zone }}"
     cf_value: "{{ record.value | default(dns_default_value) }}"
@@ -28,7 +28,7 @@
   ansible.builtin.set_fact:
     cf_zone_id: "{{ cf_zone_result.json.result[0].id }}"
 
-- name: "Listing existing {{ record.type }} records for {{ cf_fqdn }}"
+- name: "Listing existing records for {{ cf_fqdn }}"
   ansible.builtin.uri:
     url: "https://api.cloudflare.com/client/v4/zones/{{ cf_zone_id }}/dns_records?type={{ record.type }}&name={{ cf_fqdn }}"
     headers: "{{ cf_headers }}"
@@ -44,7 +44,7 @@
          if record.type in ['A', 'AAAA', 'CNAME']
          else {'type': record.type, 'name': cf_fqdn, 'content': cf_value, 'ttl': cf_ttl | int} }}
 
-- name: "Creating {{ record.type }} record for {{ cf_fqdn }}"
+- name: "Creating the record for {{ cf_fqdn }}"
   when: cf_existing.json.result | length == 0
   ansible.builtin.uri:
     url: "https://api.cloudflare.com/client/v4/zones/{{ cf_zone_id }}/dns_records"
@@ -55,7 +55,7 @@
     status_code: [200]
   changed_when: true
 
-- name: "Updating {{ record.type }} record for {{ cf_fqdn }}"
+- name: "Updating the record for {{ cf_fqdn }}"
   when:
     - cf_existing.json.result | length > 0
     - >-
@@ -71,7 +71,7 @@
     status_code: [200]
   changed_when: true
 
-- name: "Removing surplus {{ record.type }} records for {{ cf_fqdn }}"
+- name: "Removing surplus records for {{ cf_fqdn }}"
   when: cf_solo | bool
   ansible.builtin.uri:
     url: "https://api.cloudflare.com/client/v4/zones/{{ cf_zone_id }}/dns_records/{{ surplus.id }}"

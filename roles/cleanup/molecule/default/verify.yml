@@ -61,17 +61,32 @@
         - /root/.bash_history
         - /home/startcloud/.bash_history
         - /var/log/startcloud-molecule.old
-        - /etc/cloud
         - /var/lib/cloud
 
     - name: Assert histories, rotated logs and cloud-init state were purged
       ansible.builtin.assert:
         that:
-          - cleanup_scrubbed.results | rejectattr('stat.exists') | list | length == 5
+          - cleanup_scrubbed.results | rejectattr('stat.exists') | list | length == 4
         fail_msg: >-
           still present after cleanup:
           {{ cleanup_scrubbed.results | selectattr('stat.exists') | map(attribute='item') | list }}
-        success_msg: "shell histories, rotated logs and cloud-init state are gone"
+        success_msg: "shell histories, rotated logs and cloud-init run state are gone"
+
+    - name: Read the cloud-gated cloud-init configuration the role ships
+      ansible.builtin.slurp:
+        src: /etc/cloud/cloud.cfg
+      register: cleanup_cloud_cfg
+
+    - name: Assert cloud.cfg gates cloud-init to the DigitalOcean and Ec2 datasources
+      ansible.builtin.assert:
+        that:
+          - "'datasource_list: [ DigitalOcean, Ec2 ]' in cleanup_cloud_cfg_content"
+          - "'- ssh' in cleanup_cloud_cfg_content"
+          - "'name: \"startcloud\"' in cleanup_cloud_cfg_content"
+        fail_msg: "/etc/cloud/cloud.cfg was not rendered with the DigitalOcean+Ec2 datasource gate"
+        success_msg: "/etc/cloud/cloud.cfg gates cloud-init to DigitalOcean and Ec2 with the startcloud default user"
+      vars:
+        cleanup_cloud_cfg_content: "{{ cleanup_cloud_cfg.content | b64decode }}"
 
     - name: Stat the truncated audit logs
       ansible.builtin.stat:

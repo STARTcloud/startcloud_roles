@@ -34,7 +34,10 @@
       vars:
         dns_primary: "{{ dns_effective_records | first }}"
       ansible.builtin.set_fact:
-        dns_effective_records: "{{ dns_effective_records + [{'provider': dns_primary.provider, 'zone': dns_primary.zone, 'type': 'CNAME', 'name': alias ~ '.' ~ dns_primary.name, 'value': dns_primary.name ~ '.' ~ dns_primary.zone}] }}"
+        dns_effective_records: >-
+          {{ dns_effective_records + [{'provider': dns_primary.provider, 'zone': dns_primary.zone,
+             'type': 'CNAME', 'name': alias ~ '.' ~ dns_primary.name,
+             'value': dns_primary.name ~ '.' ~ dns_primary.zone}] }}
       loop: "{{ dns_entries_list }}"
       loop_control:
         loop_var: alias

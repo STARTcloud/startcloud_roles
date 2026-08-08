@@ -170,3 +170,24 @@
           - "'sshd' not in fail2ban_jail_status.stdout"
         fail_msg: "The sshd jail is still loaded despite jail.local disabling it: {{ fail2ban_jail_status.stdout }}"
         success_msg: "The running fail2ban server loaded no sshd jail, as jail.local specifies"
+
+    - name: Stat the consumer-supplied filter written to filter.d
+      ansible.builtin.stat:
+        path: /etc/fail2ban/filter.d/molecule-probe.conf
+      register: fail2ban_probe_filter
+
+    - name: Assert the consumer-supplied filter and jail were rendered
+      ansible.builtin.assert:
+        that:
+          - fail2ban_probe_filter.stat.exists
+          - "'[molecule-probe]' in (fail2ban_jail_local.content | b64decode)"
+          - "'ignoreip = 127.0.0.1/8 ::1 192.0.2.0/24' in (fail2ban_jail_local.content | b64decode)"
+        fail_msg: "the consumer-supplied filter/jail/ignoreip did not render into the fail2ban configuration"
+        success_msg: "consumer-supplied filter, jail block and ignoreip rendered"
+
+    - name: Assert the running server loaded the consumer-supplied jail
+      ansible.builtin.assert:
+        that:
+          - "'molecule-probe' in fail2ban_jail_status.stdout"
+        fail_msg: "the molecule-probe jail is not loaded: {{ fail2ban_jail_status.stdout }}"
+        success_msg: "The running fail2ban server loaded the consumer-supplied molecule-probe jail"

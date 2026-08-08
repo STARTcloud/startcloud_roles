@@ -61,9 +61,15 @@ argument_specs:
         type: list
         elements: dict
         default: []
-        description: Consumer-supplied filter definitions; each item's name and content are written to /etc/fail2ban/filter.d/<name>.conf, letting service-specific roles or playbooks (Asterisk, HAProxy, etc.) ship filters through this role without the role hardcoding any service.
+        description: >-
+          Consumer-supplied filter definitions; each item's name and content are written to
+          /etc/fail2ban/filter.d/<name>.conf, letting service-specific roles or playbooks (Asterisk,
+          HAProxy, etc.) ship filters through this role without the role hardcoding any service.
       fail2ban_jails:
         type: list
         elements: dict
         default: []
-        description: Consumer-supplied jail blocks appended to jail.local. Each item requires name and may set enabled, port, logpath, backend, filter, action, maxretry, bantime and findtime; omitted keys are not rendered.
+        description: >-
+          Consumer-supplied jail blocks appended to jail.local. Each item requires name and may set
+          enabled, port, logpath, backend, filter, action, maxretry, bantime and findtime; omitted
+          keys are not rendered.

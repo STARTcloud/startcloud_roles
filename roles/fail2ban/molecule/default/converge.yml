@@ -14,6 +14,25 @@
     fail2ban_pidfile: /var/run/fail2ban/fail2ban.pid
     fail2ban_dbfile: /var/lib/fail2ban/fail2ban.sqlite3
     fail2ban_dbpurgeage: 2d
+    ## Consumer-extension exercise: one supplied filter + jail (dummy action, so
+    ## the container needs no iptables) and an extra ignoreip, so verify can
+    ## prove the extension path renders and the server loads the jail.
+    fail2ban_ignoreip: "192.0.2.0/24"
+    fail2ban_filters:
+      - name: molecule-probe
+        content: |
+          [Definition]
+          failregex = ^molecule-probe-fail from <HOST>$
+          ignoreregex =
+    fail2ban_jails:
+      - name: molecule-probe
+        enabled: true
+        logpath: /var/log/fail2ban.log
+        maxretry: 3
+        bantime: "1h"
+        findtime: "10m"
+        filter: molecule-probe
+        action: "dummy"
     settings:
       hostname: startcloud-fail2ban-debian12
       domain: molecule.test
