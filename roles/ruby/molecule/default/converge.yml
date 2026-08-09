@@ -24,6 +24,12 @@
     ruby_install_gems:
       - name: rake
         user_install: false
+  pre_tasks:
+    - name: "Refreshing the apt cache so the package installs can resolve"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 600
+      changed_when: false
   tasks:
     - name: "Including the ruby role"
       ansible.builtin.include_role:
