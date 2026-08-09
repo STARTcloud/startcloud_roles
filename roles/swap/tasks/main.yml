@@ -24,3 +24,23 @@
     - name: "Including enable.yml"
       ansible.builtin.include_tasks: enable.yml
       when: swap_file_state == 'present'
+
+    ## Under memory pressure the OOM killer taking sshd locks the operator out
+    ## of the machine at exactly the moment access matters most.
+    - name: "Protecting SSH from the OOM killer"
+      when: swap_protect_ssh_oom
+      block:
+        - name: "Creating the SSH service override directory"
+          ansible.builtin.file:
+            path: /etc/systemd/system/ssh.service.d
+            state: directory
+            mode: "0755"
+
+        - name: "Lowering the SSH service OOM score"
+          ansible.builtin.copy:
+            dest: /etc/systemd/system/ssh.service.d/override.conf
+            content: |
+              [Service]
+              OOMScoreAdjust=-900
+            mode: "0644"
+          notify: "Reloading the systemd daemon"

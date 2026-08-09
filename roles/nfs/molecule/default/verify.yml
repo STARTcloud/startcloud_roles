@@ -69,25 +69,20 @@
       loop_control:
         label: "{{ item.item }}"
 
-    - name: "Querying the NFS server unit through systemctl show so the Debian unit alias resolves" # noqa: command-instead-of-module
-      ansible.builtin.command: >-
-        systemctl show nfs-kernel-server.service
-        --property=Id --property=ActiveState --property=SubState --property=UnitFileState
-      register: nfs_unit_show
-      changed_when: false
-      failed_when: false
+    - name: "Gathering service facts so the Debian nfs-server unit alias resolves to whichever name systemd registered"
+      ansible.builtin.service_facts:
 
-    - name: "Parsing the NFS server unit properties"
+    - name: "Resolving the NFS server unit from the gathered services under either of its names"
       ansible.builtin.set_fact:
-        nfs_unit_props: "{{ dict(nfs_unit_show.stdout_lines | map('split', '=', 1) | list) }}"
+        nfs_unit: "{{ ansible_facts.services['nfs-kernel-server.service'] | default(ansible_facts.services['nfs-server.service'] | default({})) }}"
 
-    - name: "Asserting the NFS server daemon is active and enabled at boot"
+    - name: "Asserting the NFS server daemon is running and enabled at boot"
       ansible.builtin.assert:
         quiet: true
         that:
-          - nfs_unit_props.ActiveState == 'active'
-          - nfs_unit_props.UnitFileState == 'enabled'
-        fail_msg: "NFS server unit is not active/enabled: {{ nfs_unit_props }}"
+          - nfs_unit.state | default('') == 'running'
+          - nfs_unit.status | default('') == 'enabled'
+        fail_msg: "NFS server unit is not running/enabled: {{ nfs_unit }}"
 
     - name: "Listing the kernel's active export table"
       ansible.builtin.command: exportfs -s

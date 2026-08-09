@@ -34,3 +34,7 @@ argument_specs:
         type: bool
         default: false
         description: When true, skip the swapon step so the role can run without activating swap.
+      swap_protect_ssh_oom:
+        type: bool
+        default: true
+        description: Install a systemd override lowering sshd's OOM score so memory pressure cannot kill operator access.

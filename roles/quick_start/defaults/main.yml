@@ -1,6 +1,13 @@
 ---
 run_tasks: true
 quick_start: false
+## Duplicated from the service_user and ssl roles on purpose: this role also
+## runs in the always-playbook, where those roles are not listed and their
+## defaults are not loaded.
+service_user: java_user
+service_group: java_group
+service_home_dir: /local/notesjava
+cert_dir: /secure
 # Overridden by the community.docker.current_container_facts fact the role
 # gathers in tasks/main.yml (host facts outrank role defaults), so this is only
 # the value consumers see when that gather never ran. Container builds get the

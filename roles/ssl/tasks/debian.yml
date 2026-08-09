@@ -16,6 +16,7 @@
     - "{{ cert_dir }}/jks"
     - "{{ cert_dir }}/combined"
     - "{{ cert_dir }}/ca"
+    - "{{ cert_dir }}/renewal-hooks.d"
     - "/usr/local/share/ca-certificates/self-signed"
 
 - name: "Using existing Certificate"
@@ -376,7 +377,7 @@
         remote_src: true
 
 - name: "Beginning Let's Encrypt Provisioning"
-  when: selfsigned_enabled and letsencrypt_enabled
+  when: selfsigned_enabled and letsencrypt_enabled and not (bake_mode | default(false) | bool)
   block:
     - name: "Ensuring apt cache is updated"
       ansible.builtin.apt:
@@ -431,6 +432,14 @@
       ansible.builtin.stat:
         path: "/etc/letsencrypt/live/{{ settings.hostname | lower }}.{{ settings.domain | lower }}/cert.pem"
 
+    - name: "Stopping services holding port 80 for standalone issuance"
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        state: stopped
+      loop: "{{ certbot_create_standalone_stop_services | default([]) }}"
+      failed_when: false
+      when: not letsencrypt_cert.stat.exists
+
     - name: "Generating new staging certificate request"
       ansible.builtin.command: >-
         certbot certonly --standalone
@@ -457,6 +466,14 @@
       ansible.builtin.command: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --email {{ settings.email }} {{ le_entries | join(' ') }} --http-01-port=8181
       changed_when: true
       when: (haproxy_installed.stat.exists and not haproxy_status.changed) and not letsencrypt_cert.stat.exists and not letsencrypt_staging_enabled
+
+    - name: "Starting services stopped for standalone issuance"
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        state: started
+      loop: "{{ certbot_create_standalone_stop_services | default([]) }}"
+      failed_when: false
+      when: not letsencrypt_cert.stat.exists
 
     - name: "Removing old cert directories for SSLs"
       ansible.builtin.file:
@@ -597,3 +614,17 @@
         group: "{{ service_group }}"
         mode: "0777"
         remote_src: true
+
+    - name: "Creating the certbot deploy-hook directory"
+      become: true
+      ansible.builtin.file:
+        path: /etc/letsencrypt/renewal-hooks/deploy
+        state: directory
+        mode: "0750"
+
+    - name: "Installing the renewal publish hook that republishes into cert_dir and runs consumer scripts in renewal-hooks.d"
+      become: true
+      ansible.builtin.template:
+        src: ssl_renew_publish.sh.j2
+        dest: /etc/letsencrypt/renewal-hooks/deploy/ssl_renew_publish.sh
+        mode: "0750"

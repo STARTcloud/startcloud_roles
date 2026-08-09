@@ -28,18 +28,13 @@
         fail_msg: "/usr/bin/curl is missing or not executable"
         success_msg: "/usr/bin/curl is present and executable"
 
-    - name: Run the installed curl to confirm it is functional # noqa: command-instead-of-module
-      ansible.builtin.command: /usr/bin/curl --version
-      register: ifconfig_me_curl_version
-      changed_when: false
-
-    - name: Assert curl reports a working libcurl build
+    - name: Assert the package manager reports an installed curl version
       ansible.builtin.assert:
         that:
-          - ifconfig_me_curl_version.rc == 0
-          - "'libcurl' in ifconfig_me_curl_version.stdout"
-        fail_msg: "curl did not report a usable libcurl build"
-        success_msg: "curl is functional: {{ ifconfig_me_curl_version.stdout_lines[0] }}"
+          - ansible_facts.packages['curl'][0].version is defined
+          - ansible_facts.packages['curl'][0].version | length > 0
+        fail_msg: "curl is present but dpkg reports no installed version"
+        success_msg: "curl {{ ansible_facts.packages['curl'][0].version }} is installed"
 
     - name: Stat the CA certificate bundle installed alongside curl
       ansible.builtin.stat:

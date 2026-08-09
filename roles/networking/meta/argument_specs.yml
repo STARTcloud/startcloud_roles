@@ -41,10 +41,11 @@ argument_specs:
         description: Service subdomain labels to register as DNS entries.
       completed_dir:
         type: str
+        default: /vagrant/completed
         description: >-
-          Provisioner context — directory the provisioner keeps its completion artifacts in. The role writes the
-          selected IP into ipaddress.yml inside that directory and reads it back when no bridged adapter was
-          configured. Supplied by the provisioner, so it is deliberately not defaulted here.
+          Directory the provisioner keeps its completion artifacts in. The role writes the selected IP into
+          ipaddress.yml inside that directory and reads it back when no bridged adapter was configured. Defaulted
+          here because the role also runs in the always-playbook, where no other role's defaults are loaded.
       settings:
         type: dict
         description: >-

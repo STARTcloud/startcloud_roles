@@ -11,3 +11,7 @@
   when:
     - mkswap_result is changed
     - not swap_test_mode
+
+- name: "Reloading the systemd daemon"
+  ansible.builtin.systemd:
+    daemon_reload: true

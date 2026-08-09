@@ -3,3 +3,26 @@ run_tasks: true
 show_help: true
 vm_encrypted: false
 root_unlock_key: pass123
+
+## Explicit block device holding a dedicated data partition (/dev/sdb on AWS;
+## the kernel may expose it as /dev/xvdb on Xen or /dev/nvme1n1 on Nitro).
+## Empty means the data-storage tasks no-op and data stays on the root
+## filesystem — safe to configure unconditionally on hosts without the disk.
+storage_device: ""
+
+# Where the dedicated filesystem is really mounted; subdirs are created here
+# and bind-mounted into the consumer paths
+storage_real_mount: /srv/data
+
+# xfs handles many small files well and supports online growth
+storage_fstype: xfs
+
+## Ownership/mode are intentionally not set on these: consumer roles chown the
+## target paths after they create the required users and groups, and the bind
+## mount makes their chown land on the real-mount dirs transparently.
+storage_subdirs: []
+
+## Each listed service gets a systemd drop-in refusing to start when its
+## required mounts are missing — prevents silent writes to the root filesystem
+## when the data partition fails to mount.
+storage_services: []

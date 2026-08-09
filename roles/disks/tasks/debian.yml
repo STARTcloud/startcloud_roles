@@ -127,15 +127,248 @@
       loop_control:
         index_var: index
 
+    ## Immediately after mkfs, udev may not have populated the UUID yet.
+    - name: "Capturing additional disk filesystem UUIDs"
+      when:
+        - disks.additional_disks is not none
+        - disks.additional_disks is iterable
+      ansible.builtin.command: "blkid -s UUID -o value /dev/{{ available_disks[index] }}"
+      register: additional_disk_uuids
+      changed_when: false
+      retries: 5
+      delay: 2
+      until: additional_disk_uuids.stdout | length > 0
+      loop: "{{ disks.additional_disks | default([], true) }}"
+      loop_control:
+        index_var: index
+
+    ## UUID in fstab because device names reorder between boots (a virtio
+    ## disk that enumerated as sdb can come back as sda); a raw device name
+    ## then mounts the wrong disk or hangs boot in emergency mode. nofail
+    ## keeps the system bootable when the disk is missing entirely.
     - name: "Mounting additional disks"
       when:
         - disks.additional_disks is not none
         - disks.additional_disks is iterable
       ansible.posix.mount:
         path: "{{ item.mount }}"
-        src: "/dev/{{ available_disks[index] }}"
+        src: "UUID={{ additional_disk_uuids.results[index].stdout }}"
         fstype: "{{ item.filesystem }}"
+        opts: defaults,nofail
         state: mounted
       loop: "{{ disks.additional_disks | default([], true) }}"
       loop_control:
         index_var: index
+
+- name: "Configuring bind-mounted data storage"
+  become: true
+  become_user: root
+  when: (storage_device | default('', true)) | length > 0
+  block:
+    ## NVMe/mmcblk/loop devices name partitions <device>p<n>
+    ## (e.g. /dev/nvme1n1p1); SCSI/virtio/Xen devices use <device><n>
+    ## (e.g. /dev/xvdb1). Detect which scheme applies by whether the
+    ## device name ends in a digit.
+    - name: "Computing the data partition path"
+      ansible.builtin.set_fact:
+        storage_partition: >-
+          {{ storage_device }}{{ 'p1' if storage_device is match('.*[0-9]$') else '1' }}
+
+    - name: "Stating the storage device"
+      ansible.builtin.stat:
+        path: "{{ storage_device }}"
+      register: storage_device_stat
+
+    - name: "Refusing when the storage device is missing or not a block device"
+      ansible.builtin.assert:
+        that:
+          - storage_device_stat.stat.exists
+          - storage_device_stat.stat.isblk | default(false)
+        fail_msg: >-
+          storage_device ({{ storage_device }}) is missing or not a block
+          device on this host. Check the host configuration and confirm the
+          data volume is attached.
+
+    ## An already-mounted target is a strong signal it is the wrong device
+    ## (root disk, swap, another service).
+    - name: "Refusing to partition a device that is already mounted"
+      ansible.builtin.assert:
+        that:
+          - ansible_mounts | selectattr('device', 'match', '^' ~ storage_device ~ 'p?[0-9]*$') | list | length == 0
+        fail_msg: >-
+          storage_device ({{ storage_device }}) or one of its partitions is
+          currently mounted. Refusing to partition to prevent data loss.
+
+    ## Installed as separate tasks rather than a Jinja-built list: without
+    ## jinja2_native a templated list can render as a string, which the
+    ## package module treats as a single broken package name.
+    - name: "Installing parted"
+      ansible.builtin.package:
+        name: parted
+        state: present
+
+    - name: "Installing xfsprogs"
+      ansible.builtin.package:
+        name: xfsprogs
+        state: present
+      when: storage_fstype == 'xfs'
+
+    - name: "Installing e2fsprogs"
+      ansible.builtin.package:
+        name: e2fsprogs
+        state: present
+      when: storage_fstype in ['ext2', 'ext3', 'ext4']
+
+    ## A filesystem directly on the whole device means no partition table —
+    ## parted would wipe it.
+    - name: "Detecting a filesystem signature on the whole device"
+      ansible.builtin.command: "blkid -s TYPE -o value {{ storage_device }}"
+      register: storage_whole_device_fs
+      failed_when: false
+      changed_when: false
+
+    - name: "Refusing to partition a device with a whole-disk filesystem"
+      ansible.builtin.assert:
+        that:
+          - storage_whole_device_fs.stdout | length == 0
+        fail_msg: >-
+          {{ storage_device }} has a {{ storage_whole_device_fs.stdout }}
+          filesystem directly on the whole device (no partition table).
+          Refusing to repartition to prevent data loss.
+
+    ## Gates the format step so a re-attached disk with existing user data
+    ## is never wiped — the same disk can move between machines.
+    - name: "Detecting an existing filesystem on the data partition"
+      ansible.builtin.command: "blkid -s TYPE -o value {{ storage_partition }}"
+      register: storage_existing_fs
+      failed_when: false
+      changed_when: false
+
+    ## parted with part_end 100% would resize an existing partition 1 to
+    ## fill the disk — on a multi-partition layout that overlaps and
+    ## corrupts later partitions, so skip parted entirely when partition 1
+    ## already exists.
+    - name: "Checking whether the data partition already exists"
+      ansible.builtin.stat:
+        path: "{{ storage_partition }}"
+      register: storage_partition_stat
+
+    - name: "Partitioning the data device"
+      community.general.parted:
+        device: "{{ storage_device }}"
+        number: 1
+        state: present
+        part_end: "100%"
+      when: not storage_partition_stat.stat.exists
+
+    ## After parted, the partition node appears only once udev processes
+    ## the kernel event.
+    - name: "Waiting for the partition device node to appear"
+      ansible.builtin.wait_for:
+        path: "{{ storage_partition }}"
+        state: present
+        timeout: 30
+
+    - name: "Creating the filesystem on the data partition when absent"
+      community.general.filesystem:
+        fstype: "{{ storage_fstype }}"
+        dev: "{{ storage_partition }}"
+        force: false
+      when: storage_existing_fs.stdout | length == 0
+
+    ## Immediately after mkfs, udev may not have populated the UUID yet.
+    - name: "Capturing the filesystem UUID"
+      ansible.builtin.command: "blkid -s UUID -o value {{ storage_partition }}"
+      register: storage_uuid
+      changed_when: false
+      retries: 5
+      delay: 2
+      until: storage_uuid.stdout | length > 0
+
+    - name: "Ensuring the real mount point exists"
+      ansible.builtin.file:
+        path: "{{ storage_real_mount }}"
+        state: directory
+        mode: "0755"
+
+    ## A disk previously formatted with a different fstype (an ext4 disk
+    ## re-attached to an xfs-default host) must mount with its detected
+    ## type or the mount fails cryptically.
+    - name: "Determining the effective filesystem type for the mount"
+      ansible.builtin.set_fact:
+        storage_effective_fstype: >-
+          {{ storage_existing_fs.stdout
+             if (storage_existing_fs.stdout | length > 0)
+             else storage_fstype }}
+
+    ## UUID in fstab so device renumbering never breaks boot; nofail keeps
+    ## the system bootable when the disk is missing — the drop-ins below
+    ## then block the services that need it instead.
+    - name: "Mounting the data partition and persisting it in fstab"
+      ansible.posix.mount:
+        src: "UUID={{ storage_uuid.stdout }}"
+        path: "{{ storage_real_mount }}"
+        fstype: "{{ storage_effective_fstype }}"
+        opts: defaults,nofail
+        state: mounted
+
+    - name: "Creating the data subdirectories on the real mount"
+      ansible.builtin.file:
+        path: "{{ storage_real_mount }}/{{ item.name }}"
+        state: directory
+        mode: "0755"
+      loop: "{{ storage_subdirs }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: "Ensuring the bind-mount target parent directories exist"
+      ansible.builtin.file:
+        path: "{{ item.target | dirname }}"
+        state: directory
+        mode: "0755"
+      loop: "{{ storage_subdirs }}"
+      loop_control:
+        label: "{{ item.target | dirname }}"
+
+    - name: "Ensuring the bind-mount targets exist"
+      ansible.builtin.file:
+        path: "{{ item.target }}"
+        state: directory
+        mode: "0755"
+      loop: "{{ storage_subdirs }}"
+      loop_control:
+        label: "{{ item.target }}"
+
+    ## x-systemd.requires-mounts-for forces systemd to resolve the real
+    ## mount before attempting the bind — prevents boot-time races.
+    - name: "Bind-mounting the data subdirectories into the consumer paths"
+      ansible.posix.mount:
+        src: "{{ storage_real_mount }}/{{ item.name }}"
+        path: "{{ item.target }}"
+        fstype: none
+        opts: "bind,nofail,x-systemd.requires-mounts-for={{ storage_real_mount }}"
+        state: mounted
+      loop: "{{ storage_subdirs }}"
+      loop_control:
+        label: "{{ item.name }} -> {{ item.target }}"
+
+    - name: "Ensuring the systemd drop-in directories exist"
+      ansible.builtin.file:
+        path: "/etc/systemd/system/{{ item.name }}.service.d"
+        state: directory
+        mode: "0755"
+      loop: "{{ storage_services }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: "Installing systemd drop-ins tying services to their required mounts"
+      ansible.builtin.copy:
+        dest: "/etc/systemd/system/{{ item.name }}.service.d/storage.conf"
+        mode: "0644"
+        content: |
+          [Unit]
+          RequiresMountsFor={{ storage_real_mount }} {{ item.requires | join(' ') }}
+      loop: "{{ storage_services }}"
+      loop_control:
+        label: "{{ item.name }}"
+      notify: "Reloading the systemd daemon"

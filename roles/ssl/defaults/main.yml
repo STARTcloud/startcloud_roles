@@ -11,6 +11,11 @@ generate_self_signed_certificate_authority: false
 letsencrypt_enabled: false
 letsencrypt_staging_enabled: false
 
+## True while baking a golden image: skip Let's Encrypt issuance entirely —
+## there is no tenant domain to issue for, and any bake-time cert is scrubbed
+## before the snapshot. The relaunch's first provision issues the real cert.
+bake_mode: false
+
 # Names of every role this deployment runs, derived from the provision_roles list
 # the core_provisioner driver passes to every play. Roles gated run_tasks: false are
 # excluded. Overridable from Hosts.yml.

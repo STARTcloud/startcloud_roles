@@ -35,6 +35,10 @@ argument_specs:
         type: bool
         default: false
         description: Use the Let's Encrypt staging environment.
+      bake_mode:
+        type: bool
+        default: false
+        description: True while baking a golden image — skips Let's Encrypt issuance; the relaunch's first provision issues the real certificate.
       cert_pass:
         type: str
         default: ThisNeedstoBeSecure!

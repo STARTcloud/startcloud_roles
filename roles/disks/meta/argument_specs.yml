@@ -22,3 +22,27 @@ argument_specs:
         type: str
         default: pass123
         description: LUKS passphrase used to resize the encrypted root volume (override in production).
+      storage_device:
+        type: str
+        default: ""
+        description: >-
+          Explicit block device to partition, format and mount as dedicated data storage (e.g. /dev/sdb).
+          Empty skips all data-storage tasks, so hosts without the disk can share the same configuration.
+      storage_real_mount:
+        type: str
+        default: /srv/data
+        description: Mount point of the dedicated data filesystem; subdirs are created here and bind-mounted into the consumer paths.
+      storage_fstype:
+        type: str
+        default: xfs
+        description: Filesystem created on the data partition when none exists; an existing filesystem is never reformatted and mounts with its detected type.
+      storage_subdirs:
+        type: list
+        elements: dict
+        default: []
+        description: Subdirectories created on the real mount and bind-mounted into consumer paths. Each item has name (subdir on the real mount) and target (absolute path the bind mount appears at).
+      storage_services:
+        type: list
+        elements: dict
+        default: []
+        description: Services that receive a systemd drop-in refusing to start when their required mounts are missing. Each item has name (service unit) and requires (list of mount paths).

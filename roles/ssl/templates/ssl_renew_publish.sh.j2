@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+cp "/etc/letsencrypt/live/{{ settings.hostname | lower }}.{{ settings.domain | lower }}/fullchain.pem" "{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}.crt"
+cp "/etc/letsencrypt/live/{{ settings.hostname | lower }}.{{ settings.domain | lower }}/privkey.pem" "{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}.key"
+chown "{{ service_user }}:{{ service_group }}" "{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}.crt" "{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}.key"
+for hook in "{{ cert_dir }}/renewal-hooks.d"/*.sh; do
+  [ -x "$hook" ] && "$hook"
+done
+exit 0
