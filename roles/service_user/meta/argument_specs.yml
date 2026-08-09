@@ -18,6 +18,14 @@ argument_specs:
         type: str
         default: java_group
         description: Primary group of the service account.
+      service_user_uid:
+        type: str
+        default: ""
+        description: Optional fixed numeric uid for the service account; empty lets the OS assign the next free id.
+      service_group_gid:
+        type: str
+        default: ""
+        description: Optional fixed numeric gid for the service group; when set the group becomes the account's primary group so created files carry it. Empty lets the OS assign the next free id.
       service_home_dir:
         type: str
         default: /local/notesjava

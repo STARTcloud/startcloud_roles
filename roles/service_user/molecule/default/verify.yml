@@ -32,6 +32,14 @@
           - ansible_facts.getent_passwd[service_user][5] == '/bin/bash'
         fail_msg: "User {{ service_user }} missing or has wrong home/shell"
 
+    - name: "Asserting the configured uid and gid were enforced"
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.getent_passwd[service_user][1] == '2994'
+          - ansible_facts.getent_passwd[service_user][2] == '2994'
+          - ansible_facts.getent_group[service_group][1] == '2994'
+        fail_msg: "Service account ids do not match the configured uid/gid 2994"
+
     - name: "Stat-ing the sudoers drop-in for the service user"
       ansible.builtin.stat:
         path: "/etc/sudoers.d/{{ service_user }}"

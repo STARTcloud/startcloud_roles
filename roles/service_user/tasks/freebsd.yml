@@ -5,11 +5,14 @@
     - name: "Creating the group {{ service_group }}"
       ansible.builtin.group:
         name: "{{ service_group }}"
+        gid: "{{ service_group_gid | default(omit, true) }}"
         state: present
 
     - name: "Creating user {{ service_user }}"
       ansible.builtin.user:
         name: "{{ service_user }}"
+        uid: "{{ service_user_uid | default(omit, true) }}"
+        group: "{{ service_group if ((service_group_gid | default('', true) | string | length) > 0) else omit }}"
         shell: /bin/sh
         home: "{{ service_home_dir }}"
         groups:
