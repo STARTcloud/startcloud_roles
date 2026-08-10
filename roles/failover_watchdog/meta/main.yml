@@ -1,0 +1,22 @@
+---
+galaxy_info:
+  role_name: failover_watchdog
+  author: Mark Gilbert
+  description: Quorum-based reserved IP failover for two-node clusters — nodes vote on peer health, a witness concurs, and the standby claims the reserved IP through the DigitalOcean API.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: GPL-2.0-or-later
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions: ["bookworm", "trixie"]
+    - name: Ubuntu
+      versions: ["jammy", "noble"]
+  galaxy_tags:
+    - failover
+    - watchdog
+    - digitalocean
+    - availability
+dependencies: []
+collections:
+  - startcloud.startcloud_roles

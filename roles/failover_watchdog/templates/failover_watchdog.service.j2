@@ -1,0 +1,13 @@
+[Unit]
+Description=Quorum failover watchdog for reserved IP clusters
+After=network-online.target remote-fs.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/failover_watchdog.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

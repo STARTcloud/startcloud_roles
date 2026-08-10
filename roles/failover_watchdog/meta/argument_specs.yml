@@ -1,0 +1,47 @@
+---
+argument_specs:
+  main:
+    short_description: Quorum failover watchdog for reserved IP clusters
+    description:
+      - Runs a small daemon that health-checks cluster nodes over HTTPS. Nodes vote on their peer's death and claim the
+        cluster's reserved IP through the DigitalOcean API only when their own vote and a fresh witness verdict agree —
+        two of three voters. The witness only writes verdicts and never acts. Verdicts and node hello files travel over
+        the cluster's existing NFS share, so no extra service or port is introduced.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      show_help:
+        type: bool
+        default: true
+        description: Whether to display help/informational output.
+      failover_watchdog_mode:
+        type: str
+        default: node
+        choices: [node, witness]
+        description: node checks its peer and may claim the reserved IP on quorum; witness only probes every node and publishes verdicts.
+      failover_watchdog_node_name:
+        type: str
+        default: ""
+        description: Which entry in the cluster's nodes list this host is. Required in node mode; ignored for the witness.
+      failover_watchdog_interval:
+        type: int
+        default: 2
+        description: Seconds between health check rounds.
+      failover_watchdog_fall:
+        type: int
+        default: 3
+        description: Consecutive failed rounds before a node is voted dead.
+      failover_watchdog_clusters:
+        type: list
+        elements: dict
+        default: []
+        description: >-
+          Clusters to guard. Each entry carries name, reserved_ip, verdict_dir (a path on the cluster's shared NFS
+          mount, identical on every participant) and nodes — a list of {name, fqdn} entries. Nodes receive only their
+          own cluster; the witness lists every cluster it referees.
+      secrets:
+        type: dict
+        description: Provisioner context — merged secrets supplied by the provisioner. Consumed key: DO_TOKEN for the reserved IP holder query and reassign action.

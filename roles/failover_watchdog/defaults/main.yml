@@ -1,0 +1,9 @@
+---
+run_tasks: true
+
+show_help: true
+failover_watchdog_mode: node
+failover_watchdog_node_name: ""
+failover_watchdog_interval: 2
+failover_watchdog_fall: 3
+failover_watchdog_clusters: []

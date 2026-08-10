@@ -1,0 +1,136 @@
+#!/bin/bash
+set -u
+
+MODE="{{ failover_watchdog_mode }}"
+SELF_NODE="{{ failover_watchdog_node_name }}"
+INTERVAL={{ failover_watchdog_interval }}
+FALL={{ failover_watchdog_fall }}
+DO_TOKEN="{{ secrets.DO_TOKEN }}"
+CLUSTERS='{{ failover_watchdog_clusters | to_json }}'
+
+log() { logger -t failover_watchdog "$*"; }
+
+probe() {
+  curl -ksm 2 -o /dev/null "https://$1/" && return 0
+  return 1
+}
+
+self_droplet_id=""
+if [ "$MODE" = "node" ]; then
+  self_droplet_id="$(curl -sm 2 http://169.254.169.254/metadata/v1/id || true)"
+fi
+
+declare -A fails
+
+log "starting in $MODE mode (interval=${INTERVAL}s fall=$FALL)"
+
+while true; do
+  ccount=$(jq length <<<"$CLUSTERS")
+  for ((c = 0; c < ccount; c++)); do
+    cluster=$(jq -c ".[$c]" <<<"$CLUSTERS")
+    cname=$(jq -r .name <<<"$cluster")
+    rip=$(jq -r .reserved_ip <<<"$cluster")
+    vdir=$(jq -r .verdict_dir <<<"$cluster")
+    mkdir -p "$vdir" 2>/dev/null || true
+    ncount=$(jq '.nodes | length' <<<"$cluster")
+    for ((n = 0; n < ncount; n++)); do
+      node=$(jq -c ".nodes[$n]" <<<"$cluster")
+      nname=$(jq -r .name <<<"$node")
+      fqdn=$(jq -r .fqdn <<<"$node")
+
+      if [ "$MODE" = "node" ] && [ "$nname" = "$SELF_NODE" ]; then
+        vpc_ip=$(ip -4 -o addr show eth1 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | head -1)
+        pub_ip=$(ip -4 -o addr show eth0 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | head -1)
+        printf '{"droplet_id":"%s","vpc_ip":"%s","public_ip":"%s","ts":%s}\n' \
+          "$self_droplet_id" "$vpc_ip" "$pub_ip" "$(date +%s)" > "$vdir/$nname.self.json.tmp" \
+          && mv -f "$vdir/$nname.self.json.tmp" "$vdir/$nname.self.json"
+        continue
+      fi
+
+      targets="$fqdn"
+      hello="$vdir/$nname.self.json"
+      if [ -f "$hello" ]; then
+        hv=$(jq -r '.vpc_ip // empty' "$hello" 2>/dev/null || true)
+        hp=$(jq -r '.public_ip // empty' "$hello" 2>/dev/null || true)
+        targets="$targets $hv $hp"
+      fi
+
+      ok=0
+      for t in $targets; do
+        [ -n "$t" ] || continue
+        if probe "$t"; then
+          ok=1
+          break
+        fi
+      done
+
+      key="$cname/$nname"
+      if [ "$ok" = 1 ]; then
+        if [ "${fails[$key]:-0}" -ge "$FALL" ]; then
+          log "$cname: node $nname is answering again"
+        fi
+        fails[$key]=0
+      else
+        fails[$key]=$(( ${fails[$key]:-0} + 1 ))
+        log "$cname: node $nname failed check ${fails[$key]}/$FALL"
+      fi
+
+      if [ "${fails[$key]}" -ge "$FALL" ]; then
+        alive=0
+      else
+        alive=1
+      fi
+
+      if [ "$MODE" = "witness" ]; then
+        printf '{"alive":%s,"fails":%s,"ts":%s}\n' \
+          "$alive" "${fails[$key]}" "$(date +%s)" > "$vdir/$nname.verdict.json.tmp" \
+          && mv -f "$vdir/$nname.verdict.json.tmp" "$vdir/$nname.verdict.json"
+        continue
+      fi
+
+      [ "$alive" = 0 ] || continue
+
+      if ! probe "localhost"; then
+        log "$cname: peer $nname down by my vote but I am unhealthy myself; refusing to act"
+        continue
+      fi
+
+      wfile="$vdir/$nname.verdict.json"
+      if [ ! -f "$wfile" ]; then
+        log "$cname: peer $nname down by my vote; witness verdict missing; no quorum"
+        continue
+      fi
+      wts=$(jq -r '.ts // 0' "$wfile" 2>/dev/null || echo 0)
+      walive=$(jq -r '.alive // 1' "$wfile" 2>/dev/null || echo 1)
+      if [ $(( $(date +%s) - wts )) -gt $(( INTERVAL * 5 )) ]; then
+        log "$cname: peer $nname down by my vote; witness verdict stale; no quorum"
+        continue
+      fi
+      [ "$walive" = "0" ] || continue
+
+      holder=$(curl -sm 5 -H "Authorization: Bearer $DO_TOKEN" \
+        "https://api.digitalocean.com/v2/reserved_ips/$rip" | jq -r '.reserved_ip.droplet.id // empty')
+      if [ -z "$holder" ]; then
+        log "$cname: cannot determine reserved IP holder; no action"
+        continue
+      fi
+      [ "$holder" != "$self_droplet_id" ] || continue
+      peer_id=$(jq -r '.droplet_id // empty' "$hello" 2>/dev/null || true)
+      if [ -z "$peer_id" ] || [ "$holder" != "$peer_id" ]; then
+        log "$cname: reserved IP holder $holder is not peer $nname; refusing to act"
+        continue
+      fi
+
+      log "$cname: QUORUM - peer $nname dead by my vote and witness vote; claiming $rip for droplet $self_droplet_id"
+      if curl -sm 10 -X POST -H "Authorization: Bearer $DO_TOKEN" -H 'Content-Type: application/json' \
+        -d "{\"type\":\"assign\",\"droplet_id\":$self_droplet_id}" \
+        "https://api.digitalocean.com/v2/reserved_ips/$rip/actions" > /dev/null; then
+        log "$cname: reassign of $rip issued"
+      else
+        log "$cname: reassign of $rip FAILED"
+      fi
+      sleep 30
+    done
+  done
+  sleep "$INTERVAL"
+done

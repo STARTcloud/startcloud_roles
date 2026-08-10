@@ -1,0 +1,6 @@
+---
+- name: "Restarting failover_watchdog"
+  ansible.builtin.systemd:
+    name: failover_watchdog
+    state: restarted
+    daemon_reload: true

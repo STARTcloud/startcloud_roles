@@ -1,0 +1,35 @@
+---
+- name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    - name: "Installing watchdog dependencies"
+      ansible.builtin.apt:
+        pkg:
+          - jq
+          - curl
+        state: present
+
+    - name: "Installing the failover watchdog script"
+      ansible.builtin.template:
+        src: failover_watchdog.sh.j2
+        dest: /usr/local/bin/failover_watchdog.sh
+        owner: root
+        group: root
+        mode: "0750"
+      notify: "Restarting failover_watchdog"
+
+    - name: "Installing the failover watchdog service unit"
+      ansible.builtin.template:
+        src: failover_watchdog.service.j2
+        dest: /etc/systemd/system/failover_watchdog.service
+        owner: root
+        group: root
+        mode: "0644"
+      notify: "Restarting failover_watchdog"
+
+    - name: "Enabling and starting the failover watchdog"
+      ansible.builtin.systemd:
+        name: failover_watchdog
+        enabled: true
+        state: started
+        daemon_reload: true
