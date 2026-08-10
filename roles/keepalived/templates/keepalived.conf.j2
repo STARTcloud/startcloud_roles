@@ -7,16 +7,32 @@ vrrp_script chk_haproxy {
 vrrp_instance VI_1 {
   interface {{ first_adapter }}
   state {{ startcloud_keepalived_state }}
+{% if startcloud_keepalived_nopreempt %}
+  nopreempt
+{% endif %}
   virtual_router_id {{ startcloud_keepalived_virtual_router_id }}
   priority {{ startcloud_keepalived_priority }}
   advert_int 1
+{% if startcloud_keepalived_unicast_peers | length > 0 %}
+  unicast_src_ip {{ (first_ip.stdout_lines | first).split('/') | first }}
+  unicast_peer {
+{% for peer in startcloud_keepalived_unicast_peers %}
+    {{ peer }}
+{% endfor %}
+  }
+{% endif %}
   authentication {
       auth_type PASS
       auth_pass {{ startcloud_keepalived_auth_pass }}
     }
+{% if not startcloud_keepalived_digitalocean_failover %}
   virtual_ipaddress {
     {{ startcloud_keepalived_virtual_ipaddress }}
   }
+{% endif %}
+{% if startcloud_keepalived_digitalocean_failover %}
+  notify_master /etc/keepalived/digitalocean_failover.sh
+{% endif %}
   track_script {
     chk_haproxy
   }

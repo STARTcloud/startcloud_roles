@@ -1,0 +1,20 @@
+#!/bin/bash
+set -e
+lineage="$(basename "${RENEWED_LINEAGE}")"
+case "${lineage}" in
+{% for cert in ssl_dns01_certs %}
+  {{ cert.domains | first }})
+    cp "${RENEWED_LINEAGE}/fullchain.pem" "{{ cert_dir }}/crt/{{ cert.domains | first }}.crt"
+    cp "${RENEWED_LINEAGE}/privkey.pem" "{{ cert_dir }}/key/{{ cert.domains | first }}.key"
+    cat "${RENEWED_LINEAGE}/fullchain.pem" "${RENEWED_LINEAGE}/privkey.pem" > "{{ cert_dir }}/combined/{{ cert.domains | first }}.pem"
+    chown "{{ service_user }}:{{ service_group }}" "{{ cert_dir }}/crt/{{ cert.domains | first }}.crt" "{{ cert_dir }}/key/{{ cert.domains | first }}.key" "{{ cert_dir }}/combined/{{ cert.domains | first }}.pem"
+    ;;
+{% endfor %}
+  *)
+    exit 0
+    ;;
+esac
+for hook in "{{ cert_dir }}/renewal-hooks.d"/*.sh; do
+  [ -x "$hook" ] && "$hook"
+done
+exit 0

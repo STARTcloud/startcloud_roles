@@ -30,3 +30,23 @@ argument_specs:
         type: int
         default: 101
         description: VRRP priority for this node; the highest priority becomes master.
+      startcloud_keepalived_nopreempt:
+        type: bool
+        default: false
+        description: Render nopreempt so a recovered higher-priority node does not take the master role back; keepalived honors it only when state is BACKUP on all nodes.
+      startcloud_keepalived_unicast_peers:
+        type: list
+        elements: str
+        default: []
+        description: Peer IP addresses for VRRP unicast mode; when non-empty the instance advertises via unicast_peer from the first adapter's address instead of multicast. Required on networks without multicast such as cloud VPCs.
+      startcloud_keepalived_digitalocean_failover:
+        type: bool
+        default: false
+        description: >-
+          Replace the floated virtual IP with DigitalOcean reserved IP failover: no virtual_ipaddress block is rendered,
+          and a notify_master script assigns the reserved IP to this droplet through the DigitalOcean API using
+          secrets.DO_TOKEN and the droplet ID from the metadata service.
+      startcloud_keepalived_digitalocean_reserved_ip:
+        type: str
+        default: ""
+        description: The DigitalOcean reserved IP the notify_master script assigns to this droplet on promotion.

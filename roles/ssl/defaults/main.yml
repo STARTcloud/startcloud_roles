@@ -59,6 +59,8 @@ cert_store_location: LocalMachine
 cert_key_storage: machine
 cert_key_exportable: true
 
+ssl_dns01_certs: []
+
 # Variables for Role Certbot certs.
 certbot_create_if_missing: false
 certbot_create_method: standalone

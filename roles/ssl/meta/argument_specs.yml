@@ -91,6 +91,15 @@ argument_specs:
         type: bool
         default: true
         description: Whether the imported Windows key is exportable.
+      ssl_dns01_certs:
+        type: list
+        elements: dict
+        default: []
+        description: >-
+          Certificates to issue via the DNS-01 challenge through an acme-dns server. Each item carries a domains list;
+          every domain requires a matching entry in secrets.acmedns_credentials and a published _acme-challenge CNAME
+          pointing at that registration's fulldomain. Issued with certbot --manual using the acme-dns update API, so the
+          role publishes no DNS records itself; renewals republish through the installed deploy hook.
       certbot_create_if_missing:
         type: bool
         default: false

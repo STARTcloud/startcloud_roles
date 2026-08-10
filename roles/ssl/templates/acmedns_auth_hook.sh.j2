@@ -1,0 +1,14 @@
+#!/bin/bash
+set -euo pipefail
+read -r ACME_USER ACME_KEY ACME_SUB < <(python3 - "${CERTBOT_DOMAIN}" <<'PYEOF'
+import json
+import sys
+creds = json.load(open('/etc/acmedns/credentials.json'))[sys.argv[1]]
+print(creds['username'], creds['password'], creds['subdomain'])
+PYEOF
+)
+curl -fsS -X POST "{{ secrets.acmedns_api_url }}/update" \
+  -H "X-Api-User: ${ACME_USER}" \
+  -H "X-Api-Key: ${ACME_KEY}" \
+  -d "{\"subdomain\":\"${ACME_SUB}\",\"txt\":\"${CERTBOT_VALIDATION}\"}"
+sleep 5

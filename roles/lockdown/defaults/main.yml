@@ -13,6 +13,8 @@ lockdown:
   - rpcbind.socket
   - nfs-kernel-server
 
+lockdown_disable_ssh_password_auth: false
+
 # List of files/paths to be cleaned up by the lockdown role.
 # Other roles can append to this list.
 lockdown_file_cleanups_list: []

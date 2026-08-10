@@ -628,3 +628,95 @@
         src: ssl_renew_publish.sh.j2
         dest: /etc/letsencrypt/renewal-hooks/deploy/ssl_renew_publish.sh
         mode: "0750"
+
+- name: "Issuing DNS-01 service certificates via acme-dns"
+  when: ssl_dns01_certs | length > 0 and not (bake_mode | default(false) | bool)
+  block:
+    - name: "Ensuring certbot is installed"
+      ansible.builtin.apt:
+        name: certbot
+        state: present
+
+    - name: "Creating acme-dns configuration directory"
+      become: true
+      ansible.builtin.file:
+        path: /etc/acmedns
+        state: directory
+        owner: root
+        group: root
+        mode: "0750"
+
+    - name: "Writing acme-dns credentials"
+      become: true
+      ansible.builtin.copy:
+        content: "{{ secrets.acmedns_credentials | to_nice_json }}"
+        dest: /etc/acmedns/credentials.json
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: "Installing the acme-dns authentication hook"
+      become: true
+      ansible.builtin.template:
+        src: acmedns_auth_hook.sh.j2
+        dest: /etc/acmedns/acmedns_auth_hook.sh
+        owner: root
+        group: root
+        mode: "0750"
+
+    - name: "Checking for existing DNS-01 certificates"
+      become: true
+      ansible.builtin.stat:
+        path: "/etc/letsencrypt/live/{{ item.domains | first }}/cert.pem"
+      loop: "{{ ssl_dns01_certs }}"
+      loop_control:
+        label: "{{ item.domains | first }}"
+      register: ssl_dns01_cert_checks
+
+    - name: "Requesting DNS-01 certificates"
+      become: true
+      ansible.builtin.command: >-
+        certbot certonly --manual
+        --preferred-challenges dns
+        --manual-auth-hook /etc/acmedns/acmedns_auth_hook.sh
+        --noninteractive
+        --agree-tos
+        --key-type rsa
+        {{ '--staging' if letsencrypt_staging_enabled else '' }}
+        --email {{ settings.email }}
+        --cert-name {{ item.item.domains | first }}
+        {% for domain in item.item.domains %}-d {{ domain }} {% endfor %}
+      changed_when: true
+      when: not item.stat.exists
+      loop: "{{ ssl_dns01_cert_checks.results }}"
+      loop_control:
+        label: "{{ item.item.domains | first }}"
+
+    - name: "Publishing DNS-01 certificates into the certificate store"
+      become: true
+      ansible.builtin.shell: >-
+        set -o pipefail &&
+        cp /etc/letsencrypt/live/{{ item.domains | first }}/fullchain.pem {{ cert_dir }}/crt/{{ item.domains | first }}.crt &&
+        cp /etc/letsencrypt/live/{{ item.domains | first }}/privkey.pem {{ cert_dir }}/key/{{ item.domains | first }}.key &&
+        cat /etc/letsencrypt/live/{{ item.domains | first }}/fullchain.pem /etc/letsencrypt/live/{{ item.domains | first }}/privkey.pem > {{ cert_dir }}/combined/{{ item.domains | first }}.pem &&
+        chown {{ service_user }}:{{ service_group }} {{ cert_dir }}/crt/{{ item.domains | first }}.crt {{ cert_dir }}/key/{{ item.domains | first }}.key {{ cert_dir }}/combined/{{ item.domains | first }}.pem
+      args:
+        executable: /bin/bash
+      changed_when: true
+      loop: "{{ ssl_dns01_certs }}"
+      loop_control:
+        label: "{{ item.domains | first }}"
+
+    - name: "Creating the certbot deploy-hook directory"
+      become: true
+      ansible.builtin.file:
+        path: /etc/letsencrypt/renewal-hooks/deploy
+        state: directory
+        mode: "0750"
+
+    - name: "Installing the DNS-01 renewal publish hook"
+      become: true
+      ansible.builtin.template:
+        src: ssl_dns01_publish.sh.j2
+        dest: /etc/letsencrypt/renewal-hooks/deploy/ssl_dns01_publish.sh
+        mode: "0750"

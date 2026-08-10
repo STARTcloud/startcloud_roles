@@ -62,6 +62,15 @@
     ## The daemon is only bounced when this file actually changes. An
     ## unconditional `state: restarted` below reported changed on every run and
     ## dropped the virtual IP each time the role was re-applied.
+    - name: "Installing the DigitalOcean reserved IP failover script"
+      when: startcloud_keepalived_digitalocean_failover | bool
+      become: true
+      ansible.builtin.template:
+        src: digitalocean_failover.sh.j2
+        dest: /etc/keepalived/digitalocean_failover.sh
+        mode: "0750"
+      notify: "Restarting keepalived"
+
     - name: "Configuring keepalived"
       become: true
       ansible.builtin.template:

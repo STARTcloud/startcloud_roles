@@ -9,3 +9,7 @@ startcloud_keepalived_auth_pass: "STARTcld"
 ## Empty = derived at runtime from the first adapter's subnet (host part .250)
 startcloud_keepalived_virtual_ipaddress: ""
 startcloud_keepalived_priority: 101
+startcloud_keepalived_nopreempt: false
+startcloud_keepalived_unicast_peers: []
+startcloud_keepalived_digitalocean_failover: false
+startcloud_keepalived_digitalocean_reserved_ip: ""

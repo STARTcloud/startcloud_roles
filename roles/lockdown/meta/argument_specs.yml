@@ -38,6 +38,13 @@ argument_specs:
         type: bool
         default: false
         description: Gate for the sensitive-file cleanup step.
+      lockdown_disable_ssh_password_auth:
+        type: bool
+        default: false
+        description: >-
+          Write PasswordAuthentication no as /etc/ssh/sshd_config.d/00-lockdown.conf and restart sshd, leaving the
+          rotated key as the only login path. The 00- prefix sorts first so it wins over later drop-ins such as
+          cloud-init's; off by default for locally built machines that log in by password.
       vagrant_user:
         type: str
         description: >-

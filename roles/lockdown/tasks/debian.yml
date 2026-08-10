@@ -64,6 +64,23 @@
     exclusive: false
     key: "{{ lockdown_generated_pubkey.content | b64decode }}"
 
+- name: "Disabling SSH password authentication"
+  when: lockdown_disable_ssh_password_auth | bool
+  ansible.builtin.copy:
+    content: "PasswordAuthentication no\n"
+    dest: /etc/ssh/sshd_config.d/00-lockdown.conf
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: "Restarting ssh to apply authentication settings"
+  when:
+    - lockdown_disable_ssh_password_auth | bool
+    - not (ansible_module_running_in_container | default(false))
+  ansible.builtin.service:
+    name: ssh
+    state: restarted
+
 - name: "Resetting ssh connection to apply user changes"
   ansible.builtin.meta: reset_connection
 

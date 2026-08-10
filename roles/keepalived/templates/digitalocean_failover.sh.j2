@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+droplet_id="$(curl -fsS http://169.254.169.254/metadata/v1/id)"
+curl -fsS -X POST "https://api.digitalocean.com/v2/reserved_ips/{{ startcloud_keepalived_digitalocean_reserved_ip }}/actions" \
+  -H "Authorization: Bearer {{ secrets.DO_TOKEN }}" \
+  -H "Content-Type: application/json" \
+  -d "{\"type\":\"assign\",\"droplet_id\":${droplet_id}}"
+exit 0
