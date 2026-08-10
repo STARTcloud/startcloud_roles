@@ -44,4 +44,6 @@ argument_specs:
           own cluster; the witness lists every cluster it referees.
       secrets:
         type: dict
-        description: Provisioner context — merged secrets supplied by the provisioner. Consumed key: DO_TOKEN for the reserved IP holder query and reassign action.
+        description: >-
+          Provisioner context — merged secrets supplied by the provisioner. Consumed key is DO_TOKEN, used for the
+          reserved IP holder query and the reassign action.
