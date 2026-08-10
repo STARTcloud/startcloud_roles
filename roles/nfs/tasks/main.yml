@@ -34,9 +34,9 @@
         name: "{{ nfs_server_daemon }}"
         state: "started"
         enabled: "yes"
-      when: nfs_exports | length | bool
+      when: nfs_exports | length > 0
 
     - name: "Activating exports so mounts later in the same play succeed"
       ansible.builtin.command: exportfs -ra
       changed_when: false
-      when: nfs_exports | length | bool
+      when: nfs_exports | length > 0

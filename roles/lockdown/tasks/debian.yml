@@ -12,7 +12,7 @@
     name: "{{ item }}"
     state: stopped
     enabled: false
-  loop: "{{ lockdown }}"
+  loop: "{{ lockdown_effective_services }}"
   failed_when: false
 
 ## password_hash('sha512') picks a fresh random salt on every invocation, so the

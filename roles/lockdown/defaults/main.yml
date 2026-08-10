@@ -13,6 +13,18 @@ lockdown:
   - rpcbind.socket
   - nfs-kernel-server
 
+enabled_roles: >-
+  {{ ((provision_roles | default([]) | selectattr('vars.run_tasks', 'undefined') | list)
+      + (provision_roles | default([]) | selectattr('vars.run_tasks', 'defined')
+         | selectattr('vars.run_tasks') | list))
+     | map(attribute='name') | list }}
+
+lockdown_nfs_enabled: "{{ 'startcloud.startcloud_roles.nfs' in enabled_roles }}"
+
+lockdown_effective_services: >-
+  {{ lockdown | difference(['portmap', 'rpcbind.target', 'rpcbind.service', 'rpcbind.socket', 'nfs-kernel-server'])
+     if lockdown_nfs_enabled | bool else lockdown }}
+
 lockdown_disable_ssh_password_auth: false
 
 # List of files/paths to be cleaned up by the lockdown role.

@@ -42,6 +42,22 @@
       loop_control:
         loop_var: alias
 
+    - name: "Resolving records that publish the second adapter's address"
+      ansible.builtin.set_fact:
+        dns_resolved_records: >-
+          {{ (dns_resolved_records | default([]))
+             + [ record | combine({'value': second_adapter_details.ip})
+                 if record.value_source | default('') == 'second_adapter' and record.value is not defined
+                 else record ] }}
+      loop: "{{ dns_effective_records }}"
+      loop_control:
+        loop_var: record
+        label: "{{ record.name }}.{{ record.zone }}"
+
+    - name: "Adopting the resolved record list"
+      ansible.builtin.set_fact:
+        dns_effective_records: "{{ dns_resolved_records }}"
+
     - name: "Grouping DNS records by provider"
       ansible.builtin.set_fact:
         dns_providers: "{{ dns_effective_records | map(attribute='provider') | unique | list }}"

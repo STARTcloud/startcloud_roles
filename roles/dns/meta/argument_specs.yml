@@ -21,10 +21,12 @@ argument_specs:
         default: []
         description: >-
           Records to publish. Each entry carries provider (cloudflare, wix or amazon), zone, name, type and
-          optionally value, ttl, proxied and solo. When value is omitted the record publishes the machine's
-          own public adapter IP (gathered by the networking role) at run time — keep templates out of
-          Hosts.yml, the playbook generator renders it before facts exist. An empty list makes the role a
-          no-op — the expected state for locally built machines that accept the generated key.
+          optionally value, ttl, proxied, solo and value_source. When value is omitted the record publishes
+          the machine's own public adapter IP (gathered by the networking role) at run time — keep templates
+          out of Hosts.yml, the playbook generator renders it before facts exist. A record with value_source
+          set to second_adapter publishes the second adapter's address instead — the VPC/private IP — so
+          internal names follow the machine across rebuilds. An empty list makes the role a no-op — the
+          expected state for locally built machines that accept the generated key.
       dns_default_ttl:
         type: int
         default: 300
