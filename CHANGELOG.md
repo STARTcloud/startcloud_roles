@@ -3,6 +3,13 @@
 All notable changes to the `startcloud.startcloud_roles` collection are
 documented here.
 
+## [0.2.1](https://github.com/STARTcloud/startcloud_roles/compare/v0.2.0...v0.2.1) (2026-08-10)
+
+
+### Bug Fixes
+
+* name deprecatitons ([fc48e2d](https://github.com/STARTcloud/startcloud_roles/commit/fc48e2d028c91d97e66387f4ed20c34d7aa519c2))
+
 ## [0.2.0](https://github.com/STARTcloud/startcloud_roles/compare/v0.1.2...v0.2.0) (2026-08-09)
 
 
