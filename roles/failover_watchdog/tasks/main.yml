@@ -9,13 +9,55 @@
           - curl
         state: present
 
+    - name: "Creating verdict directories for refereed clusters"
+      when: failover_watchdog_mode == 'witness'
+      ansible.builtin.file:
+        path: "{{ item.verdict_dir }}"
+        state: directory
+        mode: "1777"
+      loop: "{{ failover_watchdog_clusters }}"
+
+    - name: "Checking each cluster's reserved IP holder"
+      when: failover_watchdog_mode == 'node'
+      ansible.builtin.uri:
+        url: "https://api.digitalocean.com/v2/reserved_ips/{{ item.reserved_ip }}"
+        headers:
+          Authorization: "Bearer {{ secrets.DO_TOKEN }}"
+        return_content: true
+      loop: "{{ failover_watchdog_clusters }}"
+      register: failover_watchdog_holder_checks
+
+    - name: "Fetching this droplet's ID"
+      when: failover_watchdog_mode == 'node'
+      ansible.builtin.uri:
+        url: http://169.254.169.254/metadata/v1/id
+        return_content: true
+      register: failover_watchdog_self_id
+
+    - name: "Claiming unassigned reserved IPs"
+      when:
+        - failover_watchdog_mode == 'node'
+        - item.json is defined
+        - item.json.reserved_ip.droplet is none
+      ansible.builtin.uri:
+        url: "https://api.digitalocean.com/v2/reserved_ips/{{ item.item.reserved_ip }}/actions"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ secrets.DO_TOKEN }}"
+        body_format: json
+        body:
+          type: assign
+          droplet_id: "{{ failover_watchdog_self_id.content | int }}"
+        status_code: [201]
+      loop: "{{ failover_watchdog_holder_checks.results | default([]) }}"
+
     - name: "Installing the failover watchdog script"
       ansible.builtin.template:
         src: failover_watchdog.sh.j2
         dest: /usr/local/bin/failover_watchdog.sh
-        owner: root
-        group: root
-        mode: "0750"
+        owner: "{{ settings.vagrant_user }}"
+        group: "{{ settings.vagrant_user }}"
+        mode: "0700"
       notify: "Restarting failover_watchdog"
 
     - name: "Installing the failover watchdog service unit"

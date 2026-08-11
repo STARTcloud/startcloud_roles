@@ -108,10 +108,15 @@ while true; do
       fi
       [ "$walive" = "0" ] || continue
 
-      holder=$(curl -sm 5 -H "Authorization: Bearer $DO_TOKEN" \
-        "https://api.digitalocean.com/v2/reserved_ips/$rip" | jq -r '.reserved_ip.droplet.id // empty')
+      resp=$(curl -sm 5 -H "Authorization: Bearer $DO_TOKEN" \
+        "https://api.digitalocean.com/v2/reserved_ips/$rip" || true)
+      if [ -z "$resp" ] || ! jq -e .reserved_ip >/dev/null 2>&1 <<<"$resp"; then
+        log "$cname: reserved IP API unreachable; no action"
+        continue
+      fi
+      holder=$(jq -r '.reserved_ip.droplet.id // empty' <<<"$resp")
       if [ -z "$holder" ]; then
-        log "$cname: cannot determine reserved IP holder; no action"
+        log "$cname: reserved IP $rip is assigned to nobody; provisioning owns first assignment; no action"
         continue
       fi
       [ "$holder" != "$self_droplet_id" ] || continue
