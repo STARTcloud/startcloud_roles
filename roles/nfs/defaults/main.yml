@@ -2,5 +2,6 @@
 run_tasks: true
 
 nfs_exports: []
+nfs_managed_dirs: []
 nfs_rpcbind_state: started
 nfs_rpcbind_enabled: true

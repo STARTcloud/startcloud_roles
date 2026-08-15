@@ -21,6 +21,15 @@
         mode: "0755"
       with_items: "{{ nfs_exports }}"
 
+    - name: "Creating managed directories inside the exports"
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: directory
+        owner: "{{ item.owner | default(omit) }}"
+        group: "{{ item.group | default(omit) }}"
+        mode: "{{ item.mode | default('0755') }}"
+      with_items: "{{ nfs_managed_dirs }}"
+
     - name: "Copying exports file"
       ansible.builtin.template:
         src: exports.j2
