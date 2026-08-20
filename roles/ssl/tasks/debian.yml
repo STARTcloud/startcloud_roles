@@ -377,7 +377,7 @@
         remote_src: true
 
 - name: "Beginning Let's Encrypt Provisioning"
-  when: selfsigned_enabled and letsencrypt_enabled and not (bake_mode | default(false) | bool)
+  when: selfsigned_enabled and letsencrypt_enabled and certbot_create_method == 'standalone' and not (bake_mode | default(false) | bool)
   block:
     - name: "Ensuring apt cache is updated"
       ansible.builtin.apt:
