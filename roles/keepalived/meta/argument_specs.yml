@@ -38,7 +38,9 @@ argument_specs:
         type: list
         elements: str
         default: []
-        description: Peer IP addresses for VRRP unicast mode; when non-empty the instance advertises via unicast_peer from the first adapter's address instead of multicast. Required on networks without multicast such as cloud VPCs.
+        description: >-
+          Peer IP addresses for VRRP unicast mode; when non-empty the instance advertises via unicast_peer
+          from the first adapter's address instead of multicast. Required on networks without multicast such as cloud VPCs.
       startcloud_keepalived_digitalocean_failover:
         type: bool
         default: false

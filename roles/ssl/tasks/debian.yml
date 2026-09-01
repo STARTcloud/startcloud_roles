@@ -699,7 +699,8 @@
         cp /etc/letsencrypt/live/{{ item.domains | first }}/fullchain.pem {{ cert_dir }}/crt/{{ item.domains | first }}.crt &&
         cp /etc/letsencrypt/live/{{ item.domains | first }}/privkey.pem {{ cert_dir }}/key/{{ item.domains | first }}.key &&
         cat /etc/letsencrypt/live/{{ item.domains | first }}/fullchain.pem /etc/letsencrypt/live/{{ item.domains | first }}/privkey.pem > {{ cert_dir }}/combined/{{ item.domains | first }}.pem &&
-        chown {{ service_user }}:{{ service_group }} {{ cert_dir }}/crt/{{ item.domains | first }}.crt {{ cert_dir }}/key/{{ item.domains | first }}.key {{ cert_dir }}/combined/{{ item.domains | first }}.pem
+        chown {{ service_user }}:{{ service_group }} {{ cert_dir }}/crt/{{ item.domains | first }}.crt {{ cert_dir }}/key/{{ item.domains | first }}.key
+        {{ cert_dir }}/combined/{{ item.domains | first }}.pem
       args:
         executable: /bin/bash
       changed_when: true
