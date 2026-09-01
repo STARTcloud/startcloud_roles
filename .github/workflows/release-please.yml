@@ -134,24 +134,40 @@ jobs:
     needs: [release-please, build-collection]
     if: ${{ needs.release-please.outputs.release_created == 'true' }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        consumer:
+          - STARTcloud/startcloud_generic_provisioner
+          - STARTcloud/switchboard_provisioner
     steps:
+      - name: Split owner and repo
+        id: target
+        env:
+          CONSUMER: ${{ matrix.consumer }}
+        run: |
+          echo "owner=${CONSUMER%%/*}" >> "$GITHUB_OUTPUT"
+          echo "repo=${CONSUMER##*/}" >> "$GITHUB_OUTPUT"
+
       - name: Mint App token
         id: app
         uses: actions/create-github-app-token@v3
         with:
           client-id: ${{ secrets.BOT_APP_ID }}
           private-key: ${{ secrets.BOT_PRIVATE_KEY }}
-          owner: STARTcloud
-          repositories: startcloud_generic_provisioner
+          owner: ${{ steps.target.outputs.owner }}
+          repositories: ${{ steps.target.outputs.repo }}
 
       - name: Dispatch dependency-update
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
           TAG: ${{ needs.release-please.outputs.tag_name }}
+          CONSUMER: ${{ matrix.consumer }}
         run: |
           SHA="$(gh api "repos/${{ github.repository }}/commits/$TAG" --jq .sha)"
-          gh api repos/STARTcloud/startcloud_generic_provisioner/dispatches \
+          gh api "repos/$CONSUMER/dispatches" \
             -f event_type=dependency-update \
             -f "client_payload[repo]=${{ github.repository }}" \
             -f "client_payload[tag]=$TAG" \
             -f "client_payload[sha]=$SHA"
+          echo "Dispatched dependency-update: $CONSUMER <- $TAG"
