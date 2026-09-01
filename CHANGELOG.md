@@ -3,6 +3,13 @@
 All notable changes to the `startcloud.startcloud_roles` collection are
 documented here.
 
+## [0.3.1](https://github.com/STARTcloud/startcloud_roles/compare/v0.3.0...v0.3.1) (2026-09-01)
+
+
+### Bug Fixes
+
+* updating logos and adding notifications to othe consumers ([6551fe1](https://github.com/STARTcloud/startcloud_roles/commit/6551fe11736270c91d51a6da389b666f4fd83563))
+
 ## [0.3.0](https://github.com/STARTcloud/startcloud_roles/compare/v0.2.1...v0.3.0) (2026-09-01)
 
 
