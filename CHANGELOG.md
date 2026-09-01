@@ -3,6 +3,25 @@
 All notable changes to the `startcloud.startcloud_roles` collection are
 documented here.
 
+## [0.3.0](https://github.com/STARTcloud/startcloud_roles/compare/v0.2.1...v0.3.0) (2026-09-01)
+
+
+### Features
+
+* now watchdog service for clusters ([d253e52](https://github.com/STARTcloud/startcloud_roles/commit/d253e52b5f5fad77733e48d40fd2deab589a5fd9))
+
+
+### Bug Fixes
+
+* adding managed dirs for NFS shares ([cf2c903](https://github.com/STARTcloud/startcloud_roles/commit/cf2c90307c06ad922bc05b4fee754d63a73382f1))
+* Adding Updates for VMs at DigitalOcean ([e7f04e4](https://github.com/STARTcloud/startcloud_roles/commit/e7f04e4144b3937c568aeff99f27a5c0064deba2))
+* linting issues ([7206480](https://github.com/STARTcloud/startcloud_roles/commit/720648029000fb9e15ec93f854ff5cb1be44e9d7))
+* SSL DNs challenges and java ([ad23941](https://github.com/STARTcloud/startcloud_roles/commit/ad23941c4eb109875c21bb2da87c8d857836e4f4))
+* Type ([5dba02d](https://github.com/STARTcloud/startcloud_roles/commit/5dba02d8ca2a66db17e686bdfb820b9df7b38e76))
+* updating NFS roles and Client for Support with Digital Ocean Workflows ([274d089](https://github.com/STARTcloud/startcloud_roles/commit/274d089b0baebf1e6688f6fff1fe790b38288802))
+* updating to support some switchboard changes ([0e5aae9](https://github.com/STARTcloud/startcloud_roles/commit/0e5aae972a65714a459e1957538f4d2754d882c0))
+* updating watchdog service ([3960df8](https://github.com/STARTcloud/startcloud_roles/commit/3960df8cfcceb685c1c83845c0b7a0d4b2149330))
+
 ## [0.2.1](https://github.com/STARTcloud/startcloud_roles/compare/v0.2.0...v0.2.1) (2026-08-10)
 
 
