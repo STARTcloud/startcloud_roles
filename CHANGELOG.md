@@ -3,6 +3,13 @@
 All notable changes to the `startcloud.startcloud_roles` collection are
 documented here.
 
+## [0.3.2](https://github.com/STARTcloud/startcloud_roles/compare/v0.3.1...v0.3.2) (2026-09-02)
+
+
+### Bug Fixes
+
+* point the switchboard consumer at its PhoneSwitchBoard repo ([05c59dd](https://github.com/STARTcloud/startcloud_roles/commit/05c59dd4a9b31c11b8da569a519218c75fc8de86))
+
 ## [0.3.1](https://github.com/STARTcloud/startcloud_roles/compare/v0.3.0...v0.3.1) (2026-09-01)
 
 
