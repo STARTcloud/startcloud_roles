@@ -139,7 +139,7 @@ jobs:
       matrix:
         consumer:
           - STARTcloud/startcloud_generic_provisioner
-          - STARTcloud/switchboard_provisioner
+          - PhoneSwitchBoard/switchboard_provisioner_private
     steps:
       - name: Split owner and repo
         id: target
