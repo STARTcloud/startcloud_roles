@@ -1,0 +1,88 @@
+#!/bin/bash
+
+param=$1
+
+TOKEN=$OCF_RESKEY_do_token
+IP=$OCF_RESKEY_floating_ip
+DROPLET_ID=$(curl -sm 5 http://169.254.169.254/metadata/v1/id)
+
+has_ip() {
+  [ "$(curl -sm 5 http://169.254.169.254/metadata/v1/floating_ip/ipv4/active)" = "true" ]
+}
+
+meta_data() {
+  cat <<END
+<?xml version="1.0"?>
+<!DOCTYPE resource-agent SYSTEM "ra-api-1.dtd">
+<resource-agent name="floatip" version="1.0">
+  <version>1.0</version>
+  <longdesc lang="en">Points a DigitalOcean reserved IP at this droplet via the DigitalOcean API</longdesc>
+  <shortdesc lang="en">DigitalOcean reserved IP</shortdesc>
+  <parameters>
+    <parameter name="do_token" unique="0" required="1">
+      <longdesc lang="en">DigitalOcean API token with write access</longdesc>
+      <shortdesc lang="en">API token</shortdesc>
+      <content type="string"/>
+    </parameter>
+    <parameter name="floating_ip" unique="0" required="1">
+      <longdesc lang="en">Reserved IP address to hold</longdesc>
+      <shortdesc lang="en">Reserved IP</shortdesc>
+      <content type="string"/>
+    </parameter>
+  </parameters>
+  <actions>
+    <action name="start"        timeout="60s" />
+    <action name="stop"         timeout="20s" />
+    <action name="status"       timeout="20s" />
+    <action name="monitor"      timeout="20s" interval="10s" depth="0" />
+    <action name="meta-data"    timeout="5s" />
+  </actions>
+</resource-agent>
+END
+}
+
+case "$param" in
+  start)
+    if has_ip; then
+      exit 0
+    fi
+    for attempt in 1 2 3; do
+      curl -fsSm 10 -X POST "https://api.digitalocean.com/v2/reserved_ips/${IP}/actions" \
+        -H "Authorization: Bearer ${TOKEN}" \
+        -H "Content-Type: application/json" \
+        -d "{\"type\":\"assign\",\"droplet_id\":${DROPLET_ID}}" >/dev/null && break
+      sleep 5
+    done
+    for attempt in 1 2 3 4 5 6; do
+      if has_ip; then
+        exit 0
+      fi
+      sleep 5
+    done
+    exit 1
+    ;;
+  stop)
+    exit 0
+    ;;
+  status)
+    if has_ip; then
+      echo "running"
+      exit 0
+    fi
+    echo "stopped"
+    exit 3
+    ;;
+  monitor)
+    if has_ip; then
+      exit 0
+    fi
+    exit 7
+    ;;
+  meta-data)
+    meta_data
+    exit 0
+    ;;
+  *)
+    exit 1
+    ;;
+esac

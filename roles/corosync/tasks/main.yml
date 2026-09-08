@@ -1,0 +1,86 @@
+---
+- name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    - name: "Asserting the node list is populated"
+      ansible.builtin.assert:
+        that:
+          - corosync_nodes | length > 0
+        fail_msg: "corosync_nodes is empty; at least one node with name and addr is required"
+
+    - name: "Asserting this node appears in the node list"
+      ansible.builtin.assert:
+        that:
+          - corosync_nodes | selectattr('name', 'equalto', corosync_node_name) | list | length == 1
+        fail_msg: "corosync_node_name '{{ corosync_node_name }}' has no matching entry in corosync_nodes"
+
+    - name: "Asserting an authkey is supplied when crypto is enabled"
+      ansible.builtin.assert:
+        that:
+          - corosync_crypto_cipher == 'none' or corosync_authkey_b64 | length > 0
+        fail_msg: "corosync_crypto_cipher is '{{ corosync_crypto_cipher }}' but corosync_authkey_b64 is empty"
+
+    - name: "Resolving the bind address for datagram transports"
+      ansible.builtin.set_fact:
+        corosync_effective_bind_addr: >-
+          {{ corosync_bind_addr if corosync_bind_addr | length > 0
+             else (corosync_nodes | selectattr('name', 'equalto', corosync_node_name) | first).addr }}
+
+    - name: "Installing corosync"
+      become: true
+      ansible.builtin.apt:
+        name: "{{ corosync_package }}"
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: "Creating the log directory"
+      when: corosync_log_to_file
+      become: true
+      ansible.builtin.file:
+        path: "{{ corosync_log_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: "Installing the cluster authentication key"
+      when: corosync_authkey_b64 | length > 0
+      become: true
+      ansible.builtin.copy:
+        content: "{{ corosync_authkey_b64 | b64decode }}"
+        dest: "{{ corosync_authkey_path }}"
+        owner: root
+        group: root
+        mode: "0400"
+      notify: "Restarting corosync"
+
+    - name: "Rendering the corosync configuration"
+      become: true
+      ansible.builtin.template:
+        src: corosync.conf.j2
+        dest: "{{ corosync_conf_path }}"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: "Restarting corosync"
+
+    - name: "Enabling and starting the corosync service"
+      become: true
+      ansible.builtin.systemd:
+        name: "{{ corosync_service_name }}"
+        enabled: "{{ corosync_service_enabled }}"
+        state: "{{ corosync_service_state }}"
+
+    - name: "Flushing handlers so a changed configuration is live before membership is checked"
+      ansible.builtin.meta: flush_handlers
+
+    - name: "Waiting for this node to join the cluster membership"
+      when: corosync_membership_verify
+      become: true
+      ansible.builtin.command: corosync-cmapctl runtime.members
+      register: corosync_membership
+      until: corosync_membership.rc == 0 and 'joined' in corosync_membership.stdout
+      retries: "{{ corosync_membership_retries }}"
+      delay: "{{ corosync_membership_delay }}"
+      changed_when: false

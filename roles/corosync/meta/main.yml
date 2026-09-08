@@ -1,0 +1,20 @@
+galaxy_info:
+  role_name: corosync
+  author: Prominic
+  description: Installs and configures corosync cluster membership and messaging with fully parameterized totem, quorum, nodelist and logging sections.
+  company: STARTcloud
+  license: license (Apache)
+  min_ansible_version: '2.14'
+
+  platforms:
+    - name: Debian
+      versions:
+        - 'bookworm'
+        - 'trixie'
+
+  galaxy_tags: []
+
+dependencies: []
+
+collections:
+  - startcloud.startcloud_roles

@@ -1,0 +1,200 @@
+---
+- name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    - name: "Installing pacemaker"
+      become: true
+      ansible.builtin.apt:
+        name: "{{ pacemaker_packages }}"
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: "Enabling and starting the pacemaker service"
+      become: true
+      ansible.builtin.systemd:
+        name: "{{ pacemaker_service_name }}"
+        enabled: "{{ pacemaker_service_enabled }}"
+        state: "{{ pacemaker_service_state }}"
+
+    - name: "Waiting for the cluster to answer"
+      become: true
+      ansible.builtin.command: crm status
+      register: pacemaker_cluster_status
+      until: pacemaker_cluster_status.rc == 0
+      retries: "{{ pacemaker_cluster_ready_retries }}"
+      delay: "{{ pacemaker_cluster_ready_delay }}"
+      changed_when: false
+
+    - name: "Querying current cluster properties"
+      become: true
+      ansible.builtin.command: "crm_attribute --query --name {{ item.key }} --quiet"
+      register: pacemaker_property_queries
+      loop: "{{ pacemaker_properties | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"
+      changed_when: false
+      failed_when: false
+
+    - name: "Applying cluster properties"
+      become: true
+      ansible.builtin.command: "crm configure property {{ item.item.key }}={{ item.item.value }}"
+      when: item.rc != 0 or (item.stdout | trim) != (item.item.value | string)
+      loop: "{{ pacemaker_property_queries.results }}"
+      loop_control:
+        label: "{{ item.item.key }}"
+      changed_when: true
+
+    - name: "Querying current resource defaults"
+      become: true
+      ansible.builtin.command: "crm_attribute --type rsc_defaults --query --name {{ item.key }} --quiet"
+      register: pacemaker_rsc_default_queries
+      loop: "{{ pacemaker_rsc_defaults | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"
+      changed_when: false
+      failed_when: false
+
+    - name: "Applying resource defaults"
+      become: true
+      ansible.builtin.command: "crm configure rsc_defaults {{ item.item.key }}={{ item.item.value }}"
+      when: item.rc != 0 or (item.stdout | trim) != (item.item.value | string)
+      loop: "{{ pacemaker_rsc_default_queries.results }}"
+      loop_control:
+        label: "{{ item.item.key }}"
+      changed_when: true
+
+    - name: "Creating OCF provider directories"
+      become: true
+      ansible.builtin.file:
+        path: "{{ pacemaker_ocf_root }}/{{ item.provider }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      loop: "{{ pacemaker_ocf_agents }}"
+      loop_control:
+        label: "{{ item.provider }}/{{ item.name }}"
+
+    - name: "Installing OCF resource agents"
+      become: true
+      ansible.builtin.copy:
+        content: "{{ item.content | default(omit) }}"
+        src: "{{ item.src | default(omit) }}"
+        remote_src: "{{ item.remote_src | default(false) }}"
+        dest: "{{ pacemaker_ocf_root }}/{{ item.provider }}/{{ item.name }}"
+        owner: root
+        group: root
+        mode: "{{ item.mode | default('0755') }}"
+      loop: "{{ pacemaker_ocf_agents }}"
+      loop_control:
+        label: "{{ item.provider }}/{{ item.name }}"
+
+    - name: "Installing helper scripts"
+      become: true
+      ansible.builtin.copy:
+        content: "{{ item.content | default(omit) }}"
+        src: "{{ item.src | default(omit) }}"
+        remote_src: "{{ item.remote_src | default(false) }}"
+        dest: "{{ item.dest }}"
+        owner: "{{ item.owner | default('root') }}"
+        group: "{{ item.group | default('root') }}"
+        mode: "{{ item.mode | default('0755') }}"
+      loop: "{{ pacemaker_scripts }}"
+      loop_control:
+        label: "{{ item.dest }}"
+
+    - name: "Checking which resources already exist"
+      become: true
+      ansible.builtin.command: "crm configure show {{ item.name }}"
+      register: pacemaker_resource_checks
+      loop: "{{ pacemaker_resources }}"
+      loop_control:
+        label: "{{ item.name }}"
+      changed_when: false
+      failed_when: false
+
+    - name: "Creating resources"
+      become: true
+      ansible.builtin.command: "crm configure primitive {{ item.item.name }} {{ item.item.spec }}"
+      when: item.rc != 0
+      loop: "{{ pacemaker_resource_checks.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"
+      changed_when: true
+
+    - name: "Checking which clones already exist"
+      become: true
+      ansible.builtin.command: "crm configure show {{ item.name }}"
+      register: pacemaker_clone_checks
+      loop: "{{ pacemaker_clones }}"
+      loop_control:
+        label: "{{ item.name }}"
+      changed_when: false
+      failed_when: false
+
+    - name: "Creating clones"
+      become: true
+      ansible.builtin.command: "crm configure clone {{ item.item.name }} {{ item.item.resource }}{% if item.item.meta is defined %} meta {{ item.item.meta }}{% endif %}"
+      when: item.rc != 0
+      loop: "{{ pacemaker_clone_checks.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"
+      changed_when: true
+
+    - name: "Checking which colocations already exist"
+      become: true
+      ansible.builtin.command: "crm configure show {{ item.name }}"
+      register: pacemaker_colocation_checks
+      loop: "{{ pacemaker_colocations }}"
+      loop_control:
+        label: "{{ item.name }}"
+      changed_when: false
+      failed_when: false
+
+    - name: "Creating colocations"
+      become: true
+      ansible.builtin.command: "crm configure colocation {{ item.item.name }} {{ item.item.score | default('inf') }}: {{ item.item.resources }}"
+      when: item.rc != 0
+      loop: "{{ pacemaker_colocation_checks.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"
+      changed_when: true
+
+    - name: "Checking which locations already exist"
+      become: true
+      ansible.builtin.command: "crm configure show {{ item.name }}"
+      register: pacemaker_location_checks
+      loop: "{{ pacemaker_locations }}"
+      loop_control:
+        label: "{{ item.name }}"
+      changed_when: false
+      failed_when: false
+
+    - name: "Creating locations"
+      become: true
+      ansible.builtin.command: "crm configure location {{ item.item.name }} {{ item.item.spec }}"
+      when: item.rc != 0
+      loop: "{{ pacemaker_location_checks.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"
+      changed_when: true
+
+    - name: "Checking which orderings already exist"
+      become: true
+      ansible.builtin.command: "crm configure show {{ item.name }}"
+      register: pacemaker_order_checks
+      loop: "{{ pacemaker_orders }}"
+      loop_control:
+        label: "{{ item.name }}"
+      changed_when: false
+      failed_when: false
+
+    - name: "Creating orderings"
+      become: true
+      ansible.builtin.command: "crm configure order {{ item.item.name }} {{ item.item.spec }}"
+      when: item.rc != 0
+      loop: "{{ pacemaker_order_checks.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"
+      changed_when: true

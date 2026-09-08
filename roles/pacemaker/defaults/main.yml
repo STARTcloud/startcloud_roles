@@ -1,0 +1,25 @@
+---
+run_tasks: true
+
+pacemaker_packages:
+  - pacemaker
+  - crmsh
+pacemaker_service_name: pacemaker
+pacemaker_service_enabled: true
+pacemaker_service_state: started
+
+pacemaker_cluster_ready_retries: 12
+pacemaker_cluster_ready_delay: 5
+
+pacemaker_properties: {}
+pacemaker_rsc_defaults: {}
+
+pacemaker_ocf_root: /usr/lib/ocf/resource.d
+pacemaker_ocf_agents: []
+pacemaker_scripts: []
+
+pacemaker_resources: []
+pacemaker_clones: []
+pacemaker_colocations: []
+pacemaker_locations: []
+pacemaker_orders: []

@@ -1,0 +1,74 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Gather package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Assert the corosync package is installed
+      ansible.builtin.assert:
+        that:
+          - "'corosync' in ansible_facts.packages"
+        fail_msg: "corosync package is not installed"
+        success_msg: "corosync package is installed"
+
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Assert the corosync service is running and enabled
+      ansible.builtin.assert:
+        that:
+          - "'corosync.service' in ansible_facts.services"
+          - ansible_facts.services['corosync.service'].state == 'running'
+          - ansible_facts.services['corosync.service'].status == 'enabled'
+        fail_msg: >-
+          corosync.service is not running and enabled:
+          {{ ansible_facts.services['corosync.service'] | default('service missing') }}
+        success_msg: "corosync.service is running and enabled"
+
+    - name: Read the rendered corosync configuration
+      ansible.builtin.slurp:
+        src: /etc/corosync/corosync.conf
+      register: corosync_conf
+
+    - name: Assert the rendered configuration carries the configured non-default values
+      ansible.builtin.assert:
+        that:
+          - "'cluster_name: molecule-ring' in (corosync_conf.content | b64decode)"
+          - "'transport: udpu' in (corosync_conf.content | b64decode)"
+          - "'mcastport: 5407' in (corosync_conf.content | b64decode)"
+          - "'token: 4000' in (corosync_conf.content | b64decode)"
+          - "'ip_version: ipv4' in (corosync_conf.content | b64decode)"
+          - "'bindnetaddr: 127.0.0.1' in (corosync_conf.content | b64decode)"
+          - "'ring0_addr: 127.0.0.1' in (corosync_conf.content | b64decode)"
+          - "'provider: corosync_votequorum' in (corosync_conf.content | b64decode)"
+        fail_msg: "/etc/corosync/corosync.conf was not rendered with the configured values"
+        success_msg: "/etc/corosync/corosync.conf carries the configured values"
+
+    - name: Ask the running cluster for its membership
+      ansible.builtin.command: corosync-cmapctl runtime.members
+      register: corosync_members
+      changed_when: false
+
+    - name: Assert this node joined the running cluster
+      ansible.builtin.assert:
+        that:
+          - "'joined' in corosync_members.stdout"
+        fail_msg: "corosync runtime membership does not report a joined node: {{ corosync_members.stdout }}"
+        success_msg: "corosync runtime membership reports a joined node"
+
+    - name: Ask the quorum service for its status
+      ansible.builtin.command: corosync-quorumtool -s
+      register: corosync_quorum
+      changed_when: false
+      failed_when: corosync_quorum.rc not in [0, 1]
+
+    - name: Assert the vote quorum service is loaded
+      ansible.builtin.assert:
+        that:
+          - "'corosync_votequorum' in corosync_quorum.stdout"
+        fail_msg: "corosync-quorumtool does not report the votequorum provider: {{ corosync_quorum.stdout }}"
+        success_msg: "corosync vote quorum service is loaded"

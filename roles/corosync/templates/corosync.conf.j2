@@ -1,0 +1,53 @@
+totem {
+  version: 2
+  cluster_name: {{ corosync_cluster_name }}
+  transport: {{ corosync_transport }}
+  token: {{ corosync_token_timeout_ms }}
+  consensus: {{ corosync_consensus_timeout_ms }}
+{% if corosync_crypto_cipher != 'none' %}
+  crypto_cipher: {{ corosync_crypto_cipher }}
+  crypto_hash: {{ corosync_crypto_hash }}
+{% endif %}
+{% for key, value in corosync_totem_options.items() %}
+  {{ key }}: {{ value }}
+{% endfor %}
+{% if corosync_transport in ['udp', 'udpu'] %}
+  interface {
+    ringnumber: 0
+    bindnetaddr: {{ corosync_effective_bind_addr }}
+    mcastport: {{ corosync_mcastport }}
+  }
+{% endif %}
+}
+
+nodelist {
+{% for node in corosync_nodes %}
+  node {
+    ring0_addr: {{ node.addr }}
+    name: {{ node.name }}
+    nodeid: {{ node.nodeid | default(loop.index) }}
+  }
+{% endfor %}
+}
+
+quorum {
+  provider: {{ corosync_quorum_provider }}
+{% if corosync_quorum_two_node_auto and (corosync_nodes | length) == 2 %}
+  two_node: 1
+{% endif %}
+{% for key, value in corosync_quorum_options.items() %}
+  {{ key }}: {{ value }}
+{% endfor %}
+}
+
+logging {
+{% if corosync_log_to_file %}
+  to_logfile: yes
+  logfile: {{ corosync_log_file }}
+{% endif %}
+  to_syslog: {{ 'yes' if corosync_log_to_syslog else 'no' }}
+  timestamp: on
+{% for key, value in corosync_logging_options.items() %}
+  {{ key }}: {{ value }}
+{% endfor %}
+}

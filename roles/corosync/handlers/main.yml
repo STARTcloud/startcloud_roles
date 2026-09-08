@@ -1,0 +1,6 @@
+---
+- name: "Restarting corosync"
+  become: true
+  ansible.builtin.service:
+    name: "{{ corosync_service_name }}"
+    state: restarted

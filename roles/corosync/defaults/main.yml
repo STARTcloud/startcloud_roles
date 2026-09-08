@@ -1,0 +1,38 @@
+---
+run_tasks: true
+
+corosync_package: corosync
+corosync_service_name: corosync
+corosync_service_enabled: true
+corosync_service_state: started
+
+corosync_cluster_name: cluster
+corosync_transport: knet
+corosync_crypto_cipher: aes256
+corosync_crypto_hash: sha256
+corosync_token_timeout_ms: 3000
+corosync_consensus_timeout_ms: 3600
+corosync_totem_options: {}
+
+corosync_node_name: "{{ ansible_hostname }}"
+corosync_nodes: []
+corosync_bind_addr: ""
+corosync_mcastport: 5405
+
+corosync_quorum_provider: corosync_votequorum
+corosync_quorum_two_node_auto: true
+corosync_quorum_options: {}
+
+corosync_authkey_b64: ""
+corosync_authkey_path: /etc/corosync/authkey
+corosync_conf_path: /etc/corosync/corosync.conf
+
+corosync_log_to_file: true
+corosync_log_dir: /var/log/corosync
+corosync_log_file: "{{ corosync_log_dir }}/corosync.log"
+corosync_log_to_syslog: true
+corosync_logging_options: {}
+
+corosync_membership_verify: true
+corosync_membership_retries: 12
+corosync_membership_delay: 5

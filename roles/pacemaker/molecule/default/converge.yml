@@ -1,0 +1,53 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    corosync_cluster_name: molecule-pcmk
+    corosync_transport: udpu
+    corosync_crypto_cipher: none
+    corosync_crypto_hash: none
+    corosync_node_name: startcloud-pacemaker-debian12
+    corosync_nodes:
+      - name: startcloud-pacemaker-debian12
+        addr: 127.0.0.1
+        nodeid: 1
+    pacemaker_properties:
+      stonith-enabled: "false"
+      no-quorum-policy: ignore
+    pacemaker_rsc_defaults:
+      migration-threshold: "3"
+    pacemaker_ocf_agents:
+      - provider: molecule
+        name: probe
+        content: |
+          #!/bin/sh
+          case "$1" in
+            start|stop|monitor|status) exit 0 ;;
+            meta-data)
+              printf '<?xml version="1.0"?><resource-agent name="probe"><version>1.0</version><longdesc lang="en">probe</longdesc><shortdesc lang="en">probe</shortdesc><actions><action name="start" timeout="20s"/><action name="stop" timeout="20s"/><action name="monitor" timeout="20s" interval="10s"/><action name="meta-data" timeout="5s"/></actions></resource-agent>'
+              exit 0 ;;
+            *) exit 1 ;;
+          esac
+    pacemaker_scripts:
+      - dest: /usr/local/bin/molecule-probe-helper
+        content: |
+          #!/bin/sh
+          exit 0
+    pacemaker_resources:
+      - name: molecule-dummy
+        spec: "ocf:pacemaker:Dummy op monitor interval=10s"
+    pacemaker_clones:
+      - name: molecule-dummy-clone
+        resource: molecule-dummy
+  pre_tasks:
+    - name: Refresh the apt cache so the role's install task can resolve packages
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 600
+      changed_when: false
+
+  roles:
+    - role: corosync
+    - role: pacemaker

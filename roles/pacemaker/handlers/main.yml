@@ -1,0 +1,6 @@
+---
+- name: "Restarting pacemaker"
+  become: true
+  ansible.builtin.service:
+    name: "{{ pacemaker_service_name }}"
+    state: restarted

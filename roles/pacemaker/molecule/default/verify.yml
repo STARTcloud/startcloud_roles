@@ -1,0 +1,109 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Gather package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Assert the pacemaker and crmsh packages are installed
+      ansible.builtin.assert:
+        that:
+          - "'pacemaker' in ansible_facts.packages"
+          - "'crmsh' in ansible_facts.packages"
+        fail_msg: "pacemaker or crmsh is not installed"
+        success_msg: "pacemaker and crmsh are installed"
+
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Assert the pacemaker service is running and enabled
+      ansible.builtin.assert:
+        that:
+          - "'pacemaker.service' in ansible_facts.services"
+          - ansible_facts.services['pacemaker.service'].state == 'running'
+          - ansible_facts.services['pacemaker.service'].status == 'enabled'
+        fail_msg: >-
+          pacemaker.service is not running and enabled:
+          {{ ansible_facts.services['pacemaker.service'] | default('service missing') }}
+        success_msg: "pacemaker.service is running and enabled"
+
+    - name: Ask the cluster for its status
+      ansible.builtin.command: crm status
+      register: pacemaker_status
+      changed_when: false
+
+    - name: Assert the node is online
+      ansible.builtin.assert:
+        that:
+          - "'Online' in pacemaker_status.stdout"
+        fail_msg: "crm status does not report an online node: {{ pacemaker_status.stdout }}"
+        success_msg: "crm status reports the node online"
+
+    - name: Ask the running cluster for the configured properties
+      ansible.builtin.command: "crm_attribute --query --name {{ item }} --quiet"
+      register: pacemaker_property_values
+      changed_when: false
+      loop:
+        - stonith-enabled
+        - no-quorum-policy
+
+    - name: Assert the running cluster loaded the configured properties
+      ansible.builtin.assert:
+        that:
+          - (pacemaker_property_values.results[0].stdout | trim) == 'false'
+          - (pacemaker_property_values.results[1].stdout | trim) == 'ignore'
+        fail_msg: >-
+          The running cluster did not load the configured properties:
+          stonith-enabled={{ pacemaker_property_values.results[0].stdout }}
+          no-quorum-policy={{ pacemaker_property_values.results[1].stdout }}
+        success_msg: "The running cluster loaded stonith-enabled=false and no-quorum-policy=ignore"
+
+    - name: Ask the running cluster for the configured resource default
+      ansible.builtin.command: "crm_attribute --type rsc_defaults --query --name migration-threshold --quiet"
+      register: pacemaker_rsc_default_value
+      changed_when: false
+
+    - name: Assert the running cluster loaded the configured resource default
+      ansible.builtin.assert:
+        that:
+          - (pacemaker_rsc_default_value.stdout | trim) == '3'
+        fail_msg: "migration-threshold did not load: {{ pacemaker_rsc_default_value.stdout }}"
+        success_msg: "The running cluster loaded migration-threshold=3"
+
+    - name: Stat the consumer-supplied OCF agent
+      ansible.builtin.stat:
+        path: /usr/lib/ocf/resource.d/molecule/probe
+      register: pacemaker_probe_agent
+
+    - name: Stat the consumer-supplied helper script
+      ansible.builtin.stat:
+        path: /usr/local/bin/molecule-probe-helper
+      register: pacemaker_probe_helper
+
+    - name: Assert the consumer-supplied agent and script are installed executable
+      ansible.builtin.assert:
+        that:
+          - pacemaker_probe_agent.stat.exists
+          - pacemaker_probe_agent.stat.mode == '0755'
+          - pacemaker_probe_helper.stat.exists
+          - pacemaker_probe_helper.stat.mode == '0755'
+        fail_msg: "the consumer-supplied OCF agent or helper script is missing or not 0755"
+        success_msg: "consumer-supplied OCF agent and helper script installed 0755"
+
+    - name: Wait for the dummy resource clone to start
+      ansible.builtin.command: crm resource status molecule-dummy-clone
+      register: pacemaker_dummy_status
+      until: "'running' in pacemaker_dummy_status.stdout"
+      retries: 12
+      delay: 5
+      changed_when: false
+
+    - name: Assert the dummy resource is running
+      ansible.builtin.assert:
+        that:
+          - "'running' in pacemaker_dummy_status.stdout"
+        fail_msg: "molecule-dummy-clone is not running: {{ pacemaker_dummy_status.stdout }}"
+        success_msg: "molecule-dummy-clone is running"

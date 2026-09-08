@@ -1,0 +1,20 @@
+galaxy_info:
+  role_name: pacemaker
+  author: Prominic
+  description: Installs and configures the pacemaker cluster resource manager with declarative properties, resource defaults, OCF agents, scripts, resources, clones, colocations and orderings.
+  company: STARTcloud
+  license: license (Apache)
+  min_ansible_version: '2.14'
+
+  platforms:
+    - name: Debian
+      versions:
+        - 'bookworm'
+        - 'trixie'
+
+  galaxy_tags: []
+
+dependencies: []
+
+collections:
+  - startcloud.startcloud_roles

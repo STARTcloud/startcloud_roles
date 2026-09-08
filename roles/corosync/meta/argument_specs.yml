@@ -1,0 +1,128 @@
+---
+argument_specs:
+  main:
+    short_description: Corosync cluster membership layer
+    description:
+      - Installs corosync and renders a fully parameterized corosync.conf covering the totem, nodelist, quorum and
+        logging sections. Carries no provider- or platform-specific behavior; every value is a variable.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      corosync_package:
+        type: str
+        default: corosync
+        description: Package name installed via apt.
+      corosync_service_name:
+        type: str
+        default: corosync
+        description: Systemd unit the role enables, starts and restarts.
+      corosync_service_enabled:
+        type: bool
+        default: true
+        description: Whether the service is enabled at boot.
+      corosync_service_state:
+        type: str
+        default: started
+        description: Desired service state after the role runs.
+      corosync_cluster_name:
+        type: str
+        default: cluster
+        description: Value of totem cluster_name; must match on every member.
+      corosync_transport:
+        type: str
+        default: knet
+        description: Totem transport (knet, udpu or udp). Datagram transports additionally render an interface block.
+      corosync_crypto_cipher:
+        type: str
+        default: aes256
+        description: Totem crypto_cipher; set to none to disable encryption (required for udp/udpu transports).
+      corosync_crypto_hash:
+        type: str
+        default: sha256
+        description: Totem crypto_hash paired with the cipher.
+      corosync_token_timeout_ms:
+        type: int
+        default: 3000
+        description: Totem token timeout in milliseconds.
+      corosync_consensus_timeout_ms:
+        type: int
+        default: 3600
+        description: Totem consensus timeout in milliseconds.
+      corosync_totem_options:
+        type: dict
+        default: {}
+        description: Free-form key/value pairs rendered verbatim into the totem section.
+      corosync_node_name:
+        type: str
+        description: This node's name; must match one entry in corosync_nodes. Defaults to ansible_hostname.
+      corosync_nodes:
+        type: list
+        elements: dict
+        default: []
+        description: Cluster members; each item carries name, addr and optional nodeid (defaults to list position).
+      corosync_bind_addr:
+        type: str
+        default: ""
+        description: Explicit bindnetaddr for datagram transports; empty derives it from this node's addr in corosync_nodes.
+      corosync_mcastport:
+        type: int
+        default: 5405
+        description: Port rendered into the interface block for datagram transports.
+      corosync_quorum_provider:
+        type: str
+        default: corosync_votequorum
+        description: Quorum provider.
+      corosync_quorum_two_node_auto:
+        type: bool
+        default: true
+        description: Renders two_node 1 automatically when corosync_nodes holds exactly two members.
+      corosync_quorum_options:
+        type: dict
+        default: {}
+        description: Free-form key/value pairs rendered verbatim into the quorum section.
+      corosync_authkey_b64:
+        type: str
+        default: ""
+        description: Base64-encoded cluster authkey installed to corosync_authkey_path; identical on every member. Generate once with corosync-keygen and encode with base64 -w0. Required whenever crypto is enabled.
+      corosync_authkey_path:
+        type: str
+        default: /etc/corosync/authkey
+        description: Destination path of the cluster authkey.
+      corosync_conf_path:
+        type: str
+        default: /etc/corosync/corosync.conf
+        description: Destination path of the rendered configuration.
+      corosync_log_to_file:
+        type: bool
+        default: true
+        description: Whether corosync logs to corosync_log_file.
+      corosync_log_dir:
+        type: str
+        default: /var/log/corosync
+        description: Directory created for the log file.
+      corosync_log_file:
+        type: str
+        description: Log file path; defaults to corosync.log inside corosync_log_dir.
+      corosync_log_to_syslog:
+        type: bool
+        default: true
+        description: Whether corosync also logs to syslog.
+      corosync_logging_options:
+        type: dict
+        default: {}
+        description: Free-form key/value pairs rendered verbatim into the logging section.
+      corosync_membership_verify:
+        type: bool
+        default: true
+        description: After start, poll corosync-cmapctl until this node reports a joined member.
+      corosync_membership_retries:
+        type: int
+        default: 12
+        description: Membership poll attempts.
+      corosync_membership_delay:
+        type: int
+        default: 5
+        description: Seconds between membership polls.

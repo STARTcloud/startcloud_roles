@@ -1,0 +1,86 @@
+---
+argument_specs:
+  main:
+    short_description: Pacemaker cluster resource manager
+    description:
+      - Installs pacemaker on top of a running corosync membership layer and declaratively applies cluster properties,
+        resource defaults, OCF resource agents, helper scripts, resources, clones, colocations and orderings. Carries
+        no provider- or platform-specific behavior; agents and scripts arrive purely as configuration.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      pacemaker_packages:
+        type: list
+        elements: str
+        default: [pacemaker, crmsh]
+        description: Packages installed via apt.
+      pacemaker_service_name:
+        type: str
+        default: pacemaker
+        description: Systemd unit the role enables and starts.
+      pacemaker_service_enabled:
+        type: bool
+        default: true
+        description: Whether the service is enabled at boot.
+      pacemaker_service_state:
+        type: str
+        default: started
+        description: Desired service state after the role runs.
+      pacemaker_cluster_ready_retries:
+        type: int
+        default: 12
+        description: Attempts polling crm status before giving up.
+      pacemaker_cluster_ready_delay:
+        type: int
+        default: 5
+        description: Seconds between crm status polls.
+      pacemaker_properties:
+        type: dict
+        default: {}
+        description: Cluster properties applied idempotently via crm_attribute query and crm configure property.
+      pacemaker_rsc_defaults:
+        type: dict
+        default: {}
+        description: Resource defaults applied idempotently via crm_attribute and crm configure rsc_defaults.
+      pacemaker_ocf_root:
+        type: str
+        default: /usr/lib/ocf/resource.d
+        description: Root directory OCF provider directories are created under.
+      pacemaker_ocf_agents:
+        type: list
+        elements: dict
+        default: []
+        description: OCF agents to install; each item carries provider, name, mode (default 0755) and exactly one of src, content or remote_src+src supplying the agent body.
+      pacemaker_scripts:
+        type: list
+        elements: dict
+        default: []
+        description: Helper scripts to install; each item carries dest, owner, group, mode (default 0755) and exactly one of src, content or remote_src+src.
+      pacemaker_resources:
+        type: list
+        elements: dict
+        default: []
+        description: Primitive resources; each item carries name and spec, created via crm configure primitive only when the name does not already exist.
+      pacemaker_clones:
+        type: list
+        elements: dict
+        default: []
+        description: Clone sets; each item carries name, resource and optional meta, created only when the name does not already exist.
+      pacemaker_colocations:
+        type: list
+        elements: dict
+        default: []
+        description: Colocation constraints; each item carries name, resources and optional score (default inf), created only when the name does not already exist.
+      pacemaker_orders:
+        type: list
+        elements: dict
+        default: []
+        description: Ordering constraints; each item carries name and spec, created only when the name does not already exist.
+      pacemaker_locations:
+        type: list
+        elements: dict
+        default: []
+        description: Location constraints; each item carries name and spec, created via crm configure location only when the name does not already exist.

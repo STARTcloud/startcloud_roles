@@ -1,0 +1,30 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    corosync_cluster_name: molecule-ring
+    corosync_transport: udpu
+    corosync_crypto_cipher: none
+    corosync_crypto_hash: none
+    corosync_mcastport: 5407
+    corosync_token_timeout_ms: 4000
+    corosync_node_name: startcloud-corosync-debian12
+    corosync_nodes:
+      - name: startcloud-corosync-debian12
+        addr: 127.0.0.1
+        nodeid: 1
+    corosync_totem_options:
+      ip_version: ipv4
+    corosync_logging_options:
+      debug: "off"
+  pre_tasks:
+    - name: Refresh the apt cache so the role's install task can resolve packages
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 600
+      changed_when: false
+
+  roles:
+    - role: corosync
