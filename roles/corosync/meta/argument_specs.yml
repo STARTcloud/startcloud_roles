@@ -86,7 +86,9 @@ argument_specs:
       corosync_authkey_b64:
         type: str
         default: ""
-        description: Base64-encoded cluster authkey installed to corosync_authkey_path; identical on every member. Generate once with corosync-keygen and encode with base64 -w0. Required whenever crypto is enabled.
+        description: >-
+          Base64-encoded cluster authkey installed to corosync_authkey_path; identical on every member.
+          Generate once with corosync-keygen and encode with base64 -w0. Required whenever crypto is enabled.
       corosync_authkey_path:
         type: str
         default: /etc/corosync/authkey
