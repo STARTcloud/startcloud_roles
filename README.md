@@ -11,16 +11,16 @@ Documentation for STARTcloud Roles
 
 ## Table of Contents
 
-* [About the Project](#about-the-project)
-* [Key Features](#key-features)
-* [Roles](#roles)
-* [Roadmap](#roadmap)
-* [Provider Support](#provider-support)
-* [Built With](#built-with)
-* [Contributing](#contributing)
-* [License](#license)
-* [Contact](#authors)
-* [Acknowledgements](#acknowledgments)
+- [About the Project](#about-the-project)
+- [Key Features](#key-features)
+- [Roles](#roles)
+- [Roadmap](#roadmap)
+- [Provider Support](#provider-support)
+- [Built With](#built-with)
+- [Contributing](#contributing)
+- [License](#license)
+- [Contact](#authors)
+- [Acknowledgements](#acknowledgments)
 
 ## About the Project
 
@@ -28,10 +28,10 @@ STARTcloud Roles is a collection of Ansible roles designed to secure and prepare
 
 ## Key Features
 
-* **Role Management**: Offers a comprehensive set of Ansible roles for various aspects of VM preparation and configuration.
-* **SSL Preparation**: Automates the process of securing VMs with SSL certificates, ensuring secure communication.
-* **Service Configuration**: Simplifies the setup of necessary services on VMs, streamlining the deployment process.
-* **Dependency Installation**: Handles the installation of required dependencies, reducing manual setup efforts.
+- **Role Management**: Offers a comprehensive set of Ansible roles for various aspects of VM preparation and configuration.
+- **SSL Preparation**: Automates the process of securing VMs with SSL certificates, ensuring secure communication.
+- **Service Configuration**: Simplifies the setup of necessary services on VMs, streamlining the deployment process.
+- **Dependency Installation**: Handles the installation of required dependencies, reducing manual setup efforts.
 
 ## Roles
 
@@ -89,40 +89,40 @@ See the [open issues](https://github.com/STARTcloud/startcloud_roles/issues) for
 
 ## Provider Support
 
-| Provider | Supported by STARTcloud Roles |
-| -------- | ----------------------------- |
-| VirtualBox | Yes |
-| Bhyve/Zones | Yes |
-| VMware Fusion | No |
-| Hyper-V | No |
-| Parallels | No |
-| AWS EC2 | Yes |
-| Google Cloud | No |
-| Azure | No |
-| DigitalOcean | No |
-| Linode | No |
-| Vultr | No |
-| Oracle Cloud | No |
-| OpenStack | No |
-| Rackspace | No |
-| Alibaba Cloud | No |
-| Aiven | No |
-| Packet | No |
-| Scaleway | No |
-| OVH | No |
-| Exoscale | No |
-| Hetzner Cloud | No |
-| KVM | Yes |
-| QEMU | Yes |
-| Docker Desktop | No |
-| HyperKit | No |
-| WSL2 | No |
+| Provider       | Supported by STARTcloud Roles |
+| -------------- | ----------------------------- |
+| VirtualBox     | Yes                           |
+| Bhyve/Zones    | Yes                           |
+| VMware Fusion  | No                            |
+| Hyper-V        | No                            |
+| Parallels      | No                            |
+| AWS EC2        | Yes                           |
+| Google Cloud   | No                            |
+| Azure          | No                            |
+| DigitalOcean   | No                            |
+| Linode         | No                            |
+| Vultr          | No                            |
+| Oracle Cloud   | No                            |
+| OpenStack      | No                            |
+| Rackspace      | No                            |
+| Alibaba Cloud  | No                            |
+| Aiven          | No                            |
+| Packet         | No                            |
+| Scaleway       | No                            |
+| OVH            | No                            |
+| Exoscale       | No                            |
+| Hetzner Cloud  | No                            |
+| KVM            | Yes                           |
+| QEMU           | Yes                           |
+| Docker Desktop | No                            |
+| HyperKit       | No                            |
+| WSL2           | No                            |
 
 ## Built With
 
-* [Vagrant](https://www.vagrantup.com/) - Portable Development Environment Suite.
-* [VirtualBox](https://www.virtualbox.org/wiki/Downloads) - Hypervisor.
-* [Ansible](https://www.ansible.com/) - Virtual Machine Automation Management.
+- [Vagrant](https://www.vagrantup.com/) - Portable Development Environment Suite.
+- [VirtualBox](https://www.virtualbox.org/wiki/Downloads) - Hypervisor.
+- [Ansible](https://www.ansible.com/) - Virtual Machine Automation Management.
 
 ## Contributing
 
@@ -130,9 +130,9 @@ Please read [CONTRIBUTING.md](https://www.prominic.net) for details on our code 
 
 ## Authors
 
-* **Joel Anderson** - *Initial work* - [JoelProminic](https://github.com/JoelProminic)
-* **Justin Hill** - *Initial work* - [JustinProminic](https://github.com/JustinProminic)
-* **Mark Gilbert** - *Refactor* - [MarkProminic](https://github.com/MarkProminic)
+- **Joel Anderson** - _Initial work_ - [JoelProminic](https://github.com/JoelProminic)
+- **Justin Hill** - _Initial work_ - [JustinProminic](https://github.com/JustinProminic)
+- **Mark Gilbert** - _Refactor_ - [MarkProminic](https://github.com/MarkProminic)
 
 See also the list of [contributors](https://github.com/STARTcloud/startcloud_roles/graphs/contributors) who participated in this project.
 
@@ -142,4 +142,4 @@ This project is licensed under the GPL-2.0-or-later License - see the [LICENSE.m
 
 ## Acknowledgments
 
-* Hat tip to anyone whose code was used
+- Hat tip to anyone whose code was used
