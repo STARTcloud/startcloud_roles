@@ -76,6 +76,7 @@
       ansible.builtin.include_role:
         name: sdkman_install
       vars:
+        sdkman_update: false
         sdkman_install_packages: []
         sdkman_uninstall_packages: []
         sdkman_update_alternatives: []

@@ -65,6 +65,7 @@
     # asserts about Gradle is the work of sdkman_gradle.
     - role: sdkman_install
       vars:
+        sdkman_update: false
         sdkman_install_packages: []
         sdkman_update_alternatives: []
     - role: sdkman_gradle
