@@ -3,6 +3,16 @@
 All notable changes to the `startcloud.startcloud_roles` collection are
 documented here.
 
+## [0.3.3](https://github.com/STARTcloud/startcloud_roles/compare/v0.3.2...v0.3.3) (2026-09-10)
+
+
+### Bug Fixes
+
+* random stuff ([4fdad52](https://github.com/STARTcloud/startcloud_roles/commit/4fdad52f970401e918c98eeba3916f66c3c91041))
+* read the release sha with the repo token so private dispatch works ([dc74049](https://github.com/STARTcloud/startcloud_roles/commit/dc74049bc473387bfd13a1a01a014f4549fa75cb))
+* readme linting ([43c61a7](https://github.com/STARTcloud/startcloud_roles/commit/43c61a7f0f814e1accf4b72b7fb1169cc44a2184))
+* sdkman updates ([8ce1681](https://github.com/STARTcloud/startcloud_roles/commit/8ce1681ca46e39d1afc63b2cb4d31383c3f15ba1))
+
 ## [0.3.2](https://github.com/STARTcloud/startcloud_roles/compare/v0.3.1...v0.3.2) (2026-09-02)
 
 
