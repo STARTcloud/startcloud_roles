@@ -26,7 +26,7 @@ installer_url: >-
   {{ installer_url_pattern
      | replace('{base}', installer_base_url)
      | replace('{org}', installer_org)
-     | replace('{app}', installer_file.app)
-     | replace('{version}', installer_file.version)
-     | replace('{variant}', installer_file.variant)
-     | replace('{name}', installer_file.name) }}
+     | replace('{app}', (installer_file | default({})).get('app', ''))
+     | replace('{version}', (installer_file | default({})).get('version', ''))
+     | replace('{variant}', (installer_file | default({})).get('variant', ''))
+     | replace('{name}', (installer_file | default({})).get('name', '')) }}
