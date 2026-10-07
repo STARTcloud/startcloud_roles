@@ -61,6 +61,3 @@ argument_specs:
         type: str
         default: "{base}/api/organization/{org}/download/{app}/release/{version}/patch/{variant}/file/{name}/download"
         description: Download URL layout with {base}, {org}, {app}, {version}, {variant} and {name} tokens; resolved from secrets.
-      installer_url:
-        type: str
-        description: The installer_url_pattern with every token replaced from installer_base_url, installer_org and the installer_file fact a role sets before downloading.
