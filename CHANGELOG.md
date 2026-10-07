@@ -3,6 +3,17 @@
 All notable changes to the `startcloud.startcloud_roles` collection are
 documented here.
 
+## [0.3.4](https://github.com/STARTcloud/startcloud_roles/compare/v0.3.3...v0.3.4) (2026-10-07)
+
+
+### Bug Fixes
+
+* dispatch collection releases to the VoltMX Go and Windows provisioners ([dc8092c](https://github.com/STARTcloud/startcloud_roles/commit/dc8092cf0663022d30ea7991f4ef29738c34758c))
+* installer url changes ([0c0cee3](https://github.com/STARTcloud/startcloud_roles/commit/0c0cee3d33290dd75f6660a66b635af3a7d60957))
+* let installer_url render before any role sets installer_file ([1a98ec4](https://github.com/STARTcloud/startcloud_roles/commit/1a98ec47b87a0878ede7dcc84f056ec31ebe92b3))
+* pass repository secrets to molecule on release pushes ([8b86d25](https://github.com/STARTcloud/startcloud_roles/commit/8b86d252dad46c04dc0878628b1fe82b39d1dc07))
+* updating specs and workflows ([aaf891e](https://github.com/STARTcloud/startcloud_roles/commit/aaf891e375dc92bdf864faa585ca34b5d81fdf1f))
+
 ## [0.3.3](https://github.com/STARTcloud/startcloud_roles/compare/v0.3.2...v0.3.3) (2026-09-10)
 
 
