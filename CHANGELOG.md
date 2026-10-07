@@ -3,6 +3,13 @@
 All notable changes to the `startcloud.startcloud_roles` collection are
 documented here.
 
+## [0.4.1](https://github.com/STARTcloud/startcloud_roles/compare/v0.4.0...v0.4.1) (2026-10-07)
+
+
+### Bug Fixes
+
+* issue Cloudflare DNS-01 certificates through the certbot Cloudflare plugin ([a4e0df0](https://github.com/STARTcloud/startcloud_roles/commit/a4e0df09cedf32b6b6f48880742d677fa8a44255))
+
 ## [0.4.0](https://github.com/STARTcloud/startcloud_roles/compare/v0.3.4...v0.4.0) (2026-10-07)
 
 
