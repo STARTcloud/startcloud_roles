@@ -22,17 +22,10 @@ argument_specs:
         type: str
         default: "UDSActorSetup-{{ uds_actor_version }}.exe"
         description: Filename of the UDS Actor installer executable.
-      uds_site:
-        type: str
-        default: S2
-        description: UDS site identifier used to build the installer download path.
-      installer_url_app_path:
-        type: str
-        default: "SHI/UDS_Actor/{{ uds_site }}"
-        description: Relative path on the download host to the UDS Actor installer.
-      installer_base_url:
-        type: str
-        description: Base URL of the host serving the UDS Actor installer.
+      installer_file:
+        type: dict
+        description: The UDS Actor download described as app, version, variant and name for the shared installer_url pattern.
       uds_installer_url:
         type: str
+        default: "{{ installer_url }}"
         description: Fully resolved URL used to download the UDS Actor installer.

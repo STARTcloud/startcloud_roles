@@ -20,3 +20,13 @@ root_ssh_key: ""
 installer_base_url: "{{ (secrets | default({})).get('installer_base_url', '') }}"
 installer_url_user: "{{ (secrets | default({})).get('installer_url_user', '') }}"
 installer_url_pass: "{{ (secrets | default({})).get('installer_url_pass', '') }}"
+installer_org: "{{ (secrets | default({})).get('installer_org', 'Prominic') }}"
+installer_url_pattern: "{{ (secrets | default({})).get('installer_url_pattern', '{base}/api/organization/{org}/download/{app}/release/{version}/patch/{variant}/file/{name}/download') }}"
+installer_url: >-
+  {{ installer_url_pattern
+     | replace('{base}', installer_base_url)
+     | replace('{org}', installer_org)
+     | replace('{app}', installer_file.app)
+     | replace('{version}', installer_file.version)
+     | replace('{variant}', installer_file.variant)
+     | replace('{name}', installer_file.name) }}
