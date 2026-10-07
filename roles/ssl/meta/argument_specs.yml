@@ -96,10 +96,12 @@ argument_specs:
         elements: dict
         default: []
         description: >-
-          Certificates to issue via the DNS-01 challenge through an acme-dns server. Each item carries a domains list;
-          every domain requires a matching entry in secrets.acmedns_credentials and a published _acme-challenge CNAME
-          pointing at that registration's fulldomain. Issued with certbot --manual using the acme-dns update API, so the
-          role publishes no DNS records itself; renewals republish through the installed deploy hook.
+          Certificates to issue via the DNS-01 challenge. Each item carries a domains list and an optional provider,
+          acmedns (default) or cloudflare. acmedns needs a matching entry per domain in secrets.acmedns_credentials and a
+          published _acme-challenge CNAME pointing at that registration's fulldomain. cloudflare needs
+          secrets.cloudflare_api_token with Zone Read and DNS Edit on each domain's zone, and creates and removes the
+          _acme-challenge TXT records itself. Both issue with certbot --manual; renewals republish through the installed
+          deploy hook.
       certbot_create_if_missing:
         type: bool
         default: false

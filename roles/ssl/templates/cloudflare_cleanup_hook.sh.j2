@@ -1,0 +1,27 @@
+#!/bin/bash
+set -euo pipefail
+python3 - "${CERTBOT_DOMAIN}" "${CERTBOT_VALIDATION}" <<'PYEOF'
+import json
+import sys
+import urllib.parse
+import urllib.request
+domain, validation = sys.argv[1], sys.argv[2]
+token = open('/etc/cloudflaredns/token').read().strip()
+headers = {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'}
+labels = domain.split('.')
+zone_id = None
+for index in range(len(labels) - 1):
+    name = '.'.join(labels[index:])
+    request = urllib.request.Request('https://api.cloudflare.com/client/v4/zones?name=' + name, headers=headers)
+    result = json.load(urllib.request.urlopen(request))['result']
+    if result:
+        zone_id = result[0]['id']
+        break
+if zone_id is None:
+    sys.exit(0)
+query = urllib.parse.urlencode({'type': 'TXT', 'name': '_acme-challenge.' + domain, 'content': validation})
+request = urllib.request.Request('https://api.cloudflare.com/client/v4/zones/' + zone_id + '/dns_records?' + query, headers=headers)
+for record in json.load(urllib.request.urlopen(request))['result']:
+    delete = urllib.request.Request('https://api.cloudflare.com/client/v4/zones/' + zone_id + '/dns_records/' + record['id'], headers=headers, method='DELETE')
+    urllib.request.urlopen(delete)
+PYEOF

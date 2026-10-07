@@ -637,32 +637,74 @@
         name: certbot
         state: present
 
-    - name: "Creating acme-dns configuration directory"
-      become: true
-      ansible.builtin.file:
-        path: /etc/acmedns
-        state: directory
-        owner: root
-        group: root
-        mode: "0750"
+    - name: "Configuring the acme-dns DNS-01 provider"
+      when: "'acmedns' in (ssl_dns01_certs | map(attribute='provider', default='acmedns') | list)"
+      block:
+        - name: "Creating acme-dns configuration directory"
+          become: true
+          ansible.builtin.file:
+            path: /etc/acmedns
+            state: directory
+            owner: root
+            group: root
+            mode: "0750"
 
-    - name: "Writing acme-dns credentials"
-      become: true
-      ansible.builtin.copy:
-        content: "{{ secrets.acmedns_credentials | to_nice_json }}"
-        dest: /etc/acmedns/credentials.json
-        owner: root
-        group: root
-        mode: "0600"
+        - name: "Writing acme-dns credentials"
+          become: true
+          ansible.builtin.copy:
+            content: "{{ secrets.acmedns_credentials | to_nice_json }}"
+            dest: /etc/acmedns/credentials.json
+            owner: root
+            group: root
+            mode: "0600"
 
-    - name: "Installing the acme-dns authentication hook"
-      become: true
-      ansible.builtin.template:
-        src: acmedns_auth_hook.sh.j2
-        dest: /etc/acmedns/acmedns_auth_hook.sh
-        owner: root
-        group: root
-        mode: "0750"
+        - name: "Installing the acme-dns authentication hook"
+          become: true
+          ansible.builtin.template:
+            src: acmedns_auth_hook.sh.j2
+            dest: /etc/acmedns/acmedns_auth_hook.sh
+            owner: root
+            group: root
+            mode: "0750"
+
+    - name: "Configuring the Cloudflare DNS-01 provider"
+      when: "'cloudflare' in (ssl_dns01_certs | map(attribute='provider', default='acmedns') | list)"
+      block:
+        - name: "Ensuring Cloudflare API credentials are present"
+          ansible.builtin.assert:
+            that:
+              - secrets.cloudflare_api_token is defined
+            fail_msg: "Cloudflare DNS-01 certificates need cloudflare_api_token in .secrets.yml"
+
+        - name: "Creating Cloudflare DNS-01 configuration directory"
+          become: true
+          ansible.builtin.file:
+            path: /etc/cloudflaredns
+            state: directory
+            owner: root
+            group: root
+            mode: "0750"
+
+        - name: "Writing the Cloudflare API token"
+          become: true
+          ansible.builtin.copy:
+            content: "{{ secrets.cloudflare_api_token }}"
+            dest: /etc/cloudflaredns/token
+            owner: root
+            group: root
+            mode: "0600"
+
+        - name: "Installing the Cloudflare DNS-01 hooks"
+          become: true
+          ansible.builtin.template:
+            src: "{{ item }}.j2"
+            dest: "/etc/cloudflaredns/{{ item }}"
+            owner: root
+            group: root
+            mode: "0750"
+          loop:
+            - cloudflare_auth_hook.sh
+            - cloudflare_cleanup_hook.sh
 
     - name: "Checking for existing DNS-01 certificates"
       become: true
@@ -678,7 +720,8 @@
       ansible.builtin.command: >-
         certbot certonly --manual
         --preferred-challenges dns
-        --manual-auth-hook /etc/acmedns/acmedns_auth_hook.sh
+        {% if (item.item.provider | default('acmedns')) == 'cloudflare' %}--manual-auth-hook /etc/cloudflaredns/cloudflare_auth_hook.sh
+        --manual-cleanup-hook /etc/cloudflaredns/cloudflare_cleanup_hook.sh{% else %}--manual-auth-hook /etc/acmedns/acmedns_auth_hook.sh{% endif %}
         --noninteractive
         --agree-tos
         --key-type rsa
