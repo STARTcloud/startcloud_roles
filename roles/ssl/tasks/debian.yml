@@ -676,35 +676,29 @@
               - secrets.cloudflare_api_token is defined
             fail_msg: "Cloudflare DNS-01 certificates need cloudflare_api_token in .secrets.yml"
 
-        - name: "Creating Cloudflare DNS-01 configuration directory"
+        - name: "Ensuring the certbot Cloudflare DNS plugin is installed"
+          become: true
+          ansible.builtin.apt:
+            name: python3-certbot-dns-cloudflare
+            state: present
+
+        - name: "Creating the Let's Encrypt configuration directory"
           become: true
           ansible.builtin.file:
-            path: /etc/cloudflaredns
+            path: /etc/letsencrypt
             state: directory
             owner: root
             group: root
-            mode: "0750"
+            mode: "0755"
 
-        - name: "Writing the Cloudflare API token"
+        - name: "Writing the Cloudflare API credentials"
           become: true
           ansible.builtin.copy:
-            content: "{{ secrets.cloudflare_api_token }}"
-            dest: /etc/cloudflaredns/token
+            content: "dns_cloudflare_api_token = {{ secrets.cloudflare_api_token }}\n"
+            dest: "{{ ssl_dns01_cloudflare_credentials }}"
             owner: root
             group: root
             mode: "0600"
-
-        - name: "Installing the Cloudflare DNS-01 hooks"
-          become: true
-          ansible.builtin.template:
-            src: "{{ item }}.j2"
-            dest: "/etc/cloudflaredns/{{ item }}"
-            owner: root
-            group: root
-            mode: "0750"
-          loop:
-            - cloudflare_auth_hook.sh
-            - cloudflare_cleanup_hook.sh
 
     - name: "Checking for existing DNS-01 certificates"
       become: true
@@ -718,10 +712,12 @@
     - name: "Requesting DNS-01 certificates"
       become: true
       ansible.builtin.command: >-
-        certbot certonly --manual
+        certbot certonly
+        {% if (item.item.provider | default('acmedns')) == 'cloudflare' %}--dns-cloudflare
+        --dns-cloudflare-credentials {{ ssl_dns01_cloudflare_credentials }}
+        --dns-cloudflare-propagation-seconds {{ ssl_dns01_cloudflare_propagation_seconds }}{% else %}--manual
         --preferred-challenges dns
-        {% if (item.item.provider | default('acmedns')) == 'cloudflare' %}--manual-auth-hook /etc/cloudflaredns/cloudflare_auth_hook.sh
-        --manual-cleanup-hook /etc/cloudflaredns/cloudflare_cleanup_hook.sh{% else %}--manual-auth-hook /etc/acmedns/acmedns_auth_hook.sh{% endif %}
+        --manual-auth-hook /etc/acmedns/acmedns_auth_hook.sh{% endif %}
         --noninteractive
         --agree-tos
         --key-type rsa

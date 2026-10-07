@@ -99,9 +99,16 @@ argument_specs:
           Certificates to issue via the DNS-01 challenge. Each item carries a domains list and an optional provider,
           acmedns (default) or cloudflare. acmedns needs a matching entry per domain in secrets.acmedns_credentials and a
           published _acme-challenge CNAME pointing at that registration's fulldomain. cloudflare needs
-          secrets.cloudflare_api_token with Zone Read and DNS Edit on each domain's zone, and creates and removes the
-          _acme-challenge TXT records itself. Both issue with certbot --manual; renewals republish through the installed
-          deploy hook.
+          secrets.cloudflare_api_token with Zone Read and DNS Edit on each domain's zone and issues through the certbot
+          Cloudflare DNS plugin. Renewals republish through the installed deploy hook.
+      ssl_dns01_cloudflare_credentials:
+        type: str
+        default: /etc/letsencrypt/cloudflare.ini
+        description: Path of the root-only credentials file the certbot Cloudflare DNS plugin reads.
+      ssl_dns01_cloudflare_propagation_seconds:
+        type: int
+        default: 30
+        description: Seconds the certbot Cloudflare DNS plugin waits for the TXT record to propagate before validation.
       certbot_create_if_missing:
         type: bool
         default: false
