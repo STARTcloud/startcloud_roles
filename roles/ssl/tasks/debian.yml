@@ -377,7 +377,7 @@
         remote_src: true
 
 - name: "Beginning Let's Encrypt Provisioning"
-  when: selfsigned_enabled and letsencrypt_enabled and certbot_create_method == 'standalone' and not (bake_mode | default(false) | bool)
+  when: selfsigned_enabled and letsencrypt_enabled and certbot_create_method in ['standalone', 'cloudflare'] and not (bake_mode | default(false) | bool)
   block:
     - name: "Ensuring apt cache is updated"
       ansible.builtin.apt:
@@ -388,6 +388,30 @@
       ansible.builtin.apt:
         name: certbot
         state: present
+
+    - name: "Configuring the certbot Cloudflare DNS plugin"
+      when: certbot_create_method == 'cloudflare'
+      block:
+        - name: "Ensuring Cloudflare API credentials are present"
+          ansible.builtin.assert:
+            that:
+              - secrets.cloudflare_api_token is defined
+            fail_msg: "Cloudflare DNS-01 certificates need cloudflare_api_token in .secrets.yml"
+
+        - name: "Ensuring the certbot Cloudflare DNS plugin is installed"
+          become: true
+          ansible.builtin.apt:
+            name: python3-certbot-dns-cloudflare
+            state: present
+
+        - name: "Writing the Cloudflare API credentials"
+          become: true
+          ansible.builtin.copy:
+            content: "dns_cloudflare_api_token = {{ secrets.cloudflare_api_token }}\n"
+            dest: "{{ certbot_cloudflare_credentials }}"
+            owner: root
+            group: root
+            mode: "0600"
 
     - name: "Checking if HAProxy is installed"
       register: haproxy_installed
@@ -438,7 +462,7 @@
         state: stopped
       loop: "{{ certbot_create_standalone_stop_services | default([]) }}"
       failed_when: false
-      when: not letsencrypt_cert.stat.exists
+      when: not letsencrypt_cert.stat.exists and certbot_create_method == 'standalone'
 
     - name: "Generating new staging certificate request"
       ansible.builtin.command: >-
@@ -450,22 +474,49 @@
         --email {{ settings.email }}
         {{ le_entries | join(' ') }}
       changed_when: true
-      when: (not haproxy_installed.stat.exists or haproxy_status.changed) and not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled
+      when: (not haproxy_installed.stat.exists or haproxy_status.changed) and not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled and certbot_create_method == 'standalone'
 
     - name: "Generating new staging request via HAProxy"
       ansible.builtin.command: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --staging --email {{ settings.email }} {{ le_entries | join(' ') }} --http-01-port=8181
       changed_when: true
-      when: (haproxy_installed.stat.exists and not haproxy_status.changed) and not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled
+      when: (haproxy_installed.stat.exists and not haproxy_status.changed) and not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled and certbot_create_method == 'standalone'
 
     - name: "Generating new certificate request"
       ansible.builtin.command: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --email {{ settings.email }} {{ le_entries | join(' ') }}
       changed_when: true
-      when: (not haproxy_installed.stat.exists or haproxy_status.changed) and not letsencrypt_cert.stat.exists and not letsencrypt_staging_enabled
+      when: (not haproxy_installed.stat.exists or haproxy_status.changed) and not letsencrypt_cert.stat.exists and not letsencrypt_staging_enabled and certbot_create_method == 'standalone'
 
     - name: "Generating new certificate request via HAProxy"
       ansible.builtin.command: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --email {{ settings.email }} {{ le_entries | join(' ') }} --http-01-port=8181
       changed_when: true
-      when: (haproxy_installed.stat.exists and not haproxy_status.changed) and not letsencrypt_cert.stat.exists and not letsencrypt_staging_enabled
+      when: (haproxy_installed.stat.exists and not haproxy_status.changed) and not letsencrypt_cert.stat.exists and not letsencrypt_staging_enabled and certbot_create_method == 'standalone'
+
+    - name: "Generating new staging certificate request via Cloudflare DNS-01"
+      ansible.builtin.command: >-
+        certbot certonly --dns-cloudflare
+        --dns-cloudflare-credentials {{ certbot_cloudflare_credentials }}
+        --dns-cloudflare-propagation-seconds {{ certbot_cloudflare_propagation_seconds }}
+        --noninteractive
+        --agree-tos
+        --key-type rsa
+        --staging
+        --email {{ settings.email }}
+        {{ le_entries | join(' ') }}
+      changed_when: true
+      when: not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled and certbot_create_method == 'cloudflare'
+
+    - name: "Generating new certificate request via Cloudflare DNS-01"
+      ansible.builtin.command: >-
+        certbot certonly --dns-cloudflare
+        --dns-cloudflare-credentials {{ certbot_cloudflare_credentials }}
+        --dns-cloudflare-propagation-seconds {{ certbot_cloudflare_propagation_seconds }}
+        --noninteractive
+        --agree-tos
+        --key-type rsa
+        --email {{ settings.email }}
+        {{ le_entries | join(' ') }}
+      changed_when: true
+      when: not letsencrypt_cert.stat.exists and not letsencrypt_staging_enabled and certbot_create_method == 'cloudflare'
 
     - name: "Starting services stopped for standalone issuance"
       ansible.builtin.systemd:
@@ -473,7 +524,7 @@
         state: started
       loop: "{{ certbot_create_standalone_stop_services | default([]) }}"
       failed_when: false
-      when: not letsencrypt_cert.stat.exists
+      when: not letsencrypt_cert.stat.exists and certbot_create_method == 'standalone'
 
     - name: "Removing old cert directories for SSLs"
       ansible.builtin.file:
@@ -682,20 +733,11 @@
             name: python3-certbot-dns-cloudflare
             state: present
 
-        - name: "Creating the Let's Encrypt configuration directory"
-          become: true
-          ansible.builtin.file:
-            path: /etc/letsencrypt
-            state: directory
-            owner: root
-            group: root
-            mode: "0755"
-
         - name: "Writing the Cloudflare API credentials"
           become: true
           ansible.builtin.copy:
             content: "dns_cloudflare_api_token = {{ secrets.cloudflare_api_token }}\n"
-            dest: "{{ ssl_dns01_cloudflare_credentials }}"
+            dest: "{{ certbot_cloudflare_credentials }}"
             owner: root
             group: root
             mode: "0600"
@@ -714,8 +756,8 @@
       ansible.builtin.command: >-
         certbot certonly
         {% if (item.item.provider | default('acmedns')) == 'cloudflare' %}--dns-cloudflare
-        --dns-cloudflare-credentials {{ ssl_dns01_cloudflare_credentials }}
-        --dns-cloudflare-propagation-seconds {{ ssl_dns01_cloudflare_propagation_seconds }}{% else %}--manual
+        --dns-cloudflare-credentials {{ certbot_cloudflare_credentials }}
+        --dns-cloudflare-propagation-seconds {{ certbot_cloudflare_propagation_seconds }}{% else %}--manual
         --preferred-challenges dns
         --manual-auth-hook /etc/acmedns/acmedns_auth_hook.sh{% endif %}
         --noninteractive
