@@ -35,12 +35,23 @@
             msg: "Container ID is {{ ansible_module_container_id }}"
           when: ansible_module_running_in_container | default(false)
 
+        - name: "Checking for the networking role's managed /etc/hosts block"
+          when: not (ansible_module_running_in_container | default(false))
+          ansible.builtin.command: grep -qF "# BEGIN SHI ANSIBLE MANAGED HOST ENTRIES" /etc/hosts
+          register: hostname_managed_block
+          changed_when: false
+          failed_when: hostname_managed_block.rc > 1
+
+        # Only the lines above the managed block are normalised: its entries may map
+        # service names to 127.0.0.1 on purpose. replace changes nothing when its
+        # before pattern is absent, so it is only set when the block exists.
         - name: "Setting /etc/hosts"
           when: not (ansible_module_running_in_container | default(false))
           ansible.builtin.replace:
             path: "/etc/hosts"
             regexp: "{{ item.regex }}"
             replace: "{{ item.replace }}"
+            before: "{{ '# BEGIN SHI ANSIBLE MANAGED HOST ENTRIES' if hostname_managed_block.rc == 0 else omit }}"
           with_items:
             # The FQDN must never ride the loopback lines: getaddrinfo canonicalizes the
             # machine's own name to localhost/127.0.0.1, which breaks daemons that resolve
