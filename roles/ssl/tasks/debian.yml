@@ -451,6 +451,14 @@
         le_entries: "{{ le_entries + ['-d ' + item + '.' + settings.hostname + '.' + settings.domain] }}"
       loop: "{{ dns_entries_list }}"
 
+    ## Saved in the renewal config, so certbot frees port 80 for every
+    ## unattended renewal too, not just this first issuance.
+    - name: "Composing the renewal hooks that stop and restart the port 80 services"
+      ansible.builtin.set_fact:
+        le_standalone_hooks: >-
+          {% set services = certbot_create_standalone_stop_services | default([]) | join(' ') %}
+          {{ ('--pre-hook "systemctl stop ' ~ services ~ ' || true" --post-hook "systemctl start ' ~ services ~ ' || true"') if services else '' }}
+
     - name: "Checking if certificate exists"
       register: letsencrypt_cert
       ansible.builtin.stat:
@@ -473,6 +481,7 @@
         --staging
         --email {{ settings.email }}
         {{ le_entries | join(' ') }}
+        {{ le_standalone_hooks }}
       changed_when: true
       when: (not haproxy_installed.stat.exists or haproxy_status.changed) and not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled and certbot_create_method == 'standalone'
 
@@ -482,7 +491,7 @@
       when: (haproxy_installed.stat.exists and not haproxy_status.changed) and not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled and certbot_create_method == 'standalone'
 
     - name: "Generating new certificate request"
-      ansible.builtin.command: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --email {{ settings.email }} {{ le_entries | join(' ') }}
+      ansible.builtin.command: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --email {{ settings.email }} {{ le_entries | join(' ') }} {{ le_standalone_hooks }}
       changed_when: true
       when: (not haproxy_installed.stat.exists or haproxy_status.changed) and not letsencrypt_cert.stat.exists and not letsencrypt_staging_enabled and certbot_create_method == 'standalone'
 
