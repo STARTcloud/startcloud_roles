@@ -13,8 +13,9 @@ Group=asterisk
 ExecStart=/usr/sbin/asterisk -mqf -C {{ asterisk_config_dir }}/asterisk.conf
 ExecReload=/usr/sbin/asterisk -rx 'core reload'
 
-#if /var/run is a tmpfs, this will create {{ asterisk_run_dir }} on start
-#RuntimeDirectory=asterisk
+# /run is a tmpfs, so the run directory is gone after every reboot and the
+# asterisk user can't recreate it; systemd creates it on each start instead
+RuntimeDirectory=asterisk
 
 #Nice=0
 #UMask=0002
