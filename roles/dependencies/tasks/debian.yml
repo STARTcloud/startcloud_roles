@@ -120,6 +120,14 @@
     cache_valid_time: 3600
     update_cache: true
 
+# Ansible needs setfacl to hand its temporary files to an unprivileged
+# become_user, which many roles in this collection use. Cloud images such as
+# the stock Debian AMIs don't ship it.
+- name: "Installing acl for become_user tasks"
+  ansible.builtin.apt:
+    name: acl
+    state: present
+
 - name: "Upgrading all apt packages"
   ansible.builtin.apt:
     upgrade: dist
