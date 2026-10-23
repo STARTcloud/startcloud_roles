@@ -12,7 +12,9 @@
 
     - name: "Setting root partition fact"
       ansible.builtin.set_fact:
-        root_disk: "{{ root_partition | regex_replace('[0-9]+$', '') }}"
+        # NVMe and MMC partitions put a "p" between the disk and the number
+        # (nvme0n1p1, mmcblk0p2); drop it only after a digit, so xvdp1 stays xvdp.
+        root_disk: "{{ root_partition | regex_replace('((?<=[0-9])p)?[0-9]+$', '') }}"
         root_partition_number: "{{ root_partition | regex_search('[0-9]+$') }}"
 
     # growpart exits 0 when it grew the partition (stdout CHANGED:), 1 when there was
@@ -55,7 +57,9 @@
 
     - name: "Setting root partition fact"
       ansible.builtin.set_fact:
-        root_disk: "{{ root_partition | regex_replace('[0-9]+$', '') }}"
+        # NVMe and MMC partitions put a "p" between the disk and the number
+        # (nvme0n1p1, mmcblk0p2); drop it only after a digit, so xvdp1 stays xvdp.
+        root_disk: "{{ root_partition | regex_replace('((?<=[0-9])p)?[0-9]+$', '') }}"
         root_partition_number: "{{ root_partition | regex_search('[0-9]+$') }}"
 
     # One step per resize stage; each may legitimately report "nothing to do" on an
