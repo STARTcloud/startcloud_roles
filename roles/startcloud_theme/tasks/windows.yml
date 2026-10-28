@@ -111,6 +111,7 @@
     $desktop = "HKLM:\Default\Control Panel\Desktop"
     $themes = "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes"
     $themeFile = "C:\Users\Default\AppData\Local\Microsoft\Windows\Themes\STARTcloud.theme"
+    $teams = "HKLM\Default\Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\SystemAppData\MSTeams_8wekyb3d8bbwe\TeamsTfwStartupTask"
     try {
         REG LOAD HKLM\Default C:\Users\Default\NTUSER.DAT
         if (Test-Path $personalize) {
@@ -140,7 +141,7 @@
         }
         try { reg delete "HKLM\Default\software\Microsoft\Windows\CurrentVersion\Run" /v OneDriveSetup /f 2>$null } catch {}
         try { reg Add "HKLM\SOFTWARE\Policies\Microsoft\Windows\OneDrive" /f /v DisableFileSyncNGSC /t Reg_DWORD /d 1 2>$null } catch {}
-        try { reg Add "HKLM\Default\Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\SystemAppData\MSTeams_8wekyb3d8bbwe\TeamsTfwStartupTask" /f /v State /t Reg_DWORD /d 1 2>$null } catch {}
+        try { reg Add $teams /f /v State /t Reg_DWORD /d 1 2>$null } catch {}
         try { reg Add "HKLM\Default\Software\Microsoft\Windows\CurrentVersion\DesktopSpotlight\Settings" /f 2>$null } catch {}
         try { reg Add "HKLM\Default\Software\Microsoft\Windows\CurrentVersion\DesktopSpotlight\Settings" /f /v "OneTimeUpgrade" /t Reg_DWORD /d 1 2>$null } catch {}
         try { reg Add "HKLM\Default\Software\Microsoft\Windows\CurrentVersion\DesktopSpotlight\Settings" /f /v "EnabledState" /t Reg_DWORD /d 0 2>$null } catch {}
