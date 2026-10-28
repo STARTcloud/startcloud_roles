@@ -4,8 +4,6 @@
     cmd: "{{ swap_file_create_command }}"
     creates: "{{ swap_file_path }}"
   register: swap_file_create
-  notify:
-    - Making swap file if necessary
 
 - name: "Setting permissions on swap file"
   ansible.builtin.file:
@@ -13,6 +11,33 @@
     owner: root
     group: root
     mode: "0600"
+
+## Formatting and enabling are tasks, not handlers: handlers wait for the end of
+## the play (or never run if it fails first), and later steps such as source
+## builds need the swap now. Both checks also repair a file a failed run left
+## unformatted or inactive.
+- name: "Reading the swap signature from the swap file header"
+  ansible.builtin.command:
+    cmd: "dd if={{ swap_file_path }} bs=1 skip=4086 count=10 status=none"
+  register: swap_file_magic
+  changed_when: false
+
+- name: "Formatting the swap file"
+  ansible.builtin.command: mkswap {{ swap_file_path }}
+  changed_when: true
+  when: swap_file_magic.stdout != 'SWAPSPACE2'
+
+- name: "Reading the currently active swap areas"
+  ansible.builtin.slurp:
+    src: /proc/swaps
+  register: swap_enable_active_areas
+
+- name: "Enabling the swap file"
+  ansible.builtin.command: swapon {{ swap_file_path }}
+  changed_when: true
+  when:
+    - not swap_test_mode
+    - swap_file_path not in ((swap_enable_active_areas.content | b64decode).splitlines()[1:] | map('split') | map('first') | list)
 
 - name: "Setting swappiness"
   ansible.posix.sysctl:
