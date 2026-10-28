@@ -34,3 +34,7 @@ argument_specs:
         type: bool
         default: true
         description: Whether the freshclam daemon is enabled on boot.
+      antivirus_hide_tray:
+        type: bool
+        default: true
+        description: Removes the antivirus tray icon from Windows startup (ClamWin's Run entry).

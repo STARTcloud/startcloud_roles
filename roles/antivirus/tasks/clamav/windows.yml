@@ -11,3 +11,10 @@
     - name: "Displaying ClamWin installation result"
       ansible.builtin.debug:
         var: clamwin_install_result
+
+    - name: "Removing the ClamWin tray icon from startup"
+      when: antivirus_hide_tray | bool
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Run
+        name: ClamWin
+        state: absent

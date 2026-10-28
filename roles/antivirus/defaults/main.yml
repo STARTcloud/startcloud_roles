@@ -21,3 +21,5 @@ clamav_daemon_enabled: true
 # clamav_freshclam_daemon: 'clamav-freshclam'
 clamav_freshclam_daemon_state: started
 clamav_freshclam_daemon_enabled: true
+
+antivirus_hide_tray: true

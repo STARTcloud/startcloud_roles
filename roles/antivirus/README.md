@@ -51,6 +51,10 @@ be removed and a socket opened for the daemon to start.
 
 Service state and boot-enablement for the ClamAV and freshclam daemons.
 
+    antivirus_hide_tray: true
+
+Removes the antivirus tray icon from Windows startup (ClamWin's Run entry).
+
 Package lists, daemon names, and configuration paths are resolved per OS family from
 `vars/Debian.yml` and `vars/RedHat.yml` (`clamav_packages`, `clamav_daemon`,
 `clamav_freshclam_daemon`, `clamav_daemon_config_path`,

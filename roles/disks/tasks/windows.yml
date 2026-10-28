@@ -124,3 +124,18 @@
       loop: "{{ disks.additional_disks | default([], true) }}"
       loop_control:
         index_var: index
+
+- name: "Disabling scheduled disk optimization"
+  when: disable_defrag | bool
+  block:
+    - name: "Disabling the ScheduledDefrag task"
+      community.windows.win_scheduled_task:
+        name: ScheduledDefrag
+        path: \Microsoft\Windows\Defrag\
+        enabled: false
+
+    - name: "Disabling the Optimize drives service"
+      ansible.windows.win_service:
+        name: defragsvc
+        start_mode: disabled
+        state: stopped

@@ -46,3 +46,7 @@ argument_specs:
         elements: dict
         default: []
         description: Services that receive a systemd drop-in refusing to start when their required mounts are missing. Each item has name (service unit) and requires (list of mount paths).
+      disable_defrag:
+        type: bool
+        default: true
+        description: Disables the Windows ScheduledDefrag task and the Optimize drives service so thin virtual disks do not balloon.

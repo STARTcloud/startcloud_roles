@@ -101,3 +101,10 @@
                 Dismount-DiskImage -ImagePath $Iso -ErrorAction SilentlyContinue | Out-Null
                 Remove-Item $Iso -Force -ErrorAction SilentlyContinue
               }
+
+    - name: "Removing the hypervisor guest tools tray icon from startup"
+      when: hide_guest_tools_tray | bool
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run
+        name: XenToolsTray
+        state: absent

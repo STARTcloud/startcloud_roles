@@ -19,6 +19,12 @@
             data: 1
             type: dword
 
+        - name: "Removing the Windows Security tray icon from startup"
+          ansible.windows.win_regedit:
+            path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run
+            name: SecurityHealth
+            state: absent
+
     - name: "Disabling Windows Feedback Experience program"
       when: disable_feedback
       ansible.windows.win_regedit:

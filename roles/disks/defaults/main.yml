@@ -26,3 +26,5 @@ storage_subdirs: []
 ## required mounts are missing — prevents silent writes to the root filesystem
 ## when the data partition fails to mount.
 storage_services: []
+
+disable_defrag: true
