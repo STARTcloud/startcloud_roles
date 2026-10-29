@@ -3,6 +3,27 @@
 All notable changes to the `startcloud.startcloud_roles` collection are
 documented here.
 
+## [0.4.3](https://github.com/STARTcloud/startcloud_roles/compare/v0.4.2...v0.4.3) (2026-10-29)
+
+
+### Bug Fixes
+
+* **asterisk:** create the run directory on every start ([26c5526](https://github.com/STARTcloud/startcloud_roles/commit/26c55268bcc36b83cba8953876af59a9d8970133))
+* create the Asterisk run directory on every start [#35](https://github.com/STARTcloud/startcloud_roles/issues/35) ([0960a03](https://github.com/STARTcloud/startcloud_roles/commit/0960a03fddad4d810a99c5b6ea0bad43fb2dcbe3))
+* grow the root partition on NVMe and MMC disks ([c7dec02](https://github.com/STARTcloud/startcloud_roles/commit/c7dec02b09a0084b600ce2560f08b77fc774e526))
+* grow the root partition on NVMe and MMC disks [#27](https://github.com/STARTcloud/startcloud_roles/issues/27) ([dfed267](https://github.com/STARTcloud/startcloud_roles/commit/dfed267ef18f3a7c04303e6d843c96f9900c45be))
+* keep the Asterisk run directory across service stops [#35](https://github.com/STARTcloud/startcloud_roles/issues/35) ([eab9d8a](https://github.com/STARTcloud/startcloud_roles/commit/eab9d8aee5a61749a60ff5e7898adea38e39527a))
+* restart PostgreSQL as soon as new locales are generated ([de3bf3c](https://github.com/STARTcloud/startcloud_roles/commit/de3bf3c81ad6a5ea12d15472b19934ea0b05df00))
+* restart PostgreSQL as soon as new locales are generated [#29](https://github.com/STARTcloud/startcloud_roles/issues/29) ([a5f89b9](https://github.com/STARTcloud/startcloud_roles/commit/a5f89b99efd40e47bc6ab87e85ff5ee8cbb07c13))
+* save port 80 stop/start hooks for standalone renewals [#37](https://github.com/STARTcloud/startcloud_roles/issues/37) ([023d5d4](https://github.com/STARTcloud/startcloud_roles/commit/023d5d4760f4300b9e881e45641f6ecee92ad74e))
+* sdkman_java LATEST extractor reads the SDKMAN versions API ([900311c](https://github.com/STARTcloud/startcloud_roles/commit/900311c06667a9ed7d0539c961cc2047f7834719))
+* some things not synced ([37325bc](https://github.com/STARTcloud/startcloud_roles/commit/37325bcae0bb1d793fb6968e32d34694b304476d))
+* **ssl:** save port 80 stop/start hooks for standalone renewals ([6239c48](https://github.com/STARTcloud/startcloud_roles/commit/6239c48ec0437db3da98bbc0fbd364b7dfed6b33))
+* switch the swap file on during the play ([ab8a8d8](https://github.com/STARTcloud/startcloud_roles/commit/ab8a8d8b86ec5eafcec3341a7922953d1670a55a))
+* switch the swap file on during the play [#30](https://github.com/STARTcloud/startcloud_roles/issues/30) ([ec754f5](https://github.com/STARTcloud/startcloud_roles/commit/ec754f570cc64f40f6657dae993d727c0f2f213b))
+* teams ([227e055](https://github.com/STARTcloud/startcloud_roles/commit/227e0552eae5b633bf8857a5919b759a544a3110))
+* teams ([8d5abde](https://github.com/STARTcloud/startcloud_roles/commit/8d5abde7b89524dc5dae7a45704edd7139057dda))
+
 ## [0.4.2](https://github.com/STARTcloud/startcloud_roles/compare/v0.4.1...v0.4.2) (2026-10-08)
 
 
