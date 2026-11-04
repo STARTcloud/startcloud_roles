@@ -3,6 +3,16 @@
 All notable changes to the `startcloud.startcloud_roles` collection are
 documented here.
 
+## [0.4.4](https://github.com/STARTcloud/startcloud_roles/compare/v0.4.3...v0.4.4) (2026-11-04)
+
+
+### Bug Fixes
+
+* **guacamole:** make the guacamole-server and guacamole-client git refs configurable ([0b1650e](https://github.com/STARTcloud/startcloud_roles/commit/0b1650e08bfd048646c5a5f74f908ef37dabaea5))
+* **guacamole:** make the guacamole-server and guacamole-client git refs configurable [#42](https://github.com/STARTcloud/startcloud_roles/issues/42) ([e3f7660](https://github.com/STARTcloud/startcloud_roles/commit/e3f7660b94c949409f3704708634d30b3a7a5f90))
+* restart PostgreSQL for new locales after a scrubbed cluster is rebuilt ([5219a3b](https://github.com/STARTcloud/startcloud_roles/commit/5219a3b3642dcba19ed8203153fab74bb7145a22))
+* restart PostgreSQL for new locales after a scrubbed cluster is rebuilt [#40](https://github.com/STARTcloud/startcloud_roles/issues/40) ([f2f5ee9](https://github.com/STARTcloud/startcloud_roles/commit/f2f5ee97a1cf4925e4d0e40da68a043cfa43bddd))
+
 ## [0.4.3](https://github.com/STARTcloud/startcloud_roles/compare/v0.4.2...v0.4.3) (2026-10-29)
 
 
