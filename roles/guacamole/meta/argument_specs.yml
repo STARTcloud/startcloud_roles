@@ -15,6 +15,14 @@ argument_specs:
         type: str
         default: "1.5.0"
         description: Guacamole release version used for source checkout and install paths.
+      guacamole_server_version:
+        type: str
+        default: main
+        description: Git ref (branch or tag) of apache/guacamole-server to build.
+      guacamole_client_version:
+        type: str
+        default: main
+        description: Git ref (branch or tag) of apache/guacamole-client to build.
       guacamole_admin_user:
         type: str
         default: guacadmin
