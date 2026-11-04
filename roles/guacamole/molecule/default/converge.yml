@@ -7,6 +7,8 @@
     # Role variables (defaults/main.yml + meta/argument_specs.yml).
     run_tasks: true
     guacamole_version: "1.5.0"
+    guacamole_server_version: "1.6.0"
+    guacamole_client_version: "1.6.0"
     guacamole_admin_user: guacadmin
     guacamole_admin_pass: "CHANGEME"
     guacamole_guacd_port: 4822

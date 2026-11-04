@@ -130,7 +130,7 @@
       ansible.builtin.git:
         repo: "https://github.com/apache/guacamole-server"
         dest: "/usr/local/src/guacamole/{{ guacamole_version }}/guacamole-server"
-        version: "main"
+        version: "{{ guacamole_server_version }}"
         update: true
         force: true
 
@@ -141,7 +141,7 @@
       ansible.builtin.git:
         repo: "https://github.com/apache/guacamole-server"
         dest: "/usr/local/src/guacamole/{{ guacamole_version }}/guacamole-server"
-        version: "main"
+        version: "{{ guacamole_server_version }}"
         update: false
         force: true
 
@@ -159,7 +159,7 @@
       ansible.builtin.git:
         repo: "https://github.com/apache/guacamole-client"
         dest: "/usr/local/src/guacamole/{{ guacamole_version }}/guacamole-client"
-        version: "main"
+        version: "{{ guacamole_client_version }}"
         update: true
         force: true
 
@@ -170,7 +170,7 @@
       ansible.builtin.git:
         repo: "https://github.com/apache/guacamole-client"
         dest: "/usr/local/src/guacamole/{{ guacamole_version }}/guacamole-client"
-        version: "main"
+        version: "{{ guacamole_client_version }}"
         update: false
         force: true
 
