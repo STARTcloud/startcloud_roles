@@ -138,3 +138,11 @@ argument_specs:
           containerd root directory where the containerd snapshotter stores image content
           (Docker CE 28+ keeps images here, not under the Docker data-root). Empty leaves
           the containerd package default.
+      container_compose_update:
+        type: bool
+        default: false
+        description: Pull every image of container_compose_file and recreate the containers whose image changed.
+      container_compose_file:
+        type: str
+        default: /home/startcloud/docker-compose.yml
+        description: The compose file whose images are pulled and whose containers are recreated.

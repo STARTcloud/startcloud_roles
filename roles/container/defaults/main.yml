@@ -63,3 +63,6 @@ docker_users: []
 docker_containerd_root: ""
 # Docker daemon options as a dict
 docker_daemon_options: { "log-driver": "journald", "log-level": "warn", "debug": false, "default-address-pools": [{ "base": "172.17.0.0/24", "size": 28 }] }
+
+container_compose_update: false
+container_compose_file: /home/startcloud/docker-compose.yml

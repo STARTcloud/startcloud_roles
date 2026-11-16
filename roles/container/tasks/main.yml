@@ -117,3 +117,7 @@
     - name: "Including docker-users tasks"
       ansible.builtin.include_tasks: docker-users.yml
       when: at_least_one_user_to_modify is defined
+
+    - name: "Including compose update tasks"
+      ansible.builtin.include_tasks: compose-update.yml
+      when: container_compose_update | bool

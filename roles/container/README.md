@@ -94,6 +94,12 @@ server). The SSH connection is reset afterwards so group membership applies imme
 
 Custom `dockerd` options, written as JSON to `/etc/docker/daemon.json`.
 
+    container_compose_update: false
+    container_compose_file: /home/startcloud/docker-compose.yml
+
+When enabled, every image of the compose file is pulled and the containers whose image
+changed are recreated; the pulled images and the compose actions are reported.
+
 ## Dependencies
 
 None.

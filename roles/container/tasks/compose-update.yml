@@ -1,0 +1,23 @@
+---
+- name: "Pulling the images of {{ container_compose_file }}"
+  community.docker.docker_compose_v2_pull:
+    project_src: "{{ container_compose_file | dirname }}"
+    files:
+      - "{{ container_compose_file | basename }}"
+    policy: always
+  register: container_compose_pull
+
+- name: "Recreating the containers that got a new image"
+  community.docker.docker_compose_v2:
+    project_src: "{{ container_compose_file | dirname }}"
+    files:
+      - "{{ container_compose_file | basename }}"
+    state: present
+  register: container_compose_up
+
+- name: "Reporting the compose update"
+  ansible.builtin.debug:
+    msg:
+      pulled: "{{ container_compose_pull.actions | default([]) }}"
+      recreated: "{{ container_compose_up.changed }}"
+      actions: "{{ container_compose_up.actions | default([]) }}"
