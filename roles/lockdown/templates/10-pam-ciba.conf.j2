@@ -1,0 +1,17 @@
+PermitRootLogin no
+PasswordAuthentication no
+KbdInteractiveAuthentication yes
+AuthenticationMethods publickey,keyboard-interactive
+LoginGraceTime {{ lockdown_pam_ciba_login_grace_time }}
+{% if lockdown_pam_ciba_health_user | length > 0 %}
+
+Match User {{ lockdown_pam_ciba_health_user }}
+    PasswordAuthentication yes
+    KbdInteractiveAuthentication no
+    AuthenticationMethods password
+{% endif %}
+{% if lockdown_pam_ciba_key_addresses | length > 0 %}
+
+Match User {{ lockdown_pam_ciba_users.keys() | join(',') }} Address {{ lockdown_pam_ciba_key_addresses | join(',') }}
+    AuthenticationMethods publickey
+{% endif %}

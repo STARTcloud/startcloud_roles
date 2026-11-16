@@ -1,0 +1,11 @@
+schemaVersion: 1
+provider:
+  issuer: {{ lockdown_pam_ciba_issuer }}
+  client_id: {{ lockdown_pam_ciba_client_id }}
+  scope: {{ lockdown_pam_ciba_scope }}
+approval:
+  authorization_details_type: {{ lockdown_pam_ciba_details_type }}
+users:
+{% for local_user, provider_user in lockdown_pam_ciba_users.items() %}
+  {{ local_user }}: {{ provider_user }}
+{% endfor %}

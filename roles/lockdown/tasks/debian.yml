@@ -81,6 +81,13 @@
     name: ssh
     state: restarted
 
+- name: "Including the pam-ciba tasks"
+  ansible.builtin.include_tasks: pam_ciba.yml
+  when: lockdown_pam_ciba | bool
+
+- name: "Flushing handlers so ssh restarts before the connection resets"
+  ansible.builtin.meta: flush_handlers
+
 - name: "Resetting ssh connection to apply user changes"
   ansible.builtin.meta: reset_connection
 

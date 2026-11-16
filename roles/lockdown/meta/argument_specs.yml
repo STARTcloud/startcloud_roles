@@ -45,6 +45,47 @@ argument_specs:
           Write PasswordAuthentication no as /etc/ssh/sshd_config.d/00-lockdown.conf and restart sshd, leaving the
           rotated key as the only login path. The 00- prefix sorts first so it wins over later drop-ins such as
           cloud-init's; off by default for locally built machines that log in by password.
+      lockdown_pam_ciba:
+        type: bool
+        default: false
+        description: >-
+          Sign SSH logins in through the OpenID Provider's push approval: installs pam-ciba from the STARTcloud
+          repository, writes its configuration, places it in the sshd PAM stack above common-auth and writes
+          /etc/ssh/sshd_config.d/10-pam-ciba.conf (key plus keyboard-interactive for every login, password only
+          for the health user, key alone from the key addresses).
+      lockdown_pam_ciba_issuer:
+        type: str
+        default: ""
+        description: The OpenID Provider's issuer identifier, an https URL.
+      lockdown_pam_ciba_client_id:
+        type: str
+        default: ""
+        description: The public client registered at the provider for this host with the CIBA grant and poll delivery.
+      lockdown_pam_ciba_scope:
+        type: str
+        default: openid profile
+        description: Scope of the authentication request; contains openid.
+      lockdown_pam_ciba_details_type:
+        type: str
+        default: pam_sign_in
+        description: The RFC 9396 authorization details type the provider has registered for the client; empty sends none.
+      lockdown_pam_ciba_users:
+        type: dict
+        default: {}
+        description: Local account name to the provider account it signs in as; an account without an entry is refused.
+      lockdown_pam_ciba_health_user:
+        type: str
+        default: ""
+        description: Local account that keeps password login and skips the push approval, for a monitoring tool that cannot use keys; empty keeps none.
+      lockdown_pam_ciba_key_addresses:
+        type: list
+        elements: str
+        default: []
+        description: Addresses or networks from which the mapped accounts sign in by key alone, with no push approval.
+      lockdown_pam_ciba_login_grace_time:
+        type: str
+        default: 6m
+        description: sshd LoginGraceTime, longer than the provider's request lifetime so the end-user has the whole lifetime to approve.
       vagrant_user:
         type: str
         description: >-

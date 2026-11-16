@@ -1,0 +1,53 @@
+---
+- name: "Checking the pam-ciba settings"
+  ansible.builtin.assert:
+    that:
+      - lockdown_pam_ciba_issuer | length > 0
+      - lockdown_pam_ciba_client_id | length > 0
+      - lockdown_pam_ciba_users | length > 0
+    fail_msg: "lockdown_pam_ciba needs lockdown_pam_ciba_issuer, lockdown_pam_ciba_client_id and at least one entry in lockdown_pam_ciba_users"
+
+- name: "Installing pam-ciba"
+  ansible.builtin.apt:
+    name: pam-ciba
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: "Creating /etc/pam-ciba"
+  ansible.builtin.file:
+    path: /etc/pam-ciba
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: "Writing /etc/pam-ciba/app.config.yaml"
+  ansible.builtin.template:
+    src: pam-ciba.app.config.yaml.j2
+    dest: /etc/pam-ciba/app.config.yaml
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: "Placing pam-ciba in the sshd PAM stack"
+  ansible.builtin.blockinfile:
+    path: /etc/pam.d/sshd
+    marker: "# {mark} ANSIBLE MANAGED PAM CIBA"
+    insertbefore: '^@include common-auth'
+    block: |
+      {% if lockdown_pam_ciba_health_user | length > 0 %}
+      auth [success=2 default=ignore] pam_succeed_if.so quiet user = {{ lockdown_pam_ciba_health_user }}
+      {% endif %}
+      auth [success=ok ignore=ignore default=die] pam_exec.so quiet /usr/bin/pam-ciba authenticate
+      auth [success=done default=die] pam_permit.so
+  notify: "Restarting ssh"
+
+- name: "Writing /etc/ssh/sshd_config.d/10-pam-ciba.conf"
+  ansible.builtin.template:
+    src: 10-pam-ciba.conf.j2
+    dest: /etc/ssh/sshd_config.d/10-pam-ciba.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: "Restarting ssh"

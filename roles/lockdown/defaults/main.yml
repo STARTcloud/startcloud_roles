@@ -32,3 +32,13 @@ lockdown_disable_ssh_password_auth: false
 lockdown_file_cleanups_list: []
 # Gate the sensitive-file cleanup step. Off by default; opt in via Hosts.yml when ready to scrub.
 lockdown_cleanup_debug_files: false
+
+lockdown_pam_ciba: false
+lockdown_pam_ciba_issuer: ""
+lockdown_pam_ciba_client_id: ""
+lockdown_pam_ciba_scope: openid profile
+lockdown_pam_ciba_details_type: pam_sign_in
+lockdown_pam_ciba_users: {}
+lockdown_pam_ciba_health_user: ""
+lockdown_pam_ciba_key_addresses: []
+lockdown_pam_ciba_login_grace_time: 6m
