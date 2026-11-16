@@ -3,6 +3,13 @@
 All notable changes to the `startcloud.startcloud_roles` collection are
 documented here.
 
+## [0.5.0](https://github.com/STARTcloud/startcloud_roles/compare/v0.4.4...v0.5.0) (2026-11-16)
+
+
+### Features
+
+* rename the docker role to container ([1114a10](https://github.com/STARTcloud/startcloud_roles/commit/1114a1027364208dd24aa2bff67407a2db4922e9))
+
 ## [0.4.4](https://github.com/STARTcloud/startcloud_roles/compare/v0.4.3...v0.4.4) (2026-11-04)
 
 
