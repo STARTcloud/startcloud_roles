@@ -9,6 +9,21 @@
     mode: "0644"
   when: use_proxy | bool
 
+- name: "Writing {{ dependencies_mirror_sources }}"
+  ansible.builtin.template:
+    src: debian.sources.j2
+    dest: "{{ dependencies_mirror_sources }}"
+    owner: root
+    group: root
+    mode: "0644"
+  when: dependencies_mirror | length > 0
+
+- name: "Removing /etc/apt/sources.list"
+  ansible.builtin.file:
+    path: /etc/apt/sources.list
+    state: absent
+  when: dependencies_mirror | length > 0
+
 - name: "Gathering DEB architecture"
   ansible.builtin.command: dpkg --print-architecture
   register: deb_architecture
@@ -115,15 +130,106 @@
   loop: "{{ extra_repos | default([]) }}"
   when: extra_repos | default([]) | length > 0
 
+- name: "Reading whether the node is a Proxmox VE host"
+  ansible.builtin.stat:
+    path: /usr/bin/pvesubscription
+  register: dependencies_pve
+  when: dependencies_pve_repository | length > 0
+
+- name: "Reading the Proxmox VE subscription"
+  ansible.builtin.command: pvesubscription get
+  register: dependencies_pve_subscription
+  changed_when: false
+  when:
+    - dependencies_pve_repository | length > 0
+    - dependencies_pve.stat.exists
+
+- name: "Checking the declared Proxmox VE repository against the subscription"
+  ansible.builtin.assert:
+    that:
+      - (dependencies_pve_repository == 'enterprise') == ('status: active' in dependencies_pve_subscription.stdout_lines)
+    fail_msg: >-
+      {{ inventory_hostname }} declares pve-{{ dependencies_pve_repository }} but pvesubscription get reports
+      {{ dependencies_pve_subscription.stdout_lines | select('search', '^status:') | first | default('no status') }}
+  when:
+    - dependencies_pve_repository | length > 0
+    - dependencies_pve.stat.exists
+
+- name: "Writing the Proxmox VE enterprise repository, enabled only where declared"
+  ansible.builtin.template:
+    src: "pve-enterprise.{{ dependencies_pve_form }}.j2"
+    dest: "/etc/apt/sources.list.d/pve-enterprise.{{ dependencies_pve_form }}"
+    owner: root
+    group: root
+    mode: "0644"
+  vars:
+    dependencies_pve_form: "{{ 'list' if ansible_distribution_release == 'bookworm' else 'sources' }}"
+  when:
+    - dependencies_pve_repository | length > 0
+    - dependencies_pve.stat.exists
+
+- name: "Writing the Proxmox VE no-subscription repository where declared"
+  ansible.builtin.template:
+    src: "pve-no-subscription.{{ dependencies_pve_form }}.j2"
+    dest: "/etc/apt/sources.list.d/pve-no-subscription.{{ dependencies_pve_form }}"
+    owner: root
+    group: root
+    mode: "0644"
+  vars:
+    dependencies_pve_form: "{{ 'list' if ansible_distribution_release == 'bookworm' else 'sources' }}"
+  when:
+    - dependencies_pve_repository == 'no-subscription'
+    - dependencies_pve.stat.exists
+
+- name: "Removing the no-subscription files the declaration does not cover"
+  ansible.builtin.file:
+    path: "/etc/apt/sources.list.d/{{ item }}"
+    state: absent
+  loop: >-
+    {{ ['pve-install-repo.list']
+       + (['pve-no-subscription.list', 'pve-no-subscription.sources']
+          if dependencies_pve_repository == 'enterprise'
+          else ['pve-no-subscription.' + ('sources' if ansible_distribution_release == 'bookworm' else 'list')]) }}
+  when:
+    - dependencies_pve_repository | length > 0
+    - dependencies_pve.stat.exists
+
 - name: "Ensuring apt cache is updated"
   ansible.builtin.apt:
     cache_valid_time: 3600
     update_cache: true
 
+- name: "Reading the upgradable packages"
+  ansible.builtin.command: apt list --upgradable
+  register: dependencies_upgradable
+  changed_when: false
+
+- name: "Reading the Galera state before the upgrade"
+  ansible.builtin.command: mysql -uroot -N -s -e "SHOW STATUS WHERE Variable_name IN ('wsrep_local_state_comment','wsrep_cluster_status')"
+  register: dependencies_galera_before
+  changed_when: false
+  failed_when: dependencies_galera_before.stdout is not search('Synced') or dependencies_galera_before.stdout is not search('status\\s+Primary')
+  when:
+    - dependencies_galera | bool
+    - dependencies_upgrade | bool
+
 - name: "Upgrading all apt packages"
   ansible.builtin.apt:
     upgrade: dist
     update_cache: true
+    autoremove: "{{ dependencies_autoremove }}"
+  when: dependencies_upgrade | bool
+
+- name: "Waiting for the Galera node to report Synced and Primary"
+  ansible.builtin.command: mysql -uroot -N -s -e "SHOW STATUS WHERE Variable_name IN ('wsrep_local_state_comment','wsrep_cluster_status')"
+  register: dependencies_galera_after
+  until: dependencies_galera_after.stdout is search('Synced') and dependencies_galera_after.stdout is search('status\\s+Primary')
+  retries: "{{ dependencies_galera_sync_retries }}"
+  delay: 1
+  changed_when: false
+  when:
+    - dependencies_galera | bool
+    - dependencies_upgrade | bool
 
 - name: "Adding Additional packages"
   ansible.builtin.apt:
@@ -161,3 +267,56 @@
   when:
     - ansible_os_family == "Debian"
     - ansible_virtualization_type == 'xen'
+
+- name: "Reading whether a reboot is required"
+  ansible.builtin.stat:
+    path: /var/run/reboot-required
+  register: dependencies_reboot_flag
+
+- name: "Reading the installed kernels"
+  ansible.builtin.find:
+    paths: /boot
+    patterns: "vmlinuz-*"
+  register: dependencies_kernels
+
+- name: "Recording the newest installed kernel"
+  ansible.builtin.set_fact:
+    dependencies_newest_kernel: >-
+      {{ dependencies_kernels.files | map(attribute='path') | map('basename')
+         | map('regex_replace', '^vmlinuz-', '') | community.general.version_sort
+         | last | default(ansible_kernel) }}
+
+- name: "Rebooting the node"
+  ansible.builtin.reboot:
+    reboot_timeout: "{{ dependencies_reboot_timeout }}"
+  register: dependencies_rebooted
+  when:
+    - dependencies_reboot | bool
+    - not (reboot_never | bool)
+    - inventory_hostname != lookup('env', 'MAINTENANCE_SELF')
+    - dependencies_reboot_flag.stat.exists or dependencies_newest_kernel != ansible_kernel
+
+- name: "Waiting for the Galera node to report Synced and Primary after the reboot"
+  ansible.builtin.command: mysql -uroot -N -s -e "SHOW STATUS WHERE Variable_name IN ('wsrep_local_state_comment','wsrep_cluster_status')"
+  register: dependencies_galera_rebooted
+  until: dependencies_galera_rebooted.stdout is search('Synced') and dependencies_galera_rebooted.stdout is search('status\\s+Primary')
+  retries: "{{ dependencies_galera_sync_retries }}"
+  delay: 1
+  changed_when: false
+  when:
+    - dependencies_galera | bool
+    - dependencies_rebooted.changed | default(false)
+
+- name: "Recording the reboot state for the summary"
+  ansible.builtin.set_fact:
+    dependencies_summary_rebooted: "{{ dependencies_rebooted.changed | default(false) }}"
+    dependencies_summary_reboot_required: "{{ (dependencies_reboot_flag.stat.exists or dependencies_newest_kernel != ansible_kernel) and not (dependencies_rebooted.changed | default(false)) }}"
+    dependencies_summary_pending: "{{ (dependencies_upgradable.stdout_lines | length > 1) and not (dependencies_upgrade | bool) }}"
+
+- name: "Reporting the update state"
+  ansible.builtin.debug:
+    msg:
+      upgraded: "{{ dependencies_upgrade | bool }}"
+      upgradable_before: "{{ dependencies_upgradable.stdout_lines[1:] }}"
+      reboot_required: "{{ dependencies_summary_reboot_required }}"
+      rebooted: "{{ dependencies_summary_rebooted }}"

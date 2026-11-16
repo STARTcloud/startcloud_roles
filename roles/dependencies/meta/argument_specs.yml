@@ -33,3 +33,86 @@ argument_specs:
           Extra APT repositories to add (name, gpg_key_url, gpg_keyring_path, repo, needs_dearmor,
           optional filename defaulting to name, optional stale_source_files listing old duplicate
           source files to remove).
+      dependencies_mirror:
+        type: str
+        default: ""
+        description: >-
+          Debian mirror root; when set, the node's Debian, updates and security sources are written as
+          deb822 stanzas pointing at its debian/ and debian-security/ trees and /etc/apt/sources.list is
+          removed. Empty leaves the node's sources untouched.
+      dependencies_mirror_components:
+        type: str
+        default: main contrib non-free non-free-firmware
+        description: Components enabled on every mirror suite.
+      dependencies_mirror_keyring:
+        type: str
+        default: /usr/share/keyrings/debian-archive-keyring.gpg
+        description: Keyring the mirror's Release files are verified against.
+      dependencies_mirror_sources:
+        type: str
+        default: /etc/apt/sources.list.d/debian.sources
+        description: deb822 sources file the mirror stanzas are written to.
+      dependencies_pve_repository:
+        type: str
+        default: ""
+        choices: ["", enterprise, no-subscription]
+        description: >-
+          The Proxmox VE repository a Proxmox host is entitled to; the role checks it against
+          pvesubscription get and stops before any change when they disagree, writes pve-enterprise in
+          Proxmox's own file form for the release (enabled, or disabled the way Proxmox disables it),
+          writes pve-no-subscription only where declared, and removes the installer's
+          pve-install-repo.list and any no-subscription file the declaration does not cover. Empty
+          leaves Proxmox repositories untouched.
+      dependencies_pve_enterprise_uri:
+        type: str
+        default: https://enterprise.proxmox.com/debian/pve
+        description: Repository of pve-enterprise; its credentials are the ones pvesubscription set wrote.
+      dependencies_pve_no_subscription_uri:
+        type: str
+        default: http://download.proxmox.com/debian/pve
+        description: Repository of pve-no-subscription.
+      dependencies_pve_keyring:
+        type: str
+        default: /usr/share/keyrings/proxmox-archive-keyring.gpg
+        description: Keyring the deb822 stanza is signed by, shipped by the proxmox-archive-keyring package.
+      dependencies_upgrade:
+        type: bool
+        default: true
+        description: Run the dist-upgrade; off keeps the node at its current packages and only reports what is upgradable.
+      dependencies_autoremove:
+        type: bool
+        default: false
+        description: Remove packages no longer needed after the upgrade.
+      dependencies_galera:
+        type: bool
+        default: false
+        description: >-
+          The node is a Galera member; the upgrade runs only when the node is Synced in a Primary cluster
+          and the run waits for the node to be Synced and Primary again before the next node.
+      dependencies_galera_sync_retries:
+        type: int
+        default: 120
+        description: Seconds to wait after the upgrade for the Galera node to report Synced and Primary.
+      reboots_allowed:
+        type: bool
+        default: false
+        description: >-
+          The one run switch every update role reads; true lets a node that asks for a reboot take it,
+          given on the command line with -e reboots_allowed=true or by the maintenance window.
+      reboot_never:
+        type: bool
+        default: false
+        description: >-
+          Set on a node in the inventory to keep it out of reboots in every run and every role; the
+          summary still names it when it asks for one.
+      dependencies_reboot:
+        type: bool
+        default: "{{ reboots_allowed }}"
+        description: >-
+          After the upgrade, reboot the node when /var/run/reboot-required exists or the newest installed
+          kernel is not the running one; takes reboots_allowed, and the node named by the MAINTENANCE_SELF
+          environment variable or carrying reboot_never is never rebooted here.
+      dependencies_reboot_timeout:
+        type: int
+        default: 600
+        description: Seconds to wait for a rebooted node to come back.

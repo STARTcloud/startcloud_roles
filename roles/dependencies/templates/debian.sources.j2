@@ -1,0 +1,11 @@
+Types: deb
+URIs: {{ dependencies_mirror }}/debian/
+Suites: {{ ansible_distribution_release }} {{ ansible_distribution_release }}-updates
+Components: {{ dependencies_mirror_components }}
+Signed-By: {{ dependencies_mirror_keyring }}
+
+Types: deb
+URIs: {{ dependencies_mirror }}/debian-security/
+Suites: {{ ansible_distribution_release }}-security
+Components: {{ dependencies_mirror_components }}
+Signed-By: {{ dependencies_mirror_keyring }}

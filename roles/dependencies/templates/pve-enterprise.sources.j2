@@ -1,0 +1,8 @@
+Types: deb
+URIs: {{ dependencies_pve_enterprise_uri }}
+Suites: {{ ansible_distribution_release }}
+Components: pve-enterprise
+Signed-By: {{ dependencies_pve_keyring }}
+{% if dependencies_pve_repository != 'enterprise' %}
+Enabled: false
+{% endif %}
