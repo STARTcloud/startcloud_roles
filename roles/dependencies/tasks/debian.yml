@@ -9,6 +9,15 @@
     mode: "0644"
   when: use_proxy | bool
 
+- name: "Gathering DEB architecture"
+  ansible.builtin.command: dpkg --print-architecture
+  register: deb_architecture
+  changed_when: false
+
+- name: "Printing DEB architecture"
+  ansible.builtin.debug:
+    msg: "deb_architecture.stdout: {{ deb_architecture.stdout }}"
+
 - name: "Writing {{ dependencies_mirror_sources }}"
   ansible.builtin.template:
     src: debian.sources.j2
@@ -23,15 +32,6 @@
     path: /etc/apt/sources.list
     state: absent
   when: dependencies_mirror | length > 0
-
-- name: "Gathering DEB architecture"
-  ansible.builtin.command: dpkg --print-architecture
-  register: deb_architecture
-  changed_when: false
-
-- name: "Printing DEB architecture"
-  ansible.builtin.debug:
-    msg: "deb_architecture.stdout: {{ deb_architecture.stdout }}"
 
 - name: "Creating keyrings directory for repository GPG keys"
   ansible.builtin.file:
