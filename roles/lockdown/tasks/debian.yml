@@ -22,26 +22,32 @@
 ## deterministic value instead. The hash then changes only when the password
 ## itself changes, which is the real change signal.
 - name: "Changing startcloud Password"
-  when: lockdown_use_settings_password
+  when:
+    - lockdown_rotate_user | bool
+    - lockdown_use_settings_password
   ansible.builtin.user:
     name: "startcloud"
     state: present
     password: "{{ vagrant_user_pass | password_hash('sha512', (inventory_hostname | hash('sha256'))[:16]) }}"
 
 - name: "Changing startcloud Password"
-  when: not lockdown_use_settings_password
+  when:
+    - lockdown_rotate_user | bool
+    - not lockdown_use_settings_password
   ansible.builtin.user:
     name: "startcloud"
     state: present
     password: "{{ lockdown_new_password | password_hash('sha512', (inventory_hostname | hash('sha256'))[:16]) }}"
 
 - name: "Generating an OpenSSH keypair with the default values"
+  when: lockdown_rotate_user | bool
   community.crypto.openssh_keypair:
     owner: startcloud
     group: startcloud
     path: "{{ lockdown_user_private_key_path }}"
 
 - name: "Setting ownership of SSH files"
+  when: lockdown_rotate_user | bool
   ansible.builtin.file:
     owner: startcloud
     group: startcloud
@@ -53,11 +59,13 @@
   # The keypair is generated ON the target, so the public key must be read back
   # from the target. lookup('file', ...) would read the controller's filesystem
   # and break any push-mode run; slurp works identically when controller == target.
+  when: lockdown_rotate_user | bool
   ansible.builtin.slurp:
     src: "{{ lockdown_user_private_key_path }}.pub"
   register: lockdown_generated_pubkey
 
 - name: "Copying the public key to the remote server"
+  when: lockdown_rotate_user | bool
   ansible.posix.authorized_key:
     user: startcloud
     state: present

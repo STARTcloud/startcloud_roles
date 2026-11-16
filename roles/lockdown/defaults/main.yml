@@ -33,6 +33,7 @@ lockdown_file_cleanups_list: []
 # Gate the sensitive-file cleanup step. Off by default; opt in via Hosts.yml when ready to scrub.
 lockdown_cleanup_debug_files: false
 
+lockdown_rotate_user: true
 lockdown_pam_ciba: false
 lockdown_pam_ciba_issuer: ""
 lockdown_pam_ciba_client_id: ""

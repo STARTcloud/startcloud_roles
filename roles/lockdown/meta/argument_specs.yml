@@ -45,6 +45,10 @@ argument_specs:
           Write PasswordAuthentication no as /etc/ssh/sshd_config.d/00-lockdown.conf and restart sshd, leaving the
           rotated key as the only login path. The 00- prefix sorts first so it wins over later drop-ins such as
           cloud-init's; off by default for locally built machines that log in by password.
+      lockdown_rotate_user:
+        type: bool
+        default: true
+        description: Rotate the startcloud password and generate and authorize its SSH keypair; off leaves the account untouched, for a machine whose accounts are already settled.
       lockdown_pam_ciba:
         type: bool
         default: false
