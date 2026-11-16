@@ -10,3 +10,7 @@ __pycache__/
 .ansible/
 lint-*.txt
 notifications.md
+playbooks/inventory/
+playbooks/*.key
+playbooks/*.pub
+playbooks/secrets.yml
