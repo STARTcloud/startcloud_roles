@@ -284,9 +284,8 @@
 - name: "Recording the newest installed kernel"
   ansible.builtin.set_fact:
     dependencies_newest_kernel: >-
-      {{ dependencies_kernels.files | map(attribute='path') | map('basename')
-         | map('regex_replace', '^vmlinuz-', '') | community.general.version_sort
-         | last | default(ansible_kernel) }}
+      {{ (dependencies_kernels.files | sort(attribute='mtime') | map(attribute='path') | map('basename')
+          | map('regex_replace', '^vmlinuz-', '') | list | last) | default(ansible_kernel, true) }}
 
 - name: "Rebooting the node"
   ansible.builtin.reboot:
