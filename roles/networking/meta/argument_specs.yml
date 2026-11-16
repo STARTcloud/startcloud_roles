@@ -39,6 +39,46 @@ argument_specs:
         type: list
         elements: str
         description: Service subdomain labels to register as DNS entries.
+      networking_hosts_file:
+        type: bool
+        default: false
+        description: >-
+          Render the whole hosts file from the site's node list instead of running the provisioner network stages:
+          loopback first, the node's own address and names, the VIP names, every other node of the site and any extra
+          entries; then verify the node resolves its short name to one address and hostname -f returns its FQDN.
+      networking_hosts_path:
+        type: str
+        default: /etc/hosts
+        description: File written when networking_hosts_file is on.
+      networking_hosts_address:
+        type: str
+        description: The node's own address; defaults to ansible_host or the inventory hostname.
+      networking_hosts_fqdn:
+        type: str
+        description: The node's fully qualified name; defaults to the inventory hostname.
+      networking_hosts_short:
+        type: str
+        description: The node's short name; defaults to the first label of the FQDN.
+      networking_hosts_aliases:
+        type: list
+        elements: str
+        default: []
+        description: Extra names on the node's own line.
+      networking_hosts_vip:
+        type: list
+        elements: dict
+        default: []
+        description: VIP lines, each with address and names.
+      networking_hosts_nodes:
+        type: list
+        elements: dict
+        default: []
+        description: Every node of the site, each with address, fqdn and optional aliases; the node's own entry is skipped.
+      networking_hosts_extra:
+        type: list
+        elements: dict
+        default: []
+        description: Lines outside the site, each with address and names.
       completed_dir:
         type: str
         default: /vagrant/completed

@@ -1,0 +1,256 @@
+---
+- name: "Setting Nitro API base URL and headers"
+  ansible.builtin.set_fact:
+    ssl_push_netscaler_url: "https://{{ inventory_hostname }}/nitro/v1/config"
+    ssl_push_netscaler_headers:
+      X-NITRO-USER: "{{ ssl_push_netscaler_username }}"
+      X-NITRO-PASS: "{{ ssl_push_netscaler_password }}"
+      Content-Type: application/json
+
+- name: "Reading the lineage leaf"
+  ansible.builtin.shell: |
+    set -o pipefail
+    printf '%s|%s|%s\n' \
+      "$(openssl x509 -noout -fingerprint -sha256 -in {{ ssl_push_lineage }}/cert.pem)" \
+      "$(openssl x509 -noout -serial -in {{ ssl_push_lineage }}/cert.pem | cut -d= -f2)" \
+      "$(openssl x509 -noout -issuer -nameopt RFC2253 -in {{ ssl_push_lineage }}/cert.pem | sed 's/^issuer=//')"
+  args:
+    executable: /bin/bash
+  register: ssl_push_netscaler_leaf_read
+  changed_when: false
+
+- name: "Recording the leaf fingerprint, serial and issuer"
+  ansible.builtin.set_fact:
+    ssl_push_netscaler_leaf_fingerprint: "{{ ssl_push_netscaler_leaf_read.stdout.split('|')[0] }}"
+    ssl_push_netscaler_leaf_serial: "{{ ssl_push_netscaler_leaf_read.stdout.split('|')[1] }}"
+    ssl_push_netscaler_leaf_issuer_cn: "{{ ssl_push_netscaler_leaf_read.stdout.split('|')[2] | regex_search('CN=([^,]+)', '\\1') | first }}"
+
+- name: "Splitting the lineage chain into single certificates"
+  ansible.builtin.shell: |
+    set -o pipefail
+    rm -rf {{ ssl_push_netscaler_work_dir }}
+    mkdir -p {{ ssl_push_netscaler_work_dir }}
+    awk -v dir={{ ssl_push_netscaler_work_dir }} '/BEGIN CERTIFICATE/{n++} {print > sprintf("%s/chain-%02d.pem", dir, n)}' {{ ssl_push_lineage }}/chain.pem
+    for f in {{ ssl_push_netscaler_work_dir }}/chain-*.pem; do
+      printf '%s|%s|%s|%s\n' "$f" \
+        "$(openssl x509 -noout -serial -in "$f" | cut -d= -f2)" \
+        "$(openssl x509 -noout -subject -nameopt RFC2253 -in "$f" | sed 's/^subject=//')" \
+        "$(openssl x509 -noout -issuer -nameopt RFC2253 -in "$f" | sed 's/^issuer=//')"
+    done
+  args:
+    executable: /bin/bash
+  register: ssl_push_netscaler_chain_read
+  changed_when: false
+
+- name: "Recording the chain certificates"
+  ansible.builtin.set_fact:
+    ssl_push_netscaler_chain: >-
+      {{ ssl_push_netscaler_chain | default([]) + [ {
+           'file': item.split('|')[0],
+           'serial': item.split('|')[1],
+           'subject_cn': item.split('|')[2] | regex_search('CN=([^,]+)', '\\1') | first,
+           'issuer_cn': item.split('|')[3] | regex_search('CN=([^,]+)', '\\1') | first,
+           'certkey': ssl_push_netscaler_chain_prefix + (item.split('|')[2] | regex_search('CN=([^,]+)', '\\1') | first | lower | regex_replace('[^a-z0-9]+', '-'))
+         } ] }}
+  loop: "{{ ssl_push_netscaler_chain_read.stdout_lines }}"
+
+- name: "Refusing a chain that does not contain the leaf's issuer"
+  ansible.builtin.assert:
+    that: ssl_push_netscaler_chain | selectattr('subject_cn', 'equalto', ssl_push_netscaler_leaf_issuer_cn) | list | length == 1
+    fail_msg: "The leaf is issued by {{ ssl_push_netscaler_leaf_issuer_cn }} but chain.pem carries {{ ssl_push_netscaler_chain | map(attribute='subject_cn') | join(', ') }}."
+
+- name: "Ensuring every chain certificate exists on the appliance"
+  ansible.builtin.include_tasks: push/netscaler_chain_certkey.yml
+  loop: "{{ ssl_push_netscaler_chain }}"
+  loop_control:
+    loop_var: ssl_push_netscaler_chain_item
+    label: "{{ ssl_push_netscaler_chain_item.subject_cn }}"
+
+- name: "Ensuring every chain certificate is linked to its issuer"
+  ansible.builtin.include_tasks: push/netscaler_link.yml
+  vars:
+    ssl_push_netscaler_link_certkey: "{{ ssl_push_netscaler_chain_names[ssl_push_netscaler_chain_item.serial] }}"
+    ssl_push_netscaler_link_target: >-
+      {{ ssl_push_netscaler_chain_names[ssl_push_netscaler_chain
+         | selectattr('subject_cn', 'equalto', ssl_push_netscaler_chain_item.issuer_cn)
+         | map(attribute='serial') | first] }}
+  loop: >-
+    {{ ssl_push_netscaler_chain
+       | selectattr('issuer_cn', 'in', ssl_push_netscaler_chain | map(attribute='subject_cn') | list) | list }}
+  loop_control:
+    loop_var: ssl_push_netscaler_chain_item
+    label: "{{ ssl_push_netscaler_chain_item.subject_cn }}"
+
+- name: "Resolving the intermediate the leaf links to"
+  ansible.builtin.set_fact:
+    ssl_push_netscaler_intermediate: >-
+      {{ ssl_push_netscaler_chain_names[ssl_push_netscaler_chain
+         | selectattr('subject_cn', 'equalto', ssl_push_netscaler_leaf_issuer_cn)
+         | map(attribute='serial') | first] }}
+
+- name: "Reading certkey {{ ssl_push_netscaler_certkey }}"
+  ansible.builtin.uri:
+    url: "{{ ssl_push_netscaler_url }}/sslcertkey/{{ ssl_push_netscaler_certkey }}"
+    headers: "{{ ssl_push_netscaler_headers }}"
+    validate_certs: "{{ ssl_push_netscaler_validate_certs }}"
+    use_proxy: false
+  register: ssl_push_netscaler_certkey_current
+
+- name: "Recording the current link of {{ ssl_push_netscaler_certkey }}"
+  ansible.builtin.set_fact:
+    ssl_push_netscaler_certkey_link: "{{ ssl_push_netscaler_certkey_current.json.sslcertkey[0].linkcertkeyname | default('') }}"
+
+- name: "Unlinking the leaf certkey from an intermediate that no longer signs it {{ ssl_push_netscaler_certkey }}"
+  ansible.builtin.uri:
+    url: "{{ ssl_push_netscaler_url }}/sslcertkey?action=unlink"
+    method: POST
+    headers: "{{ ssl_push_netscaler_headers }}"
+    validate_certs: "{{ ssl_push_netscaler_validate_certs }}"
+    use_proxy: false
+    body_format: json
+    body:
+      sslcertkey:
+        certkey: "{{ ssl_push_netscaler_certkey }}"
+  when: ssl_push_netscaler_certkey_link != '' and ssl_push_netscaler_certkey_link != ssl_push_netscaler_intermediate
+  changed_when: true
+
+- name: "Removing previous uploads of the leaf and key"
+  ansible.builtin.uri:
+    url: "{{ ssl_push_netscaler_url }}/systemfile/{{ item }}?args=filelocation:{{ ssl_push_netscaler_file_location | regex_replace('/', '%2F') }}"
+    method: DELETE
+    headers: "{{ ssl_push_netscaler_headers }}"
+    validate_certs: "{{ ssl_push_netscaler_validate_certs }}"
+    use_proxy: false
+    status_code: [200, 404, 599]
+  loop:
+    - "{{ ssl_push_netscaler_cert_file }}"
+    - "{{ ssl_push_netscaler_key_file }}"
+  changed_when: false
+
+- name: "Uploading the leaf and key"
+  ansible.builtin.uri:
+    url: "{{ ssl_push_netscaler_url }}/systemfile"
+    method: POST
+    headers: "{{ ssl_push_netscaler_headers }}"
+    validate_certs: "{{ ssl_push_netscaler_validate_certs }}"
+    use_proxy: false
+    body_format: json
+    body:
+      systemfile:
+        filename: "{{ item.name }}"
+        filelocation: "{{ ssl_push_netscaler_file_location }}"
+        filecontent: "{{ lookup('file', ssl_push_lineage + '/' + item.source) | b64encode }}"
+        fileencoding: BASE64
+    status_code: 201
+  loop:
+    - { name: "{{ ssl_push_netscaler_cert_file }}", source: cert.pem }
+    - { name: "{{ ssl_push_netscaler_key_file }}", source: privkey.pem }
+  changed_when: true
+
+- name: "Updating the leaf certkey in place {{ ssl_push_netscaler_certkey }}"
+  ansible.builtin.uri:
+    url: "{{ ssl_push_netscaler_url }}/sslcertkey?action=update"
+    method: POST
+    headers: "{{ ssl_push_netscaler_headers }}"
+    validate_certs: "{{ ssl_push_netscaler_validate_certs }}"
+    use_proxy: false
+    body_format: json
+    body:
+      sslcertkey:
+        certkey: "{{ ssl_push_netscaler_certkey }}"
+        cert: "{{ ssl_push_netscaler_cert_file }}"
+        key: "{{ ssl_push_netscaler_key_file }}"
+        nodomaincheck: true
+  changed_when: true
+
+- name: "Linking the leaf certkey to its intermediate {{ ssl_push_netscaler_certkey }}"
+  ansible.builtin.uri:
+    url: "{{ ssl_push_netscaler_url }}/sslcertkey?action=link"
+    method: POST
+    headers: "{{ ssl_push_netscaler_headers }}"
+    validate_certs: "{{ ssl_push_netscaler_validate_certs }}"
+    use_proxy: false
+    body_format: json
+    body:
+      sslcertkey:
+        certkey: "{{ ssl_push_netscaler_certkey }}"
+        linkcertkeyname: "{{ ssl_push_netscaler_intermediate }}"
+  when: ssl_push_netscaler_certkey_link != ssl_push_netscaler_intermediate
+  changed_when: true
+
+- name: "Saving the running configuration"
+  ansible.builtin.uri:
+    url: "{{ ssl_push_netscaler_url }}/nsconfig?action=save"
+    method: POST
+    headers: "{{ ssl_push_netscaler_headers }}"
+    validate_certs: "{{ ssl_push_netscaler_validate_certs }}"
+    use_proxy: false
+    body_format: json
+    body:
+      nsconfig: {}
+  changed_when: true
+
+- name: "Reading the chain the appliance binds under {{ ssl_push_netscaler_certkey }}"
+  ansible.builtin.uri:
+    url: "{{ ssl_push_netscaler_url }}/sslcertchain_binding/{{ ssl_push_netscaler_certkey }}"
+    headers: "{{ ssl_push_netscaler_headers }}"
+    validate_certs: "{{ ssl_push_netscaler_validate_certs }}"
+    use_proxy: false
+  register: ssl_push_netscaler_chain_binding
+
+- name: "Verifying the appliance links the leaf through the intermediate"
+  ansible.builtin.assert:
+    that: >-
+      ssl_push_netscaler_intermediate in (ssl_push_netscaler_chain_binding.json.sslcertchain_binding[0].sslcertchain_sslcertkey_binding
+      | selectattr('islinked', 'equalto', true) | map(attribute='linkcertkeyname') | list)
+    fail_msg: "{{ ssl_push_netscaler_certkey }} is not linked through {{ ssl_push_netscaler_intermediate }}."
+
+- name: "Verifying the served TLS chain validates and matches the lineage"
+  ansible.builtin.shell: |
+    set -o pipefail
+    sleep 5
+    timeout 15 openssl s_client \
+      -connect {{ ssl_push_netscaler_verify_host }}:{{ ssl_push_netscaler_verify_port }} \
+      -servername {{ ssl_push_netscaler_verify_servername }} \
+      -verify_return_error -CAfile {{ ssl_push_netscaler_ca_file }} </dev/null 2>/dev/null \
+      | openssl x509 -noout -fingerprint -sha256
+  args:
+    executable: /bin/bash
+  register: ssl_push_netscaler_served_fingerprint
+  changed_when: false
+  failed_when: ssl_push_netscaler_served_fingerprint.stdout != ssl_push_netscaler_leaf_fingerprint
+
+- name: "Verifying the served DTLS chain validates and matches the lineage"
+  ansible.builtin.shell: |
+    set -o pipefail
+    timeout 15 openssl s_client -dtls \
+      -connect {{ ssl_push_netscaler_verify_host }}:{{ ssl_push_netscaler_verify_port }} \
+      -servername {{ ssl_push_netscaler_verify_servername }} \
+      -verify_return_error -CAfile {{ ssl_push_netscaler_ca_file }} </dev/null 2>/dev/null \
+      | openssl x509 -noout -fingerprint -sha256
+  args:
+    executable: /bin/bash
+  register: ssl_push_netscaler_served_dtls_fingerprint
+  changed_when: false
+  failed_when: ssl_push_netscaler_served_dtls_fingerprint.stdout != ssl_push_netscaler_leaf_fingerprint
+  when: ssl_push_netscaler_verify_dtls | bool
+
+- name: "Verifying the management page serves the lineage"
+  ansible.builtin.shell: |
+    set -o pipefail
+    timeout 15 openssl s_client \
+      -connect {{ ssl_push_netscaler_management_host }}:{{ ssl_push_netscaler_management_port }} \
+      -servername {{ ssl_push_netscaler_management_servername }} \
+      -verify_return_error -CAfile {{ ssl_push_netscaler_ca_file }} </dev/null 2>/dev/null \
+      | openssl x509 -noout -fingerprint -sha256
+  args:
+    executable: /bin/bash
+  register: ssl_push_netscaler_management_fingerprint
+  changed_when: false
+  failed_when: ssl_push_netscaler_management_fingerprint.stdout != ssl_push_netscaler_leaf_fingerprint
+  when: ssl_push_netscaler_management_host | length > 0
+
+- name: "Removing the split chain"
+  ansible.builtin.file:
+    path: "{{ ssl_push_netscaler_work_dir }}"
+    state: absent

@@ -26,3 +26,12 @@ dns_entries_list:
   - restapi
   - www
   - web-terminal
+networking_hosts_file: false
+networking_hosts_path: /etc/hosts
+networking_hosts_address: "{{ ansible_host | default(inventory_hostname) }}"
+networking_hosts_fqdn: "{{ inventory_hostname }}"
+networking_hosts_short: "{{ inventory_hostname.split('.')[0] }}"
+networking_hosts_aliases: []
+networking_hosts_vip: []
+networking_hosts_nodes: []
+networking_hosts_extra: []

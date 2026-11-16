@@ -2,5 +2,10 @@
 - name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
+    - name: "Including the hosts file tasks"
+      ansible.builtin.include_tasks: hosts_file.yml
+      when: networking_hosts_file | bool
+
     - name: "Including OS-specific tasks"
       ansible.builtin.include_tasks: "{{ ansible_os_family | lower }}.yml"
+      when: not (networking_hosts_file | bool)

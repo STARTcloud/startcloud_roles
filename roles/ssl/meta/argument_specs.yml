@@ -158,3 +158,240 @@ argument_specs:
         type: str
         default: letsencrypt-production-2
         description: ACME server profile name used by the appliance acme package.
+      ssl_push_lineage:
+        type: str
+        default: ""
+        description: certbot live directory on the controller whose cert.pem, chain.pem, fullchain.pem and privkey.pem the push tasks deliver.
+      ssl_push_fortigate:
+        type: bool
+        default: false
+        description: >-
+          Push the lineage to a FortiGate over its REST API from the controller: imports it under a dated name, imports
+          the chain as a global CA, points admin-server-cert, the VDOM auth-cert and the SSL VPN servercert at it, rebuilds
+          the served chain when it is incomplete and deletes other certificates sharing the prefix.
+      ssl_push_fortigate_admin_port:
+        type: int
+        default: 18443
+        description: HTTPS administration port the FortiGate REST API listens on.
+      ssl_push_fortigate_validate_certs:
+        type: bool
+        default: true
+        description: Verify the FortiGate's TLS certificate on every API call.
+      ssl_push_fortigate_api_token:
+        type: str
+        default: ""
+        description: REST API token of the FortiGate api-user, sent as a Bearer header.
+      ssl_push_fortigate_vdom:
+        type: str
+        default: FG-traffic
+        description: VDOM holding the user setting and the SSL VPN settings.
+      ssl_push_fortigate_prefix:
+        type: str
+        default: ""
+        description: Name prefix shared by every copy of this certificate on the FortiGate; other names carrying it are deleted.
+      ssl_push_fortigate_name:
+        type: str
+        description: Name the imported certificate gets, the prefix plus today's date, at most 35 characters.
+      ssl_push_fortigate_sslvpn_host:
+        type: str
+        description: Public name the SSL VPN listener answers on; defaults to the inventory hostname.
+      ssl_push_fortigate_sslvpn_port:
+        type: int
+        default: 28974
+        description: SSL VPN listener port whose served chain is checked from the controller.
+      ssl_push_fortigate_rebuild_cert:
+        type: str
+        default: Fortinet_Factory
+        description: Built-in certificate servercert is briefly switched to when the served chain is incomplete, forcing FortiOS to rebuild it.
+      ssl_push_galera:
+        type: bool
+        default: false
+        description: >-
+          Push the lineage to a MariaDB Galera node: copies fullchain, privkey and chain into the SSL directory, installs
+          stunnel, writes the SSL option file, restarts MariaDB when it does not serve TLS yet or the option file changed
+          and waits for Synced, otherwise reloads with FLUSH SSL, and verifies the certificate served on the MySQL port.
+      ssl_push_galera_ssl_dir:
+        type: str
+        default: /etc/mysql/ssl
+        description: Directory on the node the three lineage files are written to.
+      ssl_push_galera_conf:
+        type: str
+        default: /etc/mysql/mariadb.conf.d/70-ssl.cnf
+        description: Option file carrying ssl-cert, ssl-key, ssl-ca, tls_version and the SST settings.
+      ssl_push_galera_owner:
+        type: str
+        default: mysql
+        description: User and group owning the SSL directory and files.
+      ssl_push_galera_service:
+        type: str
+        default: mariadb
+        description: systemd unit restarted when the server does not serve TLS yet.
+      ssl_push_galera_tls_version:
+        type: str
+        default: TLSv1.2,TLSv1.3
+        description: tls_version written to the option file.
+      ssl_push_galera_require_secure_transport:
+        type: bool
+        default: false
+        description: Write require-secure-transport = on.
+      ssl_push_galera_replication_tls:
+        type: bool
+        default: false
+        description: Write wsrep_provider_options with socket.ssl; takes effect on a full cluster restart.
+      ssl_push_galera_sst_mode:
+        type: str
+        default: REQUIRED
+        description: "[sst] ssl-mode; REQUIRED encrypts SST without peer verification, which a Let's Encrypt certificate cannot pass because it carries the server purpose only."
+      ssl_push_galera_sst_ca:
+        type: str
+        default: /etc/ssl/certs/ca-certificates.crt
+        description: "[sst] tca, a bundle holding a root; chain.pem is an intermediate alone and is refused as a trust anchor."
+      ssl_push_galera_sst_package:
+        type: str
+        default: stunnel4
+        description: Package providing stunnel for rsync SST once ssl-mode is set.
+      ssl_push_galera_host:
+        type: str
+        description: Address the MySQL port is checked on from the controller; defaults to the inventory hostname.
+      ssl_push_galera_port:
+        type: int
+        default: 3306
+        description: MySQL port whose served certificate is compared.
+      ssl_push_galera_servername:
+        type: str
+        description: SNI of the check; defaults to the inventory hostname.
+      ssl_push_galera_sync_retries:
+        type: int
+        default: 60
+        description: Seconds to wait after a restart for Synced.
+      ssl_push_netscaler:
+        type: bool
+        default: false
+        description: >-
+          Push the lineage to a NetScaler over the Nitro API from the controller: ensures each chain certificate exists
+          as a certkey linked to its issuer, uploads leaf and key, updates the bound certkey in place, relinks it to the
+          signing intermediate, saves the configuration and verifies the TLS, DTLS and management handshakes.
+      ssl_push_netscaler_username:
+        type: str
+        default: nsroot
+        description: Nitro API user.
+      ssl_push_netscaler_password:
+        type: str
+        default: ""
+        description: Nitro API password, sent in X-NITRO-PASS.
+      ssl_push_netscaler_validate_certs:
+        type: bool
+        default: false
+        description: Verify the NSIP management certificate on every API call.
+      ssl_push_netscaler_certkey:
+        type: str
+        default: ""
+        description: Name of the certkey bound to the Gateway vservers; updated and relinked, never deleted or re-added.
+      ssl_push_netscaler_cert_file:
+        type: str
+        default: letsencrypt-leaf.pem
+        description: Upload name of the leaf.
+      ssl_push_netscaler_key_file:
+        type: str
+        default: letsencrypt-privkey.pem
+        description: Upload name of the key.
+      ssl_push_netscaler_file_location:
+        type: str
+        default: /nsconfig/ssl/
+        description: Appliance directory the uploads go into.
+      ssl_push_netscaler_chain_prefix:
+        type: str
+        default: letsencrypt-
+        description: Prefix of the chain certkeys; the rest is the subject CN lower-cased with non-alphanumerics as dashes.
+      ssl_push_netscaler_work_dir:
+        type: str
+        default: /tmp/netscaler-certificate
+        description: Controller directory the chain is split into; removed at the end.
+      ssl_push_netscaler_ca_file:
+        type: str
+        default: /etc/ssl/certs/ca-certificates.crt
+        description: CA bundle the served chain must validate against.
+      ssl_push_netscaler_verify_host:
+        type: str
+        description: Address the Gateway vserver is checked on; defaults to the inventory hostname.
+      ssl_push_netscaler_verify_port:
+        type: int
+        default: 443
+        description: Port checked.
+      ssl_push_netscaler_verify_servername:
+        type: str
+        description: SNI on the verification handshakes; defaults to the verify host.
+      ssl_push_netscaler_verify_dtls:
+        type: bool
+        default: true
+        description: Also verify DTLS on the same address and port.
+      ssl_push_netscaler_management_host:
+        type: str
+        default: ""
+        description: NSIP whose management page is verified; empty skips.
+      ssl_push_netscaler_management_port:
+        type: int
+        default: 443
+        description: Management page port.
+      ssl_push_netscaler_management_servername:
+        type: str
+        description: SNI on the management check; defaults to the management host.
+      ssl_push_uds:
+        type: bool
+        default: false
+        description: >-
+          Push the lineage to a UDS Enterprise appliance: stages cert, chain and key, installs them with uds cert,
+          restarts the listed services or reboots, removes the staging directory and verifies the served certificate.
+      ssl_push_uds_staging_dir:
+        type: str
+        default: /root/uds-certificate
+        description: Directory the three files are copied into for uds cert; removed afterwards.
+      ssl_push_uds_services:
+        type: list
+        elements: str
+        default: []
+        description: systemd units restarted after uds cert, every service that loads /etc/certs/server.pem.
+      ssl_push_uds_reboot:
+        type: bool
+        default: false
+        description: Reboot the appliance instead of restarting services.
+      ssl_push_uds_host:
+        type: str
+        description: Name checked from the controller; defaults to the inventory hostname.
+      ssl_push_uds_port:
+        type: int
+        default: 443
+        description: TLS port checked.
+      ssl_push_vdi_health:
+        type: bool
+        default: false
+        description: >-
+          Push the lineage to a VDI Health Monitor: copies fullchain and privkey into its SSL directory under its
+          service account, restarts the service and verifies the served certificate.
+      ssl_push_vdi_health_ssl_dir:
+        type: str
+        default: /etc/vdi-health/ssl
+        description: Directory the monitor reads cert and key from.
+      ssl_push_vdi_health_cert_path:
+        type: str
+        default: /etc/vdi-health/ssl/public.crt
+        description: Path the full chain is written to, the ssl.cert_path of app.config.yaml.
+      ssl_push_vdi_health_key_path:
+        type: str
+        default: /etc/vdi-health/ssl/private.key
+        description: Path the key is written to, the ssl.key_path of app.config.yaml.
+      ssl_push_vdi_health_owner:
+        type: str
+        default: vdi-health
+        description: User and group owning the directory and files.
+      ssl_push_vdi_health_service:
+        type: str
+        default: vdi-health
+        description: systemd unit restarted.
+      ssl_push_vdi_health_host:
+        type: str
+        description: Name checked from the controller; defaults to the inventory hostname.
+      ssl_push_vdi_health_port:
+        type: int
+        default: 8443
+        description: TLS port checked.

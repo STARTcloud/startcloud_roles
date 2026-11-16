@@ -1,0 +1,156 @@
+---
+- name: "Setting FortiGate API base URL and headers"
+  ansible.builtin.set_fact:
+    ssl_push_fortigate_url: "https://{{ inventory_hostname }}:{{ ssl_push_fortigate_admin_port }}"
+    ssl_push_fortigate_headers:
+      Authorization: "Bearer {{ ssl_push_fortigate_api_token }}"
+
+- name: "Listing local certificates"
+  ansible.builtin.uri:
+    url: "{{ ssl_push_fortigate_url }}/api/v2/cmdb/vpn.certificate/local?scope=global"
+    headers: "{{ ssl_push_fortigate_headers }}"
+    validate_certs: "{{ ssl_push_fortigate_validate_certs }}"
+  register: ssl_push_fortigate_local
+
+- name: "Recording certificate names"
+  ansible.builtin.set_fact:
+    ssl_push_fortigate_present: "{{ ssl_push_fortigate_local.json.results | map(attribute='name') | list }}"
+
+- name: "Importing {{ ssl_push_fortigate_name }}"
+  when: ssl_push_fortigate_name not in ssl_push_fortigate_present
+  ansible.builtin.uri:
+    url: "{{ ssl_push_fortigate_url }}/api/v2/monitor/vpn-certificate/local/import?vdom=root"
+    method: POST
+    headers: "{{ ssl_push_fortigate_headers }}"
+    validate_certs: "{{ ssl_push_fortigate_validate_certs }}"
+    body_format: json
+    body:
+      type: regular
+      certname: "{{ ssl_push_fortigate_name }}"
+      scope: global
+      file_content: "{{ lookup('file', ssl_push_lineage + '/fullchain.pem') | b64encode }}"
+      key_file_content: "{{ lookup('file', ssl_push_lineage + '/privkey.pem') | b64encode }}"
+  changed_when: true
+
+- name: "Importing issuing chain as global CA"
+  ansible.builtin.uri:
+    url: "{{ ssl_push_fortigate_url }}/api/v2/monitor/vpn-certificate/ca/import?vdom=root"
+    method: POST
+    headers: "{{ ssl_push_fortigate_headers }}"
+    validate_certs: "{{ ssl_push_fortigate_validate_certs }}"
+    body_format: json
+    body:
+      import_method: file
+      scope: global
+      file_content: "{{ lookup('file', ssl_push_lineage + '/chain.pem') | b64encode }}"
+    status_code: [200, 500]
+  register: ssl_push_fortigate_ca
+  changed_when: ssl_push_fortigate_ca.status == 200
+  failed_when: ssl_push_fortigate_ca.status == 500 and ssl_push_fortigate_ca.json.error != -328
+
+- name: "Reading system global settings"
+  ansible.builtin.uri:
+    url: "{{ ssl_push_fortigate_url }}/api/v2/cmdb/system/global?scope=global"
+    headers: "{{ ssl_push_fortigate_headers }}"
+    validate_certs: "{{ ssl_push_fortigate_validate_certs }}"
+  register: ssl_push_fortigate_system_global
+
+- name: "Setting admin-server-cert to {{ ssl_push_fortigate_name }}"
+  when: ssl_push_fortigate_system_global.json.results['admin-server-cert'] != ssl_push_fortigate_name
+  ansible.builtin.uri:
+    url: "{{ ssl_push_fortigate_url }}/api/v2/cmdb/system/global?scope=global"
+    method: PUT
+    headers: "{{ ssl_push_fortigate_headers }}"
+    validate_certs: "{{ ssl_push_fortigate_validate_certs }}"
+    body_format: json
+    body:
+      admin-server-cert: "{{ ssl_push_fortigate_name }}"
+  changed_when: true
+
+- name: "Reading user settings in {{ ssl_push_fortigate_vdom }}"
+  ansible.builtin.uri:
+    url: "{{ ssl_push_fortigate_url }}/api/v2/cmdb/user/setting?vdom={{ ssl_push_fortigate_vdom }}"
+    headers: "{{ ssl_push_fortigate_headers }}"
+    validate_certs: "{{ ssl_push_fortigate_validate_certs }}"
+  register: ssl_push_fortigate_user_setting
+
+- name: "Setting auth-cert to {{ ssl_push_fortigate_name }}"
+  when: ssl_push_fortigate_user_setting.json.results['auth-cert'] != ssl_push_fortigate_name
+  ansible.builtin.uri:
+    url: "{{ ssl_push_fortigate_url }}/api/v2/cmdb/user/setting?vdom={{ ssl_push_fortigate_vdom }}"
+    method: PUT
+    headers: "{{ ssl_push_fortigate_headers }}"
+    validate_certs: "{{ ssl_push_fortigate_validate_certs }}"
+    body_format: json
+    body:
+      auth-cert: "{{ ssl_push_fortigate_name }}"
+  changed_when: true
+
+- name: "Reading SSL VPN settings in {{ ssl_push_fortigate_vdom }}"
+  ansible.builtin.uri:
+    url: "{{ ssl_push_fortigate_url }}/api/v2/cmdb/vpn.ssl/settings?vdom={{ ssl_push_fortigate_vdom }}"
+    headers: "{{ ssl_push_fortigate_headers }}"
+    validate_certs: "{{ ssl_push_fortigate_validate_certs }}"
+  register: ssl_push_fortigate_ssl_settings
+
+- name: "Setting SSL VPN servercert to {{ ssl_push_fortigate_name }}"
+  when: ssl_push_fortigate_ssl_settings.json.results['servercert'] != ssl_push_fortigate_name
+  ansible.builtin.uri:
+    url: "{{ ssl_push_fortigate_url }}/api/v2/cmdb/vpn.ssl/settings?vdom={{ ssl_push_fortigate_vdom }}"
+    method: PUT
+    headers: "{{ ssl_push_fortigate_headers }}"
+    validate_certs: "{{ ssl_push_fortigate_validate_certs }}"
+    body_format: json
+    body:
+      servercert: "{{ ssl_push_fortigate_name }}"
+  changed_when: true
+
+- name: "Counting certificates served on the SSL VPN port"
+  ansible.builtin.shell: |
+    set -o pipefail
+    timeout 15 openssl s_client -showcerts \
+      -connect {{ ssl_push_fortigate_sslvpn_host }}:{{ ssl_push_fortigate_sslvpn_port }} \
+      -servername {{ ssl_push_fortigate_sslvpn_host }} </dev/null 2>/dev/null | grep -c 'BEGIN CERT'
+  args:
+    executable: /bin/bash
+  register: ssl_push_fortigate_served
+  changed_when: false
+  failed_when: false
+
+- name: "Rebuilding the SSL VPN chain"
+  when: ssl_push_fortigate_served.stdout | int < 2
+  ansible.builtin.uri:
+    url: "{{ ssl_push_fortigate_url }}/api/v2/cmdb/vpn.ssl/settings?vdom={{ ssl_push_fortigate_vdom }}"
+    method: PUT
+    headers: "{{ ssl_push_fortigate_headers }}"
+    validate_certs: "{{ ssl_push_fortigate_validate_certs }}"
+    body_format: json
+    body:
+      servercert: "{{ item }}"
+  loop:
+    - "{{ ssl_push_fortigate_rebuild_cert }}"
+    - "{{ ssl_push_fortigate_name }}"
+  changed_when: true
+
+- name: "Verifying the SSL VPN port serves the full chain"
+  when: ssl_push_fortigate_served.stdout | int < 2
+  ansible.builtin.shell: |
+    set -o pipefail
+    sleep 10
+    timeout 15 openssl s_client -showcerts \
+      -connect {{ ssl_push_fortigate_sslvpn_host }}:{{ ssl_push_fortigate_sslvpn_port }} \
+      -servername {{ ssl_push_fortigate_sslvpn_host }} </dev/null 2>/dev/null | grep -c 'BEGIN CERT'
+  args:
+    executable: /bin/bash
+  register: ssl_push_fortigate_verified
+  changed_when: false
+  failed_when: ssl_push_fortigate_verified.stdout | int < 2
+
+- name: "Deleting the retired certificates sharing the prefix {{ ssl_push_fortigate_prefix }}"
+  ansible.builtin.uri:
+    url: "{{ ssl_push_fortigate_url }}/api/v2/cmdb/vpn.certificate/local/{{ item }}?scope=global"
+    method: DELETE
+    headers: "{{ ssl_push_fortigate_headers }}"
+    validate_certs: "{{ ssl_push_fortigate_validate_certs }}"
+  loop: "{{ ssl_push_fortigate_present | select('match', '^' + (ssl_push_fortigate_prefix | regex_escape)) | reject('equalto', ssl_push_fortigate_name) | list }}"
+  changed_when: true

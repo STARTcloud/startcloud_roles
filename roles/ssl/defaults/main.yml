@@ -84,3 +84,62 @@ ssl_acme_account_name: CHANGEME
 ssl_acme_account_email: changeme@example.com
 ssl_acme_account_key: "{{ vault_ssl_acme_account_key | default('CHANGEME') }}"
 ssl_acme_server: letsencrypt-production-2
+
+ssl_push_lineage: ""
+ssl_push_fortigate: false
+ssl_push_fortigate_admin_port: 18443
+ssl_push_fortigate_validate_certs: true
+ssl_push_fortigate_api_token: ""
+ssl_push_fortigate_vdom: FG-traffic
+ssl_push_fortigate_prefix: ""
+ssl_push_fortigate_name: "{{ ssl_push_fortigate_prefix }}.{{ lookup('pipe', 'date +%Y%m%d') }}"
+ssl_push_fortigate_sslvpn_host: "{{ inventory_hostname }}"
+ssl_push_fortigate_sslvpn_port: 28974
+ssl_push_fortigate_rebuild_cert: Fortinet_Factory
+ssl_push_galera: false
+ssl_push_galera_ssl_dir: /etc/mysql/ssl
+ssl_push_galera_conf: /etc/mysql/mariadb.conf.d/70-ssl.cnf
+ssl_push_galera_owner: mysql
+ssl_push_galera_service: mariadb
+ssl_push_galera_tls_version: TLSv1.2,TLSv1.3
+ssl_push_galera_require_secure_transport: false
+ssl_push_galera_replication_tls: false
+ssl_push_galera_sst_mode: REQUIRED
+ssl_push_galera_sst_ca: /etc/ssl/certs/ca-certificates.crt
+ssl_push_galera_sst_package: stunnel4
+ssl_push_galera_host: "{{ inventory_hostname }}"
+ssl_push_galera_port: 3306
+ssl_push_galera_servername: "{{ inventory_hostname }}"
+ssl_push_galera_sync_retries: 60
+ssl_push_netscaler: false
+ssl_push_netscaler_username: nsroot
+ssl_push_netscaler_password: ""
+ssl_push_netscaler_validate_certs: false
+ssl_push_netscaler_certkey: ""
+ssl_push_netscaler_cert_file: letsencrypt-leaf.pem
+ssl_push_netscaler_key_file: letsencrypt-privkey.pem
+ssl_push_netscaler_file_location: /nsconfig/ssl/
+ssl_push_netscaler_chain_prefix: letsencrypt-
+ssl_push_netscaler_work_dir: /tmp/netscaler-certificate
+ssl_push_netscaler_ca_file: /etc/ssl/certs/ca-certificates.crt
+ssl_push_netscaler_verify_host: "{{ inventory_hostname }}"
+ssl_push_netscaler_verify_port: 443
+ssl_push_netscaler_verify_servername: "{{ ssl_push_netscaler_verify_host }}"
+ssl_push_netscaler_verify_dtls: true
+ssl_push_netscaler_management_host: ""
+ssl_push_netscaler_management_port: 443
+ssl_push_netscaler_management_servername: "{{ ssl_push_netscaler_management_host }}"
+ssl_push_uds: false
+ssl_push_uds_staging_dir: /root/uds-certificate
+ssl_push_uds_services: []
+ssl_push_uds_reboot: false
+ssl_push_uds_host: "{{ inventory_hostname }}"
+ssl_push_uds_port: 443
+ssl_push_vdi_health: false
+ssl_push_vdi_health_ssl_dir: /etc/vdi-health/ssl
+ssl_push_vdi_health_cert_path: "{{ ssl_push_vdi_health_ssl_dir }}/public.crt"
+ssl_push_vdi_health_key_path: "{{ ssl_push_vdi_health_ssl_dir }}/private.key"
+ssl_push_vdi_health_owner: vdi-health
+ssl_push_vdi_health_service: vdi-health
+ssl_push_vdi_health_host: "{{ inventory_hostname }}"
+ssl_push_vdi_health_port: 8443

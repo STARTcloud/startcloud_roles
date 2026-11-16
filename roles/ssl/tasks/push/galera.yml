@@ -1,0 +1,85 @@
+---
+- name: "Reading the lineage certificate"
+  community.crypto.x509_certificate_info:
+    path: "{{ ssl_push_lineage }}/cert.pem"
+  delegate_to: localhost
+  become: false
+  register: ssl_push_galera_lineage
+
+- name: "Reading whether the server serves TLS"
+  ansible.builtin.command: mysql -uroot -N -s -e "SHOW VARIABLES LIKE 'have_ssl'"
+  register: ssl_push_galera_have_ssl
+  changed_when: false
+
+- name: "Creating {{ ssl_push_galera_ssl_dir }}"
+  ansible.builtin.file:
+    path: "{{ ssl_push_galera_ssl_dir }}"
+    state: directory
+    owner: "{{ ssl_push_galera_owner }}"
+    group: "{{ ssl_push_galera_owner }}"
+    mode: "0750"
+
+- name: "Installing the lineage files"
+  ansible.builtin.copy:
+    src: "{{ ssl_push_lineage }}/{{ item.name }}"
+    dest: "{{ ssl_push_galera_ssl_dir }}/{{ item.name }}"
+    owner: "{{ ssl_push_galera_owner }}"
+    group: "{{ ssl_push_galera_owner }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - { name: fullchain.pem, mode: "0644" }
+    - { name: chain.pem, mode: "0644" }
+    - { name: privkey.pem, mode: "0600" }
+
+- name: "Installing {{ ssl_push_galera_sst_package }}"
+  ansible.builtin.apt:
+    name: "{{ ssl_push_galera_sst_package }}"
+    state: present
+
+- name: "Writing {{ ssl_push_galera_conf }}"
+  ansible.builtin.template:
+    src: galera-ssl.cnf.j2
+    dest: "{{ ssl_push_galera_conf }}"
+    owner: root
+    group: root
+    mode: "0644"
+  register: ssl_push_galera_conf_written
+
+- name: "Restarting {{ ssl_push_galera_service }}"
+  ansible.builtin.systemd_service:
+    name: "{{ ssl_push_galera_service }}"
+    state: restarted
+  when: ssl_push_galera_have_ssl.stdout is not search('YES') or ssl_push_galera_conf_written.changed
+
+- name: "Waiting for the node to report Synced"
+  ansible.builtin.command: mysql -uroot -N -s -e "SHOW STATUS LIKE 'wsrep_local_state_comment'"
+  register: ssl_push_galera_state
+  until: ssl_push_galera_state.stdout is search('Synced')
+  retries: "{{ ssl_push_galera_sync_retries }}"
+  delay: 1
+  changed_when: false
+  when: ssl_push_galera_have_ssl.stdout is not search('YES') or ssl_push_galera_conf_written.changed
+
+- name: "Reloading the certificate with FLUSH SSL"
+  ansible.builtin.command: mysql -uroot -e "FLUSH SSL"
+  changed_when: true
+  when: ssl_push_galera_have_ssl.stdout is search('YES') and not ssl_push_galera_conf_written.changed
+
+- name: "Reading the certificate served by {{ ssl_push_galera_host }}"
+  community.crypto.get_certificate:
+    host: "{{ ssl_push_galera_host }}"
+    port: "{{ ssl_push_galera_port }}"
+    server_name: "{{ ssl_push_galera_servername }}"
+    starttls: mysql
+  delegate_to: localhost
+  become: false
+  register: ssl_push_galera_served
+  until: ssl_push_galera_served.cert is defined
+  retries: 5
+  delay: 3
+
+- name: "Verifying the served certificate matches the lineage"
+  ansible.builtin.assert:
+    that:
+      - (ssl_push_galera_served.cert | community.crypto.x509_certificate_info).fingerprints.sha256 == ssl_push_galera_lineage.fingerprints.sha256
+    fail_msg: "{{ ssl_push_galera_host }}:{{ ssl_push_galera_port }} serves a certificate other than {{ ssl_push_lineage }}/cert.pem"

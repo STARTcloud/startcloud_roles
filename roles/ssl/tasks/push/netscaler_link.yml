@@ -1,0 +1,41 @@
+---
+- name: "Reading certkey {{ ssl_push_netscaler_link_certkey }}"
+  ansible.builtin.uri:
+    url: "{{ ssl_push_netscaler_url }}/sslcertkey/{{ ssl_push_netscaler_link_certkey }}"
+    headers: "{{ ssl_push_netscaler_headers }}"
+    validate_certs: "{{ ssl_push_netscaler_validate_certs }}"
+    use_proxy: false
+  register: ssl_push_netscaler_link_current
+
+- name: "Recording the current link of {{ ssl_push_netscaler_link_certkey }}"
+  ansible.builtin.set_fact:
+    ssl_push_netscaler_link_existing: "{{ ssl_push_netscaler_link_current.json.sslcertkey[0].linkcertkeyname | default('') }}"
+
+- name: "Unlinking the certkey from its previous issuer {{ ssl_push_netscaler_link_certkey }}"
+  ansible.builtin.uri:
+    url: "{{ ssl_push_netscaler_url }}/sslcertkey?action=unlink"
+    method: POST
+    headers: "{{ ssl_push_netscaler_headers }}"
+    validate_certs: "{{ ssl_push_netscaler_validate_certs }}"
+    use_proxy: false
+    body_format: json
+    body:
+      sslcertkey:
+        certkey: "{{ ssl_push_netscaler_link_certkey }}"
+  when: ssl_push_netscaler_link_existing != '' and ssl_push_netscaler_link_existing != ssl_push_netscaler_link_target
+  changed_when: true
+
+- name: "Linking the certkey to its issuer {{ ssl_push_netscaler_link_certkey }}"
+  ansible.builtin.uri:
+    url: "{{ ssl_push_netscaler_url }}/sslcertkey?action=link"
+    method: POST
+    headers: "{{ ssl_push_netscaler_headers }}"
+    validate_certs: "{{ ssl_push_netscaler_validate_certs }}"
+    use_proxy: false
+    body_format: json
+    body:
+      sslcertkey:
+        certkey: "{{ ssl_push_netscaler_link_certkey }}"
+        linkcertkeyname: "{{ ssl_push_netscaler_link_target }}"
+  when: ssl_push_netscaler_link_existing != ssl_push_netscaler_link_target
+  changed_when: true

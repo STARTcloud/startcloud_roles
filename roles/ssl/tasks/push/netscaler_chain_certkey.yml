@@ -1,0 +1,73 @@
+---
+- name: "Looking up a certkey carrying serial {{ ssl_push_netscaler_chain_item.serial }}"
+  ansible.builtin.uri:
+    url: "{{ ssl_push_netscaler_url }}/sslcertkey?filter=serial:{{ ssl_push_netscaler_chain_item.serial }}"
+    headers: "{{ ssl_push_netscaler_headers }}"
+    validate_certs: "{{ ssl_push_netscaler_validate_certs }}"
+    use_proxy: false
+  register: ssl_push_netscaler_chain_lookup
+
+- name: "Looking up the same serial without leading zeros"
+  ansible.builtin.uri:
+    url: "{{ ssl_push_netscaler_url }}/sslcertkey?filter=serial:{{ ssl_push_netscaler_chain_item.serial | regex_replace('^0+', '') }}"
+    headers: "{{ ssl_push_netscaler_headers }}"
+    validate_certs: "{{ ssl_push_netscaler_validate_certs }}"
+    use_proxy: false
+  register: ssl_push_netscaler_chain_lookup_short
+  when: ssl_push_netscaler_chain_lookup.json.sslcertkey is not defined
+
+- name: "Recording what the appliance holds for {{ ssl_push_netscaler_chain_item.subject_cn }}"
+  ansible.builtin.set_fact:
+    ssl_push_netscaler_chain_found: "{{ ssl_push_netscaler_chain_lookup.json.sslcertkey | default(ssl_push_netscaler_chain_lookup_short.json.sslcertkey | default([])) }}"
+
+- name: "Removing a previous upload of {{ ssl_push_netscaler_chain_item.certkey }}"
+  ansible.builtin.uri:
+    url: "{{ ssl_push_netscaler_url }}/systemfile/{{ ssl_push_netscaler_chain_item.certkey }}.pem?args=filelocation:{{ ssl_push_netscaler_file_location | regex_replace('/', '%2F') }}"
+    method: DELETE
+    headers: "{{ ssl_push_netscaler_headers }}"
+    validate_certs: "{{ ssl_push_netscaler_validate_certs }}"
+    use_proxy: false
+    status_code: [200, 404, 599]
+  when: ssl_push_netscaler_chain_found | length == 0
+  changed_when: false
+
+- name: "Uploading {{ ssl_push_netscaler_chain_item.certkey }}"
+  ansible.builtin.uri:
+    url: "{{ ssl_push_netscaler_url }}/systemfile"
+    method: POST
+    headers: "{{ ssl_push_netscaler_headers }}"
+    validate_certs: "{{ ssl_push_netscaler_validate_certs }}"
+    use_proxy: false
+    body_format: json
+    body:
+      systemfile:
+        filename: "{{ ssl_push_netscaler_chain_item.certkey }}.pem"
+        filelocation: "{{ ssl_push_netscaler_file_location }}"
+        filecontent: "{{ lookup('file', ssl_push_netscaler_chain_item.file) | b64encode }}"
+        fileencoding: BASE64
+    status_code: 201
+  when: ssl_push_netscaler_chain_found | length == 0
+  changed_when: true
+
+- name: "Adding certkey {{ ssl_push_netscaler_chain_item.certkey }}"
+  ansible.builtin.uri:
+    url: "{{ ssl_push_netscaler_url }}/sslcertkey"
+    method: POST
+    headers: "{{ ssl_push_netscaler_headers }}"
+    validate_certs: "{{ ssl_push_netscaler_validate_certs }}"
+    use_proxy: false
+    body_format: json
+    body:
+      sslcertkey:
+        certkey: "{{ ssl_push_netscaler_chain_item.certkey }}"
+        cert: "{{ ssl_push_netscaler_chain_item.certkey }}.pem"
+    status_code: 201
+  when: ssl_push_netscaler_chain_found | length == 0
+  changed_when: true
+
+- name: "Recording the certkey name for serial {{ ssl_push_netscaler_chain_item.serial }}"
+  ansible.builtin.set_fact:
+    ssl_push_netscaler_chain_names: >-
+      {{ ssl_push_netscaler_chain_names | default({})
+         | combine({ ssl_push_netscaler_chain_item.serial: (ssl_push_netscaler_chain_found[0].certkey
+                     if ssl_push_netscaler_chain_found | length > 0 else ssl_push_netscaler_chain_item.certkey) }) }}

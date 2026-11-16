@@ -1,0 +1,30 @@
+---
+- name: "Writing {{ networking_hosts_path }}"
+  ansible.builtin.template:
+    src: hosts.j2
+    dest: "{{ networking_hosts_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: "Reading the addresses the node resolves its own name to"
+  ansible.builtin.getent:
+    database: ahosts
+    key: "{{ networking_hosts_short }}"
+
+- name: "Verifying the node resolves its own name to one address"
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.getent_ahosts.keys() | list | length == 1
+    fail_msg: "{{ networking_hosts_short }} resolves to {{ ansible_facts.getent_ahosts.keys() | list | join(', ') }}"
+
+- name: "Reading the name the node reports"
+  ansible.builtin.command: hostname -f
+  register: networking_hosts_hostname
+  changed_when: false
+
+- name: "Verifying hostname -f returns the FQDN"
+  ansible.builtin.assert:
+    that:
+      - networking_hosts_hostname.stdout == networking_hosts_fqdn
+    fail_msg: "hostname -f returns {{ networking_hosts_hostname.stdout }} instead of {{ networking_hosts_fqdn }}"

@@ -1,0 +1,22 @@
+127.0.0.1       localhost
+{{ networking_hosts_address }}   {{ networking_hosts_fqdn }} {{ networking_hosts_short }}{% for alias in networking_hosts_aliases %} {{ alias }}{% endfor %}
+
+
+::1     ip6-localhost ip6-loopback
+fe00::0 ip6-localnet
+ff00::0 ip6-mcastprefix
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters
+
+{% for vip in networking_hosts_vip -%}
+{{ vip.address }}   {{ vip.names | join(' ') }}
+{% endfor %}
+
+{% for node in networking_hosts_nodes if node.fqdn != networking_hosts_fqdn -%}
+{{ node.address }}   {{ node.fqdn }} {{ node.fqdn.split('.')[0] }}{% for alias in node.aliases | default([]) %} {{ alias }}{% endfor %}
+
+{% endfor %}
+
+{% for entry in networking_hosts_extra -%}
+{{ entry.address }}   {{ entry.names | join(' ') }}
+{% endfor %}
