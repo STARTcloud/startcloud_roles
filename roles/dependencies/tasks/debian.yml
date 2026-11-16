@@ -67,6 +67,7 @@
     url: "{{ item.item.gpg_key_url }}"
     dest: "/tmp/{{ item.item.name }}-key.asc"
     mode: "0644"
+  environment: "{{ dependencies_download_environment }}"
   loop: "{{ dependencies_keyring_stats.results | default([]) }}"
   loop_control:
     label: "{{ item.item.name | default('skipped') }}"
@@ -108,6 +109,7 @@
     url: "{{ item.gpg_key_url }}"
     dest: "{{ item.gpg_keyring_path }}"
     mode: "0644"
+  environment: "{{ dependencies_download_environment }}"
   loop: "{{ extra_repos | default([]) }}"
   when:
     - extra_repos | default([]) | length > 0
@@ -147,7 +149,7 @@
 - name: "Checking the declared Proxmox VE repository against the subscription"
   ansible.builtin.assert:
     that:
-      - (dependencies_pve_repository == 'enterprise') == ('status: active' in dependencies_pve_subscription.stdout_lines)
+      - "(dependencies_pve_repository == 'enterprise') == ('status: active' in dependencies_pve_subscription.stdout_lines)"
     fail_msg: >-
       {{ inventory_hostname }} declares pve-{{ dependencies_pve_repository }} but pvesubscription get reports
       {{ dependencies_pve_subscription.stdout_lines | select('search', '^status:') | first | default('no status') }}

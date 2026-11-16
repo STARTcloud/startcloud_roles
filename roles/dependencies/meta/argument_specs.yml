@@ -33,6 +33,15 @@ argument_specs:
           Extra APT repositories to add (name, gpg_key_url, gpg_keyring_path, repo, needs_dearmor,
           optional filename defaulting to name, optional stale_source_files listing old duplicate
           source files to remove).
+      proxy_server:
+        type: str
+        description: Hostname or address of the HTTP proxy apt and the key downloads go through when use_proxy is true.
+      proxy_port:
+        type: int
+        description: Port of the HTTP proxy when use_proxy is true.
+      dependencies_download_environment:
+        type: dict
+        description: Environment of the key downloads; carries http_proxy and https_proxy from proxy_server and proxy_port when use_proxy is true, empty otherwise.
       dependencies_mirror:
         type: str
         default: ""
