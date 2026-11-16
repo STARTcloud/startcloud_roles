@@ -19,6 +19,6 @@ galaxy_info:
     - webclient
     - websocket
 dependencies:
-  - role: startcloud.startcloud_roles.docker
+  - role: startcloud.startcloud_roles.container
 collections:
   - startcloud.startcloud_roles

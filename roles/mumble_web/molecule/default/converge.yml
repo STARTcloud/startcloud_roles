@@ -25,7 +25,7 @@
     ## asserts the proxy container is absent rather than faking a deployment.
     mumble_web_proxy_enabled: false
 
-    ## Consumed by the startcloud.startcloud_roles.docker meta dependency.
+    ## Consumed by the startcloud.startcloud_roles.container meta dependency.
     ## json-file rather than the journald default: a nested systemd container
     ## does not guarantee a writable journald socket for dockerd. The address
     ## pool is moved off 172.17/172.18 so the network this role creates cannot

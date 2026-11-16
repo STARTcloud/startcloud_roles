@@ -4,7 +4,7 @@
   become: true
   vars:
     run_tasks: true
-    ## Dependency role (startcloud.startcloud_roles.docker) settings: the nested
+    ## Dependency role (startcloud.startcloud_roles.container) settings: the nested
     ## systemd container has no guaranteed journald socket for dockerd, and the
     ## default address pool would collide with the outer Docker bridge network.
     ## storage-driver vfs: the inner daemon's /var/lib/docker sits on the outer

@@ -31,7 +31,7 @@ dependencies:
           webroot: "{{ bbb_ssl_webroot_path }}"
           domains: "{{ bbb_server_names }}"
     when: bbb_configure_ssl == True
-  - role: startcloud.startcloud_roles.docker
+  - role: startcloud.startcloud_roles.container
     vars:
       docker_install_compose: true
 collections:

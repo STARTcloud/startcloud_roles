@@ -21,6 +21,6 @@ galaxy_info:
     - docker
     - security
 dependencies:
-  - role: startcloud.startcloud_roles.docker
+  - role: startcloud.startcloud_roles.container
 collections:
   - startcloud.startcloud_roles

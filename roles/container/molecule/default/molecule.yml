@@ -2,7 +2,7 @@
 driver:
   name: docker
 platforms:
-  - name: startcloud-docker-debian12
+  - name: startcloud-container-debian12
     image: geerlingguy/docker-debian12-ansible:latest
     command: /lib/systemd/systemd
     volumes:

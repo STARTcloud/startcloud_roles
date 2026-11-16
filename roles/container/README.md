@@ -1,4 +1,4 @@
-# Ansible Role: Docker
+# Ansible Role: Container
 
 Installs Docker CE on Debian/Ubuntu or RHEL-family systems from the official Docker
 repository, configures the daemon, optionally installs Docker Compose (as a plugin
@@ -102,7 +102,7 @@ None.
 
     - hosts: all
       roles:
-        - startcloud.startcloud_roles.docker
+        - startcloud.startcloud_roles.container
 
 ## License
 

@@ -9,7 +9,7 @@ Packages come from the official pkgs.k8s.io repositories and are version-pinned.
 
 Requires a compatible
 [Container Runtime](https://kubernetes.io/docs/setup/production-environment/container-runtimes),
-e.g. containerd or Docker (`startcloud.startcloud_roles.docker`).
+e.g. containerd or Docker (`startcloud.startcloud_roles.container`).
 
 ## Role Variables
 
@@ -154,7 +154,7 @@ None.
       vars:
         kubernetes_allow_pods_on_control_plane: true
       roles:
-        - startcloud.startcloud_roles.docker
+        - startcloud.startcloud_roles.container
         - startcloud.startcloud_roles.kubernetes
 
 ### Two or more nodes (single control-plane) cluster
@@ -173,7 +173,7 @@ Playbook:
       vars:
         kubernetes_allow_pods_on_control_plane: true
       roles:
-        - startcloud.startcloud_roles.docker
+        - startcloud.startcloud_roles.container
         - startcloud.startcloud_roles.kubernetes
 
 Then log into the control plane and run `kubectl get nodes` as root to see every server
