@@ -43,3 +43,4 @@ lockdown_pam_ciba_users: {}
 lockdown_pam_ciba_health_user: ""
 lockdown_pam_ciba_key_addresses: []
 lockdown_pam_ciba_login_grace_time: 6m
+lockdown_pam_ciba_replaced_dropins: []

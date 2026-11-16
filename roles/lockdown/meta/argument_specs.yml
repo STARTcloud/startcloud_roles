@@ -90,6 +90,11 @@ argument_specs:
         type: str
         default: 6m
         description: sshd LoginGraceTime, longer than the provider's request lifetime so the end-user has the whole lifetime to approve.
+      lockdown_pam_ciba_replaced_dropins:
+        type: list
+        elements: str
+        default: []
+        description: File names under /etc/ssh/sshd_config.d whose settings 10-pam-ciba.conf now carries; removed so sshd reads one source.
       vagrant_user:
         type: str
         description: >-

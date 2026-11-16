@@ -30,6 +30,23 @@
     group: root
     mode: "0600"
 
+- name: "Reading the sshd PAM stack"
+  ansible.builtin.slurp:
+    src: /etc/pam.d/sshd
+  register: lockdown_pam_sshd
+
+- name: "Removing pam-ciba lines placed outside the managed block"
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/sshd
+    regexp: "{{ item }}"
+    state: absent
+  loop:
+    - '^auth \[success=\d+ default=ignore\] pam_succeed_if\.so quiet user = '
+    - '^auth \[success=ok ignore=ignore default=die\] pam_exec\.so quiet /usr/bin/pam-ciba authenticate$'
+    - '^auth \[success=done default=die\] pam_permit\.so$'
+  when: "'ANSIBLE MANAGED PAM CIBA' not in (lockdown_pam_sshd.content | b64decode)"
+  notify: "Restarting ssh"
+
 - name: "Placing pam-ciba in the sshd PAM stack"
   ansible.builtin.blockinfile:
     path: /etc/pam.d/sshd
@@ -41,6 +58,13 @@
       {% endif %}
       auth [success=ok ignore=ignore default=die] pam_exec.so quiet /usr/bin/pam-ciba authenticate
       auth [success=done default=die] pam_permit.so
+  notify: "Restarting ssh"
+
+- name: "Removing sshd drop-ins the pam-ciba file replaces"
+  ansible.builtin.file:
+    path: "/etc/ssh/sshd_config.d/{{ item }}"
+    state: absent
+  loop: "{{ lockdown_pam_ciba_replaced_dropins }}"
   notify: "Restarting ssh"
 
 - name: "Writing /etc/ssh/sshd_config.d/10-pam-ciba.conf"
