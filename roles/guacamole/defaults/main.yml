@@ -2,6 +2,8 @@
 run_tasks: true
 ## Guacamole Variables
 guacamole_version: 1.5.0
+guacamole_server_version: main
+guacamole_client_version: main
 
 guacamole_admin_user: guacadmin
 guacamole_admin_pass: guacadmin

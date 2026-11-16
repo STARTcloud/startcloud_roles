@@ -20,6 +20,9 @@
     - name: "Including initialize.yml"
       ansible.builtin.include_tasks: initialize.yml
 
+    - name: "Restarting PostgreSQL now so it can use the new locales"
+      ansible.builtin.meta: flush_handlers
+
     - name: "Including configure.yml"
       ansible.builtin.include_tasks: configure.yml
 
