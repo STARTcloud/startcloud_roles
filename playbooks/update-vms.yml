@@ -1,6 +1,6 @@
 ---
-- name: Update every virtual machine
-  hosts: vms
+- name: Update every virtual machine and Raspberry Pi
+  hosts: vms:pis
   serial: 1
   any_errors_fatal: true
   become: true
