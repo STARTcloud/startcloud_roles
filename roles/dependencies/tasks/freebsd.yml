@@ -44,12 +44,10 @@
   loop: "{{ extra_repos }}"
   loop_control:
     label: "{{ item.name }}"
-  register: dependencies_pkg_repos
 
 - name: "Refreshing the package catalogues"
-  ansible.builtin.command: pkg update -f
-  changed_when: true
-  when: dependencies_pkg_repos is changed
+  ansible.builtin.command: pkg update
+  changed_when: false
 
 - name: "Self-upgrading pkg before installing other packages (pkg mid-install self-upgrades can abort subsequent work)"
   community.general.pkgng:

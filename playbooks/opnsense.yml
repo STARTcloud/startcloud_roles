@@ -23,11 +23,13 @@
 
     - name: "Applying the package updates"
       ansible.builtin.command: opnsense-update -p
+      changed_when: true
       when: "'Your packages are up to date' not in opnsense_packages.stdout"
 
     - name: "Applying the base and kernel update"
       ansible.builtin.command: opnsense-update -bk
       register: opnsense_base_applied
+      changed_when: true
       when:
         - opnsense_update_base_kernel | bool
         - opnsense_base.rc == 0

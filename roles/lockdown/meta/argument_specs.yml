@@ -90,7 +90,10 @@ argument_specs:
         type: list
         elements: str
         default: []
-        description: Local accounts that sign in by key alone from anywhere, with no push approval, for a service account such as the configuration controller's; the health user listed here keeps its password login beside the key.
+        description: >-
+          Local accounts that sign in by key alone from anywhere, with no push approval, for a service
+          account such as the configuration controller's; the health user listed here keeps its password
+          login beside the key.
       lockdown_pam_ciba_login_grace_time:
         type: str
         default: 6m
