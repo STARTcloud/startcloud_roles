@@ -1,0 +1,54 @@
+---
+- name: "Setting the ntp_driftfile variable."
+  ansible.builtin.set_fact:
+    ntp_driftfile: "{{ __ntp_driftfile }}"
+  when: ntp_driftfile is not defined
+
+- name: "Setting the ntp_package variable."
+  ansible.builtin.set_fact:
+    ntp_package: "{{ __ntp_package }}"
+  when: ntp_package is not defined
+
+- name: "Setting the ntp_config_file variable."
+  ansible.builtin.set_fact:
+    ntp_config_file: "{{ __ntp_config_file }}"
+  when: ntp_config_file is not defined
+
+- name: "Setting the ntp_daemon variable."
+  ansible.builtin.set_fact:
+    ntp_daemon: "{{ __ntp_daemon }}"
+  when: ntp_daemon is not defined
+
+- name: "Ensuring the NTP package is installed."
+  community.general.pkg5:
+    name: "{{ ntp_package }}"
+    state: present
+
+- name: "Setting timezone."
+  ansible.builtin.lineinfile:
+    path: /etc/default/init
+    regexp: '^TZ='
+    line: "TZ={{ ntp_timezone }}"
+  notify: "Restarting cron"
+
+- name: "Ensuring NTP is running and enabled as configured."
+  ansible.builtin.service:
+    name: "{{ ntp_daemon }}"
+    state: started
+    enabled: true
+  when: ntp_enabled | bool
+
+- name: "Ensuring NTP is stopped and disabled as configured."
+  ansible.builtin.service:
+    name: "{{ ntp_daemon }}"
+    state: stopped
+    enabled: false
+  when: not (ntp_enabled | bool)
+
+- name: "Generating the NTP configuration file."
+  ansible.builtin.template:
+    src: "{{ __ntp_config_template }}"
+    dest: "{{ ntp_config_file }}"
+    mode: "0644"
+  notify: "Restarting NTP"
+  when: ntp_manage_config | bool

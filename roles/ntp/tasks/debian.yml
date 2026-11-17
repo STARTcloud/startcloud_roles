@@ -25,9 +25,9 @@
     state: present
   when: not (__use_systemd_timesyncd | bool)
 
-- name: "Ensuring systemd package is present (for systemd-timesyncd)."
+- name: "Ensuring systemd-timesyncd is installed."
   ansible.builtin.package:
-    name: systemd
+    name: "{{ ntp_package }}"
     state: present
   when: __use_systemd_timesyncd | bool
 
@@ -81,7 +81,7 @@
 
 - name: "Generating traditional NTP configuration file."
   ansible.builtin.template:
-    src: "{{ ntp_config_file | basename }}.j2"
+    src: "{{ __ntp_config_template }}"
     dest: "{{ ntp_config_file }}"
     mode: "0644"
   notify: "Restarting NTP"

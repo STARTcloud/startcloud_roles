@@ -1,0 +1,28 @@
+---
+- name: Point every access point's clock at its gateway
+  hosts: openwrt
+  serial: 1
+  any_errors_fatal: true
+  gather_facts: false
+  tasks:
+    - name: "Reading the default gateway"
+      ansible.builtin.raw: ip -4 route show default | awk '{print $3}'
+      register: openwrt_gateway
+      changed_when: false
+      check_mode: false
+
+    - name: "Reading the configured time server"
+      ansible.builtin.raw: uci get system.ntp.server
+      register: openwrt_ntp_server
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: "Pointing sysntpd at the gateway"
+      ansible.builtin.raw: uci set system.ntp.server='{{ openwrt_gateway.stdout | trim }}' && uci commit system && /etc/init.d/sysntpd restart
+      changed_when: true
+      when: openwrt_ntp_server.stdout | trim != openwrt_gateway.stdout | trim
+
+    - name: "Reporting the time server"
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} syncs from {{ openwrt_gateway.stdout | trim }}"

@@ -15,6 +15,13 @@ argument_specs:
         type: bool
         default: true
         description: Whether the NTP daemon is started and enabled (false stops and disables it).
+      ntp_engine:
+        type: str
+        default: ""
+        choices: ["", timesyncd, ntp, chrony]
+        description: >-
+          The time daemon the role installs and configures; empty takes the platform's own default (systemd-timesyncd on
+          Debian 13 and later, ntp on older Debian, chrony on EL, ntpd on FreeBSD and OmniOS).
       ntp_timezone:
         type: str
         default: America/Chicago

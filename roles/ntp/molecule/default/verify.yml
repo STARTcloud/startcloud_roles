@@ -57,8 +57,9 @@
     - name: "Asserting the configuration contains the servers, driftfile and tinker panic"
       ansible.builtin.assert:
         that:
-          - "'pool ntp1.prominic.net iburst' in ntp_conf_decoded"
-          - "'pool ntp2.prominic.net iburst' in ntp_conf_decoded"
+          - "'server ntp1.prominic.net iburst' in ntp_conf_decoded"
+          - "'server ntp2.prominic.net iburst' in ntp_conf_decoded"
+          - "'restrict ntp1.prominic.net nomodify noquery notrap' in ntp_conf_decoded"
           - "'driftfile /var/lib/ntp/drift' in ntp_conf_decoded"
           - "'tinker panic 0' in ntp_conf_decoded"
           - "'restrict 127.0.0.1' in ntp_conf_decoded"

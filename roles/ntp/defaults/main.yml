@@ -2,6 +2,7 @@
 run_tasks: true
 
 ntp_enabled: true
+ntp_engine: ""
 ntp_timezone: America/Chicago
 # ntp_daemon: [various]
 # ntp_package: ntp

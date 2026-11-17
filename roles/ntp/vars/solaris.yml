@@ -1,0 +1,12 @@
+---
+__ntp_release: "{{ ansible_distribution_version | regex_replace('^r', '') | regex_replace('[a-z]+$', '') | int }}"
+__ntp_default_engine: "{{ 'chrony' if __ntp_release >= 151059 else 'ntp' }}"
+__ntp_engine: "{{ ntp_engine if ntp_engine | length > 0 else __ntp_default_engine }}"
+__use_systemd_timesyncd: false
+__ntp_daemon: "{{ 'network/chrony' if __ntp_engine == 'chrony' else 'network/ntp' }}"
+ntp_tzdata_package: ""
+__ntp_package: "{{ 'service/network/chrony' if __ntp_engine == 'chrony' else 'service/network/ntpsec' }}"
+__ntp_config_file: "{{ '/etc/inet/chrony.conf' if __ntp_engine == 'chrony' else '/etc/inet/ntp.conf' }}"
+__ntp_driftfile: "{{ '/var/lib/chrony/drift' if __ntp_engine == 'chrony' else '/var/ntp/ntp.drift' }}"
+__ntp_config_template: "{{ 'chrony-omnios.conf.j2' if __ntp_engine == 'chrony' else 'ntp.conf.j2' }}"
+ntp_cron_daemon: system/cron

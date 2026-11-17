@@ -9,4 +9,3 @@
     - role: startcloud.startcloud_roles.lockdown
       lockdown_rotate_user: false
       lockdown_pam_ciba: true
-      lockdown_disable_ssh_password_auth: true

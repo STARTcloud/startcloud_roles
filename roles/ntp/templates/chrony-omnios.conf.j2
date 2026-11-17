@@ -1,0 +1,11 @@
+{% for item in ntp_servers %}
+{{ 'pool' if 'pool.ntp.org' in item else 'server' }} {{ item }}
+{% endfor %}
+
+driftfile {{ ntp_driftfile }}
+
+ntsdumpdir /var/lib/chrony
+
+pidfile /var/run/chrony/chronyd.pid
+
+makestep 1.0 3

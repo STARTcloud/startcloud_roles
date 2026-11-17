@@ -8,12 +8,15 @@
 
 - name: "Disabling NFS, Exim and Cockpit, reboot to fully apply"
   when: not (ansible_module_running_in_container | default(false))
-  ansible.builtin.service:
+  ansible.builtin.systemd_service:
     name: "{{ item }}"
     state: stopped
-    enabled: false
+    enabled: "{{ omit if item.endswith('.target') else false }}"
   loop: "{{ lockdown_effective_services }}"
-  failed_when: false
+  register: lockdown_service_result
+  failed_when:
+    - lockdown_service_result.failed | default(false)
+    - "'Could not find the requested service' not in (lockdown_service_result.msg | default(''))"
 
 ## password_hash('sha512') picks a fresh random salt on every invocation, so the
 ## resulting hash differs each run and the user module rewrites /etc/shadow
@@ -80,14 +83,7 @@
     owner: root
     group: root
     mode: "0644"
-
-- name: "Restarting ssh to apply authentication settings"
-  when:
-    - lockdown_disable_ssh_password_auth | bool
-    - not (ansible_module_running_in_container | default(false))
-  ansible.builtin.service:
-    name: ssh
-    state: restarted
+  notify: "Restarting ssh"
 
 - name: "Including the pam-ciba tasks"
   ansible.builtin.include_tasks: pam_ciba.yml

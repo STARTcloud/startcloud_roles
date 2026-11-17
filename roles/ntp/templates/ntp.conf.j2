@@ -20,18 +20,18 @@ filegen clockstats file clockstats type day enable
 tinker panic 0
 {% endif %}
 
-# Use public servers from the pool.ntp.org project.
-# Please consider joining the pool (http://www.pool.ntp.org/join.html).
 {% for item in ntp_servers %}
-pool {{ item }}
+{{ 'pool' if 'pool.ntp.org' in item else 'server' }} {{ item }}
 {% endfor %}
 
-# Permit time synchronization with our time source, but do not
-# permit the source to query or modify the service on this system.
-restrict default nomodify notrap nopeer noquery
-
-# Allow pool associations
+restrict default ignore
+restrict -6 default ignore
+{% for item in ntp_servers if 'pool.ntp.org' not in item %}
+restrict {{ item.split()[0] }} nomodify noquery notrap
+{% endfor %}
+{% if ntp_servers | select('search', 'pool.ntp.org') | list | length > 0 %}
 restrict source nomodify notrap noquery
+{% endif %}
 
 # Permit all access over the loopback interface.  This could
 # be tightened as well, but to do so would effect some of
