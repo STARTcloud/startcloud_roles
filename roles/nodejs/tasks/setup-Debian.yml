@@ -1,19 +1,9 @@
 ---
-- name: "Ensuring dependencies are present"
-  ansible.builtin.apt:
-    name:
-      - apt-transport-https
-      - ca-certificates
-      - curl
-      - gnupg
-    state: present
-    update_cache: true
-    cache_valid_time: 3600
-
 - name: "Gathering DEB architecture"
   ansible.builtin.command: dpkg --print-architecture
   register: deb_architecture
   changed_when: false
+  check_mode: false
 
 - name: "Validating architecture is supported"
   ansible.builtin.assert:
@@ -54,6 +44,17 @@
   when:
     - nodejs_list_state.stat.exists
     - "'signed-by=/etc/apt/keyrings/nodesource.gpg' not in (nodejs_list_content.content | b64decode)"
+
+- name: "Ensuring dependencies are present"
+  ansible.builtin.apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
 
 - name: "Checking for the dearmored NodeSource GPG key"
   ansible.builtin.stat:

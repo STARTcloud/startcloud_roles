@@ -13,6 +13,7 @@
   ansible.builtin.command: dpkg --print-architecture
   register: deb_architecture
   changed_when: false
+  check_mode: false
 
 - name: "Printing DEB architecture"
   ansible.builtin.debug:
@@ -142,6 +143,7 @@
   ansible.builtin.command: pvesubscription get
   register: dependencies_pve_subscription
   changed_when: false
+  check_mode: false
   when:
     - dependencies_pve_repository | length > 0
     - dependencies_pve.stat.exists
@@ -205,6 +207,7 @@
   ansible.builtin.command: apt list --upgradable
   register: dependencies_upgradable
   changed_when: false
+  check_mode: false
 
 - name: "Reading the Galera state before the upgrade"
   ansible.builtin.command: mysql -uroot -N -s -e "SHOW STATUS WHERE Variable_name IN ('wsrep_local_state_comment','wsrep_cluster_status')"
