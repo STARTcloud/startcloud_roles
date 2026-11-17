@@ -90,7 +90,7 @@ argument_specs:
         description: Run the dist-upgrade; off keeps the node at its current packages and only reports what is upgradable.
       dependencies_autoremove:
         type: bool
-        default: false
+        default: true
         description: Remove packages no longer needed after the upgrade.
       dependencies_galera:
         type: bool
