@@ -1,0 +1,42 @@
+---
+argument_specs:
+  main:
+    short_description: Forward system logs to a central syslog collector
+    description:
+      - Installs rsyslog where the platform ships it and writes one forwarding rule to the collector.
+      - On OmniOS the rule goes into rsyslog when it is the active system logger, else into syslog.conf.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      syslog_enabled:
+        type: bool
+        default: true
+        description: Whether the system logger is started and enabled.
+      syslog_forward:
+        type: bool
+        default: true
+        description: Whether the forwarding rule is written; false removes it (the collector itself sets this false).
+      syslog_server:
+        type: str
+        default: ""
+        description: Collector address every log line is forwarded to; empty writes no rule.
+      syslog_port:
+        type: int
+        default: 514
+        description: Collector port.
+      syslog_protocol:
+        type: str
+        default: udp
+        choices: [udp, tcp]
+        description: Transport to the collector.
+      syslog_selector:
+        type: str
+        default: "*.*"
+        description: Facility and priority selector of the lines forwarded.
+      syslog_config_file:
+        type: str
+        default: /etc/rsyslog.d/10-remote.conf
+        description: File the forwarding rule is written to on rsyslog platforms.

@@ -1,0 +1,42 @@
+---
+- name: "Reading which system logger the host runs"
+  ansible.builtin.command: svcs -H -o state {{ syslog_daemon }}
+  register: syslog_rsyslog_state
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "Setting the syslog_use_rsyslog variable"
+  ansible.builtin.set_fact:
+    syslog_use_rsyslog: "{{ syslog_rsyslog_state.rc == 0 and syslog_rsyslog_state.stdout | trim == 'online' }}"
+
+- name: "Writing the forwarding rule for rsyslog"
+  ansible.builtin.template:
+    src: remote.conf.j2
+    dest: "{{ syslog_config_file }}"
+    owner: root
+    group: sys
+    mode: "0644"
+  notify: "Restarting syslog"
+  when:
+    - syslog_use_rsyslog | bool
+    - syslog_forward | bool
+    - syslog_server | length > 0
+
+- name: "Removing the forwarding rule for rsyslog"
+  ansible.builtin.file:
+    path: "{{ syslog_config_file }}"
+    state: absent
+  notify: "Restarting syslog"
+  when:
+    - syslog_use_rsyslog | bool
+    - not (syslog_forward | bool) or syslog_server | length == 0
+
+- name: "Writing the forwarding rule for syslogd"
+  ansible.builtin.lineinfile:
+    path: "{{ syslog_legacy_config_file }}"
+    regexp: '^\*\.\*\s+@'
+    line: "{{ syslog_selector }}\t@{{ syslog_server }}"
+    state: "{{ 'present' if (syslog_forward | bool and syslog_server | length > 0) else 'absent' }}"
+  notify: "Restarting legacy syslog"
+  when: not (syslog_use_rsyslog | bool)

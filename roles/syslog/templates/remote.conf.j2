@@ -1,0 +1,1 @@
+{{ syslog_selector }} {{ '@@' if syslog_protocol == 'tcp' else '@' }}{{ syslog_server }}:{{ syslog_port }}

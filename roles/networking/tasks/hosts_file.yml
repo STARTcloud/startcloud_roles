@@ -22,6 +22,7 @@
   ansible.builtin.command: hostname -f
   register: networking_hosts_hostname
   changed_when: false
+  check_mode: false
 
 - name: "Verifying hostname -f returns the FQDN"
   ansible.builtin.assert:

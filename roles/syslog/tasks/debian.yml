@@ -1,0 +1,43 @@
+---
+- name: "Ensuring the system logger is installed"
+  ansible.builtin.package:
+    name: "{{ syslog_package }}"
+    state: present
+  register: syslog_install
+
+- name: "Writing the forwarding rule"
+  ansible.builtin.template:
+    src: remote.conf.j2
+    dest: "{{ syslog_config_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: "Restarting syslog"
+  when:
+    - syslog_forward | bool
+    - syslog_server | length > 0
+
+- name: "Removing the forwarding rule"
+  ansible.builtin.file:
+    path: "{{ syslog_config_file }}"
+    state: absent
+  notify: "Restarting syslog"
+  when: not (syslog_forward | bool) or syslog_server | length == 0
+
+- name: "Ensuring the system logger is running and enabled"
+  ansible.builtin.service:
+    name: "{{ syslog_daemon }}"
+    state: started
+    enabled: true
+  when:
+    - syslog_enabled | bool
+    - not (ansible_check_mode and syslog_install is changed)
+
+- name: "Ensuring the system logger is stopped and disabled"
+  ansible.builtin.service:
+    name: "{{ syslog_daemon }}"
+    state: stopped
+    enabled: false
+  when:
+    - not (syslog_enabled | bool)
+    - not (ansible_check_mode and syslog_install is changed)

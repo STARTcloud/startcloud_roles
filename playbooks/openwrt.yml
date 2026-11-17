@@ -40,27 +40,52 @@
       failed_when: false
       check_mode: false
 
+    - name: "Reading the running release"
+      ansible.builtin.raw: . /etc/openwrt_release && echo "$DISTRIB_RELEASE $DISTRIB_REVISION"
+      register: openwrt_release_before
+      changed_when: false
+      check_mode: false
+
     - name: "Upgrading the firmware and packages"
-      ansible.builtin.raw: owut upgrade -y
+      ansible.builtin.raw: owut upgrade
       register: openwrt_upgrade
-      failed_when: false
+      changed_when: openwrt_upgrade.rc == 0
+      failed_when:
+        - openwrt_upgrade.rc != 0
+        - "'Connection to' not in openwrt_upgrade.stderr | default('')"
       ignore_unreachable: true
+      when: "'safe to proceed' in openwrt_check.stdout"
+
+    - name: "Waiting for the access point to go down"
+      ansible.builtin.wait_for:
+        host: "{{ ansible_host }}"
+        port: "{{ ansible_port }}"
+        state: stopped
+        timeout: 300
+      delegate_to: localhost
       when: "'safe to proceed' in openwrt_check.stdout"
 
     - name: "Waiting for the access point to come back"
       ansible.builtin.wait_for:
         host: "{{ ansible_host }}"
         port: "{{ ansible_port }}"
-        delay: 60
+        delay: 30
         timeout: 600
       delegate_to: localhost
       when: "'safe to proceed' in openwrt_check.stdout"
 
-    - name: "Reading the running release"
+    - name: "Reading the running release after the upgrade"
       ansible.builtin.raw: . /etc/openwrt_release && echo "$DISTRIB_RELEASE $DISTRIB_REVISION"
       register: openwrt_release
       changed_when: false
       check_mode: false
+
+    - name: "Verifying the release changed"
+      ansible.builtin.assert:
+        that:
+          - openwrt_release.stdout | trim != openwrt_release_before.stdout | trim
+        fail_msg: "{{ inventory_hostname }} still runs {{ openwrt_release.stdout | trim }} after the upgrade"
+      when: "'safe to proceed' in openwrt_check.stdout"
 
     - name: "Reporting the access point"
       ansible.builtin.debug:

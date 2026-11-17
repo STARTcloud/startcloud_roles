@@ -1,0 +1,7 @@
+---
+snmp_packages:
+  - system/management/snmp/net-snmp
+
+snmp_config: /etc/net-snmp/snmp/snmpd.conf
+snmp_service_name: application/management/net-snmp
+snmp_extension_list: []

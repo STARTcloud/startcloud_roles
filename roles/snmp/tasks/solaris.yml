@@ -1,0 +1,20 @@
+---
+- name: "Solaris : installing snmp"
+  community.general.pkg5:
+    name: "{{ snmp_packages }}"
+    state: present
+
+- name: "Solaris : writing snmp config"
+  ansible.builtin.template:
+    src: "snmp/snmpd.conf.j2"
+    dest: "{{ snmp_config }}"
+    owner: root
+    group: sys
+    mode: "0600"
+  notify: Restart snmp
+
+- name: "Solaris : ensuring snmpd is running and enabled"
+  ansible.builtin.service:
+    name: "{{ snmp_service_name }}"
+    state: started
+    enabled: true

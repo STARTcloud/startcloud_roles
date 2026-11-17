@@ -1,22 +1,41 @@
 # {{ ansible_managed }}
 
-createUser {{ snmp_user }} SHA {{ snmp_password }} AES {{ snmp_encryption }}
+{% if snmp_location | length > 0 %}
+sysLocation    {{ snmp_location }}
+{% endif %}
+{% if snmp_contact | length > 0 %}
+sysContact     {{ snmp_contact }}
+{% endif %}
+sysServices    72
+sysName {{ ansible_fqdn }}
 
-rouser {{ snmp_user }} priv
+master  agentx
+
+{% if snmp_agentaddress | length > 0 %}
+{% for item in snmp_agentaddress %}
+agentAddress {{ item }}
+{% endfor %}
+{% else %}
 {% if ansible_default_ipv4.address is defined %}
 agentAddress {{ snmp_agentaddress_protocol.ipv4 }}:{{ snmp_agentaddress_address.ipv4 }}:{{ snmp_agentaddress_port.ipv4 }}
 {% endif %}
 {% if ansible_default_ipv6.address is defined %}
 agentAddress {{ snmp_agentaddress_protocol.ipv6 }}:{{ snmp_agentaddress_address.ipv6 }}:{{ snmp_agentaddress_port.ipv6 }}
 {% endif %}
+{% endif %}
 
-{% if snmp_location is defined %}
-sysLocation {{ snmp_location }}
+view   all         included   .1
+view   systemonly  included   .1.3.6.1.2.1.1
+view   systemonly  included   .1.3.6.1.2.1.25.1
+
+{% if snmp_community | length > 0 %}
+rocommunity  {{ snmp_community }} default -V {{ snmp_community_view }}
 {% endif %}
-sysName {{ ansible_fqdn }}
-{% if email is defined %}
-sysContact {{ email }}
+{% if snmp_v3 | bool %}
+createUser {{ snmp_user }} SHA {{ snmp_password }} AES {{ snmp_encryption }}
+rouser {{ snmp_user }} priv
 {% endif %}
+rouser authPrivUser authpriv -V systemonly
 
 {% for item in snmp_extension_list %}
 extend {{ item.extend }}

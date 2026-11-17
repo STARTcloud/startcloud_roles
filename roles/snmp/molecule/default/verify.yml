@@ -69,6 +69,7 @@
         that:
           - "'createUser snmpmonitor SHA CHANGEME AES CHANGEME' in snmpd_conf_text"
           - "'rouser snmpmonitor priv' in snmpd_conf_text"
+          - "'rocommunity  CHANGEME default -V all' in snmpd_conf_text"
           - "'agentAddress udp:127.0.0.1:161' in snmpd_conf_text"
           - "'sysLocation STARTcloud Molecule Lab' in snmpd_conf_text"
           - "'sysContact admin@example.com' in snmpd_conf_text"

@@ -9,6 +9,7 @@
     snmp_user: snmpmonitor
     snmp_password: CHANGEME
     snmp_encryption: CHANGEME
+    snmp_community: CHANGEME
     snmp_additional_packages: []
     snmp_extension_scripts: /usr/local/lib/snmpd
     snmp_extension_list:

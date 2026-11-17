@@ -21,6 +21,7 @@
     serole: object_r
     setype: lib_t
     selevel: s0
+  register: snmp_extension_dir
   tags:
     - configuration
 
@@ -36,8 +37,10 @@
     serole: object_r
     setype: lib_t
     selevel: s0
+  environment: "{{ snmp_download_environment }}"
   with_items:
     - "{{ snmp_extension_list }}"
+  when: not (ansible_check_mode and snmp_extension_dir is changed)
   tags:
     - configuration
 
@@ -53,7 +56,10 @@
     serole: object_r
     setype: lib_t
     selevel: s0
-  when: '"pve" in ansible_kernel'
+  environment: "{{ snmp_download_environment }}"
+  when:
+    - '"pve" in ansible_kernel'
+    - not (ansible_check_mode and snmp_extension_dir is changed)
   tags:
     - configuration
 
@@ -93,3 +99,10 @@
   ansible.builtin.meta: flush_handlers
   tags:
     - configuration
+
+- name: "Linux : ensuring snmpd is running and enabled"
+  become: true
+  ansible.builtin.service:
+    name: "{{ snmp_service_name }}"
+    state: started
+    enabled: true

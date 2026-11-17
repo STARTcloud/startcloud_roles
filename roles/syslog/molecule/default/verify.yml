@@ -1,0 +1,37 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting rsyslog is installed"
+      ansible.builtin.assert:
+        that:
+          - "'rsyslog' in ansible_facts.packages"
+        fail_msg: "rsyslog is not installed"
+
+    - name: "Gathering service facts"
+      ansible.builtin.service_facts:
+
+    - name: "Asserting rsyslog is running and enabled"
+      ansible.builtin.assert:
+        that:
+          - "'rsyslog.service' in ansible_facts.services"
+          - ansible_facts.services['rsyslog.service'].state == 'running'
+          - ansible_facts.services['rsyslog.service'].status == 'enabled'
+        fail_msg: "rsyslog.service is not running and enabled"
+
+    - name: "Reading the forwarding rule"
+      ansible.builtin.slurp:
+        src: /etc/rsyslog.d/10-remote.conf
+      register: syslog_remote_content
+
+    - name: "Asserting the forwarding rule points at the collector"
+      ansible.builtin.assert:
+        that:
+          - "'*.* @192.0.2.10:514' in syslog_remote_content.content | b64decode"
+        fail_msg: "/etc/rsyslog.d/10-remote.conf does not forward to the collector"

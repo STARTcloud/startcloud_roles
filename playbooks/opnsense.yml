@@ -4,6 +4,8 @@
   serial: 1
   any_errors_fatal: true
   gather_facts: true
+  vars:
+    opnsense_update_base_kernel: false
   tasks:
     - name: "Checking for a base and kernel update"
       ansible.builtin.command: opnsense-update -c
@@ -19,16 +21,24 @@
       failed_when: false
       check_mode: false
 
-    - name: "Applying the minor update to base, kernel and packages"
-      ansible.builtin.command: opnsense-update -bkp
-      when: opnsense_base.rc == 0 or 'Your packages are up to date' not in opnsense_packages.stdout
+    - name: "Applying the package updates"
+      ansible.builtin.command: opnsense-update -p
+      when: "'Your packages are up to date' not in opnsense_packages.stdout"
 
-    - name: "Checking whether a reboot is pending"
-      ansible.builtin.command: opnsense-update -c -B -K
-      register: opnsense_reboot
-      changed_when: false
-      failed_when: opnsense_reboot.rc not in [0, 1]
-      check_mode: false
+    - name: "Applying the base and kernel update"
+      ansible.builtin.command: opnsense-update -bk
+      register: opnsense_base_applied
+      when:
+        - opnsense_update_base_kernel | bool
+        - opnsense_base.rc == 0
+
+    - name: "Rebooting the firewall to finish the base and kernel update"
+      ansible.builtin.reboot:
+        reboot_timeout: "{{ dependencies_reboot_timeout | default(600) }}"
+      when:
+        - opnsense_base_applied is changed
+        - reboots_allowed | default(false) | bool
+        - not (reboot_never | default(false) | bool)
 
     - name: "Reading the installed OPNsense version"
       ansible.builtin.command: opnsense-version
@@ -40,4 +50,4 @@
       ansible.builtin.debug:
         msg:
           version: "{{ opnsense_version.stdout | trim }}"
-          reboot_pending: "{{ opnsense_reboot.rc == 0 }}"
+          reboot_pending: "{{ (opnsense_base_applied is changed) and not (opnsense_base_applied is skipped) }}"

@@ -1,0 +1,3 @@
+---
+syslog_package: rsyslog
+syslog_daemon: rsyslog
