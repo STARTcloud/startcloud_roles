@@ -10,4 +10,9 @@ packages:
   - os-qemu-guest-agent
   - os-acme-client
 
-extra_packages: []
+extra_repos:
+  - name: startcloud-opnsense
+    url: "https://public.opnsense.startcloud.com/${ABI}"
+    pubkey_url: https://public.opnsense.startcloud.com/pubkey.pem
+    pubkey_path: /usr/local/etc/ssl/pkg-repo/startcloud-opnsense.pub
+    priority: 100

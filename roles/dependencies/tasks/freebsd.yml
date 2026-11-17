@@ -17,6 +17,40 @@
     mode: "0644"
   when: use_proxy | bool
 
+- name: "Creating the package repository key directories"
+  ansible.builtin.file:
+    path: "{{ item.pubkey_path | dirname }}"
+    state: directory
+    mode: "0755"
+  loop: "{{ extra_repos }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: "Fetching the package repository public keys"
+  ansible.builtin.get_url:
+    url: "{{ item.pubkey_url }}"
+    dest: "{{ item.pubkey_path }}"
+    mode: "0644"
+  environment: "{{ dependencies_download_environment }}"
+  loop: "{{ extra_repos }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: "Writing the package repository configurations"
+  ansible.builtin.template:
+    src: pkg_repo.conf.j2
+    dest: "/usr/local/etc/pkg/repos/{{ item.name }}.conf"
+    mode: "0644"
+  loop: "{{ extra_repos }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: dependencies_pkg_repos
+
+- name: "Refreshing the package catalogues"
+  ansible.builtin.command: pkg update -f
+  changed_when: true
+  when: dependencies_pkg_repos is changed
+
 - name: "Self-upgrading pkg before installing other packages (pkg mid-install self-upgrades can abort subsequent work)"
   community.general.pkgng:
     name: pkg

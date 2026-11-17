@@ -1,0 +1,8 @@
+{{ item.name }}: {
+  url:            "{{ item.url }}",
+  mirror_type:    "none",
+  signature_type: "pubkey",
+  pubkey:         "{{ item.pubkey_path }}",
+  enabled:        yes,
+  priority:       {{ item.priority | default(100) }}
+}
