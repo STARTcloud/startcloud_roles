@@ -8,15 +8,15 @@ LoginGraceTime {{ lockdown_pam_ciba_login_grace_time }}
 Match User {{ lockdown_pam_ciba_health_user }}
     PasswordAuthentication yes
     KbdInteractiveAuthentication no
-    AuthenticationMethods password
+    AuthenticationMethods {{ 'publickey password' if lockdown_pam_ciba_health_user in lockdown_pam_ciba_key_users else 'password' }}
 {% endif %}
 {% if lockdown_pam_ciba_key_addresses | length > 0 %}
 
 Match User {{ lockdown_pam_ciba_users.keys() | join(',') }} Address {{ lockdown_pam_ciba_key_addresses | join(',') }}
     AuthenticationMethods publickey
 {% endif %}
-{% if lockdown_pam_ciba_key_users | length > 0 %}
+{% if lockdown_pam_ciba_key_users | difference([lockdown_pam_ciba_health_user]) | length > 0 %}
 
-Match User {{ lockdown_pam_ciba_key_users | join(',') }}
+Match User {{ lockdown_pam_ciba_key_users | difference([lockdown_pam_ciba_health_user]) | join(',') }}
     AuthenticationMethods publickey
 {% endif %}
