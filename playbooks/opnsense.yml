@@ -1,0 +1,43 @@
+---
+- name: Update every OPNsense firewall
+  hosts: firewalls
+  serial: 1
+  any_errors_fatal: true
+  gather_facts: true
+  tasks:
+    - name: "Checking for a base and kernel update"
+      ansible.builtin.command: opnsense-update -c
+      register: opnsense_base
+      changed_when: false
+      failed_when: opnsense_base.rc not in [0, 1]
+      check_mode: false
+
+    - name: "Reading the pending package upgrades"
+      ansible.builtin.command: pkg upgrade -n
+      register: opnsense_packages
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: "Applying the minor update to base, kernel and packages"
+      ansible.builtin.command: opnsense-update -bkp
+      when: opnsense_base.rc == 0 or 'Your packages are up to date' not in opnsense_packages.stdout
+
+    - name: "Checking whether a reboot is pending"
+      ansible.builtin.command: opnsense-update -c -B -K
+      register: opnsense_reboot
+      changed_when: false
+      failed_when: opnsense_reboot.rc not in [0, 1]
+      check_mode: false
+
+    - name: "Reading the installed OPNsense version"
+      ansible.builtin.command: opnsense-version
+      register: opnsense_version
+      changed_when: false
+      check_mode: false
+
+    - name: "Reporting the firewall"
+      ansible.builtin.debug:
+        msg:
+          version: "{{ opnsense_version.stdout | trim }}"
+          reboot_pending: "{{ opnsense_reboot.rc == 0 }}"
