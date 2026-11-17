@@ -15,3 +15,8 @@ Match User {{ lockdown_pam_ciba_health_user }}
 Match User {{ lockdown_pam_ciba_users.keys() | join(',') }} Address {{ lockdown_pam_ciba_key_addresses | join(',') }}
     AuthenticationMethods publickey
 {% endif %}
+{% if lockdown_pam_ciba_key_users | length > 0 %}
+
+Match User {{ lockdown_pam_ciba_key_users | join(',') }}
+    AuthenticationMethods publickey
+{% endif %}

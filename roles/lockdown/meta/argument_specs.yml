@@ -86,6 +86,11 @@ argument_specs:
         elements: str
         default: []
         description: Addresses or networks from which the mapped accounts sign in by key alone, with no push approval.
+      lockdown_pam_ciba_key_users:
+        type: list
+        elements: str
+        default: []
+        description: Local accounts that sign in by key alone from anywhere, with no push approval, for a service account such as the configuration controller's.
       lockdown_pam_ciba_login_grace_time:
         type: str
         default: 6m
