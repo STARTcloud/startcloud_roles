@@ -78,6 +78,7 @@ certbot_create_standalone_stop_services:
 # the acme package path is driven by letsencrypt_enabled and the account vars
 # below. ssl_appliance_cert_dir is the on-appliance destination the acme
 # package, webConfigurator, fwauthserver and gbauthd all consume.
+ssl_appliance_hostname: "{{ inventory_hostname_short }}"
 ssl_appliance_cert_dir: /conf/acme
 ssl_appliance_tools_dir: /conf/ansible/tools
 ssl_appliance_keytool: /usr/local/openjdk8-jre/bin/keytool
