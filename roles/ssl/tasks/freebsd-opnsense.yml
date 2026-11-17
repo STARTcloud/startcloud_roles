@@ -1,0 +1,51 @@
+---
+- name: "Ensuring Cloudflare API credentials are present"
+  ansible.builtin.assert:
+    that:
+      - secrets.cloudflare_api_token is defined
+    fail_msg: "Cloudflare DNS-01 certificates need cloudflare_api_token in .secrets.yml"
+
+- name: "Creating Appliance Tools Directory"
+  ansible.builtin.file:
+    path: "{{ ssl_appliance_tools_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: "Placing the ACME Client Configuration Tool"
+  ansible.builtin.template:
+    src: opnsense_acme.php.j2
+    dest: "{{ ssl_appliance_tools_dir }}/opnsense_acme.php"
+    mode: "0700"
+
+- name: "Configuring the ACME Client"
+  ansible.builtin.command: "php {{ ssl_appliance_tools_dir }}/opnsense_acme.php configure"
+  environment:
+    SSL_ACME_CERTS: "{{ ssl_dns01_certs | to_json }}"
+    SSL_ACME_EMAIL: "{{ settings.email }}"
+    SSL_ACME_STAGING: "{{ '1' if letsencrypt_staging_enabled else '0' }}"
+    SSL_CF_TOKEN: "{{ secrets.cloudflare_api_token }}"
+  register: ssl_opnsense_acme
+  changed_when: (ssl_opnsense_acme.stdout | from_json).changed
+  no_log: true
+
+- name: "Configuring the ACME Client Certificates"
+  ansible.builtin.command: "php {{ ssl_appliance_tools_dir }}/opnsense_acme.php certificates"
+  environment:
+    SSL_ACME_CERTS: "{{ ssl_dns01_certs | to_json }}"
+  register: ssl_opnsense_certificates
+  changed_when: (ssl_opnsense_certificates.stdout | from_json).changed
+
+- name: "Issuing the Certificates"
+  ansible.builtin.command: "/usr/local/opnsense/scripts/OPNsense/AcmeClient/lecert.php --mode issue --cert {{ item.uuid }}"
+  changed_when: true
+  when: not item.issued
+  loop: "{{ (ssl_opnsense_certificates.stdout | default('{}', true) | from_json).certificates | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: "Pointing the Web GUI at the Certificate"
+  ansible.builtin.command: "php {{ ssl_appliance_tools_dir }}/opnsense_acme.php webgui"
+  environment:
+    SSL_ACME_CERTS: "{{ ssl_dns01_certs | to_json }}"
+  register: ssl_opnsense_webgui
+  changed_when: (ssl_opnsense_webgui.stdout | from_json).changed

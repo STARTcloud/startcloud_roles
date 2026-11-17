@@ -260,3 +260,14 @@
 
         - name: "Reloading Appliance Configuration"
           ansible.builtin.include_tasks: freebsd-reload.yml
+
+- name: "Detecting OPNsense Appliance"
+  ansible.builtin.stat:
+    path: /usr/local/opnsense/mvc
+  register: ssl_opnsense_check
+
+- name: "Configuring OPNsense Certificates"
+  ansible.builtin.include_tasks: freebsd-opnsense.yml
+  when:
+    - ssl_opnsense_check.stat.exists
+    - ssl_dns01_certs | length > 0
