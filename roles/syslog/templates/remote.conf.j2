@@ -1,1 +1,6 @@
+{% if syslog_protocol == 'tls' %}
+global(DefaultNetstreamDriver="ossl" DefaultNetstreamDriverCAFile="{{ syslog_tls_ca }}")
+{{ syslog_selector }} action(type="omfwd" target="{{ syslog_server }}" port="{{ syslog_port }}" protocol="tcp" StreamDriver="ossl" StreamDriverMode="1" StreamDriverAuthMode="x509/name" StreamDriverPermittedPeers="{{ syslog_tls_peer }}")
+{% else %}
 {{ syslog_selector }} {{ '@@' if syslog_protocol == 'tcp' else '@' }}{{ syslog_server }}:{{ syslog_port }}
+{% endif %}

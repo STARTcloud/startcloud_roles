@@ -1,0 +1,13 @@
+template(name="RemoteHostFile" type="string" string="{{ syslog_receive_log_dir }}/%HOSTNAME%.log")
+ruleset(name="remote") {
+  action(type="omfile" dynaFile="RemoteHostFile")
+}
+{% if syslog_receive_udp | bool %}
+module(load="imudp")
+input(type="imudp" port="{{ syslog_receive_udp_port }}" ruleset="remote")
+{% endif %}
+{% if syslog_receive_tls | bool %}
+global(DefaultNetstreamDriver="ossl" DefaultNetstreamDriverCertFile="{{ syslog_receive_tls_cert }}" DefaultNetstreamDriverKeyFile="{{ syslog_receive_tls_key }}")
+module(load="imtcp" StreamDriver.Name="ossl" StreamDriver.Mode="1" StreamDriver.AuthMode="anon")
+input(type="imtcp" port="{{ syslog_receive_tls_port }}" ruleset="remote")
+{% endif %}

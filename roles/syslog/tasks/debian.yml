@@ -5,6 +5,12 @@
     state: present
   register: syslog_install
 
+- name: "Ensuring the TLS stream driver is installed"
+  ansible.builtin.package:
+    name: "{{ syslog_tls_package }}"
+    state: present
+  when: syslog_protocol == 'tls' or syslog_receive_tls | bool
+
 - name: "Writing the forwarding rule"
   ansible.builtin.template:
     src: remote.conf.j2
@@ -23,6 +29,32 @@
     state: absent
   notify: "Restarting syslog"
   when: not (syslog_forward | bool) or syslog_server | length == 0
+
+- name: "Creating the directory remote logs are written to"
+  ansible.builtin.file:
+    path: "{{ syslog_receive_log_dir }}"
+    state: directory
+    owner: root
+    group: adm
+    mode: "0755"
+  when: syslog_receive_udp | bool or syslog_receive_tls | bool
+
+- name: "Writing the receiving rules"
+  ansible.builtin.template:
+    src: receive.conf.j2
+    dest: "{{ syslog_receive_config_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: "Restarting syslog"
+  when: syslog_receive_udp | bool or syslog_receive_tls | bool
+
+- name: "Removing the receiving rules"
+  ansible.builtin.file:
+    path: "{{ syslog_receive_config_file }}"
+    state: absent
+  notify: "Restarting syslog"
+  when: not (syslog_receive_udp | bool or syslog_receive_tls | bool)
 
 - name: "Ensuring the system logger is running and enabled"
   ansible.builtin.service:

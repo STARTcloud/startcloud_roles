@@ -689,6 +689,14 @@
         dest: /etc/letsencrypt/renewal-hooks/deploy/ssl_renew_publish.sh
         mode: "0750"
 
+    - name: "Ensuring the certbot renewal timer is enabled"
+      become: true
+      ansible.builtin.systemd_service:
+        name: certbot.timer
+        enabled: true
+        state: started
+      when: ssl_auto_renew | bool
+
 - name: "Issuing DNS-01 service certificates via acme-dns"
   when: ssl_dns01_certs | length > 0 and not (bake_mode | default(false) | bool)
   block:
@@ -811,3 +819,24 @@
         src: ssl_dns01_publish.sh.j2
         dest: /etc/letsencrypt/renewal-hooks/deploy/ssl_dns01_publish.sh
         mode: "0750"
+
+    - name: "Ensuring the certbot renewal timer is enabled"
+      become: true
+      ansible.builtin.systemd_service:
+        name: certbot.timer
+        enabled: true
+        state: started
+      when: ssl_auto_renew | bool
+
+- name: "Installing the renewal hooks consumers run after a republish"
+  become: true
+  ansible.builtin.template:
+    src: ssl_renewal_hook.sh.j2
+    dest: "{{ cert_dir }}/renewal-hooks.d/{{ ssl_renewal_hook.name }}.sh"
+    owner: root
+    group: root
+    mode: "0750"
+  loop: "{{ ssl_renewal_hooks }}"
+  loop_control:
+    loop_var: ssl_renewal_hook
+    label: "{{ ssl_renewal_hook.name }}"

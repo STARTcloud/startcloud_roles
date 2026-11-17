@@ -6,6 +6,7 @@
   with_items:
     - "{{ snmp_packages }}"
     - "{{ snmp_additional_packages }}"
+  register: snmp_install
   tags:
     - packages
 
@@ -106,3 +107,4 @@
     name: "{{ snmp_service_name }}"
     state: started
     enabled: true
+  when: not (ansible_check_mode and snmp_install is changed)

@@ -3,3 +3,4 @@ syslog_package: system/rsyslog
 syslog_daemon: system/system-log:rsyslog
 syslog_legacy_daemon: system/system-log:default
 syslog_legacy_config_file: /etc/syslog.conf
+syslog_legacy_selector: "*.debug"

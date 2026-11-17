@@ -5,6 +5,7 @@
   ansible.builtin.service:
     name: "{{ snmp_service_name }}"
     state: stopped
+  when: not (ansible_check_mode and snmp_install | default({}) is changed)
 
 - name: Write snmp config
   become: true
@@ -29,21 +30,25 @@
   ansible.builtin.service:
     name: "{{ snmp_service_name }}"
     state: started
+  when: not (ansible_check_mode and snmp_install | default({}) is changed)
 
 - name: Restart snmp
   become: true
   ansible.builtin.service:
     name: "{{ snmp_service_name }}"
     state: restarted
+  when: not (ansible_check_mode and snmp_install | default({}) is changed)
 
 - name: Enabled snmp
   become: true
   ansible.builtin.service:
     name: "{{ snmp_service_name }}"
     enabled: true
+  when: not (ansible_check_mode and snmp_install | default({}) is changed)
 
 - name: Start snmp
   become: true
   ansible.builtin.service:
     name: "{{ snmp_service_name }}"
     state: started
+  when: not (ansible_check_mode and snmp_install | default({}) is changed)

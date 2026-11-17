@@ -8,3 +8,13 @@ syslog_port: 514
 syslog_protocol: udp
 syslog_selector: "*.*"
 syslog_config_file: /etc/rsyslog.d/10-remote.conf
+syslog_tls_ca: /etc/ssl/certs/ca-certificates.crt
+syslog_tls_peer: "{{ syslog_server }}"
+syslog_receive_udp: false
+syslog_receive_udp_port: 514
+syslog_receive_tls: false
+syslog_receive_tls_port: 6514
+syslog_receive_tls_cert: ""
+syslog_receive_tls_key: ""
+syslog_receive_log_dir: /var/log/remote
+syslog_receive_config_file: /etc/rsyslog.d/10-receive.conf

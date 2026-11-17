@@ -1,6 +1,14 @@
 ---
+- name: Issue the collector's certificate
+  hosts: collectors
+  any_errors_fatal: true
+  become: true
+  gather_facts: true
+  roles:
+    - role: startcloud.startcloud_roles.ssl
+
 - name: Point every node at the log collector and answer SNMP the same way
-  hosts: vms:pis:hypervisors
+  hosts: vms:pis:hypervisors:outside
   serial: 1
   any_errors_fatal: true
   become: true

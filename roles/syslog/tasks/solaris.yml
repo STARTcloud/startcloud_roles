@@ -35,8 +35,8 @@
 - name: "Writing the forwarding rule for syslogd"
   ansible.builtin.lineinfile:
     path: "{{ syslog_legacy_config_file }}"
-    regexp: '^\*\.\*\s+@'
-    line: "{{ syslog_selector }}\t@{{ syslog_server }}"
+    regexp: '^\*\.\S+\s+@'
+    line: "{{ syslog_legacy_selector }}\t@{{ syslog_server }}"
     state: "{{ 'present' if (syslog_forward | bool and syslog_server | length > 0) else 'absent' }}"
   notify: "Restarting legacy syslog"
   when: not (syslog_use_rsyslog | bool)

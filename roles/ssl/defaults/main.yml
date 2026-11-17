@@ -60,6 +60,8 @@ cert_key_storage: machine
 cert_key_exportable: true
 
 ssl_dns01_certs: []
+ssl_auto_renew: true
+ssl_renewal_hooks: []
 certbot_cloudflare_credentials: /etc/letsencrypt/cloudflare.ini
 certbot_cloudflare_propagation_seconds: 30
 

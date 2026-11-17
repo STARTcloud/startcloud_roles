@@ -3,7 +3,8 @@ argument_specs:
   main:
     short_description: Forward system logs to a central syslog collector
     description:
-      - Installs rsyslog where the platform ships it and writes one forwarding rule to the collector.
+      - Installs rsyslog where the platform ships it and writes one forwarding rule to the collector, over UDP, TCP or TLS.
+      - On the collector it writes the receiving rules, one file per sending host, over UDP and TLS.
       - On OmniOS the rule goes into rsyslog when it is the active system logger, else into syslog.conf.
     author: Mark Gilbert
     options:
@@ -30,8 +31,8 @@ argument_specs:
       syslog_protocol:
         type: str
         default: udp
-        choices: [udp, tcp]
-        description: Transport to the collector.
+        choices: [udp, tcp, tls]
+        description: Transport to the collector; tls sends over TCP inside TLS and verifies the collector's certificate name against syslog_tls_peer (Linux rsyslog only).
       syslog_selector:
         type: str
         default: "*.*"
@@ -40,3 +41,42 @@ argument_specs:
         type: str
         default: /etc/rsyslog.d/10-remote.conf
         description: File the forwarding rule is written to on rsyslog platforms.
+      syslog_tls_ca:
+        type: str
+        default: /etc/ssl/certs/ca-certificates.crt
+        description: CA bundle the sender validates the collector's certificate against.
+      syslog_tls_peer:
+        type: str
+        description: Name the collector's certificate must carry; defaults to syslog_server.
+      syslog_receive_udp:
+        type: bool
+        default: false
+        description: Receive plain UDP syslog from other hosts into one file per sender (the collector sets this true).
+      syslog_receive_udp_port:
+        type: int
+        default: 514
+        description: UDP port the collector listens on.
+      syslog_receive_tls:
+        type: bool
+        default: false
+        description: Receive TLS syslog from other hosts into one file per sender, serving syslog_receive_tls_cert.
+      syslog_receive_tls_port:
+        type: int
+        default: 6514
+        description: TCP port the TLS listener binds.
+      syslog_receive_tls_cert:
+        type: str
+        default: ""
+        description: Full-chain certificate the TLS listener serves.
+      syslog_receive_tls_key:
+        type: str
+        default: ""
+        description: Private key of syslog_receive_tls_cert.
+      syslog_receive_log_dir:
+        type: str
+        default: /var/log/remote
+        description: Directory the collector writes one file per sending host into.
+      syslog_receive_config_file:
+        type: str
+        default: /etc/rsyslog.d/10-receive.conf
+        description: File the receiving rules are written to.

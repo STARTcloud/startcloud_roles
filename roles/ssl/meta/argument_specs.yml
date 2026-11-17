@@ -101,6 +101,17 @@ argument_specs:
           published _acme-challenge CNAME pointing at that registration's fulldomain. cloudflare needs
           secrets.cloudflare_api_token with Zone Read and DNS Edit on each domain's zone and issues through the certbot
           Cloudflare DNS plugin. Renewals republish through the installed deploy hook.
+      ssl_auto_renew:
+        type: bool
+        default: true
+        description: Enable the certbot systemd timer on Debian hosts where the role issued a Let's Encrypt certificate, so every lineage renews and republishes on its own.
+      ssl_renewal_hooks:
+        type: list
+        elements: dict
+        default: []
+        description: >-
+          Scripts written into cert_dir/renewal-hooks.d and run by the publish hooks after every renewal; each item
+          carries a name (the file name) and a command (what to run, such as a service restart).
       certbot_create_if_missing:
         type: bool
         default: false

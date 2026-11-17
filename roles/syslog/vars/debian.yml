@@ -1,3 +1,4 @@
 ---
 syslog_package: rsyslog
+syslog_tls_package: rsyslog-openssl
 syslog_daemon: rsyslog
