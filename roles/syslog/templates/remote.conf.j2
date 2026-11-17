@@ -1,6 +1,11 @@
+{% if syslog_protocol == 'udp' %}
+{{ syslog_selector }} @{{ syslog_server }}:{{ syslog_port }}
+{% else %}
+{% if syslog_work_directory is defined %}
+global(workDirectory="{{ syslog_work_directory }}")
+{% endif %}
 {% if syslog_protocol == 'tls' %}
 global(DefaultNetstreamDriver="ossl" DefaultNetstreamDriverCAFile="{{ syslog_tls_ca }}")
-{{ syslog_selector }} action(type="omfwd" target="{{ syslog_server }}" port="{{ syslog_port }}" protocol="tcp" StreamDriver="ossl" StreamDriverMode="1" StreamDriverAuthMode="x509/name" StreamDriverPermittedPeers="{{ syslog_tls_peer }}")
-{% else %}
-{{ syslog_selector }} {{ '@@' if syslog_protocol == 'tcp' else '@' }}{{ syslog_server }}:{{ syslog_port }}
+{% endif %}
+{{ syslog_selector }} action(type="omfwd" target="{{ syslog_server }}" port="{{ syslog_port }}" protocol="tcp"{% if syslog_protocol == 'tls' %} StreamDriver="ossl" StreamDriverMode="1" StreamDriverAuthMode="x509/name" StreamDriverPermittedPeers="{{ syslog_tls_peer }}"{% endif %} queue.type="LinkedList" queue.filename="{{ syslog_queue_name }}" queue.maxDiskSpace="{{ syslog_queue_max_disk }}" queue.saveOnShutdown="on" action.resumeRetryCount="-1")
 {% endif %}

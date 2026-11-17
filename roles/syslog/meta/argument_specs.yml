@@ -32,7 +32,17 @@ argument_specs:
         type: str
         default: udp
         choices: [udp, tcp, tls]
-        description: Transport to the collector; tls sends over TCP inside TLS and verifies the collector's certificate name against syslog_tls_peer (Linux rsyslog only).
+        description: >-
+          Transport to the collector. tcp and tls hold every line in a disk-backed queue until the collector takes it;
+          tls also verifies the collector's certificate name against syslog_tls_peer. udp sends once and keeps nothing.
+      syslog_queue_name:
+        type: str
+        default: remote
+        description: File name prefix of the forwarding queue in the rsyslog work directory (tcp and tls).
+      syslog_queue_max_disk:
+        type: str
+        default: 256m
+        description: Most disk the forwarding queue may use while the collector is unreachable (tcp and tls).
       syslog_selector:
         type: str
         default: "*.*"
@@ -56,6 +66,14 @@ argument_specs:
         type: int
         default: 514
         description: UDP port the collector listens on.
+      syslog_receive_tcp:
+        type: bool
+        default: false
+        description: Receive plain TCP syslog from other hosts into one file per sender.
+      syslog_receive_tcp_port:
+        type: int
+        default: 514
+        description: TCP port the plain listener binds.
       syslog_receive_tls:
         type: bool
         default: false

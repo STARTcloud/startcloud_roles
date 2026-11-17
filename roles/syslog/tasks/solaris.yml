@@ -10,6 +10,17 @@
   ansible.builtin.set_fact:
     syslog_use_rsyslog: "{{ syslog_rsyslog_state.rc == 0 and syslog_rsyslog_state.stdout | trim == 'online' }}"
 
+- name: "Creating the directory the forwarding queue is kept in"
+  ansible.builtin.file:
+    path: "{{ syslog_work_directory }}"
+    state: directory
+    owner: root
+    group: sys
+    mode: "0700"
+  when:
+    - syslog_use_rsyslog | bool
+    - syslog_protocol != 'udp'
+
 - name: "Writing the forwarding rule for rsyslog"
   ansible.builtin.template:
     src: remote.conf.j2

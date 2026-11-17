@@ -8,10 +8,14 @@ syslog_port: 514
 syslog_protocol: udp
 syslog_selector: "*.*"
 syslog_config_file: /etc/rsyslog.d/10-remote.conf
+syslog_queue_name: remote
+syslog_queue_max_disk: 256m
 syslog_tls_ca: /etc/ssl/certs/ca-certificates.crt
 syslog_tls_peer: "{{ syslog_server }}"
 syslog_receive_udp: false
 syslog_receive_udp_port: 514
+syslog_receive_tcp: false
+syslog_receive_tcp_port: 514
 syslog_receive_tls: false
 syslog_receive_tls_port: 6514
 syslog_receive_tls_cert: ""

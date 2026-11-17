@@ -37,7 +37,7 @@
     owner: root
     group: adm
     mode: "0755"
-  when: syslog_receive_udp | bool or syslog_receive_tls | bool
+  when: syslog_receive_udp | bool or syslog_receive_tcp | bool or syslog_receive_tls | bool
 
 - name: "Writing the receiving rules"
   ansible.builtin.template:
@@ -47,14 +47,14 @@
     group: root
     mode: "0644"
   notify: "Restarting syslog"
-  when: syslog_receive_udp | bool or syslog_receive_tls | bool
+  when: syslog_receive_udp | bool or syslog_receive_tcp | bool or syslog_receive_tls | bool
 
 - name: "Removing the receiving rules"
   ansible.builtin.file:
     path: "{{ syslog_receive_config_file }}"
     state: absent
   notify: "Restarting syslog"
-  when: not (syslog_receive_udp | bool or syslog_receive_tls | bool)
+  when: not (syslog_receive_udp | bool or syslog_receive_tcp | bool or syslog_receive_tls | bool)
 
 - name: "Ensuring the system logger is running and enabled"
   ansible.builtin.service:

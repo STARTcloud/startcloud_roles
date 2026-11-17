@@ -40,15 +40,24 @@
       failed_when: false
       check_mode: false
 
+    - name: "Reading the configured log transport"
+      ansible.builtin.raw: uci get system.@system[0].log_proto
+      register: openwrt_log_proto
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
     - name: "Pointing logd at the collector"
       ansible.builtin.raw: >-
         uci set system.@system[0].log_ip='{{ syslog_server }}'
         && uci set system.@system[0].log_port='{{ syslog_port | default(514) }}'
-        && uci set system.@system[0].log_proto='udp'
+        && uci set system.@system[0].log_proto='{{ syslog_protocol | default('udp') }}'
         && uci commit system
         && /etc/init.d/log restart
       changed_when: true
-      when: openwrt_log_ip.stdout | trim != syslog_server
+      when: >-
+        openwrt_log_ip.stdout | trim != syslog_server
+        or openwrt_log_proto.stdout | trim != syslog_protocol | default('udp')
 
     - name: "Reporting the log server"
       ansible.builtin.debug:
