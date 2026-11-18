@@ -1,0 +1,83 @@
+---
+- name: "Including OS-specific vars"
+  ansible.builtin.include_vars: "{{ ansible_os_family | lower }}.yml"
+
+- name: "Reading the boot environments before the upgrade"
+  ansible.builtin.command: beadm list -H
+  register: dependencies_boot_environments_before
+  changed_when: false
+  check_mode: false
+
+- name: "Recording whether a boot environment waits on a reboot"
+  ansible.builtin.set_fact:
+    dependencies_boot_environment_waiting: >-
+      {{ (dependencies_boot_environments_before.stdout_lines | map('split', ';') | selectattr('2', 'search', 'R') | map(attribute='0') | first)
+         != (dependencies_boot_environments_before.stdout_lines | map('split', ';') | selectattr('2', 'search', 'N') | map(attribute='0') | first) }}
+
+- name: "Reading the upgradable packages"
+  ansible.builtin.command: pkg update -r -nv
+  register: dependencies_upgradable
+  changed_when: false
+  failed_when: dependencies_upgradable.rc not in [0, 4]
+  check_mode: false
+  when: not (dependencies_boot_environment_waiting | bool)
+
+- name: "Upgrading all pkg packages"
+  ansible.builtin.command: pkg update -r
+  async: "{{ ansible_check_mode | ternary(0, 3600) }}"
+  poll: 15
+  changed_when: true
+  when:
+    - dependencies_upgrade | bool
+    - not (dependencies_boot_environment_waiting | bool)
+    - dependencies_upgradable.rc == 0
+
+- name: "Adding Additional packages"
+  community.general.pkg5:
+    name: "{{ packages }}"
+    state: present
+
+- name: "Adding Additional Dependencies"
+  community.general.pkg5:
+    name: "{{ extra_packages }}"
+    state: present
+
+- name: "Reading the boot environments"
+  ansible.builtin.command: beadm list -H
+  register: dependencies_boot_environments
+  changed_when: false
+  check_mode: false
+
+- name: "Recording the running and the next boot environment"
+  ansible.builtin.set_fact:
+    dependencies_boot_environment_running: >-
+      {{ dependencies_boot_environments.stdout_lines | map('split', ';') | selectattr('2', 'search', 'N') | map(attribute='0') | first }}
+    dependencies_boot_environment_next: >-
+      {{ dependencies_boot_environments.stdout_lines | map('split', ';') | selectattr('2', 'search', 'R') | map(attribute='0') | first }}
+
+- name: "Rebooting the node"
+  ansible.builtin.reboot:
+    reboot_timeout: "{{ dependencies_reboot_timeout }}"
+  register: dependencies_rebooted
+  when:
+    - dependencies_reboot | bool
+    - not (reboot_never | bool)
+    - inventory_hostname != lookup('env', 'MAINTENANCE_SELF')
+    - dependencies_boot_environment_next != dependencies_boot_environment_running
+
+- name: "Recording the reboot state for the summary"
+  ansible.builtin.set_fact:
+    dependencies_summary_rebooted: "{{ dependencies_rebooted.changed | default(false) }}"
+    dependencies_summary_reboot_required: "{{ (dependencies_boot_environment_next != dependencies_boot_environment_running) and not (dependencies_rebooted.changed | default(false)) }}"
+    dependencies_summary_pending: "{{ (dependencies_upgradable.rc | default(4) == 0) and not (dependencies_upgrade | bool) }}"
+
+- name: "Reporting the update state"
+  ansible.builtin.debug:
+    msg:
+      upgraded: "{{ dependencies_upgrade | bool }}"
+      upgradable_before: "{{ dependencies_upgradable.rc | default(4) == 0 }}"
+      boot_environment_waiting_before: "{{ dependencies_boot_environment_waiting | bool }}"
+      boot_environment_running: "{{ dependencies_boot_environment_running }}"
+      boot_environment_next: "{{ dependencies_boot_environment_next }}"
+      reboot_required: "{{ dependencies_summary_reboot_required }}"
+      rebooted: "{{ dependencies_summary_rebooted }}"
