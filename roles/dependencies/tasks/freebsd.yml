@@ -25,6 +25,7 @@
   loop: "{{ extra_repos }}"
   loop_control:
     label: "{{ item.name }}"
+  register: dependencies_repo_key_dirs
 
 - name: "Fetching the package repository public keys"
   ansible.builtin.get_url:
@@ -35,6 +36,7 @@
   loop: "{{ extra_repos }}"
   loop_control:
     label: "{{ item.name }}"
+  when: not (ansible_check_mode and dependencies_repo_key_dirs is changed)
 
 - name: "Writing the package repository configurations"
   ansible.builtin.template:

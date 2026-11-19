@@ -10,6 +10,8 @@ packages:
   - os-qemu-guest-agent
   - os-acme-client
 
+extra_packages: []
+
 extra_repos:
   - name: startcloud-public
     url: "https://opnsense.startcloud.com/public/opnsense/${ABI}"
