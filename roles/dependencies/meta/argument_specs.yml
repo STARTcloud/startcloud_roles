@@ -5,7 +5,10 @@ argument_specs:
     description:
       - Installs baseline packages, extra packages, and (on Debian) extra repositories needed by other roles. Dispatches to OS-specific tasks for Debian, RedHat, FreeBSD, OmniOS and Windows.
       - On an OPNsense firewall with an API key it checks for and applies the firewall's own updates through the firmware API and records whether a reboot waits.
-      - On an OpenWrt access point, whose inventory entry sets ansible_os_family to openwrt and whose play gathers no facts, it upgrades the firmware and packages with owut when owut reports it safe and waits for the access point to come back.
+      - >-
+        On an OpenWrt access point, whose inventory entry sets ansible_os_family to openwrt and whose play gathers no
+        facts, it upgrades the firmware and packages with owut when owut reports it safe and waits for the access point
+        to come back.
     author: Mark Gilbert
     options:
       run_tasks:

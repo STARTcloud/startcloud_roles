@@ -12,7 +12,6 @@
     lines:
       - >-
         logging host {{ syslog_server }}{{ '' if syslog_protocol == 'udp' and syslog_port | int == syslog_ios_default_port
-        else ' transport ' ~ syslog_ios_transport[syslog_protocol] }}{{ '' if syslog_port | int == syslog_ios_default_port
-        else ' port ' ~ syslog_port }}
+        else ' transport ' ~ syslog_ios_transport[syslog_protocol] ~ ' port ' ~ syslog_port }}
     save_when: modified
   when: syslog_forward | bool
