@@ -54,16 +54,18 @@ A group the site does not have is declared with no hosts, so every play finds it
 | --- | --- | --- |
 | `authorized-key` | `vms`, `hypervisors`, `pis` | Places the controller's public key on the login account |
 | `hosts-file` | `vms`, `hypervisors` | Writes the site hosts file |
-| `ntp` | `vms`, `pis`, `hypervisors`, `outside`, `firewalls` | Points every clock at its time servers |
-| `monitoring` | `collectors`, then `vms`, `pis`, `hypervisors`, `outside`, `firewalls` | Issues the collector's certificate, forwards logs to the collector, answers SNMP |
+| `ntp` | `vms`, `pis`, `hypervisors`, `outside`, `firewalls`, then `openwrt`, `switches` | Points every clock at its time servers |
+| `monitoring` | `collectors`, then `vms`, `pis`, `hypervisors`, `outside`, `firewalls`, then `openwrt`, `switches` | Issues the collector's certificate, forwards logs to the collector, answers SNMP |
 | `pam-ciba` | `pam_ciba` | Gates SSH logins on push approval |
 | `system-proxy` | `system_proxy` | Writes the system-wide and package-manager proxy settings |
 | `proxies` | `proxies` | Installs HAProxy with the site's template named by `haproxy_cfg`, keepalived with the site's VRRP values, and squid where `squid_proxy` is set |
-| `update` | `vms`, `pis`, then `windows`, then `hypervisors`, then `controllers` | Upgrades packages one node at a time, updates compose containers where `container_compose_update` is set, reboots where allowed, waits for a rebooted host's boot-time guests to run again, reports what still waits, fails on any node it never reached |
+| `update` | `vms`, `pis`, then `windows`, then `hypervisors`, then `controllers`, then `openwrt` | Upgrades packages one node at a time, updates compose containers where `container_compose_update` is set, reboots where allowed, waits for a rebooted host's boot-time guests to run again, reports what still waits, fails on any node it never reached, then upgrades the access points |
 | `maintenance` | the `update` groups and `controllers` | The maintenance window: a mail that it opens, the `update` plays with reboots allowed, the certificate renewal on the controller, a mail that it is done with the log attached, and the controller's own reboot last; a failing node mails the log and stops the run |
 | `certificates` | `controllers`, then `certificates` | Issues or adopts the controller's certificates by DNS-01, then pushes them to every target |
 | `opnsense` | `firewalls` | Applies the pending OPNsense updates through the firmware API, installs the baseline packages and the repositories in `opnsense_repos`, issues the web GUI certificate through the ACME client, reboots where allowed, places root's key and the web GUI sign-in through the OpenID Provider |
-| `openwrt` | `openwrt` | Points the clock at the gateway, points logs at the collector, upgrades firmware and packages |
+| `openwrt` | `openwrt` | Upgrades the access points' firmware and packages |
+
+The access points and the switches run no Python, so their plays gather no facts: each group sets `ansible_os_family` (`openwrt`, `ios`) and the fact names the roles dispatch on in the inventory, and the roles' `openwrt` and `ios` lanes read nothing from the device but what they set. The switches connect over `network_cli` with `ansible_network_os: cisco.ios.ios`.
 
 ## Updates
 

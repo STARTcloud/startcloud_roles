@@ -1,0 +1,54 @@
+---
+- name: "Ensuring the collector and a supported transport are present"
+  ansible.builtin.assert:
+    that:
+      - syslog_server | length > 0
+      - syslog_protocol in syslog_openwrt_transport
+    fail_msg: "The OpenWrt lane needs syslog_server and forwards over {{ syslog_openwrt_transport.keys() | join(' or ') }}"
+  when: syslog_forward | bool
+
+- name: "Reading the configured log server"
+  ansible.builtin.raw: "uci get {{ __syslog_uci_system }}.log_ip"
+  register: syslog_openwrt_ip
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: syslog_forward | bool
+
+- name: "Reading the configured log port"
+  ansible.builtin.raw: "uci get {{ __syslog_uci_system }}.log_port"
+  register: syslog_openwrt_port
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: syslog_forward | bool
+
+- name: "Reading the configured log transport"
+  ansible.builtin.raw: "uci get {{ __syslog_uci_system }}.log_proto"
+  register: syslog_openwrt_proto
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: syslog_forward | bool
+
+- name: "Recording whether the log forwarding changes"
+  ansible.builtin.set_fact:
+    syslog_openwrt_change: >-
+      {{ syslog_openwrt_ip.stdout | default('') | trim != syslog_server
+         or syslog_openwrt_port.stdout | default('') | trim != syslog_port | string
+         or syslog_openwrt_proto.stdout | default('') | trim != syslog_openwrt_transport[syslog_protocol] }}
+  changed_when: syslog_openwrt_change | bool
+  when: syslog_forward | bool
+
+- name: "Pointing logd at the collector"
+  ansible.builtin.raw: >-
+    uci set {{ __syslog_uci_system }}.log_ip='{{ syslog_server }}'
+    && uci set {{ __syslog_uci_system }}.log_port='{{ syslog_port }}'
+    && uci set {{ __syslog_uci_system }}.log_proto='{{ syslog_openwrt_transport[syslog_protocol] }}'
+    && uci commit system
+    && /etc/init.d/{{ __syslog_openwrt_daemon }} restart
+  changed_when: true
+  when:
+    - syslog_forward | bool
+    - syslog_openwrt_change | bool
+    - not ansible_check_mode

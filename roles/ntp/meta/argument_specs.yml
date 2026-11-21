@@ -7,6 +7,9 @@ argument_specs:
       - Renders the daemon configuration from the role's upstream server list and sets the system timezone.
       - On an OPNsense firewall it writes the time servers and the timezone into the firewall's configuration with a
         PHP tool, the firewall having no API for them, and restarts ntpd through the API.
+      - On an OpenWrt access point (inventory ansible_os_family openwrt, no facts gathered) it writes the time servers
+        with uci and restarts sysntpd; on a Cisco IOS switch (ansible_os_family ios, connection network_cli) it writes
+        the ntp server lines with cisco.ios.ios_config and saves the configuration.
     author: Mark Gilbert
     options:
       run_tasks:

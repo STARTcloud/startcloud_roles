@@ -1,0 +1,3 @@
+---
+__ntp_ios_command: ntp server
+ntp_cron_daemon: ""

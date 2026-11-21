@@ -1,0 +1,18 @@
+---
+- name: "Ensuring the collector and a supported transport are present"
+  ansible.builtin.assert:
+    that:
+      - syslog_server | length > 0
+      - syslog_protocol in syslog_ios_transport
+    fail_msg: "The IOS lane needs syslog_server and forwards over {{ syslog_ios_transport.keys() | join(' or ') }}"
+  when: syslog_forward | bool
+
+- name: "Pointing the switch's logging at the collector"
+  cisco.ios.ios_config:
+    lines:
+      - >-
+        logging host {{ syslog_server }}{{ '' if syslog_protocol == 'udp' and syslog_port | int == syslog_ios_default_port
+        else ' transport ' ~ syslog_ios_transport[syslog_protocol] }}{{ '' if syslog_port | int == syslog_ios_default_port
+        else ' port ' ~ syslog_port }}
+    save_when: modified
+  when: syslog_forward | bool

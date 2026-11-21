@@ -1,0 +1,12 @@
+---
+- name: "Ensuring the time servers are present"
+  ansible.builtin.assert:
+    that:
+      - ntp_servers | length > 0
+    fail_msg: "The IOS lane needs at least one entry in ntp_servers"
+
+- name: "Pointing the switch at its time servers"
+  cisco.ios.ios_config:
+    lines: "{{ ntp_servers | map('split') | map('first') | map('regex_replace', '^', __ntp_ios_command ~ ' ') | list }}"
+    save_when: modified
+  when: ntp_manage_config | bool

@@ -1,0 +1,31 @@
+---
+- name: "Ensuring the time servers are present"
+  ansible.builtin.assert:
+    that:
+      - ntp_servers | length > 0
+    fail_msg: "The OpenWrt lane needs at least one entry in ntp_servers"
+
+- name: "Reading the configured time servers"
+  ansible.builtin.raw: "uci get {{ __ntp_uci_server }}"
+  register: ntp_openwrt_servers
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "Recording whether the time servers change"
+  ansible.builtin.set_fact:
+    ntp_openwrt_change: >-
+      {{ (ntp_openwrt_servers.stdout | default('') | trim | split | sort)
+         != (ntp_servers | map('split') | map('first') | list | sort) }}
+  changed_when: ntp_openwrt_change | bool
+
+- name: "Pointing sysntpd at the time servers"
+  ansible.builtin.raw: >-
+    uci -q delete {{ __ntp_uci_server }};
+    {% for server in ntp_servers | map('split') | map('first') %}uci add_list {{ __ntp_uci_server }}='{{ server }}'; {% endfor %}
+    uci commit system && /etc/init.d/{{ __ntp_daemon }} restart
+  changed_when: true
+  when:
+    - ntp_manage_config | bool
+    - ntp_openwrt_change | bool
+    - not ansible_check_mode

@@ -1,0 +1,14 @@
+---
+- name: "Ensuring the community is present"
+  ansible.builtin.assert:
+    that:
+      - snmp_community | length > 0
+    fail_msg: "The IOS lane needs snmp_community"
+
+- name: "Writing the SNMP agent settings"
+  cisco.ios.ios_config:
+    lines:
+      - "snmp-server community {{ snmp_community }} {{ snmp_ios_access }}"
+      - "snmp-server location {{ snmp_location }}"
+      - "snmp-server contact {{ snmp_contact }}"
+    save_when: modified

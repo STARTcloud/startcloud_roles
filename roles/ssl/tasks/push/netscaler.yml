@@ -65,9 +65,9 @@
       {{ ssl_push_netscaler_chain | default([]) + [ {
            'file': item.split('|')[0],
            'serial': item.split('|')[1],
-           'subject_cn': item.split('|')[2] | regex_search('CN=([^,]+)', '\\1') | first,
-           'issuer_cn': item.split('|')[3] | regex_search('CN=([^,]+)', '\\1') | first,
-           'certkey': ssl_push_netscaler_chain_prefix + (item.split('|')[2] | regex_search('CN=([^,]+)', '\\1') | first | lower | regex_replace('[^a-z0-9]+', '-'))
+           'subject_cn': item.split('|')[2] | regex_search('CN=([^,]+)', '\1') | first,
+           'issuer_cn': item.split('|')[3] | regex_search('CN=([^,]+)', '\1') | first,
+           'certkey': ssl_push_netscaler_chain_prefix + (item.split('|')[2] | regex_search('CN=([^,]+)', '\1') | first | lower | regex_replace('[^a-z0-9]+', '-'))
          } ] }}
   loop: "{{ ssl_push_netscaler_chain_read.stdout_lines }}"
 

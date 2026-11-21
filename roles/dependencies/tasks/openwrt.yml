@@ -1,0 +1,82 @@
+---
+- name: "Including OS-specific vars"
+  ansible.builtin.include_vars: "{{ ansible_os_family | lower }}.yml"
+
+- name: "Checking for a firmware and package upgrade"
+  ansible.builtin.raw: owut check
+  register: dependencies_openwrt_check
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "Reading the running release"
+  ansible.builtin.raw: . /etc/openwrt_release && echo "$DISTRIB_RELEASE $DISTRIB_REVISION"
+  register: dependencies_openwrt_release_before
+  changed_when: false
+  check_mode: false
+
+- name: "Recording the upgrade that waits"
+  ansible.builtin.set_fact:
+    dependencies_openwrt_upgrade_pending: "{{ 'safe to proceed' in dependencies_openwrt_check.stdout | default('') }}"
+  changed_when:
+    - "'safe to proceed' in dependencies_openwrt_check.stdout | default('')"
+    - dependencies_upgrade | bool
+
+- name: "Upgrading the firmware and packages"
+  ansible.builtin.raw: owut upgrade
+  register: dependencies_openwrt_upgrade
+  changed_when: dependencies_openwrt_upgrade.rc == 0
+  failed_when:
+    - dependencies_openwrt_upgrade.rc != 0
+    - "'Connection to' not in dependencies_openwrt_upgrade.stderr | default('')"
+  ignore_unreachable: true
+  when:
+    - dependencies_upgrade | bool
+    - dependencies_openwrt_upgrade_pending | bool
+    - not ansible_check_mode
+
+- name: "Waiting for the access point to go down"
+  ansible.builtin.wait_for:
+    host: "{{ ansible_host }}"
+    port: "{{ ansible_port }}"
+    state: stopped
+    timeout: "{{ dependencies_openwrt_down_timeout }}"
+  delegate_to: localhost
+  when:
+    - dependencies_upgrade | bool
+    - dependencies_openwrt_upgrade_pending | bool
+    - not ansible_check_mode
+
+- name: "Waiting for the access point to come back"
+  ansible.builtin.wait_for:
+    host: "{{ ansible_host }}"
+    port: "{{ ansible_port }}"
+    delay: "{{ dependencies_openwrt_up_delay }}"
+    timeout: "{{ dependencies_openwrt_up_timeout }}"
+  delegate_to: localhost
+  when:
+    - dependencies_upgrade | bool
+    - dependencies_openwrt_upgrade_pending | bool
+    - not ansible_check_mode
+
+- name: "Reading the running release after the upgrade"
+  ansible.builtin.raw: . /etc/openwrt_release && echo "$DISTRIB_RELEASE $DISTRIB_REVISION"
+  register: dependencies_openwrt_release
+  changed_when: false
+  check_mode: false
+
+- name: "Verifying the release changed"
+  ansible.builtin.assert:
+    that:
+      - dependencies_openwrt_release.stdout | trim != dependencies_openwrt_release_before.stdout | trim
+    fail_msg: "{{ inventory_hostname }} still runs {{ dependencies_openwrt_release.stdout | trim }} after the upgrade"
+  when:
+    - dependencies_upgrade | bool
+    - dependencies_openwrt_upgrade_pending | bool
+    - not ansible_check_mode
+
+- name: "Recording the update state"
+  ansible.builtin.set_fact:
+    dependencies_openwrt_version: "{{ dependencies_openwrt_release.stdout | trim }}"
+    dependencies_reboot_required: false
+    dependencies_updates_pending: "{{ (dependencies_openwrt_upgrade_pending | bool) and not (dependencies_upgrade | bool) }}"

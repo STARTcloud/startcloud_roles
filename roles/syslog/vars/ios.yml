@@ -1,0 +1,5 @@
+---
+syslog_ios_transport:
+  udp: udp
+  tcp: tcp
+syslog_ios_default_port: 514

@@ -1,0 +1,4 @@
+---
+__ntp_uci_server: system.ntp.server
+__ntp_daemon: sysntpd
+ntp_cron_daemon: cron

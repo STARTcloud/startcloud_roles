@@ -1,0 +1,6 @@
+---
+syslog_openwrt_transport:
+  udp: udp
+  tcp: tcp
+__syslog_uci_system: system.@system[0]
+__syslog_openwrt_daemon: log
