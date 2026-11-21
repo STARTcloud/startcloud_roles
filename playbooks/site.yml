@@ -106,7 +106,7 @@
           Package updates, container images, Windows updates and the certificate renewal run now, one node at a time,
           with a reboot where a node asks for one. The first failure stops the window and mails the log.
 
-- name: Update every virtual machine and Raspberry Pi
+- name: Update every node
   hosts: vms:pis:!controllers
   serial: 1
   any_errors_fatal: true
@@ -197,7 +197,7 @@
           ansible.builtin.fail:
             msg: "The update of {{ inventory_hostname }} failed"
 
-- name: Update every hypervisor
+- name: Update every host
   hosts: hypervisors:!controllers
   serial: 1
   any_errors_fatal: true
@@ -286,7 +286,7 @@
           ansible.builtin.fail:
             msg: "The update of {{ inventory_hostname }} failed"
 
-- name: Update every controller
+- name: Update the controller last
   hosts: controllers
   serial: 1
   any_errors_fatal: true
@@ -377,12 +377,9 @@
   tags: [certificates]
   roles:
     - role: startcloud.startcloud_roles.ssl
-      ssl_push_files: false
+      ssl_push: false
       ssl_push_fortigate: false
-      ssl_push_galera: false
       ssl_push_netscaler: false
-      ssl_push_uds: false
-      ssl_push_vdi_health: false
 
 - name: Push the certificates to every target
   hosts: certificates

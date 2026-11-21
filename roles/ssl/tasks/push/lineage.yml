@@ -1,0 +1,110 @@
+---
+- name: "Reading the lineage certificate"
+  community.crypto.x509_certificate_info:
+    path: "{{ ssl_push_lineage }}/cert.pem"
+  delegate_to: localhost
+  become: false
+  register: ssl_push_lineage_cert
+
+- name: "Reading the certificate the node serves now"
+  community.crypto.get_certificate:
+    host: "{{ ssl_push_verify_host }}"
+    port: "{{ ssl_push_verify_port }}"
+    server_name: "{{ ssl_push_verify_servername }}"
+    starttls: "{{ ssl_push_verify_starttls | default(omit, true) }}"
+  delegate_to: localhost
+  become: false
+  register: ssl_push_served_before
+  failed_when: false
+  when: ssl_push_verify_port | int > 0
+
+- name: "Recording whether the node serves the lineage"
+  ansible.builtin.set_fact:
+    ssl_push_serving: >-
+      {{ ssl_push_verify_port | int > 0
+         and ssl_push_served_before.cert is defined
+         and (ssl_push_served_before.cert | community.crypto.x509_certificate_info).fingerprints.sha256 == ssl_push_lineage_cert.fingerprints.sha256 }}
+
+- name: "Creating the certificate directories"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ cert_dir }}"
+    - "{{ cert_dir }}/crt"
+    - "{{ cert_dir }}/key"
+    - "{{ cert_dir }}/ca"
+    - "{{ cert_dir }}/combined"
+    - "{{ cert_dir }}/renewal-hooks.d"
+
+- name: "Installing the lineage files"
+  ansible.builtin.copy:
+    src: "{{ ssl_push_lineage }}/{{ item.source }}"
+    dest: "{{ cert_dir }}/{{ item.dest }}"
+    owner: "{{ ssl_push_owner }}"
+    group: "{{ ssl_push_group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - { source: fullchain.pem, dest: "crt/{{ ssl_push_name }}.crt", mode: "0644" }
+    - { source: chain.pem, dest: "ca/{{ ssl_push_name }}.ca", mode: "0644" }
+    - { source: privkey.pem, dest: "key/{{ ssl_push_name }}.key", mode: "0600" }
+  loop_control:
+    label: "{{ item.dest }}"
+  register: ssl_push_files
+
+- name: "Assembling the combined certificate"
+  ansible.builtin.copy:
+    content: "{{ lookup('ansible.builtin.file', ssl_push_lineage ~ '/fullchain.pem') }}\n{{ lookup('ansible.builtin.file', ssl_push_lineage ~ '/privkey.pem') }}\n"
+    dest: "{{ cert_dir }}/combined/{{ ssl_push_name }}.pem"
+    owner: "{{ ssl_push_owner }}"
+    group: "{{ ssl_push_group }}"
+    mode: "0600"
+  register: ssl_push_combined
+
+- name: "Installing the renewal hooks the node runs after a republish"
+  ansible.builtin.template:
+    src: ssl_renewal_hook.sh.j2
+    dest: "{{ cert_dir }}/renewal-hooks.d/{{ ssl_renewal_hook.name }}.sh"
+    owner: root
+    group: root
+    mode: "0750"
+  loop: "{{ ssl_renewal_hooks }}"
+  loop_control:
+    loop_var: ssl_renewal_hook
+    label: "{{ ssl_renewal_hook.name }}"
+
+- name: "Reading the renewal hooks"
+  ansible.builtin.find:
+    paths: "{{ cert_dir }}/renewal-hooks.d"
+    patterns: "*.sh"
+  register: ssl_push_hooks
+
+- name: "Running the renewal hooks"
+  ansible.builtin.command: "{{ item.path }}"
+  loop: "{{ ssl_push_hooks.files | sort(attribute='path') }}"
+  loop_control:
+    label: "{{ item.path }}"
+  changed_when: true
+  when: ssl_push_files.changed or ssl_push_combined.changed or not (ssl_push_serving | bool)
+
+- name: "Reading the certificate the node serves"
+  community.crypto.get_certificate:
+    host: "{{ ssl_push_verify_host }}"
+    port: "{{ ssl_push_verify_port }}"
+    server_name: "{{ ssl_push_verify_servername }}"
+    starttls: "{{ ssl_push_verify_starttls | default(omit, true) }}"
+  delegate_to: localhost
+  become: false
+  register: ssl_push_served
+  until: ssl_push_served.cert is defined
+  retries: 10
+  delay: 3
+  when: ssl_push_verify_port | int > 0
+
+- name: "Verifying the served certificate matches the lineage"
+  ansible.builtin.assert:
+    that:
+      - (ssl_push_served.cert | community.crypto.x509_certificate_info).fingerprints.sha256 == ssl_push_lineage_cert.fingerprints.sha256
+    fail_msg: "{{ ssl_push_verify_host }}:{{ ssl_push_verify_port }} serves a certificate other than {{ ssl_push_lineage }}/cert.pem"
+  when: ssl_push_verify_port | int > 0

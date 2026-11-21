@@ -59,7 +59,7 @@ A group the site does not have is declared with no hosts, so every play finds it
 | `pam-ciba` | `pam_ciba` | Gates SSH logins on push approval |
 | `system-proxy` | `system_proxy` | Writes the system-wide and package-manager proxy settings |
 | `proxies` | `proxies` | Installs HAProxy with the site's template named by `haproxy_cfg`, keepalived with the site's VRRP values, and squid where `squid_proxy` is set |
-| `update` | `vms`, `pis`, `hypervisors`, `windows`, `controllers` | Upgrades packages one node at a time, updates compose containers where `container_compose_update` is set, reboots where allowed, reports what still waits |
+| `update` | `vms`, `pis`, then `hypervisors`, then `windows`, then `controllers` | Upgrades packages one node at a time, updates compose containers where `container_compose_update` is set, reboots where allowed, reports what still waits |
 | `maintenance` | the `update` groups and `controllers` | The maintenance window: a mail that it opens, the `update` plays with reboots allowed, the certificate renewal on the controller, a mail that it is done with the log attached, and the controller's own reboot last; a failing node mails the log and stops the run |
 | `certificates` | `controllers`, then `certificates` | Issues or adopts the controller's certificates by DNS-01, then pushes them to every target |
 | `opnsense` | `firewalls` | Applies pending OPNsense package updates, installs the baseline packages and the repositories in `opnsense_repos`, issues and renews the web GUI certificate |
@@ -112,7 +112,16 @@ ssl_renewal_hooks:
   - { name: certificates, command: "cd /home/startcloud/startcloud_roles/playbooks && ansible-playbook -i inventory/s2.yml site.yml --tags certificates" }
 ```
 
-Each host of the `certificates` group names the lineage it receives in `ssl_push_lineage` and the push it takes: `ssl_push_files` writes the chain, key and combined pem into the host's `cert_dir` and runs its own `ssl_renewal_hooks`; `ssl_push_uds`, `ssl_push_galera`, `ssl_push_vdi_health`, `ssl_push_netscaler` and `ssl_push_fortigate` install it the way that service takes a certificate. A host that takes the push over an API, such as a NetScaler, carries `ansible_connection: local`.
+Each host of the `certificates` group names the lineage it receives in `ssl_push_lineage`. With `ssl_push` the role writes the chain, the CA chain, the key and the combined pem into the host's `cert_dir`, owned by `ssl_push_owner`, then runs the host's `ssl_renewal_hooks` when a file changed or the host does not serve the lineage on `ssl_push_verify_port`, and compares the served certificate to the lineage afterwards; what a hook does is the host's business, a service reload, an appliance's own certificate command, a database's `FLUSH SSL`:
+
+```yaml
+ssl_push: true
+ssl_push_verify_port: 443
+ssl_renewal_hooks:
+  - { name: haproxy, command: systemctl reload haproxy }
+```
+
+A port that negotiates TLS inside its protocol names it in `ssl_push_verify_starttls`, such as `mysql`. A host that takes the push over an API carries `ansible_connection: local` and `ssl_push_netscaler` or `ssl_push_fortigate` instead.
 
 ## Logs and SNMP
 

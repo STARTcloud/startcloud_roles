@@ -5,7 +5,7 @@ galaxy_info:
   description: >-
     Provisions TLS material — imports an existing cert, generates a self-signed CA/cert, or obtains Let's Encrypt
     certs — builds PFX/PEM/JKS bundles on Debian/Ubuntu, FreeBSD appliances and Windows, and pushes a certbot
-    lineage to FortiGate, NetScaler, Galera, UDS and VDI Health targets.
+    lineage to any node's certificate directory with its renewal hooks, and to FortiGate and NetScaler over their APIs.
   company: STARTcloud
   issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
   license: GPL-2.0-or-later
