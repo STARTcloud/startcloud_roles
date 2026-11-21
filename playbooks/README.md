@@ -59,7 +59,7 @@ A group the site does not have is declared with no hosts, so every play finds it
 | `pam-ciba` | `pam_ciba` | Gates SSH logins on push approval |
 | `system-proxy` | `system_proxy` | Writes the system-wide and package-manager proxy settings |
 | `proxies` | `proxies` | Installs HAProxy with the site's template named by `haproxy_cfg`, keepalived with the site's VRRP values, and squid where `squid_proxy` is set |
-| `update` | `vms`, `pis`, then `hypervisors`, then `windows`, then `controllers` | Upgrades packages one node at a time, updates compose containers where `container_compose_update` is set, reboots where allowed, reports what still waits |
+| `update` | `vms`, `pis`, then `windows`, then `hypervisors`, then `controllers` | Upgrades packages one node at a time, updates compose containers where `container_compose_update` is set, reboots where allowed, waits for a rebooted host's boot-time guests to run again, reports what still waits, fails on any node it never reached |
 | `maintenance` | the `update` groups and `controllers` | The maintenance window: a mail that it opens, the `update` plays with reboots allowed, the certificate renewal on the controller, a mail that it is done with the log attached, and the controller's own reboot last; a failing node mails the log and stops the run |
 | `certificates` | `controllers`, then `certificates` | Issues or adopts the controller's certificates by DNS-01, then pushes them to every target |
 | `opnsense` | `firewalls` | Applies pending OPNsense package updates, installs the baseline packages and the repositories in `opnsense_repos`, issues and renews the web GUI certificate |
@@ -77,7 +77,7 @@ A node that carries `galera_node: true` is upgraded only while it reads `Synced`
 
 A node that carries `dependencies_install_packages: false` is upgraded and never given a package it does not have; one that carries `dependencies_upgrade: false` only reports what is upgradable. A node that carries `update_extra_repos` passes that list to the role as its whole repository list, in place of the one the role's vars file holds.
 
-The last play of an update run lists the nodes still waiting for a reboot or an update.
+A Proxmox host that rebooted is not done until every guest it starts on boot reports running again. The last play of an update run lists the nodes still waiting for a reboot or an update, and fails the run, with the window's mail, on any node it never reached.
 
 OPNsense base and kernel updates stay off unless asked for:
 
