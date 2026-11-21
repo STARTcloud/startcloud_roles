@@ -277,7 +277,7 @@ argument_specs:
         type: bool
         default: false
         description: >-
-          Push the lineage to a FortiGate over its REST API from the controller: imports it under a dated name, imports
+          Push the lineage to a FortiGate over its REST API at the host's ansible_host from the controller: imports it under a dated name, imports
           the chain as a global CA, points admin-server-cert, the VDOM auth-cert and the SSL VPN servercert at it, rebuilds
           the served chain when it is incomplete and deletes other certificates sharing the prefix.
       ssl_push_fortigate_admin_port:
@@ -318,7 +318,7 @@ argument_specs:
         type: bool
         default: false
         description: >-
-          Push the lineage to a NetScaler over the Nitro API from the controller: ensures each chain certificate exists
+          Push the lineage to a NetScaler over the Nitro API at the host's ansible_host from the controller: ensures each chain certificate exists
           as a certkey linked to its issuer, and, when the Gateway serves a certificate other than the lineage's,
           uploads leaf and key, updates the bound certkey in place and relinks it to the signing intermediate; saves
           the configuration when anything changed and verifies the TLS, DTLS and management handshakes.

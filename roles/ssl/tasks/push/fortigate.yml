@@ -1,7 +1,7 @@
 ---
 - name: "Setting FortiGate API base URL and headers"
   ansible.builtin.set_fact:
-    ssl_push_fortigate_url: "https://{{ inventory_hostname }}:{{ ssl_push_fortigate_admin_port }}"
+    ssl_push_fortigate_url: "https://{{ ansible_host | default(inventory_hostname) }}:{{ ssl_push_fortigate_admin_port }}"
     ssl_push_fortigate_headers:
       Authorization: "Bearer {{ ssl_push_fortigate_api_token }}"
 

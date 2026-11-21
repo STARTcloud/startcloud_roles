@@ -1,7 +1,7 @@
 ---
 - name: "Setting Nitro API base URL and headers"
   ansible.builtin.set_fact:
-    ssl_push_netscaler_url: "https://{{ inventory_hostname }}/nitro/v1/config"
+    ssl_push_netscaler_url: "https://{{ ansible_host | default(inventory_hostname) }}/nitro/v1/config"
     ssl_push_netscaler_headers:
       X-NITRO-USER: "{{ ssl_push_netscaler_username }}"
       X-NITRO-PASS: "{{ ssl_push_netscaler_password }}"
