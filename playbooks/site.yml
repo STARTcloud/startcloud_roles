@@ -352,6 +352,7 @@
         update_summary_unreached: >-
           {{ (groups['vms'] | default([]) + groups['pis'] | default([]) + groups['hypervisors'] | default([]) + groups['windows'] | default([]))
              | unique | reject('in', groups['controllers'] | default([]))
+             | select('in', lookup('ansible.builtin.inventory_hostnames', ansible_limit | default('all')))
              | reject('in', hostvars | dict2items | selectattr('value.dependencies_reboot_required', 'defined') | map(attribute='key') | list)
              | list }}
 
