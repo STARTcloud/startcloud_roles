@@ -1,6 +1,6 @@
 # Playbooks
 
-`site.yml` applies the roles of this collection to the groups of one inventory. Every play carries the tag of its job, so one tag runs one job, several tags run several, and no tag runs the whole file in order. Runs use this checkout, found on a collections path as `ansible_collections/startcloud/startcloud_roles`, so a role change is live in the next run; the collections the roles call come from the Debian `ansible` package.
+`site.yml` applies the roles of this collection to the groups of one inventory. Every play carries the tag of its job, so one tag runs one job, several tags run several, and no tag runs the whole file in order. Runs use this checkout, cloned as `<folder>/ansible_collections/startcloud/startcloud_roles` and run from its `playbooks/` directory, whose `ansible.cfg` names that folder as the collections path, so a role change is live in the next run; the collections the roles call come from the Debian `ansible` package.
 
 ## Before a run
 
@@ -109,7 +109,7 @@ The first domain names the lineage. A Cloudflare provider reads `secrets.cloudfl
 
 ```yaml
 ssl_renewal_hooks:
-  - { name: certificates, command: "cd /home/startcloud/startcloud_roles/playbooks && ansible-playbook -i inventory/s2.yml site.yml --tags certificates" }
+  - { name: certificates, command: "cd {{ playbook_dir }} && ansible-playbook -i {{ inventory_file }} site.yml --tags certificates" }
 ```
 
 Each host of the `certificates` group names the lineage it receives in `ssl_push_lineage`. With `ssl_push` the role writes the chain, the CA chain, the key and the combined pem into the host's `cert_dir`, owned by `ssl_push_owner`, then runs the host's `ssl_renewal_hooks` when a file changed or the host does not serve the lineage on `ssl_push_verify_port`, and compares the served certificate to the lineage afterwards; what a hook does is the host's business, a service reload, an appliance's own certificate command, a database's `FLUSH SSL`:
