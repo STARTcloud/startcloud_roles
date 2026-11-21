@@ -11,10 +11,3 @@ packages:
   - os-acme-client
 
 extra_packages: []
-
-extra_repos:
-  - name: startcloud-public
-    url: "https://opnsense.startcloud.com/public/opnsense/${ABI}"
-    pubkey_url: https://opnsense.startcloud.com/pubkey.pem
-    pubkey_path: /usr/local/etc/ssl/pkg-repo/opnsense.pub
-    priority: 100

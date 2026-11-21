@@ -68,7 +68,6 @@
     url: "{{ item.item.gpg_key_url }}"
     dest: "/tmp/{{ item.item.name }}-key.asc"
     mode: "0644"
-  environment: "{{ dependencies_download_environment }}"
   loop: "{{ dependencies_keyring_stats.results | default([]) }}"
   loop_control:
     label: "{{ item.item.name | default('skipped') }}"
@@ -110,7 +109,6 @@
     url: "{{ item.gpg_key_url }}"
     dest: "{{ item.gpg_keyring_path }}"
     mode: "0644"
-  environment: "{{ dependencies_download_environment }}"
   loop: "{{ extra_repos | default([]) }}"
   when:
     - extra_repos | default([]) | length > 0
@@ -209,15 +207,6 @@
   changed_when: false
   check_mode: false
 
-- name: "Reading the Galera state before the upgrade"
-  ansible.builtin.command: mysql -uroot -N -s -e "SHOW STATUS WHERE Variable_name IN ('wsrep_local_state_comment','wsrep_cluster_status')"
-  register: dependencies_galera_before
-  changed_when: false
-  failed_when: dependencies_galera_before.stdout is not search('Synced') or dependencies_galera_before.stdout is not search('status\\s+Primary')
-  when:
-    - dependencies_galera | bool
-    - dependencies_upgrade | bool
-
 - name: "Upgrading all apt packages"
   ansible.builtin.apt:
     upgrade: dist
@@ -225,26 +214,17 @@
     autoremove: "{{ dependencies_autoremove }}"
   when: dependencies_upgrade | bool
 
-- name: "Waiting for the Galera node to report Synced and Primary"
-  ansible.builtin.command: mysql -uroot -N -s -e "SHOW STATUS WHERE Variable_name IN ('wsrep_local_state_comment','wsrep_cluster_status')"
-  register: dependencies_galera_after
-  until: dependencies_galera_after.stdout is search('Synced') and dependencies_galera_after.stdout is search('status\\s+Primary')
-  retries: "{{ dependencies_galera_sync_retries }}"
-  delay: 1
-  changed_when: false
-  when:
-    - dependencies_galera | bool
-    - dependencies_upgrade | bool
-
 - name: "Adding Additional packages"
   ansible.builtin.apt:
     name: "{{ packages }}"
     state: present
+  when: dependencies_install_packages | bool
 
 - name: "Adding Additional Dependencies"
   ansible.builtin.apt:
     name: "{{ extra_packages }}"
     state: present
+  when: dependencies_install_packages | bool
 
 - name: "Loading Xen PV drivers in kernel"
   community.general.modprobe:
@@ -290,37 +270,7 @@
       {{ (dependencies_kernels.files | sort(attribute='mtime') | map(attribute='path') | map('basename')
           | map('regex_replace', '^vmlinuz-', '') | list | last) | default(ansible_kernel, true) }}
 
-- name: "Rebooting the node"
-  ansible.builtin.reboot:
-    reboot_timeout: "{{ dependencies_reboot_timeout }}"
-  register: dependencies_rebooted
-  when:
-    - dependencies_reboot | bool
-    - not (reboot_never | bool)
-    - inventory_hostname != lookup('env', 'MAINTENANCE_SELF')
-    - dependencies_reboot_flag.stat.exists or dependencies_newest_kernel != ansible_kernel
-
-- name: "Waiting for the Galera node to report Synced and Primary after the reboot"
-  ansible.builtin.command: mysql -uroot -N -s -e "SHOW STATUS WHERE Variable_name IN ('wsrep_local_state_comment','wsrep_cluster_status')"
-  register: dependencies_galera_rebooted
-  until: dependencies_galera_rebooted.stdout is search('Synced') and dependencies_galera_rebooted.stdout is search('status\\s+Primary')
-  retries: "{{ dependencies_galera_sync_retries }}"
-  delay: 1
-  changed_when: false
-  when:
-    - dependencies_galera | bool
-    - dependencies_rebooted.changed | default(false)
-
-- name: "Recording the reboot state for the summary"
+- name: "Recording the update state"
   ansible.builtin.set_fact:
-    dependencies_summary_rebooted: "{{ dependencies_rebooted.changed | default(false) }}"
-    dependencies_summary_reboot_required: "{{ (dependencies_reboot_flag.stat.exists or dependencies_newest_kernel != ansible_kernel) and not (dependencies_rebooted.changed | default(false)) }}"
-    dependencies_summary_pending: "{{ (dependencies_upgradable.stdout_lines | length > 1) and not (dependencies_upgrade | bool) }}"
-
-- name: "Reporting the update state"
-  ansible.builtin.debug:
-    msg:
-      upgraded: "{{ dependencies_upgrade | bool }}"
-      upgradable_before: "{{ dependencies_upgradable.stdout_lines[1:] }}"
-      reboot_required: "{{ dependencies_summary_reboot_required }}"
-      rebooted: "{{ dependencies_summary_rebooted }}"
+    dependencies_reboot_required: "{{ dependencies_reboot_flag.stat.exists or dependencies_newest_kernel != ansible_kernel }}"
+    dependencies_updates_pending: "{{ (dependencies_upgradable.stdout_lines | length > 1) and not (dependencies_upgrade | bool) }}"

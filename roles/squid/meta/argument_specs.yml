@@ -21,3 +21,13 @@ argument_specs:
         type: int
         default: 3128
         description: TCP port Squid listens on; rendered into the http_port directive of squid.conf.
+      squid_localnet_extra:
+        type: list
+        elements: str
+        default: []
+        description: Networks added to the localnet ACL beside the private ranges, each as an address or a prefix.
+      squid_ssl_ports_extra:
+        type: list
+        elements: int
+        default: []
+        description: Ports added to the SSL_ports ACL beside 443, so CONNECT to them is allowed.

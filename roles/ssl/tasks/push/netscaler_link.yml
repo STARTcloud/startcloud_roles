@@ -22,6 +22,7 @@
     body:
       sslcertkey:
         certkey: "{{ ssl_push_netscaler_link_certkey }}"
+  register: ssl_push_netscaler_link_unlinked
   when: ssl_push_netscaler_link_existing != '' and ssl_push_netscaler_link_existing != ssl_push_netscaler_link_target
   changed_when: true
 
@@ -37,5 +38,13 @@
       sslcertkey:
         certkey: "{{ ssl_push_netscaler_link_certkey }}"
         linkcertkeyname: "{{ ssl_push_netscaler_link_target }}"
+  register: ssl_push_netscaler_link_linked
   when: ssl_push_netscaler_link_existing != ssl_push_netscaler_link_target
   changed_when: true
+
+- name: "Recording whether the chain links changed"
+  ansible.builtin.set_fact:
+    ssl_push_netscaler_config_changed: >-
+      {{ (ssl_push_netscaler_config_changed | default(false) | bool)
+         or (ssl_push_netscaler_link_unlinked is changed)
+         or (ssl_push_netscaler_link_linked is changed) }}

@@ -9,6 +9,12 @@ proxy_systemwide: true
 proxy_systemwide_proxy: squid
 proxy_package_manager: true
 proxy_package_manager_proxy: dante
+proxy_no_proxy:
+  - localhost
+  - 127.0.0.1
+  - localaddress
+  - .localdomain.com
+proxy_systemd: false
 proxy:
   - dante:
       user: dante

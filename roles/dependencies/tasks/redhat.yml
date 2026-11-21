@@ -42,3 +42,4 @@
   ansible.builtin.dnf:
     name: "{{ packages }}"
     state: present
+  when: dependencies_install_packages | bool

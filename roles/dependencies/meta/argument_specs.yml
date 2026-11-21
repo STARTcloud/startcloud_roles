@@ -40,9 +40,29 @@ argument_specs:
       proxy_port:
         type: int
         description: Port of the HTTP proxy when use_proxy is true.
-      dependencies_download_environment:
-        type: dict
-        description: Environment of the key downloads; carries http_proxy and https_proxy from proxy_server and proxy_port when use_proxy is true, empty otherwise.
+      dependencies_install_packages:
+        type: bool
+        default: true
+        description: Install the OS baseline packages and extra_packages; off leaves the node's package set as it is and only refreshes and upgrades.
+      dependencies_windows_update:
+        type: bool
+        default: false
+        description: >-
+          On Windows, run the update path instead of the image-bake path, which searches the update categories,
+          installs them where dependencies_upgrade is true, and reports.
+      dependencies_windows_categories:
+        type: list
+        elements: str
+        default: [SecurityUpdates, CriticalUpdates, UpdateRollups, Updates, DefinitionUpdates]
+        description: Windows Update categories the update path searches and installs.
+      dependencies_windows_reboot:
+        type: bool
+        default: false
+        description: Let the Windows update path reboot the node as many times as its updates need; off leaves the reboot to the caller.
+      dependencies_windows_reboot_timeout:
+        type: int
+        default: 1200
+        description: Seconds the Windows update path waits for the node to come back from each reboot.
       dependencies_mirror:
         type: str
         default: ""
@@ -88,41 +108,11 @@ argument_specs:
       dependencies_upgrade:
         type: bool
         default: true
-        description: Run the dist-upgrade; off keeps the node at its current packages and only reports what is upgradable.
+        description: >-
+          Run the dist-upgrade; off keeps the node at its current packages and only reports what is upgradable. The
+          role sets the facts dependencies_reboot_required and dependencies_updates_pending for the caller, and
+          dependencies_rebooted on Windows.
       dependencies_autoremove:
         type: bool
         default: true
         description: Remove packages no longer needed after the upgrade.
-      dependencies_galera:
-        type: bool
-        default: false
-        description: >-
-          The node is a Galera member; the upgrade runs only when the node is Synced in a Primary cluster
-          and the run waits for the node to be Synced and Primary again before the next node.
-      dependencies_galera_sync_retries:
-        type: int
-        default: 120
-        description: Seconds to wait after the upgrade for the Galera node to report Synced and Primary.
-      reboots_allowed:
-        type: bool
-        default: false
-        description: >-
-          The one run switch every update role reads; true lets a node that asks for a reboot take it,
-          given on the command line with -e reboots_allowed=true or by the maintenance window.
-      reboot_never:
-        type: bool
-        default: false
-        description: >-
-          Set on a node in the inventory to keep it out of reboots in every run and every role; the
-          summary still names it when it asks for one.
-      dependencies_reboot:
-        type: bool
-        default: "{{ reboots_allowed }}"
-        description: >-
-          After the upgrade, reboot the node when /var/run/reboot-required exists or the newest installed
-          kernel is not the running one; takes reboots_allowed, and the node named by the MAINTENANCE_SELF
-          environment variable or carrying reboot_never is never rebooted here.
-      dependencies_reboot_timeout:
-        type: int
-        default: 600
-        description: Seconds to wait for a rebooted node to come back.

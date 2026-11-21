@@ -64,6 +64,8 @@ ssl_auto_renew: true
 ssl_renewal_hooks: []
 certbot_cloudflare_credentials: /etc/letsencrypt/cloudflare.ini
 certbot_cloudflare_propagation_seconds: 30
+certbot_rfc2136_credentials: /etc/letsencrypt/rfc2136.ini
+certbot_rfc2136_propagation_seconds: 30
 
 # Variables for Role Certbot certs.
 certbot_create_if_missing: false
@@ -89,6 +91,10 @@ ssl_acme_account_key: "{{ vault_ssl_acme_account_key | default('CHANGEME') }}"
 ssl_acme_server: letsencrypt-production-2
 
 ssl_push_lineage: ""
+ssl_push_files: false
+ssl_push_files_name: "{{ ssl_push_lineage | basename }}"
+ssl_push_files_owner: root
+ssl_push_files_group: root
 ssl_push_fortigate: false
 ssl_push_fortigate_admin_port: 18443
 ssl_push_fortigate_validate_certs: true

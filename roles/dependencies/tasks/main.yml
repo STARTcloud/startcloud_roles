@@ -2,5 +2,12 @@
 - name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
+    - name: "Including the Windows update tasks"
+      ansible.builtin.include_tasks: windows_update.yml
+      when:
+        - ansible_os_family == 'Windows'
+        - dependencies_windows_update | bool
+
     - name: "Including OS-specific tasks"
       ansible.builtin.include_tasks: "{{ ansible_os_family | lower }}.yml"
+      when: not (ansible_os_family == 'Windows' and dependencies_windows_update | bool)

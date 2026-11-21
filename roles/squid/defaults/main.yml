@@ -4,3 +4,5 @@ squid_packages:
   - squid
 ## TCP port squid listens on; rendered into http_port in squid.conf.
 proxy_port: 3128
+squid_localnet_extra: []
+squid_ssl_ports_extra: []

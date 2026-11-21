@@ -1,0 +1,22 @@
+---
+- name: "Searching for the available updates"
+  ansible.windows.win_updates:
+    category_names: "{{ dependencies_windows_categories }}"
+    state: searched
+  register: dependencies_windows_available
+
+- name: "Installing every available update"
+  ansible.windows.win_updates:
+    category_names: "{{ dependencies_windows_categories }}"
+    state: installed
+    reboot: "{{ dependencies_windows_reboot | bool }}"
+    reboot_timeout: "{{ dependencies_windows_reboot_timeout }}"
+  register: dependencies_windows_installed
+  when: dependencies_upgrade | bool
+
+- name: "Recording the update state"
+  ansible.builtin.set_fact:
+    dependencies_windows_updates: "{{ dependencies_windows_available.updates.values() | map(attribute='title') | list }}"
+    dependencies_rebooted: "{{ dependencies_windows_installed.rebooted | default(false) }}"
+    dependencies_reboot_required: "{{ dependencies_windows_installed.reboot_required | default(dependencies_windows_available.reboot_required) }}"
+    dependencies_updates_pending: "{{ (dependencies_windows_available.updates | length > 0) and not (dependencies_upgrade | bool) }}"

@@ -759,6 +759,37 @@
             group: root
             mode: "0600"
 
+    - name: "Configuring the rfc2136 DNS-01 provider"
+      when: "'rfc2136' in (ssl_dns01_certs | map(attribute='provider', default='acmedns') | list)"
+      block:
+        - name: "Ensuring the rfc2136 credentials are present"
+          ansible.builtin.assert:
+            that:
+              - secrets.rfc2136_server is defined
+              - secrets.rfc2136_name is defined
+              - secrets.rfc2136_secret is defined
+            fail_msg: "rfc2136 DNS-01 certificates need rfc2136_server, rfc2136_name and rfc2136_secret in .secrets.yml"
+
+        - name: "Ensuring the certbot rfc2136 DNS plugin is installed"
+          become: true
+          ansible.builtin.apt:
+            name: python3-certbot-dns-rfc2136
+            state: present
+
+        - name: "Writing the rfc2136 credentials"
+          become: true
+          ansible.builtin.copy:
+            content: |
+              dns_rfc2136_server = {{ secrets.rfc2136_server }}
+              dns_rfc2136_port = {{ secrets.rfc2136_port | default(53) }}
+              dns_rfc2136_name = {{ secrets.rfc2136_name }}
+              dns_rfc2136_secret = {{ secrets.rfc2136_secret }}
+              dns_rfc2136_algorithm = {{ secrets.rfc2136_algorithm | default('HMAC-SHA256') }}
+            dest: "{{ certbot_rfc2136_credentials }}"
+            owner: root
+            group: root
+            mode: "0600"
+
     - name: "Checking for existing DNS-01 certificates"
       become: true
       ansible.builtin.stat:
@@ -774,7 +805,9 @@
         certbot certonly
         {% if (item.item.provider | default('acmedns')) == 'cloudflare' %}--dns-cloudflare
         --dns-cloudflare-credentials {{ certbot_cloudflare_credentials }}
-        --dns-cloudflare-propagation-seconds {{ certbot_cloudflare_propagation_seconds }}{% else %}--manual
+        --dns-cloudflare-propagation-seconds {{ certbot_cloudflare_propagation_seconds }}{% elif (item.item.provider | default('acmedns')) == 'rfc2136' %}--dns-rfc2136
+        --dns-rfc2136-credentials {{ certbot_rfc2136_credentials }}
+        --dns-rfc2136-propagation-seconds {{ certbot_rfc2136_propagation_seconds }}{% else %}--manual
         --preferred-challenges dns
         --manual-auth-hook /etc/acmedns/acmedns_auth_hook.sh{% endif %}
         --noninteractive

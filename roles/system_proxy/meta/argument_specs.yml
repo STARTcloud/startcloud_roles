@@ -26,10 +26,22 @@ argument_specs:
         type: str
         default: dante
         description: Key of the proxy entry (from proxy) to use for the package-manager proxy configuration, which is written as a socks5h URL.
+      proxy_no_proxy:
+        type: list
+        elements: str
+        default: [localhost, 127.0.0.1, localaddress, .localdomain.com]
+        description: Names, domains and addresses written to no_proxy in /etc/environment, which the system-wide proxy never carries.
+      proxy_systemd:
+        type: bool
+        default: false
+        description: >-
+          On Debian, also hand the system-wide proxy to every systemd unit through DefaultEnvironment in
+          /etc/systemd/system.conf.d/proxy.conf, for timers and services that never read /etc/environment.
       proxy:
         type: list
         elements: dict
         description: >-
           List of proxy definitions, each a single-key dict whose key names the
           proxy (for example dante or squid) and whose value holds the
-          connection details (user, pass, host, port).
+          connection details (host, port, and user and pass where the proxy
+          takes credentials; an entry without user renders as host:port alone).

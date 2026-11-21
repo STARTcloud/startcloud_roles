@@ -7,7 +7,8 @@
   when: proxy_systemwide | bool
   vars:
     proxy_env_entry: "{{ proxy | selectattr(proxy_systemwide_proxy, 'defined') | map(attribute=proxy_systemwide_proxy) | first }}"
-    proxy_env_url: "http://{{ proxy_env_entry.user }}:{{ proxy_env_entry.pass }}@{{ proxy_env_entry.host }}:{{ proxy_env_entry.port }}"
+    proxy_env_credentials: "{{ (proxy_env_entry.user ~ ':' ~ proxy_env_entry.pass ~ '@') if proxy_env_entry.user | default('') | length > 0 else '' }}"
+    proxy_env_url: "http://{{ proxy_env_credentials }}{{ proxy_env_entry.host }}:{{ proxy_env_entry.port }}"
     proxy_env_endpoint: "{{ proxy_env_entry.host }}:{{ proxy_env_entry.port }}"
   block:
     - name: "Setting HTTP and HTTPS Proxy Environment Variables"

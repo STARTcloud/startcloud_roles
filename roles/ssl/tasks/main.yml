@@ -2,6 +2,10 @@
 - name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
+    - name: "Including the file push tasks"
+      ansible.builtin.include_tasks: push/files.yml
+      when: ssl_push_files | bool
+
     - name: "Including the FortiGate push tasks"
       ansible.builtin.include_tasks: push/fortigate.yml
       when: ssl_push_fortigate | bool
@@ -26,6 +30,7 @@
       ansible.builtin.include_tasks: "{{ ansible_os_family | lower }}.yml"
       when:
         - ansible_os_family is defined
+        - not (ssl_push_files | bool)
         - not (ssl_push_fortigate | bool)
         - not (ssl_push_galera | bool)
         - not (ssl_push_netscaler | bool)

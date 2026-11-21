@@ -8,7 +8,13 @@ acl localnet src 172.16.0.0/12
 acl localnet src 192.168.0.0/16
 acl localnet src fc00::/7
 acl localnet src fe80::/10
+{% for network in squid_localnet_extra %}
+acl localnet src {{ network }}
+{% endfor %}
 acl SSL_ports port 443
+{% for port in squid_ssl_ports_extra %}
+acl SSL_ports port {{ port }}
+{% endfor %}
 acl Safe_ports port 80
 acl Safe_ports port 21
 acl Safe_ports port 443

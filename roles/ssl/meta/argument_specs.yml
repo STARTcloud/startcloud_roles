@@ -97,10 +97,12 @@ argument_specs:
         default: []
         description: >-
           Certificates to issue via the DNS-01 challenge. Each item carries a domains list and an optional provider,
-          acmedns (default) or cloudflare. acmedns needs a matching entry per domain in secrets.acmedns_credentials and a
+          acmedns (default), cloudflare or rfc2136. acmedns needs a matching entry per domain in secrets.acmedns_credentials and a
           published _acme-challenge CNAME pointing at that registration's fulldomain. cloudflare needs
           secrets.cloudflare_api_token with Zone Read and DNS Edit on each domain's zone and issues through the certbot
-          Cloudflare DNS plugin. Renewals republish through the installed deploy hook.
+          Cloudflare DNS plugin. rfc2136 needs secrets.rfc2136_server, rfc2136_name and rfc2136_secret, with optional
+          rfc2136_port and rfc2136_algorithm, for a DNS server that takes TSIG-signed updates of the _acme-challenge
+          names, and issues through the certbot rfc2136 DNS plugin. Renewals republish through the installed deploy hook.
       ssl_auto_renew:
         type: bool
         default: true
@@ -128,6 +130,14 @@ argument_specs:
         type: int
         default: 30
         description: Seconds the certbot Cloudflare DNS plugin waits for the TXT record to propagate before validation.
+      certbot_rfc2136_credentials:
+        type: str
+        default: /etc/letsencrypt/rfc2136.ini
+        description: Path of the root-only credentials file the certbot rfc2136 DNS plugin reads.
+      certbot_rfc2136_propagation_seconds:
+        type: int
+        default: 30
+        description: Seconds the certbot rfc2136 DNS plugin waits for the TXT record to propagate before validation.
       certbot_admin_email:
         type: str
         default: "support@startcloud.com"
@@ -173,6 +183,24 @@ argument_specs:
         type: str
         default: ""
         description: certbot live directory on the controller whose cert.pem, chain.pem, fullchain.pem and privkey.pem the push tasks deliver.
+      ssl_push_files:
+        type: bool
+        default: false
+        description: >-
+          Push the lineage into the host's cert_dir the way the role publishes its own certificates: the full chain
+          under crt, the key under key, the combined pem under combined, each named by ssl_push_files_name; then the
+          scripts of ssl_renewal_hooks are written to renewal-hooks.d and every script there runs when a file changed.
+      ssl_push_files_name:
+        type: str
+        description: Name the three files are written under; defaults to the lineage directory's name.
+      ssl_push_files_owner:
+        type: str
+        default: root
+        description: Owner of the pushed files.
+      ssl_push_files_group:
+        type: str
+        default: root
+        description: Group of the pushed files.
       ssl_push_fortigate:
         type: bool
         default: false
@@ -280,8 +308,9 @@ argument_specs:
         default: false
         description: >-
           Push the lineage to a NetScaler over the Nitro API from the controller: ensures each chain certificate exists
-          as a certkey linked to its issuer, uploads leaf and key, updates the bound certkey in place, relinks it to the
-          signing intermediate, saves the configuration and verifies the TLS, DTLS and management handshakes.
+          as a certkey linked to its issuer, and, when the Gateway serves a certificate other than the lineage's,
+          uploads leaf and key, updates the bound certkey in place and relinks it to the signing intermediate; saves
+          the configuration when anything changed and verifies the TLS, DTLS and management handshakes.
       ssl_push_netscaler_username:
         type: str
         default: nsroot
@@ -351,8 +380,9 @@ argument_specs:
         type: bool
         default: false
         description: >-
-          Push the lineage to a UDS Enterprise appliance: stages cert, chain and key, installs them with uds cert,
-          restarts the listed services or reboots, removes the staging directory and verifies the served certificate.
+          Push the lineage to a UDS Enterprise appliance when it serves a certificate other than the lineage's: stages
+          cert, chain and key, installs them with uds cert, restarts the listed services or reboots, removes the
+          staging directory; verifies the served certificate on every run.
       ssl_push_uds_staging_dir:
         type: str
         default: /root/uds-certificate
@@ -377,8 +407,9 @@ argument_specs:
         type: bool
         default: false
         description: >-
-          Push the lineage to a VDI Health Monitor: copies fullchain and privkey into its SSL directory under its
-          service account, restarts the service and verifies the served certificate.
+          Push the lineage to a VDI Health Monitor when it serves a certificate other than the lineage's: copies
+          fullchain and privkey into its SSL directory under its service account and restarts the service; verifies
+          the served certificate on every run.
       ssl_push_vdi_health_ssl_dir:
         type: str
         default: /etc/vdi-health/ssl

@@ -6,11 +6,28 @@
   become: false
   register: ssl_push_uds_lineage
 
+- name: "Reading the certificate served now by {{ ssl_push_uds_host }}"
+  community.crypto.get_certificate:
+    host: "{{ ssl_push_uds_host }}"
+    port: "{{ ssl_push_uds_port }}"
+    server_name: "{{ ssl_push_uds_host }}"
+  delegate_to: localhost
+  become: false
+  register: ssl_push_uds_current
+  failed_when: false
+
+- name: "Recording whether the lineage has to be installed"
+  ansible.builtin.set_fact:
+    ssl_push_uds_needed: >-
+      {{ ssl_push_uds_current.cert is not defined
+         or (ssl_push_uds_current.cert | community.crypto.x509_certificate_info).fingerprints.sha256 != ssl_push_uds_lineage.fingerprints.sha256 }}
+
 - name: "Creating {{ ssl_push_uds_staging_dir }}"
   ansible.builtin.file:
     path: "{{ ssl_push_uds_staging_dir }}"
     state: directory
     mode: "0700"
+  when: ssl_push_uds_needed | bool
 
 - name: "Copying the lineage files"
   ansible.builtin.copy:
@@ -21,26 +38,33 @@
     - { name: cert.pem, mode: "0644" }
     - { name: chain.pem, mode: "0644" }
     - { name: privkey.pem, mode: "0600" }
+  when: ssl_push_uds_needed | bool
 
 - name: "Installing the certificate with uds cert"
   ansible.builtin.command: uds cert -c {{ ssl_push_uds_staging_dir }}/chain.pem {{ ssl_push_uds_staging_dir }}/cert.pem {{ ssl_push_uds_staging_dir }}/privkey.pem
   changed_when: true
+  when: ssl_push_uds_needed | bool
 
 - name: "Restarting {{ item }}"
   ansible.builtin.systemd_service:
     name: "{{ item }}"
     state: restarted
   loop: "{{ ssl_push_uds_services }}"
-  when: not (ssl_push_uds_reboot | bool)
+  when:
+    - ssl_push_uds_needed | bool
+    - not (ssl_push_uds_reboot | bool)
 
 - name: "Rebooting the appliance"
   ansible.builtin.reboot:
-  when: ssl_push_uds_reboot | bool
+  when:
+    - ssl_push_uds_needed | bool
+    - ssl_push_uds_reboot | bool
 
 - name: "Removing {{ ssl_push_uds_staging_dir }}"
   ansible.builtin.file:
     path: "{{ ssl_push_uds_staging_dir }}"
     state: absent
+  when: ssl_push_uds_needed | bool
 
 - name: "Reading the certificate served by {{ ssl_push_uds_host }}"
   community.crypto.get_certificate:

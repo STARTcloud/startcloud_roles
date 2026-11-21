@@ -25,6 +25,23 @@
     ssl_push_netscaler_leaf_serial: "{{ ssl_push_netscaler_leaf_read.stdout.split('|')[1] }}"
     ssl_push_netscaler_leaf_issuer_cn: "{{ ssl_push_netscaler_leaf_read.stdout.split('|')[2] | regex_search('CN=([^,]+)', '\\1') | first }}"
 
+- name: "Reading the certificate the Gateway serves now"
+  ansible.builtin.shell: |
+    set -o pipefail
+    timeout 15 openssl s_client \
+      -connect {{ ssl_push_netscaler_verify_host }}:{{ ssl_push_netscaler_verify_port }} \
+      -servername {{ ssl_push_netscaler_verify_servername }} </dev/null 2>/dev/null \
+      | openssl x509 -noout -fingerprint -sha256
+  args:
+    executable: /bin/bash
+  register: ssl_push_netscaler_served_before
+  changed_when: false
+  failed_when: false
+
+- name: "Recording whether the leaf has to be uploaded"
+  ansible.builtin.set_fact:
+    ssl_push_netscaler_needed: "{{ ssl_push_netscaler_served_before.stdout | default('') != ssl_push_netscaler_leaf_fingerprint }}"
+
 - name: "Splitting the lineage chain into single certificates"
   ansible.builtin.shell: |
     set -o pipefail
@@ -111,6 +128,7 @@
     body:
       sslcertkey:
         certkey: "{{ ssl_push_netscaler_certkey }}"
+  register: ssl_push_netscaler_unlinked
   when: ssl_push_netscaler_certkey_link != '' and ssl_push_netscaler_certkey_link != ssl_push_netscaler_intermediate
   changed_when: true
 
@@ -126,6 +144,7 @@
     - "{{ ssl_push_netscaler_cert_file }}"
     - "{{ ssl_push_netscaler_key_file }}"
   changed_when: false
+  when: ssl_push_netscaler_needed | bool
 
 - name: "Uploading the leaf and key"
   ansible.builtin.uri:
@@ -146,6 +165,7 @@
     - { name: "{{ ssl_push_netscaler_cert_file }}", source: cert.pem }
     - { name: "{{ ssl_push_netscaler_key_file }}", source: privkey.pem }
   changed_when: true
+  when: ssl_push_netscaler_needed | bool
 
 - name: "Updating the leaf certkey in place {{ ssl_push_netscaler_certkey }}"
   ansible.builtin.uri:
@@ -162,6 +182,7 @@
         key: "{{ ssl_push_netscaler_key_file }}"
         nodomaincheck: true
   changed_when: true
+  when: ssl_push_netscaler_needed | bool
 
 - name: "Linking the leaf certkey to its intermediate {{ ssl_push_netscaler_certkey }}"
   ansible.builtin.uri:
@@ -175,6 +196,7 @@
       sslcertkey:
         certkey: "{{ ssl_push_netscaler_certkey }}"
         linkcertkeyname: "{{ ssl_push_netscaler_intermediate }}"
+  register: ssl_push_netscaler_linked
   when: ssl_push_netscaler_certkey_link != ssl_push_netscaler_intermediate
   changed_when: true
 
@@ -189,6 +211,11 @@
     body:
       nsconfig: {}
   changed_when: true
+  when: >-
+    ssl_push_netscaler_needed | bool
+    or ssl_push_netscaler_config_changed | default(false) | bool
+    or ssl_push_netscaler_unlinked is changed
+    or ssl_push_netscaler_linked is changed
 
 - name: "Reading the chain the appliance binds under {{ ssl_push_netscaler_certkey }}"
   ansible.builtin.uri:

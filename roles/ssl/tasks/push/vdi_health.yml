@@ -6,6 +6,22 @@
   become: false
   register: ssl_push_vdi_health_lineage
 
+- name: "Reading the certificate served now by {{ ssl_push_vdi_health_host }}"
+  community.crypto.get_certificate:
+    host: "{{ ssl_push_vdi_health_host }}"
+    port: "{{ ssl_push_vdi_health_port }}"
+    server_name: "{{ ssl_push_vdi_health_host }}"
+  delegate_to: localhost
+  become: false
+  register: ssl_push_vdi_health_current
+  failed_when: false
+
+- name: "Recording whether the lineage has to be installed"
+  ansible.builtin.set_fact:
+    ssl_push_vdi_health_needed: >-
+      {{ ssl_push_vdi_health_current.cert is not defined
+         or (ssl_push_vdi_health_current.cert | community.crypto.x509_certificate_info).fingerprints.sha256 != ssl_push_vdi_health_lineage.fingerprints.sha256 }}
+
 - name: "Creating {{ ssl_push_vdi_health_ssl_dir }}"
   ansible.builtin.file:
     path: "{{ ssl_push_vdi_health_ssl_dir }}"
@@ -13,6 +29,7 @@
     owner: "{{ ssl_push_vdi_health_owner }}"
     group: "{{ ssl_push_vdi_health_owner }}"
     mode: "0750"
+  when: ssl_push_vdi_health_needed | bool
 
 - name: "Installing the certificate chain"
   ansible.builtin.copy:
@@ -21,6 +38,7 @@
     owner: "{{ ssl_push_vdi_health_owner }}"
     group: "{{ ssl_push_vdi_health_owner }}"
     mode: "0644"
+  when: ssl_push_vdi_health_needed | bool
 
 - name: "Installing the private key"
   ansible.builtin.copy:
@@ -29,11 +47,13 @@
     owner: "{{ ssl_push_vdi_health_owner }}"
     group: "{{ ssl_push_vdi_health_owner }}"
     mode: "0600"
+  when: ssl_push_vdi_health_needed | bool
 
 - name: "Restarting {{ ssl_push_vdi_health_service }}"
   ansible.builtin.systemd_service:
     name: "{{ ssl_push_vdi_health_service }}"
     state: restarted
+  when: ssl_push_vdi_health_needed | bool
 
 - name: "Reading the certificate served by {{ ssl_push_vdi_health_host }}"
   community.crypto.get_certificate:

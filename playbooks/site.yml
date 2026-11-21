@@ -1,0 +1,594 @@
+---
+- name: Place the controller key on every node
+  hosts: vms:hypervisors:pis
+  become: true
+  gather_facts: false
+  tags: [authorized-key]
+  tasks:
+    - name: "Placing the controller public key for the login account"
+      ansible.posix.authorized_key:
+        user: "{{ ansible_user }}"
+        state: present
+        exclusive: false
+        key: "{{ lookup('file', controller_public_key) }}"
+
+- name: Write the site hosts file on every node
+  hosts: vms:hypervisors
+  become: true
+  gather_facts: true
+  tags: [hosts-file]
+  roles:
+    - role: startcloud.startcloud_roles.networking
+      networking_hosts_file: true
+
+- name: Point every node's clock at its time servers
+  hosts: vms:pis:hypervisors:outside
+  serial: 1
+  any_errors_fatal: true
+  become: true
+  gather_facts: true
+  tags: [ntp]
+  roles:
+    - role: startcloud.startcloud_roles.ntp
+
+- name: Issue the collector's certificate
+  hosts: collectors
+  any_errors_fatal: true
+  become: true
+  gather_facts: true
+  tags: [monitoring]
+  roles:
+    - role: startcloud.startcloud_roles.ssl
+
+- name: Point every node at the log collector and answer SNMP the same way
+  hosts: vms:pis:hypervisors:outside
+  serial: 1
+  any_errors_fatal: true
+  become: true
+  gather_facts: true
+  tags: [monitoring]
+  roles:
+    - role: startcloud.startcloud_roles.syslog
+    - role: startcloud.startcloud_roles.snmp
+
+- name: Gate SSH logins on pam-ciba push approval
+  hosts: pam_ciba
+  serial: 1
+  any_errors_fatal: true
+  become: true
+  gather_facts: true
+  tags: [pam-ciba]
+  roles:
+    - role: startcloud.startcloud_roles.lockdown
+      lockdown_rotate_user: false
+      lockdown_pam_ciba: true
+
+- name: Point every proxied node at its proxy
+  hosts: system_proxy
+  serial: 1
+  any_errors_fatal: true
+  become: true
+  gather_facts: true
+  tags: [system-proxy]
+  roles:
+    - role: startcloud.startcloud_roles.system_proxy
+
+- name: Configure every proxy
+  hosts: proxies
+  serial: 1
+  any_errors_fatal: true
+  become: true
+  gather_facts: true
+  tags: [proxies]
+  roles:
+    - role: startcloud.startcloud_roles.squid
+      run_tasks: "{{ squid_proxy | default(false) | bool }}"
+    - role: startcloud.startcloud_roles.haproxy
+    - role: startcloud.startcloud_roles.keepalived
+
+- name: Open the maintenance window
+  hosts: controllers
+  run_once: true
+  gather_facts: false
+  tags: [maintenance]
+  tasks:
+    - name: "Mailing that the window opens"
+      community.general.mail:
+        host: "{{ maintenance_mail_host }}"
+        port: "{{ maintenance_mail_port }}"
+        username: "{{ maintenance_mail_username }}"
+        password: "{{ maintenance_mail_password }}"
+        secure: try
+        from: "{{ maintenance_mail_from }}"
+        to: "{{ maintenance_mail_to }}"
+        subject: "{{ maintenance_name | default(inventory_hostname) }}: maintenance window opening"
+        body: >-
+          Package updates, container images, Windows updates and the certificate renewal run now, one node at a time,
+          with a reboot where a node asks for one. The first failure stops the window and mails the log.
+
+- name: Update every virtual machine and Raspberry Pi
+  hosts: vms:pis:!controllers
+  serial: 1
+  any_errors_fatal: true
+  become: true
+  gather_facts: true
+  tags: [update, maintenance]
+  tasks:
+    - name: "Updating the node"
+      block:
+        - name: "Reading the Galera state before the upgrade"
+          ansible.builtin.command: mysql -uroot -N -s -e "SHOW STATUS WHERE Variable_name IN ('wsrep_local_state_comment','wsrep_cluster_status')"
+          register: update_galera_before
+          changed_when: false
+          failed_when: update_galera_before.stdout is not search('Synced') or update_galera_before.stdout is not search('status\\s+Primary')
+          when: galera_node | default(false) | bool
+
+        - name: "Upgrading the packages"
+          ansible.builtin.include_role:
+            name: startcloud.startcloud_roles.dependencies
+          when: update_extra_repos is not defined
+
+        - name: "Upgrading the packages with the node's own repository list"
+          ansible.builtin.include_role:
+            name: startcloud.startcloud_roles.dependencies
+          vars:
+            extra_repos: "{{ update_extra_repos }}"
+          when: update_extra_repos is defined
+
+        - name: "Waiting for the Galera node to report Synced and Primary"
+          ansible.builtin.command: mysql -uroot -N -s -e "SHOW STATUS WHERE Variable_name IN ('wsrep_local_state_comment','wsrep_cluster_status')"
+          register: update_galera_after
+          until: update_galera_after.stdout is search('Synced') and update_galera_after.stdout is search('status\\s+Primary')
+          retries: "{{ galera_sync_retries | default(120) }}"
+          delay: 1
+          changed_when: false
+          when: galera_node | default(false) | bool
+
+        - name: "Pulling the compose images and recreating the changed containers"
+          ansible.builtin.include_role:
+            name: startcloud.startcloud_roles.container
+            tasks_from: compose-update.yml
+          when: container_compose_update | default(false) | bool
+
+        - name: "Rebooting the node"
+          ansible.builtin.reboot:
+            reboot_timeout: "{{ update_reboot_timeout | default(600) }}"
+          register: update_reboot
+          when:
+            - reboots_allowed | default(false) | bool
+            - not (reboot_never | default(false) | bool)
+            - dependencies_reboot_required | default(false) | bool
+
+        - name: "Recording the reboot"
+          ansible.builtin.set_fact:
+            update_rebooted: "{{ update_reboot.changed | default(false) }}"
+
+        - name: "Waiting for the Galera node to report Synced and Primary after the reboot"
+          ansible.builtin.command: mysql -uroot -N -s -e "SHOW STATUS WHERE Variable_name IN ('wsrep_local_state_comment','wsrep_cluster_status')"
+          register: update_galera_rebooted
+          until: update_galera_rebooted.stdout is search('Synced') and update_galera_rebooted.stdout is search('status\\s+Primary')
+          retries: "{{ galera_sync_retries | default(120) }}"
+          delay: 1
+          changed_when: false
+          when:
+            - galera_node | default(false) | bool
+            - update_rebooted | bool
+      rescue:
+        - name: "Mailing that the window failed"
+          community.general.mail:
+            host: "{{ maintenance_mail_host }}"
+            port: "{{ maintenance_mail_port }}"
+            username: "{{ maintenance_mail_username }}"
+            password: "{{ maintenance_mail_password }}"
+            secure: try
+            from: "{{ maintenance_mail_from }}"
+            to: "{{ maintenance_mail_to }}"
+            subject: "{{ maintenance_name | default(inventory_hostname) }}: maintenance window FAILED on {{ inventory_hostname }}"
+            body: "A step failed on {{ inventory_hostname }} and the run stopped there; nothing after it ran. The log of the run is attached."
+            attach:
+              - "{{ lookup('env', 'HOME') }}/ansible.log"
+          delegate_to: "{{ groups['controllers'] | first }}"
+          become: false
+          when:
+            - maintenance_mail_host is defined
+            - groups['controllers'] | default([]) | length > 0
+
+        - name: "Stopping the run"
+          ansible.builtin.fail:
+            msg: "The update of {{ inventory_hostname }} failed"
+
+- name: Update every hypervisor
+  hosts: hypervisors:!controllers
+  serial: 1
+  any_errors_fatal: true
+  become: true
+  gather_facts: true
+  tags: [update, maintenance]
+  tasks:
+    - name: "Updating the host"
+      block:
+        - name: "Upgrading the packages"
+          ansible.builtin.include_role:
+            name: startcloud.startcloud_roles.dependencies
+
+        - name: "Rebooting the host"
+          ansible.builtin.reboot:
+            reboot_timeout: "{{ update_reboot_timeout | default(600) }}"
+          register: update_reboot
+          when:
+            - reboots_allowed | default(false) | bool
+            - not (reboot_never | default(false) | bool)
+            - dependencies_reboot_required | default(false) | bool
+
+        - name: "Recording the reboot"
+          ansible.builtin.set_fact:
+            update_rebooted: "{{ update_reboot.changed | default(false) }}"
+      rescue:
+        - name: "Mailing that the window failed"
+          community.general.mail:
+            host: "{{ maintenance_mail_host }}"
+            port: "{{ maintenance_mail_port }}"
+            username: "{{ maintenance_mail_username }}"
+            password: "{{ maintenance_mail_password }}"
+            secure: try
+            from: "{{ maintenance_mail_from }}"
+            to: "{{ maintenance_mail_to }}"
+            subject: "{{ maintenance_name | default(inventory_hostname) }}: maintenance window FAILED on {{ inventory_hostname }}"
+            body: "A step failed on {{ inventory_hostname }} and the run stopped there; nothing after it ran. The log of the run is attached."
+            attach:
+              - "{{ lookup('env', 'HOME') }}/ansible.log"
+          delegate_to: "{{ groups['controllers'] | first }}"
+          become: false
+          when:
+            - maintenance_mail_host is defined
+            - groups['controllers'] | default([]) | length > 0
+
+        - name: "Stopping the run"
+          ansible.builtin.fail:
+            msg: "The update of {{ inventory_hostname }} failed"
+
+- name: Update every Windows node
+  hosts: windows
+  serial: 1
+  any_errors_fatal: true
+  gather_facts: true
+  tags: [update, maintenance]
+  tasks:
+    - name: "Updating the node"
+      block:
+        - name: "Installing the updates"
+          ansible.builtin.include_role:
+            name: startcloud.startcloud_roles.dependencies
+          vars:
+            dependencies_windows_update: true
+            dependencies_windows_reboot: "{{ (reboots_allowed | default(false) | bool) and not (reboot_never | default(false) | bool) }}"
+      rescue:
+        - name: "Mailing that the window failed"
+          community.general.mail:
+            host: "{{ maintenance_mail_host }}"
+            port: "{{ maintenance_mail_port }}"
+            username: "{{ maintenance_mail_username }}"
+            password: "{{ maintenance_mail_password }}"
+            secure: try
+            from: "{{ maintenance_mail_from }}"
+            to: "{{ maintenance_mail_to }}"
+            subject: "{{ maintenance_name | default(inventory_hostname) }}: maintenance window FAILED on {{ inventory_hostname }}"
+            body: "A step failed on {{ inventory_hostname }} and the run stopped there; nothing after it ran. The log of the run is attached."
+            attach:
+              - "{{ lookup('env', 'HOME') }}/ansible.log"
+          delegate_to: "{{ groups['controllers'] | first }}"
+          become: false
+          when:
+            - maintenance_mail_host is defined
+            - groups['controllers'] | default([]) | length > 0
+
+        - name: "Stopping the run"
+          ansible.builtin.fail:
+            msg: "The update of {{ inventory_hostname }} failed"
+
+- name: Update every controller
+  hosts: controllers
+  serial: 1
+  any_errors_fatal: true
+  become: true
+  gather_facts: true
+  tags: [update, maintenance]
+  roles:
+    - role: startcloud.startcloud_roles.dependencies
+
+- name: Summarise the updates
+  hosts: controllers
+  run_once: true
+  gather_facts: false
+  tags: [update, maintenance]
+  tasks:
+    - name: "Collecting the nodes that rebooted"
+      ansible.builtin.set_fact:
+        update_summary_rebooted: >-
+          {{ (hostvars | dict2items | selectattr('value.update_rebooted', 'defined')
+              | selectattr('value.update_rebooted') | map(attribute='key') | list)
+             + (hostvars | dict2items | selectattr('value.dependencies_rebooted', 'defined')
+                | selectattr('value.dependencies_rebooted') | map(attribute='key') | list) }}
+
+    - name: "Collecting the nodes that still wait on a reboot or an update"
+      ansible.builtin.set_fact:
+        update_summary_needing: >-
+          {{ hostvars | dict2items | selectattr('value.dependencies_reboot_required', 'defined')
+             | selectattr('value.dependencies_reboot_required') | map(attribute='key')
+             | reject('in', update_summary_rebooted) | list }}
+        update_summary_pending: >-
+          {{ hostvars | dict2items | selectattr('value.dependencies_updates_pending', 'defined')
+             | selectattr('value.dependencies_updates_pending') | map(attribute='key') | list }}
+
+    - name: "Reporting the run"
+      ansible.builtin.debug:
+        msg:
+          reboots_pending_on: "{{ update_summary_needing }}"
+          rebooted: "{{ update_summary_rebooted }}"
+          updates_pending_on: "{{ update_summary_pending }}"
+
+- name: Renew the controller's certificates
+  hosts: controllers
+  become: true
+  gather_facts: false
+  tags: [maintenance]
+  tasks:
+    - name: "Running the renewal"
+      ansible.builtin.command: certbot renew
+      register: maintenance_renewal
+      changed_when: "'No renewals were attempted' not in maintenance_renewal.stdout"
+      when: ssl_dns01_certs | default([]) | length > 0
+
+- name: Close the maintenance window
+  hosts: controllers
+  become: true
+  gather_facts: false
+  tags: [maintenance]
+  tasks:
+    - name: "Mailing that the window is done"
+      community.general.mail:
+        host: "{{ maintenance_mail_host }}"
+        port: "{{ maintenance_mail_port }}"
+        username: "{{ maintenance_mail_username }}"
+        password: "{{ maintenance_mail_password }}"
+        secure: try
+        from: "{{ maintenance_mail_from }}"
+        to: "{{ maintenance_mail_to }}"
+        subject: "{{ maintenance_name | default(inventory_hostname) }}: maintenance window done"
+        body: "Every step finished. The log of the run is attached."
+        attach:
+          - "{{ lookup('env', 'HOME') }}/ansible.log"
+      become: false
+      run_once: true
+
+    - name: "Scheduling the controller's reboot one minute out"
+      ansible.builtin.command: shutdown -r +1
+      changed_when: true
+      when:
+        - reboots_allowed | default(false) | bool
+        - not (reboot_never | default(false) | bool)
+        - dependencies_reboot_required | default(false) | bool
+
+- name: Issue and renew the controller's certificates
+  hosts: controllers
+  any_errors_fatal: true
+  become: true
+  gather_facts: true
+  tags: [certificates]
+  roles:
+    - role: startcloud.startcloud_roles.ssl
+      ssl_push_files: false
+      ssl_push_fortigate: false
+      ssl_push_galera: false
+      ssl_push_netscaler: false
+      ssl_push_uds: false
+      ssl_push_vdi_health: false
+
+- name: Push the certificates to every target
+  hosts: certificates
+  serial: 1
+  any_errors_fatal: true
+  become: true
+  gather_facts: true
+  tags: [certificates]
+  roles:
+    - role: startcloud.startcloud_roles.ssl
+
+- name: Update every OPNsense firewall
+  hosts: firewalls
+  serial: 1
+  any_errors_fatal: true
+  gather_facts: true
+  tags: [opnsense]
+  vars:
+    opnsense_update_base_kernel: false
+  tasks:
+    - name: "Checking for a base and kernel update"
+      ansible.builtin.command: opnsense-update -c
+      register: opnsense_base
+      changed_when: false
+      failed_when: opnsense_base.rc not in [0, 1]
+      check_mode: false
+
+    - name: "Reading the pending package upgrades"
+      ansible.builtin.command: pkg upgrade -n
+      register: opnsense_packages
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: "Applying the package updates"
+      ansible.builtin.command: opnsense-update -p
+      changed_when: true
+      when: "'Your packages are up to date' not in opnsense_packages.stdout"
+
+    - name: "Applying the base and kernel update"
+      ansible.builtin.command: opnsense-update -bk
+      register: opnsense_base_applied
+      changed_when: true
+      when:
+        - opnsense_update_base_kernel | bool
+        - opnsense_base.rc == 0
+
+    - name: "Rebooting the firewall to finish the base and kernel update"
+      ansible.builtin.reboot:
+        reboot_timeout: "{{ update_reboot_timeout | default(600) }}"
+      when:
+        - opnsense_base_applied is changed
+        - reboots_allowed | default(false) | bool
+        - not (reboot_never | default(false) | bool)
+
+    - name: "Reading the installed OPNsense version"
+      ansible.builtin.command: opnsense-version
+      register: opnsense_version
+      changed_when: false
+      check_mode: false
+
+    - name: "Reporting the firewall"
+      ansible.builtin.debug:
+        msg:
+          version: "{{ opnsense_version.stdout | trim }}"
+          reboot_pending: "{{ (opnsense_base_applied is changed) and not (opnsense_base_applied is skipped) }}"
+
+- name: Install the baseline packages and the certificate on every OPNsense firewall
+  hosts: firewalls
+  serial: 1
+  any_errors_fatal: true
+  gather_facts: true
+  tags: [opnsense]
+  roles:
+    - role: startcloud.startcloud_roles.dependencies
+      extra_packages: "{{ opnsense_plugins }}"
+      extra_repos: "{{ opnsense_repos | default([]) }}"
+    - role: startcloud.startcloud_roles.ssl
+
+- name: Point every access point's clock at its gateway
+  hosts: openwrt
+  serial: 1
+  any_errors_fatal: true
+  gather_facts: false
+  tags: [openwrt]
+  tasks:
+    - name: "Reading the default gateway"
+      ansible.builtin.raw: ip -4 route show default | awk '{print $3}'
+      register: openwrt_gateway
+      changed_when: false
+      check_mode: false
+
+    - name: "Reading the configured time server"
+      ansible.builtin.raw: uci get system.ntp.server
+      register: openwrt_ntp_server
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: "Pointing sysntpd at the gateway"
+      ansible.builtin.raw: uci set system.ntp.server='{{ openwrt_gateway.stdout | trim }}' && uci commit system && /etc/init.d/sysntpd restart
+      changed_when: true
+      when: openwrt_ntp_server.stdout | trim != openwrt_gateway.stdout | trim
+
+    - name: "Reporting the time server"
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} syncs from {{ openwrt_gateway.stdout | trim }}"
+
+- name: Point every access point's logs at the collector
+  hosts: openwrt
+  serial: 1
+  any_errors_fatal: true
+  gather_facts: false
+  tags: [openwrt]
+  tasks:
+    - name: "Reading the configured log server"
+      ansible.builtin.raw: uci get system.@system[0].log_ip
+      register: openwrt_log_ip
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: "Reading the configured log transport"
+      ansible.builtin.raw: uci get system.@system[0].log_proto
+      register: openwrt_log_proto
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: "Pointing logd at the collector"
+      ansible.builtin.raw: >-
+        uci set system.@system[0].log_ip='{{ syslog_server }}'
+        && uci set system.@system[0].log_port='{{ syslog_port | default(514) }}'
+        && uci set system.@system[0].log_proto='{{ syslog_protocol | default('udp') }}'
+        && uci commit system
+        && /etc/init.d/log restart
+      changed_when: true
+      when: >-
+        openwrt_log_ip.stdout | trim != syslog_server
+        or openwrt_log_proto.stdout | trim != syslog_protocol | default('udp')
+
+    - name: "Reporting the log server"
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} logs to {{ syslog_server }}"
+
+- name: Update every access point
+  hosts: openwrt
+  serial: 1
+  any_errors_fatal: true
+  gather_facts: false
+  tags: [openwrt]
+  tasks:
+    - name: "Checking for a firmware and package upgrade"
+      ansible.builtin.raw: owut check
+      register: openwrt_check
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: "Reading the running release"
+      ansible.builtin.raw: . /etc/openwrt_release && echo "$DISTRIB_RELEASE $DISTRIB_REVISION"
+      register: openwrt_release_before
+      changed_when: false
+      check_mode: false
+
+    - name: "Upgrading the firmware and packages"
+      ansible.builtin.raw: owut upgrade
+      register: openwrt_upgrade
+      changed_when: openwrt_upgrade.rc == 0
+      failed_when:
+        - openwrt_upgrade.rc != 0
+        - "'Connection to' not in openwrt_upgrade.stderr | default('')"
+      ignore_unreachable: true
+      when: "'safe to proceed' in openwrt_check.stdout"
+
+    - name: "Waiting for the access point to go down"
+      ansible.builtin.wait_for:
+        host: "{{ ansible_host }}"
+        port: "{{ ansible_port }}"
+        state: stopped
+        timeout: 300
+      delegate_to: localhost
+      when: "'safe to proceed' in openwrt_check.stdout"
+
+    - name: "Waiting for the access point to come back"
+      ansible.builtin.wait_for:
+        host: "{{ ansible_host }}"
+        port: "{{ ansible_port }}"
+        delay: 30
+        timeout: 600
+      delegate_to: localhost
+      when: "'safe to proceed' in openwrt_check.stdout"
+
+    - name: "Reading the running release after the upgrade"
+      ansible.builtin.raw: . /etc/openwrt_release && echo "$DISTRIB_RELEASE $DISTRIB_REVISION"
+      register: openwrt_release
+      changed_when: false
+      check_mode: false
+
+    - name: "Verifying the release changed"
+      ansible.builtin.assert:
+        that:
+          - openwrt_release.stdout | trim != openwrt_release_before.stdout | trim
+        fail_msg: "{{ inventory_hostname }} still runs {{ openwrt_release.stdout | trim }} after the upgrade"
+      when: "'safe to proceed' in openwrt_check.stdout"
+
+    - name: "Reporting the access point"
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} runs {{ openwrt_release.stdout | trim }}"

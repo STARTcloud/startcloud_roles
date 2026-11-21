@@ -36,11 +36,13 @@
   community.general.pkg5:
     name: "{{ packages }}"
     state: present
+  when: dependencies_install_packages | bool
 
 - name: "Adding Additional Dependencies"
   community.general.pkg5:
     name: "{{ extra_packages }}"
     state: present
+  when: dependencies_install_packages | bool
 
 - name: "Reading the boot environments"
   ansible.builtin.command: beadm list -H
@@ -55,29 +57,7 @@
     dependencies_boot_environment_next: >-
       {{ dependencies_boot_environments.stdout_lines | map('split', ';') | selectattr('2', 'search', 'R') | map(attribute='0') | first }}
 
-- name: "Rebooting the node"
-  ansible.builtin.reboot:
-    reboot_timeout: "{{ dependencies_reboot_timeout }}"
-  register: dependencies_rebooted
-  when:
-    - dependencies_reboot | bool
-    - not (reboot_never | bool)
-    - inventory_hostname != lookup('env', 'MAINTENANCE_SELF')
-    - dependencies_boot_environment_next != dependencies_boot_environment_running
-
-- name: "Recording the reboot state for the summary"
+- name: "Recording the update state"
   ansible.builtin.set_fact:
-    dependencies_summary_rebooted: "{{ dependencies_rebooted.changed | default(false) }}"
-    dependencies_summary_reboot_required: "{{ (dependencies_boot_environment_next != dependencies_boot_environment_running) and not (dependencies_rebooted.changed | default(false)) }}"
-    dependencies_summary_pending: "{{ (dependencies_upgradable.rc | default(4) == 0) and not (dependencies_upgrade | bool) }}"
-
-- name: "Reporting the update state"
-  ansible.builtin.debug:
-    msg:
-      upgraded: "{{ dependencies_upgrade | bool }}"
-      upgradable_before: "{{ dependencies_upgradable.rc | default(4) == 0 }}"
-      boot_environment_waiting_before: "{{ dependencies_boot_environment_waiting | bool }}"
-      boot_environment_running: "{{ dependencies_boot_environment_running }}"
-      boot_environment_next: "{{ dependencies_boot_environment_next }}"
-      reboot_required: "{{ dependencies_summary_reboot_required }}"
-      rebooted: "{{ dependencies_summary_rebooted }}"
+    dependencies_reboot_required: "{{ dependencies_boot_environment_next != dependencies_boot_environment_running }}"
+    dependencies_updates_pending: "{{ (dependencies_upgradable.rc | default(4) == 0) and not (dependencies_upgrade | bool) }}"
