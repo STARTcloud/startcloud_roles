@@ -5,6 +5,7 @@ argument_specs:
     description:
       - Installs the net-snmp packages and starts the snmpd service on Linux and OmniOS, or enables the SNMP-Service feature on Windows.
       - Deploys the LibreNMS extension scripts and renders the snmpd daemon and configuration files from templates.
+      - On OPNsense it writes the community, location and contact of the os-net-snmp plugin through the firewall's API with an API key.
     author: Mark Gilbert
     options:
       run_tasks:
@@ -77,3 +78,22 @@ argument_specs:
         type: str
         default: snmp
         description: SNMPv3 username created on the agent.
+      opnsense_api_port:
+        type: int
+        default: 443
+        description: Port the OPNsense web GUI and API listen on.
+      opnsense_api_url:
+        type: str
+        description: Base address of the OPNsense API; defaults to https://<inventory_hostname>:<opnsense_api_port>/api.
+      opnsense_api_key:
+        type: str
+        default: ""
+        description: OPNsense API key the lane signs in with.
+      opnsense_api_secret:
+        type: str
+        default: ""
+        description: Secret of opnsense_api_key.
+      opnsense_api_validate_certs:
+        type: bool
+        default: true
+        description: Whether the firewall's web GUI certificate is checked on API calls.

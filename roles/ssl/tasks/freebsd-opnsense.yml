@@ -1,9 +1,108 @@
 ---
-- name: "Ensuring Cloudflare API credentials are present"
+- name: "Ensuring the OPNsense API and Cloudflare credentials are present"
   ansible.builtin.assert:
     that:
+      - opnsense_api_key | length > 0
+      - opnsense_api_secret | length > 0
       - secrets.cloudflare_api_token is defined
-    fail_msg: "Cloudflare DNS-01 certificates need cloudflare_api_token in .secrets.yml"
+    fail_msg: "The OPNsense lane needs opnsense_api_key, opnsense_api_secret and cloudflare_api_token in secrets"
+
+- name: "Reading the ACME client settings"
+  ansible.builtin.uri:
+    url: "{{ opnsense_api_url }}/acmeclient/settings/get"
+    url_username: "{{ opnsense_api_key }}"
+    url_password: "{{ opnsense_api_secret }}"
+    force_basic_auth: true
+    validate_certs: "{{ opnsense_api_validate_certs }}"
+    return_content: true
+  register: ssl_opnsense_settings
+  check_mode: false
+
+- name: "Setting the ACME client settings the inventory asks for"
+  ansible.builtin.set_fact:
+    ssl_opnsense_settings_wanted:
+      enabled: "1"
+      autoRenewal: "1"
+      environment: "{{ ssl_opnsense_environment }}"
+    ssl_opnsense_settings_current: >-
+      {{ ssl_opnsense_settings.json.acmeclient.settings
+         | combine({'environment': ssl_opnsense_settings.json.acmeclient.settings.environment | dict2items
+                                   | selectattr('value.selected', 'equalto', 1) | map(attribute='key') | first | default('')}) }}
+
+- name: "Recording whether the ACME client settings change"
+  ansible.builtin.set_fact:
+    ssl_opnsense_settings_change: >-
+      {{ (ssl_opnsense_settings_wanted.keys() | map('extract', ssl_opnsense_settings_current) | list)
+         != (ssl_opnsense_settings_wanted.values() | list) }}
+  changed_when: ssl_opnsense_settings_change | bool
+  notify: "Reconfiguring the OPNsense ACME client"
+
+- name: "Writing the ACME client settings"
+  ansible.builtin.uri:
+    url: "{{ opnsense_api_url }}/acmeclient/settings/set"
+    method: POST
+    url_username: "{{ opnsense_api_key }}"
+    url_password: "{{ opnsense_api_secret }}"
+    force_basic_auth: true
+    validate_certs: "{{ opnsense_api_validate_certs }}"
+    body_format: json
+    body:
+      acmeclient:
+        settings: "{{ ssl_opnsense_settings_wanted }}"
+    return_content: true
+  register: ssl_opnsense_settings_set
+  failed_when: ssl_opnsense_settings_set.json.result | default('failed') != 'saved'
+  changed_when: true
+  when:
+    - ssl_opnsense_settings_change | bool
+    - not ansible_check_mode
+
+- name: "Ensuring the ACME account exists"
+  ansible.builtin.include_tasks: freebsd-opnsense-object.yml
+  vars:
+    ssl_opnsense_object:
+      controller: accounts
+      key: account
+      name: "{{ ssl_opnsense_account_name }}"
+      wanted:
+        enabled: "1"
+        name: "{{ ssl_opnsense_account_name }}"
+        email: "{{ settings.email }}"
+        ca: "{{ ssl_opnsense_ca }}"
+
+- name: "Ensuring the DNS-01 challenge exists"
+  ansible.builtin.include_tasks: freebsd-opnsense-object.yml
+  vars:
+    ssl_opnsense_object:
+      controller: validations
+      key: validation
+      name: "{{ ssl_opnsense_validation_name }}"
+      secret: true
+      wanted:
+        enabled: "1"
+        name: "{{ ssl_opnsense_validation_name }}"
+        method: dns01
+        dns_service: "{{ ssl_opnsense_dns_service }}"
+        dns_cf_token: "{{ secrets.cloudflare_api_token }}"
+
+- name: "Ensuring the web GUI restart automation exists"
+  ansible.builtin.include_tasks: freebsd-opnsense-object.yml
+  vars:
+    ssl_opnsense_object:
+      controller: actions
+      key: action
+      name: "{{ ssl_opnsense_action_name }}"
+      wanted:
+        enabled: "1"
+        name: "{{ ssl_opnsense_action_name }}"
+        type: "{{ ssl_opnsense_action_type }}"
+
+- name: "Ensuring every certificate exists and is issued"
+  ansible.builtin.include_tasks: freebsd-opnsense-certificate.yml
+  loop: "{{ ssl_dns01_certs }}"
+  loop_control:
+    loop_var: ssl_opnsense_certificate
+    label: "{{ ssl_opnsense_certificate.domains | first }}"
 
 - name: "Creating Appliance Tools Directory"
   ansible.builtin.file:
@@ -11,41 +110,16 @@
     state: directory
     mode: "0755"
 
-- name: "Placing the ACME Client Configuration Tool"
+- name: "Placing the web GUI certificate tool"
   ansible.builtin.template:
-    src: opnsense_acme.php.j2
-    dest: "{{ ssl_appliance_tools_dir }}/opnsense_acme.php"
+    src: opnsense_webgui_cert.php.j2
+    dest: "{{ ssl_appliance_tools_dir }}/opnsense_webgui_cert.php"
     mode: "0700"
 
-- name: "Configuring the ACME Client"
-  ansible.builtin.command: "php {{ ssl_appliance_tools_dir }}/opnsense_acme.php configure"
+- name: "Pointing the web GUI at {{ ssl_dns01_certs[0].domains | first }}"
+  ansible.builtin.command: "php {{ ssl_appliance_tools_dir }}/opnsense_webgui_cert.php"
   environment:
-    SSL_ACME_CERTS: "{{ ssl_dns01_certs | to_json }}"
-    SSL_ACME_EMAIL: "{{ settings.email }}"
-    SSL_ACME_STAGING: "{{ '1' if letsencrypt_staging_enabled else '0' }}"
-    SSL_CF_TOKEN: "{{ secrets.cloudflare_api_token }}"
-  register: ssl_opnsense_acme
-  changed_when: (ssl_opnsense_acme.stdout | from_json).changed
-  no_log: true
-
-- name: "Configuring the ACME Client Certificates"
-  ansible.builtin.command: "php {{ ssl_appliance_tools_dir }}/opnsense_acme.php certificates"
-  environment:
-    SSL_ACME_CERTS: "{{ ssl_dns01_certs | to_json }}"
-  register: ssl_opnsense_certificates
-  changed_when: (ssl_opnsense_certificates.stdout | from_json).changed
-
-- name: "Issuing the Certificates"
-  ansible.builtin.command: "/usr/local/opnsense/scripts/OPNsense/AcmeClient/lecert.php --mode issue --cert {{ item.uuid }}"
-  changed_when: true
-  when: not item.issued
-  loop: "{{ (ssl_opnsense_certificates.stdout | default('{}', true) | from_json).certificates | default([]) }}"
-  loop_control:
-    label: "{{ item.name }}"
-
-- name: "Pointing the Web GUI at the Certificate"
-  ansible.builtin.command: "php {{ ssl_appliance_tools_dir }}/opnsense_acme.php webgui"
-  environment:
-    SSL_ACME_CERTS: "{{ ssl_dns01_certs | to_json }}"
+    SSL_WEBGUI_REFID: "{{ ssl_opnsense_refids[ssl_dns01_certs[0].domains | first] }}"
   register: ssl_opnsense_webgui
   changed_when: (ssl_opnsense_webgui.stdout | from_json).changed
+  when: ssl_opnsense_refids[ssl_dns01_certs[0].domains | first] | length > 0

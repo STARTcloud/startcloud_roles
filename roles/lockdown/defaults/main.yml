@@ -44,3 +44,23 @@ lockdown_pam_ciba_health_user: ""
 lockdown_pam_ciba_key_addresses: []
 lockdown_pam_ciba_key_users: []
 lockdown_pam_ciba_login_grace_time: 6m
+
+lockdown_opnsense_oidc: false
+lockdown_opnsense_oidc_issuer: ""
+lockdown_opnsense_oidc_client_id: ""
+lockdown_opnsense_oidc_client_secret: ""
+lockdown_opnsense_oidc_set_secret: false
+lockdown_opnsense_oidc_scopes: openid profile email
+lockdown_opnsense_oidc_username_claim: email
+lockdown_opnsense_oidc_button: Single Sign-On
+lockdown_opnsense_oidc_primary_button: true
+lockdown_opnsense_oidc_hide_local: true
+lockdown_opnsense_oidc_auto_sign_in: true
+lockdown_opnsense_oidc_provider_logout: true
+lockdown_opnsense_oidc_prompt: ""
+lockdown_opnsense_oidc_users: {}
+opnsense_api_port: 443
+opnsense_api_url: "https://{{ inventory_hostname }}:{{ opnsense_api_port }}/api"
+opnsense_api_key: ""
+opnsense_api_secret: ""
+opnsense_api_validate_certs: true

@@ -22,3 +22,8 @@ syslog_receive_tls_cert: ""
 syslog_receive_tls_key: ""
 syslog_receive_log_dir: /var/log/remote
 syslog_receive_config_file: /etc/rsyslog.d/10-receive.conf
+opnsense_api_port: 443
+opnsense_api_url: "https://{{ inventory_hostname }}:{{ opnsense_api_port }}/api"
+opnsense_api_key: ""
+opnsense_api_secret: ""
+opnsense_api_validate_certs: true

@@ -1,0 +1,57 @@
+---
+- name: "Setting the wanted mapping of {{ lockdown_opnsense_user.key }}"
+  ansible.builtin.set_fact:
+    lockdown_opnsense_user_wanted:
+      enabled: "1"
+      username: "{{ lockdown_opnsense_user.key }}"
+      subject: "{{ lockdown_opnsense_user.value }}"
+    lockdown_opnsense_user_existing: >-
+      {{ lockdown_opnsense_users.json.rows | selectattr('username', 'equalto', lockdown_opnsense_user.key) | list }}
+
+- name: "Recording whether the mapping changes for {{ lockdown_opnsense_user.key }}"
+  ansible.builtin.set_fact:
+    lockdown_opnsense_user_change: >-
+      {{ lockdown_opnsense_user_existing | length == 0
+         or (lockdown_opnsense_user_wanted.keys() | map('extract', lockdown_opnsense_user_existing[0]) | list)
+            != (lockdown_opnsense_user_wanted.values() | list) }}
+  changed_when: lockdown_opnsense_user_change | bool
+
+- name: "Adding the mapping of {{ lockdown_opnsense_user.key }}"
+  ansible.builtin.uri:
+    url: "{{ opnsense_api_url }}/oidclogin/settings/addUser"
+    method: POST
+    url_username: "{{ opnsense_api_key }}"
+    url_password: "{{ opnsense_api_secret }}"
+    force_basic_auth: true
+    validate_certs: "{{ opnsense_api_validate_certs }}"
+    body_format: json
+    body:
+      user: "{{ lockdown_opnsense_user_wanted }}"
+    return_content: true
+  register: lockdown_opnsense_user_add
+  failed_when: lockdown_opnsense_user_add.json.result | default('failed') != 'saved'
+  changed_when: true
+  when:
+    - lockdown_opnsense_user_change | bool
+    - lockdown_opnsense_user_existing | length == 0
+    - not ansible_check_mode
+
+- name: "Updating the mapping of {{ lockdown_opnsense_user.key }}"
+  ansible.builtin.uri:
+    url: "{{ opnsense_api_url }}/oidclogin/settings/setUser/{{ lockdown_opnsense_user_existing[0].uuid }}"
+    method: POST
+    url_username: "{{ opnsense_api_key }}"
+    url_password: "{{ opnsense_api_secret }}"
+    force_basic_auth: true
+    validate_certs: "{{ opnsense_api_validate_certs }}"
+    body_format: json
+    body:
+      user: "{{ lockdown_opnsense_user_wanted }}"
+    return_content: true
+  register: lockdown_opnsense_user_set
+  failed_when: lockdown_opnsense_user_set.json.result | default('failed') != 'saved'
+  changed_when: true
+  when:
+    - lockdown_opnsense_user_change | bool
+    - lockdown_opnsense_user_existing | length > 0
+    - not ansible_check_mode

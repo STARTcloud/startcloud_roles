@@ -1,0 +1,72 @@
+---
+- name: "Ensuring the certificate and its relations exist for {{ ssl_opnsense_certificate.domains | first }}"
+  ansible.builtin.include_tasks: freebsd-opnsense-object.yml
+  vars:
+    ssl_opnsense_object:
+      controller: certificates
+      key: certificate
+      name: "{{ ssl_opnsense_certificate.domains | first }}"
+      wanted:
+        enabled: "1"
+        name: "{{ ssl_opnsense_certificate.domains | first }}"
+        altNames: "{{ ssl_opnsense_certificate.domains[1:] | join(',') }}"
+        account: "{{ ssl_opnsense_uuids[ssl_opnsense_account_name] }}"
+        validationMethod: "{{ ssl_opnsense_uuids[ssl_opnsense_validation_name] }}"
+        restartActions: "{{ ssl_opnsense_uuids[ssl_opnsense_action_name] }}"
+        autoRenewal: "1"
+
+- name: "Reading the issue state of {{ ssl_opnsense_certificate.domains | first }}"
+  ansible.builtin.uri:
+    url: "{{ opnsense_api_url }}/acmeclient/certificates/get/{{ ssl_opnsense_uuids[ssl_opnsense_certificate.domains | first] }}"
+    url_username: "{{ opnsense_api_key }}"
+    url_password: "{{ opnsense_api_secret }}"
+    force_basic_auth: true
+    validate_certs: "{{ opnsense_api_validate_certs }}"
+    return_content: true
+  register: ssl_opnsense_certificate_state
+  check_mode: false
+  when: ssl_opnsense_uuids[ssl_opnsense_certificate.domains | first] | length > 0
+
+- name: "Recording whether issuing is needed for {{ ssl_opnsense_certificate.domains | first }}"
+  ansible.builtin.set_fact:
+    ssl_opnsense_certificate_unissued: >-
+      {{ ssl_opnsense_uuids[ssl_opnsense_certificate.domains | first] | length == 0
+         or ssl_opnsense_certificate_state.json.certificate.certRefId | default('') | length == 0 }}
+  changed_when: ssl_opnsense_certificate_unissued | bool
+
+- name: "Issuing {{ ssl_opnsense_certificate.domains | first }}"
+  ansible.builtin.uri:
+    url: "{{ opnsense_api_url }}/acmeclient/certificates/sign/{{ ssl_opnsense_uuids[ssl_opnsense_certificate.domains | first] }}"
+    method: POST
+    url_username: "{{ opnsense_api_key }}"
+    url_password: "{{ opnsense_api_secret }}"
+    force_basic_auth: true
+    validate_certs: "{{ opnsense_api_validate_certs }}"
+    body_format: json
+    body: {}
+    return_content: true
+    timeout: "{{ ssl_opnsense_sign_timeout }}"
+  changed_when: true
+  when:
+    - ssl_opnsense_certificate_unissued | bool
+    - not ansible_check_mode
+
+- name: "Reading the issue state after issuing {{ ssl_opnsense_certificate.domains | first }}"
+  ansible.builtin.uri:
+    url: "{{ opnsense_api_url }}/acmeclient/certificates/get/{{ ssl_opnsense_uuids[ssl_opnsense_certificate.domains | first] }}"
+    url_username: "{{ opnsense_api_key }}"
+    url_password: "{{ opnsense_api_secret }}"
+    force_basic_auth: true
+    validate_certs: "{{ opnsense_api_validate_certs }}"
+    return_content: true
+  register: ssl_opnsense_certificate_state
+  failed_when: ssl_opnsense_certificate_state.json.certificate.certRefId | default('') | length == 0
+  when:
+    - ssl_opnsense_certificate_unissued | bool
+    - not ansible_check_mode
+
+- name: "Recording the trust store reference of {{ ssl_opnsense_certificate.domains | first }}"
+  ansible.builtin.set_fact:
+    ssl_opnsense_refids: >-
+      {{ ssl_opnsense_refids | default({})
+         | combine({ssl_opnsense_certificate.domains | first: ssl_opnsense_certificate_state.json.certificate.certRefId | default('')}) }}

@@ -6,6 +6,7 @@ argument_specs:
       - Installs rsyslog where the platform ships it and writes one forwarding rule to the collector, over UDP, TCP or TLS.
       - On the collector it writes the receiving rules, one file per sending host, over UDP and TLS.
       - On OmniOS the rule goes into rsyslog when it is the active system logger, else into syslog.conf.
+      - On OPNsense the rule is one remote destination, written through the firewall's API with an API key.
     author: Mark Gilbert
     options:
       run_tasks:
@@ -98,3 +99,22 @@ argument_specs:
         type: str
         default: /etc/rsyslog.d/10-receive.conf
         description: File the receiving rules are written to.
+      opnsense_api_port:
+        type: int
+        default: 443
+        description: Port the OPNsense web GUI and API listen on.
+      opnsense_api_url:
+        type: str
+        description: Base address of the OPNsense API; defaults to https://<inventory_hostname>:<opnsense_api_port>/api.
+      opnsense_api_key:
+        type: str
+        default: ""
+        description: OPNsense API key the lane signs in with.
+      opnsense_api_secret:
+        type: str
+        default: ""
+        description: Secret of opnsense_api_key.
+      opnsense_api_validate_certs:
+        type: bool
+        default: true
+        description: Whether the firewall's web GUI certificate is checked on API calls.

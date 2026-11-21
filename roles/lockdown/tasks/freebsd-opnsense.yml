@@ -1,0 +1,92 @@
+---
+- name: "Checking the OPNsense sign-in settings"
+  ansible.builtin.assert:
+    that:
+      - opnsense_api_key | length > 0
+      - opnsense_api_secret | length > 0
+      - lockdown_opnsense_oidc_issuer | length > 0
+      - lockdown_opnsense_oidc_client_id | length > 0
+      - lockdown_opnsense_oidc_users | length > 0
+    fail_msg: >-
+      lockdown_opnsense_oidc needs opnsense_api_key, opnsense_api_secret, lockdown_opnsense_oidc_issuer,
+      lockdown_opnsense_oidc_client_id and at least one entry in lockdown_opnsense_oidc_users
+
+- name: "Reading the sign-in plugin settings"
+  ansible.builtin.uri:
+    url: "{{ opnsense_api_url }}/oidclogin/settings/get"
+    url_username: "{{ opnsense_api_key }}"
+    url_password: "{{ opnsense_api_secret }}"
+    force_basic_auth: true
+    validate_certs: "{{ opnsense_api_validate_certs }}"
+    return_content: true
+  register: lockdown_opnsense_settings
+  check_mode: false
+
+- name: "Setting the sign-in plugin settings the inventory asks for"
+  ansible.builtin.set_fact:
+    lockdown_opnsense_wanted:
+      Enabled: "1"
+      Name: "{{ lockdown_opnsense_oidc_button }}"
+      PrimaryButton: "{{ '1' if lockdown_opnsense_oidc_primary_button | bool else '0' }}"
+      HideLocal: "{{ '1' if lockdown_opnsense_oidc_hide_local | bool else '0' }}"
+      AutoSignIn: "{{ '1' if lockdown_opnsense_oidc_auto_sign_in | bool else '0' }}"
+      Issuer: "{{ lockdown_opnsense_oidc_issuer }}"
+      ClientId: "{{ lockdown_opnsense_oidc_client_id }}"
+      Scopes: "{{ lockdown_opnsense_oidc_scopes }}"
+      UsernameClaim: "{{ lockdown_opnsense_oidc_username_claim }}"
+      Prompt: "{{ lockdown_opnsense_oidc_prompt }}"
+      ProviderLogout: "{{ '1' if lockdown_opnsense_oidc_provider_logout | bool else '0' }}"
+    lockdown_opnsense_current: >-
+      {{ lockdown_opnsense_settings.json.oidclogin.general
+         | combine({'Prompt': lockdown_opnsense_settings.json.oidclogin.general.Prompt | dict2items
+                               | selectattr('value.selected', 'equalto', 1) | map(attribute='key') | first | default('')}) }}
+
+- name: "Recording whether the sign-in plugin settings change"
+  ansible.builtin.set_fact:
+    lockdown_opnsense_change: >-
+      {{ lockdown_opnsense_oidc_set_secret | bool
+         or (lockdown_opnsense_wanted.keys() | map('extract', lockdown_opnsense_current) | list)
+            != (lockdown_opnsense_wanted.values() | list) }}
+  changed_when: lockdown_opnsense_change | bool
+
+- name: "Writing the sign-in plugin settings"
+  ansible.builtin.uri:
+    url: "{{ opnsense_api_url }}/oidclogin/settings/set"
+    method: POST
+    url_username: "{{ opnsense_api_key }}"
+    url_password: "{{ opnsense_api_secret }}"
+    force_basic_auth: true
+    validate_certs: "{{ opnsense_api_validate_certs }}"
+    body_format: json
+    body:
+      oidclogin:
+        general: "{{ lockdown_opnsense_wanted | combine({'ClientSecret': lockdown_opnsense_oidc_client_secret}) }}"
+    return_content: true
+  register: lockdown_opnsense_set
+  failed_when: lockdown_opnsense_set.json.result | default('failed') != 'saved'
+  changed_when: true
+  no_log: true
+  when:
+    - lockdown_opnsense_change | bool
+    - not ansible_check_mode
+
+- name: "Reading the sign-in plugin's user map"
+  ansible.builtin.uri:
+    url: "{{ opnsense_api_url }}/oidclogin/settings/searchUser"
+    method: POST
+    url_username: "{{ opnsense_api_key }}"
+    url_password: "{{ opnsense_api_secret }}"
+    force_basic_auth: true
+    validate_certs: "{{ opnsense_api_validate_certs }}"
+    body_format: json
+    body: {}
+    return_content: true
+  register: lockdown_opnsense_users
+  check_mode: false
+
+- name: "Mapping the local accounts to their provider accounts"
+  ansible.builtin.include_tasks: freebsd-opnsense-user.yml
+  loop: "{{ lockdown_opnsense_oidc_users | dict2items }}"
+  loop_control:
+    loop_var: lockdown_opnsense_user
+    label: "{{ lockdown_opnsense_user.key }}"

@@ -18,8 +18,9 @@
   failed_when: false
   when: ssl_push_verify_port | int > 0
 
-- name: "Recording whether the node serves the lineage"
+- name: "Recording whether the node listens and whether it serves the lineage"
   ansible.builtin.set_fact:
+    ssl_push_listening: "{{ ssl_push_verify_port | int == 0 or ssl_push_served_before.cert is defined }}"
     ssl_push_serving: >-
       {{ ssl_push_verify_port | int > 0
          and ssl_push_served_before.cert is defined
@@ -86,7 +87,9 @@
   loop_control:
     label: "{{ item.path }}"
   changed_when: true
-  when: ssl_push_files.changed or ssl_push_combined.changed or not (ssl_push_serving | bool)
+  when:
+    - ssl_push_listening | bool
+    - ssl_push_files.changed or ssl_push_combined.changed or not (ssl_push_serving | bool)
 
 - name: "Reading the certificate the node serves"
   community.crypto.get_certificate:
@@ -100,11 +103,15 @@
   until: ssl_push_served.cert is defined
   retries: 10
   delay: 3
-  when: ssl_push_verify_port | int > 0
+  when:
+    - ssl_push_verify_port | int > 0
+    - ssl_push_listening | bool
 
 - name: "Verifying the served certificate matches the lineage"
   ansible.builtin.assert:
     that:
       - (ssl_push_served.cert | community.crypto.x509_certificate_info).fingerprints.sha256 == ssl_push_lineage_cert.fingerprints.sha256
     fail_msg: "{{ ssl_push_verify_host }}:{{ ssl_push_verify_port }} serves a certificate other than {{ ssl_push_lineage }}/cert.pem"
-  when: ssl_push_verify_port | int > 0
+  when:
+    - ssl_push_verify_port | int > 0
+    - ssl_push_listening | bool

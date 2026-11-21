@@ -1,0 +1,90 @@
+---
+- name: "Ensuring the OPNsense API credentials and a supported transport are present"
+  ansible.builtin.assert:
+    that:
+      - opnsense_api_key | length > 0
+      - opnsense_api_secret | length > 0
+      - syslog_protocol in syslog_opnsense_transport
+    fail_msg: "The OPNsense lane needs opnsense_api_key and opnsense_api_secret and forwards over {{ syslog_opnsense_transport.keys() | join(' or ') }}"
+
+- name: "Reading the log destinations"
+  ansible.builtin.uri:
+    url: "{{ opnsense_api_url }}/syslog/settings/searchDestinations"
+    method: POST
+    url_username: "{{ opnsense_api_key }}"
+    url_password: "{{ opnsense_api_secret }}"
+    force_basic_auth: true
+    validate_certs: "{{ opnsense_api_validate_certs }}"
+    body_format: json
+    body: {}
+    return_content: true
+  register: syslog_opnsense_destinations
+  check_mode: false
+
+- name: "Setting the destination the collector is reached by"
+  ansible.builtin.set_fact:
+    syslog_opnsense_destination:
+      enabled: "1"
+      transport: "{{ syslog_opnsense_transport[syslog_protocol] }}"
+      program: ""
+      level: "{{ syslog_opnsense_levels }}"
+      facility: ""
+      hostname: "{{ syslog_server }}"
+      certificate: ""
+      port: "{{ syslog_port | string }}"
+      rfc5424: "1"
+      description: "{{ syslog_opnsense_description }}"
+    syslog_opnsense_existing: >-
+      {{ syslog_opnsense_destinations.json.rows
+         | selectattr('hostname', 'equalto', syslog_server)
+         | selectattr('program', 'equalto', '')
+         | list }}
+
+- name: "Recording whether the destination changes"
+  ansible.builtin.set_fact:
+    syslog_opnsense_change: >-
+      {{ syslog_opnsense_existing | length == 0
+         or (syslog_opnsense_destination.keys() | map('extract', syslog_opnsense_existing[0]) | list)
+            != (syslog_opnsense_destination.values() | list) }}
+  changed_when: syslog_opnsense_change | bool
+  notify: "Reconfiguring the OPNsense syslog"
+
+- name: "Adding the destination"
+  ansible.builtin.uri:
+    url: "{{ opnsense_api_url }}/syslog/settings/addDestination"
+    method: POST
+    url_username: "{{ opnsense_api_key }}"
+    url_password: "{{ opnsense_api_secret }}"
+    force_basic_auth: true
+    validate_certs: "{{ opnsense_api_validate_certs }}"
+    body_format: json
+    body:
+      destination: "{{ syslog_opnsense_destination }}"
+    return_content: true
+  register: syslog_opnsense_add
+  failed_when: syslog_opnsense_add.json.result | default('failed') != 'saved'
+  changed_when: true
+  when:
+    - syslog_opnsense_change | bool
+    - syslog_opnsense_existing | length == 0
+    - not ansible_check_mode
+
+- name: "Updating the destination"
+  ansible.builtin.uri:
+    url: "{{ opnsense_api_url }}/syslog/settings/setDestination/{{ syslog_opnsense_existing[0].uuid }}"
+    method: POST
+    url_username: "{{ opnsense_api_key }}"
+    url_password: "{{ opnsense_api_secret }}"
+    force_basic_auth: true
+    validate_certs: "{{ opnsense_api_validate_certs }}"
+    body_format: json
+    body:
+      destination: "{{ syslog_opnsense_destination }}"
+    return_content: true
+  register: syslog_opnsense_set
+  failed_when: syslog_opnsense_set.json.result | default('failed') != 'saved'
+  changed_when: true
+  when:
+    - syslog_opnsense_change | bool
+    - syslog_opnsense_existing | length > 0
+    - not ansible_check_mode

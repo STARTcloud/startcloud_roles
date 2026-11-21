@@ -7,6 +7,11 @@
     path: /etc/inc/globals.inc
   register: dependencies_pfsense_check
 
+- name: "Detecting OPNsense Appliance"
+  ansible.builtin.stat:
+    path: /usr/local/opnsense/mvc
+  register: dependencies_opnsense_check
+
 - name: "Including OS-specific vars"
   ansible.builtin.include_vars: "{{ 'pfsense.yml' if dependencies_pfsense_check.stat.exists else (ansible_os_family | lower ~ '.yml') }}"
 
@@ -46,10 +51,18 @@
   loop_control:
     label: "{{ item.name }}"
 
+- name: "Updating the firewall through the OPNsense API"
+  ansible.builtin.include_tasks: freebsd-opnsense.yml
+  when:
+    - dependencies_opnsense_check.stat.exists
+    - opnsense_api_key | length > 0
+
 - name: "Refreshing the package catalogues"
   ansible.builtin.command: pkg update
   changed_when: false
-  when: extra_repos | default([]) | length > 0
+  when:
+    - extra_repos | default([]) | length > 0
+    - not (dependencies_opnsense_check.stat.exists and opnsense_api_key | length > 0)
 
 - name: "Self-upgrading pkg before installing other packages (pkg mid-install self-upgrades can abort subsequent work)"
   community.general.pkgng:

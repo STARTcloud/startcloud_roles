@@ -5,6 +5,8 @@ argument_specs:
     description:
       - Installs and configures an NTP implementation (traditional ntpd, chrony, or systemd-timesyncd depending on the platform).
       - Renders the daemon configuration from the role's upstream server list and sets the system timezone.
+      - On an OPNsense firewall it writes the time servers and the timezone into the firewall's configuration with a
+        PHP tool, the firewall having no API for them, and restarts ntpd through the API.
     author: Mark Gilbert
     options:
       run_tasks:
@@ -56,3 +58,26 @@ argument_specs:
         type: bool
         default: false
         description: When true, adds "tinker panic 0" to ntp.conf so the clock always steps (useful for paused VMs).
+      ntp_opnsense_tools_dir:
+        type: str
+        default: /conf/ansible/tools
+        description: Directory on an OPNsense firewall the time server tool is placed in.
+      opnsense_api_port:
+        type: int
+        default: 443
+        description: Port the OPNsense web GUI and API listen on.
+      opnsense_api_url:
+        type: str
+        description: Base address of the OPNsense API; defaults to https://<inventory_hostname>:<opnsense_api_port>/api.
+      opnsense_api_key:
+        type: str
+        default: ""
+        description: OPNsense API key the ntpd restart signs in with.
+      opnsense_api_secret:
+        type: str
+        default: ""
+        description: Secret of opnsense_api_key.
+      opnsense_api_validate_certs:
+        type: bool
+        default: true
+        description: Whether the firewall's web GUI certificate is checked on API calls.

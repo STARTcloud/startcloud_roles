@@ -4,6 +4,7 @@ argument_specs:
     short_description: Baseline system dependencies
     description:
       - Installs baseline packages, extra packages, and (on Debian) extra repositories needed by other roles. Dispatches to OS-specific tasks for Debian, RedHat, FreeBSD, OmniOS and Windows.
+      - On an OPNsense firewall with an API key it checks for and applies the firewall's own updates through the firmware API and records whether a reboot waits.
     author: Mark Gilbert
     options:
       run_tasks:
@@ -116,3 +117,36 @@ argument_specs:
         type: bool
         default: true
         description: Remove packages no longer needed after the upgrade.
+      dependencies_opnsense_poll_delay:
+        type: int
+        default: 10
+        description: Seconds between two reads of the firmware job state while an OPNsense check or update runs.
+      dependencies_opnsense_check_retries:
+        type: int
+        default: 30
+        description: Reads of the firmware job state an OPNsense update check may take before the role gives up.
+      dependencies_opnsense_update_retries:
+        type: int
+        default: 360
+        description: Reads of the firmware job state an OPNsense update may take before the role gives up.
+      opnsense_api_port:
+        type: int
+        default: 443
+        description: Port the OPNsense web GUI and API listen on.
+      opnsense_api_url:
+        type: str
+        description: Base address of the OPNsense API; defaults to https://<inventory_hostname>:<opnsense_api_port>/api.
+      opnsense_api_key:
+        type: str
+        default: ""
+        description: >-
+          OPNsense API key the lane signs in with; empty keeps the plain FreeBSD path (pkg update and the package
+          modules), the image-build way.
+      opnsense_api_secret:
+        type: str
+        default: ""
+        description: Secret of opnsense_api_key.
+      opnsense_api_validate_certs:
+        type: bool
+        default: true
+        description: Whether the firewall's web GUI certificate is checked on API calls.

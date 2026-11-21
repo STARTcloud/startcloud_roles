@@ -11,8 +11,22 @@
   when: vendor is defined
   failed_when: false
 
+- name: "Detecting OPNsense Appliance"
+  ansible.builtin.stat:
+    path: /usr/local/opnsense/mvc
+  register: setup_opnsense_check
+
+- name: "Installing the root key through the OPNsense API"
+  ansible.builtin.include_tasks: freebsd-opnsense.yml
+  when:
+    - (root_ssh_key | default('')) | length > 0
+    - setup_opnsense_check.stat.exists
+    - opnsense_api_key | length > 0
+
 - name: "Ensuring /root/.ssh directory exists"
-  when: (root_ssh_key | default('')) | length > 0
+  when:
+    - (root_ssh_key | default('')) | length > 0
+    - not (setup_opnsense_check.stat.exists and opnsense_api_key | length > 0)
   ansible.builtin.file:
     path: /root/.ssh
     state: directory
@@ -21,7 +35,9 @@
     mode: "0700"
 
 - name: "Installing authorized_key for root"
-  when: (root_ssh_key | default('')) | length > 0
+  when:
+    - (root_ssh_key | default('')) | length > 0
+    - not (setup_opnsense_check.stat.exists and opnsense_api_key | length > 0)
   ansible.posix.authorized_key:
     user: root
     state: present

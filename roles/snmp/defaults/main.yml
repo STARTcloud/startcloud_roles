@@ -31,3 +31,8 @@ snmp_logging_options: ""
 snmp_password: snmp_password
 snmp_user: snmp
 snmp_v3: true
+opnsense_api_port: 443
+opnsense_api_url: "https://{{ inventory_hostname }}:{{ opnsense_api_port }}/api"
+opnsense_api_key: ""
+opnsense_api_secret: ""
+opnsense_api_validate_certs: true

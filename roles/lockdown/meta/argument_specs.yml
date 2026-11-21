@@ -4,6 +4,7 @@ argument_specs:
     short_description: Guest security lockdown
     description:
       - Disables unneeded/risky services, rotates the default user password, generates and installs an SSH key, and optionally scrubs sensitive files. Dispatches to Debian and Windows tasks.
+      - On OPNsense it writes the os-oidc-login plugin's settings and user map through the firewall's API, so the web GUI signs in through the OpenID Provider.
     author: Mark Gilbert
     options:
       run_tasks:
@@ -98,6 +99,82 @@ argument_specs:
         type: str
         default: 6m
         description: sshd LoginGraceTime, longer than the provider's request lifetime so the end-user has the whole lifetime to approve.
+      lockdown_opnsense_oidc:
+        type: bool
+        default: false
+        description: On an OPNsense firewall, write the os-oidc-login plugin's settings and user map through the API.
+      lockdown_opnsense_oidc_issuer:
+        type: str
+        default: ""
+        description: The OpenID Provider's issuer identifier the web GUI signs in through.
+      lockdown_opnsense_oidc_client_id:
+        type: str
+        default: ""
+        description: The client registered at the provider for this firewall's web GUI.
+      lockdown_opnsense_oidc_client_secret:
+        type: str
+        default: ""
+        description: Secret of that client; the plugin never reads it back, so it is sent on every write of the settings.
+      lockdown_opnsense_oidc_set_secret:
+        type: bool
+        default: false
+        description: Force one write of the settings so a changed secret reaches the firewall; the plugin cannot show whether the stored one differs.
+      lockdown_opnsense_oidc_scopes:
+        type: str
+        default: openid profile email
+        description: Scopes the web GUI asks the provider for.
+      lockdown_opnsense_oidc_username_claim:
+        type: str
+        default: email
+        description: Claim of the ID token that names the provider account.
+      lockdown_opnsense_oidc_button:
+        type: str
+        default: Single Sign-On
+        description: Text of the sign-in button on the login page.
+      lockdown_opnsense_oidc_primary_button:
+        type: bool
+        default: true
+        description: Draw the sign-in button as the primary one.
+      lockdown_opnsense_oidc_hide_local:
+        type: bool
+        default: true
+        description: Hide the password form on the login page.
+      lockdown_opnsense_oidc_auto_sign_in:
+        type: bool
+        default: true
+        description: Send the browser to the provider as soon as the login page opens.
+      lockdown_opnsense_oidc_provider_logout:
+        type: bool
+        default: true
+        description: Sign out at the provider as well when the web GUI signs out.
+      lockdown_opnsense_oidc_prompt:
+        type: str
+        default: ""
+        choices: ["", login, select_account]
+        description: The prompt the provider is asked for; empty lets the provider decide.
+      lockdown_opnsense_oidc_users:
+        type: dict
+        default: {}
+        description: Local web GUI account name to the provider account it signs in as.
+      opnsense_api_port:
+        type: int
+        default: 443
+        description: Port the OPNsense web GUI and API listen on.
+      opnsense_api_url:
+        type: str
+        description: Base address of the OPNsense API; defaults to https://<inventory_hostname>:<opnsense_api_port>/api.
+      opnsense_api_key:
+        type: str
+        default: ""
+        description: OPNsense API key the lane signs in with.
+      opnsense_api_secret:
+        type: str
+        default: ""
+        description: Secret of opnsense_api_key.
+      opnsense_api_validate_certs:
+        type: bool
+        default: true
+        description: Whether the firewall's web GUI certificate is checked on API calls.
       vagrant_user:
         type: str
         description: >-

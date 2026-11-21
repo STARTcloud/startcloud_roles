@@ -22,7 +22,7 @@
       networking_hosts_file: true
 
 - name: Point every node's clock at its time servers
-  hosts: vms:pis:hypervisors:outside
+  hosts: vms:pis:hypervisors:outside:firewalls
   serial: 1
   any_errors_fatal: true
   become: true
@@ -41,7 +41,7 @@
     - role: startcloud.startcloud_roles.ssl
 
 - name: Point every node at the log collector and answer SNMP the same way
-  hosts: vms:pis:hypervisors:outside
+  hosts: vms:pis:hypervisors:outside:firewalls
   serial: 1
   any_errors_fatal: true
   become: true
@@ -450,73 +450,49 @@
   roles:
     - role: startcloud.startcloud_roles.ssl
 
-- name: Update every OPNsense firewall
+- name: Update every OPNsense firewall and install its baseline packages and certificate
   hosts: firewalls
   serial: 1
   any_errors_fatal: true
   gather_facts: true
   tags: [opnsense]
-  vars:
-    opnsense_update_base_kernel: false
   tasks:
-    - name: "Checking for a base and kernel update"
-      ansible.builtin.command: opnsense-update -c
-      register: opnsense_base
-      changed_when: false
-      failed_when: opnsense_base.rc not in [0, 1]
-      check_mode: false
+    - name: "Updating the firewall and installing its packages"
+      ansible.builtin.include_role:
+        name: startcloud.startcloud_roles.dependencies
+      vars:
+        extra_packages: "{{ opnsense_plugins }}"
+        extra_repos: "{{ opnsense_repos | default([]) }}"
 
-    - name: "Reading the pending package upgrades"
-      ansible.builtin.command: pkg upgrade -n
-      register: opnsense_packages
-      changed_when: false
-      failed_when: false
-      check_mode: false
+    - name: "Issuing the web GUI certificate"
+      ansible.builtin.include_role:
+        name: startcloud.startcloud_roles.ssl
 
-    - name: "Applying the package updates"
-      ansible.builtin.command: opnsense-update -p
-      changed_when: true
-      when: "'Your packages are up to date' not in opnsense_packages.stdout"
-
-    - name: "Applying the base and kernel update"
-      ansible.builtin.command: opnsense-update -bk
-      register: opnsense_base_applied
-      changed_when: true
-      when:
-        - opnsense_update_base_kernel | bool
-        - opnsense_base.rc == 0
-
-    - name: "Rebooting the firewall to finish the base and kernel update"
+    - name: "Rebooting the firewall to finish its update"
       ansible.builtin.reboot:
         reboot_timeout: "{{ update_reboot_timeout | default(600) }}"
+      register: update_reboot
       when:
-        - opnsense_base_applied is changed
         - reboots_allowed | default(false) | bool
         - not (reboot_never | default(false) | bool)
-
-    - name: "Reading the installed OPNsense version"
-      ansible.builtin.command: opnsense-version
-      register: opnsense_version
-      changed_when: false
-      check_mode: false
+        - dependencies_reboot_required | default(false) | bool
 
     - name: "Reporting the firewall"
       ansible.builtin.debug:
         msg:
-          version: "{{ opnsense_version.stdout | trim }}"
-          reboot_pending: "{{ (opnsense_base_applied is changed) and not (opnsense_base_applied is skipped) }}"
+          version: "{{ dependencies_opnsense_version | default('') }}"
+          reboot_pending: "{{ (dependencies_reboot_required | default(false) | bool) and not (update_reboot.changed | default(false)) }}"
 
-- name: Install the baseline packages and the certificate on every OPNsense firewall
+- name: Place the root key and the web GUI sign-in on every OPNsense firewall
   hosts: firewalls
   serial: 1
   any_errors_fatal: true
   gather_facts: true
   tags: [opnsense]
   roles:
-    - role: startcloud.startcloud_roles.dependencies
-      extra_packages: "{{ opnsense_plugins }}"
-      extra_repos: "{{ opnsense_repos | default([]) }}"
-    - role: startcloud.startcloud_roles.ssl
+    - role: startcloud.startcloud_roles.setup
+    - role: startcloud.startcloud_roles.lockdown
+      lockdown_rotate_user: false
 
 - name: Point every access point's clock at its gateway
   hosts: openwrt

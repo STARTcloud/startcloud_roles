@@ -1,0 +1,53 @@
+---
+- name: "Ensuring the OPNsense API credentials are present"
+  ansible.builtin.assert:
+    that:
+      - opnsense_api_key | length > 0
+      - opnsense_api_secret | length > 0
+    fail_msg: "The OPNsense lane needs opnsense_api_key and opnsense_api_secret"
+
+- name: "Reading the SNMP agent settings"
+  ansible.builtin.uri:
+    url: "{{ opnsense_api_url }}/netsnmp/general/get"
+    url_username: "{{ opnsense_api_key }}"
+    url_password: "{{ opnsense_api_secret }}"
+    force_basic_auth: true
+    validate_certs: "{{ opnsense_api_validate_certs }}"
+    return_content: true
+  register: snmp_opnsense_general
+  check_mode: false
+
+- name: "Setting the SNMP agent settings the inventory asks for"
+  ansible.builtin.set_fact:
+    snmp_opnsense_wanted:
+      enabled: "1"
+      community: "{{ snmp_community }}"
+      syslocation: "{{ snmp_location }}"
+      syscontact: "{{ snmp_contact }}"
+
+- name: "Recording whether the SNMP agent settings change"
+  ansible.builtin.set_fact:
+    snmp_opnsense_change: >-
+      {{ (snmp_opnsense_wanted.keys() | map('extract', snmp_opnsense_general.json.general) | list)
+         != (snmp_opnsense_wanted.values() | list) }}
+  changed_when: snmp_opnsense_change | bool
+  notify: "Reconfiguring the OPNsense SNMP agent"
+
+- name: "Writing the SNMP agent settings"
+  ansible.builtin.uri:
+    url: "{{ opnsense_api_url }}/netsnmp/general/set"
+    method: POST
+    url_username: "{{ opnsense_api_key }}"
+    url_password: "{{ opnsense_api_secret }}"
+    force_basic_auth: true
+    validate_certs: "{{ opnsense_api_validate_certs }}"
+    body_format: json
+    body:
+      general: "{{ snmp_opnsense_wanted }}"
+    return_content: true
+  register: snmp_opnsense_set
+  failed_when: snmp_opnsense_set.json.result | default('failed') != 'saved'
+  changed_when: true
+  when:
+    - snmp_opnsense_change | bool
+    - not ansible_check_mode

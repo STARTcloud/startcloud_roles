@@ -1,0 +1,6 @@
+---
+syslog_opnsense_transport:
+  udp: udp4
+  tcp: tcp4
+syslog_opnsense_levels: "info,notice,warn,err,crit,alert,emerg"
+syslog_opnsense_description: everything

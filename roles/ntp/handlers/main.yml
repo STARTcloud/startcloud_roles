@@ -10,3 +10,19 @@
     name: "{{ ntp_cron_daemon }}"
     state: restarted
   when: ntp_cron_handler_enabled | bool
+
+- name: "Restarting the OPNsense ntpd"
+  ansible.builtin.uri:
+    url: "{{ opnsense_api_url }}/core/service/restart/ntpd"
+    method: POST
+    url_username: "{{ opnsense_api_key }}"
+    url_password: "{{ opnsense_api_secret }}"
+    force_basic_auth: true
+    validate_certs: "{{ opnsense_api_validate_certs }}"
+    body_format: json
+    body: {}
+    return_content: true
+  changed_when: true
+  when:
+    - ntp_enabled | bool
+    - not ansible_check_mode

@@ -1,0 +1,54 @@
+---
+- name: "Ensuring the OPNsense API credentials are present"
+  ansible.builtin.assert:
+    that:
+      - opnsense_api_key | length > 0
+      - opnsense_api_secret | length > 0
+    fail_msg: "The OPNsense lane needs opnsense_api_key and opnsense_api_secret"
+
+- name: "Reading the firewall's users"
+  ansible.builtin.uri:
+    url: "{{ opnsense_api_url }}/auth/user/search"
+    method: POST
+    url_username: "{{ opnsense_api_key }}"
+    url_password: "{{ opnsense_api_secret }}"
+    force_basic_auth: true
+    validate_certs: "{{ opnsense_api_validate_certs }}"
+    body_format: json
+    body: {}
+    return_content: true
+  register: setup_opnsense_users
+  check_mode: false
+
+- name: "Setting the root user and the keys it holds"
+  ansible.builtin.set_fact:
+    setup_opnsense_root: "{{ setup_opnsense_users.json.rows | selectattr('name', 'equalto', 'root') | first }}"
+
+- name: "Setting the keys root holds"
+  ansible.builtin.set_fact:
+    setup_opnsense_root_keys: "{{ setup_opnsense_root['%authorizedkeys'] | split('\n') | map('trim') | reject('equalto', '') | list }}"
+
+- name: "Recording whether the root key is missing"
+  ansible.builtin.set_fact:
+    setup_opnsense_change: "{{ root_ssh_key | trim not in setup_opnsense_root_keys }}"
+  changed_when: setup_opnsense_change | bool
+
+- name: "Adding the root key"
+  ansible.builtin.uri:
+    url: "{{ opnsense_api_url }}/auth/user/set/{{ setup_opnsense_root.uuid }}"
+    method: POST
+    url_username: "{{ opnsense_api_key }}"
+    url_password: "{{ opnsense_api_secret }}"
+    force_basic_auth: true
+    validate_certs: "{{ opnsense_api_validate_certs }}"
+    body_format: json
+    body:
+      user:
+        authorizedkeys: "{{ (setup_opnsense_root_keys + [root_ssh_key | trim]) | join('\n') }}"
+    return_content: true
+  register: setup_opnsense_set
+  failed_when: setup_opnsense_set.json.result | default('failed') != 'saved'
+  changed_when: true
+  when:
+    - setup_opnsense_change | bool
+    - not ansible_check_mode

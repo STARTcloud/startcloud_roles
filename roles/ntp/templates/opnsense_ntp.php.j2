@@ -1,0 +1,34 @@
+<?php
+
+require_once('config.inc');
+
+use OPNsense\Core\Config;
+
+$check = getenv('NTP_CHECK') === '1';
+$wanted = [
+    'timeservers' => (string)getenv('NTP_TIMESERVERS'),
+    'iburst' => (string)getenv('NTP_IBURST'),
+    'prefer' => (string)getenv('NTP_PREFER'),
+    'timezone' => (string)getenv('NTP_TIMEZONE'),
+];
+$config = Config::getInstance()->object();
+if (!isset($config->ntpd)) {
+    $config->addChild('ntpd');
+}
+$current = [
+    'timeservers' => (string)$config->system->timeservers,
+    'iburst' => (string)$config->ntpd->iburst,
+    'prefer' => (string)$config->ntpd->prefer,
+    'timezone' => (string)$config->system->timezone,
+];
+$changed = $current !== $wanted;
+
+if ($changed && !$check) {
+    $config->system->timeservers = $wanted['timeservers'];
+    $config->ntpd->iburst = $wanted['iburst'];
+    $config->ntpd->prefer = $wanted['prefer'];
+    $config->system->timezone = $wanted['timezone'];
+    Config::getInstance()->save();
+}
+
+echo json_encode(['changed' => $changed, 'current' => $current, 'wanted' => $wanted]), "\n";

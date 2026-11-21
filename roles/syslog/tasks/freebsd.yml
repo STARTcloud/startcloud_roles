@@ -1,0 +1,12 @@
+---
+- name: "Detecting OPNsense Appliance"
+  ansible.builtin.stat:
+    path: /usr/local/opnsense/mvc
+  register: syslog_opnsense_check
+
+- name: "Forwarding the logs through the OPNsense API"
+  ansible.builtin.include_tasks: freebsd-opnsense.yml
+  when:
+    - syslog_opnsense_check.stat.exists
+    - syslog_forward | bool
+    - syslog_server | length > 0

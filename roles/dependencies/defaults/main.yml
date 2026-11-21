@@ -31,3 +31,11 @@ dependencies_pve_no_subscription_uri: http://download.proxmox.com/debian/pve
 dependencies_pve_keyring: /usr/share/keyrings/proxmox-archive-keyring.gpg
 dependencies_upgrade: true
 dependencies_autoremove: true
+dependencies_opnsense_poll_delay: 10
+dependencies_opnsense_check_retries: 30
+dependencies_opnsense_update_retries: 360
+opnsense_api_port: 443
+opnsense_api_url: "https://{{ inventory_hostname }}:{{ opnsense_api_port }}/api"
+opnsense_api_key: ""
+opnsense_api_secret: ""
+opnsense_api_validate_certs: true

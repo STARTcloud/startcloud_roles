@@ -1,0 +1,57 @@
+---
+- name: "Ensuring the OPNsense API credentials and the time servers are present"
+  ansible.builtin.assert:
+    that:
+      - opnsense_api_key | length > 0
+      - opnsense_api_secret | length > 0
+      - ntp_servers | length > 0
+    fail_msg: "The OPNsense lane needs opnsense_api_key, opnsense_api_secret and at least one entry in ntp_servers"
+
+- name: "Setting the time servers the inventory asks for"
+  ansible.builtin.set_fact:
+    ntp_opnsense_timeservers: "{{ ntp_servers | map('split') | map('first') | join(' ') }}"
+    ntp_opnsense_iburst: "{{ ntp_servers | map('split') | select('contains', 'iburst') | map('first') | join(' ') }}"
+    ntp_opnsense_prefer: "{{ ntp_servers | map('split') | select('contains', 'prefer') | map('first') | join(' ') }}"
+
+- name: "Creating Appliance Tools Directory"
+  ansible.builtin.file:
+    path: "{{ ntp_opnsense_tools_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: "Placing the time server tool"
+  ansible.builtin.template:
+    src: opnsense_ntp.php.j2
+    dest: "{{ ntp_opnsense_tools_dir }}/opnsense_ntp.php"
+    mode: "0700"
+
+- name: "Reading the time servers and the timezone"
+  ansible.builtin.command: "php {{ ntp_opnsense_tools_dir }}/opnsense_ntp.php"
+  environment:
+    NTP_CHECK: "1"
+    NTP_TIMESERVERS: "{{ ntp_opnsense_timeservers }}"
+    NTP_IBURST: "{{ ntp_opnsense_iburst }}"
+    NTP_PREFER: "{{ ntp_opnsense_prefer }}"
+    NTP_TIMEZONE: "{{ ntp_timezone }}"
+  register: ntp_opnsense_read
+  changed_when: false
+  check_mode: false
+
+- name: "Recording whether the time servers or the timezone change"
+  ansible.builtin.set_fact:
+    ntp_opnsense_change: "{{ (ntp_opnsense_read.stdout | from_json).changed }}"
+  changed_when: ntp_opnsense_change | bool
+  notify: "Restarting the OPNsense ntpd"
+
+- name: "Writing the time servers and the timezone"
+  ansible.builtin.command: "php {{ ntp_opnsense_tools_dir }}/opnsense_ntp.php"
+  environment:
+    NTP_TIMESERVERS: "{{ ntp_opnsense_timeservers }}"
+    NTP_IBURST: "{{ ntp_opnsense_iburst }}"
+    NTP_PREFER: "{{ ntp_opnsense_prefer }}"
+    NTP_TIMEZONE: "{{ ntp_timezone }}"
+  register: ntp_opnsense_write
+  changed_when: (ntp_opnsense_write.stdout | from_json).changed
+  when:
+    - ntp_opnsense_change | bool
+    - not ansible_check_mode

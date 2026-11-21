@@ -1,0 +1,18 @@
+<?php
+
+require_once('config.inc');
+
+use OPNsense\Core\Config;
+
+$refid = (string)getenv('SSL_WEBGUI_REFID');
+$config = Config::getInstance()->object();
+$changed = false;
+
+if ($refid !== '' && (string)$config->system->webgui->{'ssl-certref'} !== $refid) {
+    $config->system->webgui->{'ssl-certref'} = $refid;
+    Config::getInstance()->save();
+    exec('/usr/local/sbin/configctl webgui restart');
+    $changed = true;
+}
+
+echo json_encode(['changed' => $changed, 'refid' => (string)$config->system->webgui->{'ssl-certref'}]), "\n";

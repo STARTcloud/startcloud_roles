@@ -1,0 +1,11 @@
+---
+- name: "Detecting OPNsense Appliance"
+  ansible.builtin.stat:
+    path: /usr/local/opnsense/mvc
+  register: lockdown_opnsense_check
+
+- name: "Signing the web GUI in through the OpenID Provider"
+  ansible.builtin.include_tasks: freebsd-opnsense.yml
+  when:
+    - lockdown_opnsense_check.stat.exists
+    - lockdown_opnsense_oidc | bool

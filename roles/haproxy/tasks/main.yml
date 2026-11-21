@@ -9,6 +9,9 @@
       ansible.builtin.apt:
         pkg:
           - haproxy
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
 
     - name: "Creating template and certificate directories"
       ansible.builtin.file:

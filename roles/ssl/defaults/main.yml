@@ -89,6 +89,19 @@ ssl_acme_account_name: CHANGEME
 ssl_acme_account_email: changeme@example.com
 ssl_acme_account_key: "{{ vault_ssl_acme_account_key | default('CHANGEME') }}"
 ssl_acme_server: letsencrypt-production-2
+ssl_opnsense_environment: "{{ 'stg' if letsencrypt_staging_enabled else 'prod' }}"
+ssl_opnsense_ca: "{{ 'letsencrypt_test' if letsencrypt_staging_enabled else 'letsencrypt' }}"
+ssl_opnsense_account_name: letsencrypt
+ssl_opnsense_validation_name: cloudflare
+ssl_opnsense_dns_service: dns_cf
+ssl_opnsense_action_name: webgui
+ssl_opnsense_action_type: configd_restart_gui
+ssl_opnsense_sign_timeout: 600
+opnsense_api_port: 443
+opnsense_api_url: "https://{{ inventory_hostname }}:{{ opnsense_api_port }}/api"
+opnsense_api_key: ""
+opnsense_api_secret: ""
+opnsense_api_validate_certs: true
 
 ssl_push_lineage: ""
 ssl_push: false

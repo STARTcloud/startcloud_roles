@@ -16,6 +16,11 @@ email: support@startcloud.com
 # Empty = skip (Debian disables root SSH login via preseed; only needed on
 # platforms without a preseed/kickstart equivalent, like OPNsense).
 root_ssh_key: ""
+opnsense_api_port: 443
+opnsense_api_url: "https://{{ inventory_hostname }}:{{ opnsense_api_port }}/api"
+opnsense_api_key: ""
+opnsense_api_secret: ""
+opnsense_api_validate_certs: true
 
 installer_base_url: "{{ (secrets | default({})).get('installer_base_url', '') }}"
 installer_url_user: "{{ (secrets | default({})).get('installer_url_user', '') }}"

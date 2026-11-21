@@ -19,3 +19,9 @@ ntp_restrict:
   - "::1"
 ntp_cron_handler_enabled: false
 ntp_tinker_panic: false
+ntp_opnsense_tools_dir: /conf/ansible/tools
+opnsense_api_port: 443
+opnsense_api_url: "https://{{ inventory_hostname }}:{{ opnsense_api_port }}/api"
+opnsense_api_key: ""
+opnsense_api_secret: ""
+opnsense_api_validate_certs: true

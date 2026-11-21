@@ -54,15 +54,15 @@ A group the site does not have is declared with no hosts, so every play finds it
 | --- | --- | --- |
 | `authorized-key` | `vms`, `hypervisors`, `pis` | Places the controller's public key on the login account |
 | `hosts-file` | `vms`, `hypervisors` | Writes the site hosts file |
-| `ntp` | `vms`, `pis`, `hypervisors`, `outside` | Points every clock at its time servers |
-| `monitoring` | `collectors`, then `vms`, `pis`, `hypervisors`, `outside` | Issues the collector's certificate, forwards logs to the collector, answers SNMP |
+| `ntp` | `vms`, `pis`, `hypervisors`, `outside`, `firewalls` | Points every clock at its time servers |
+| `monitoring` | `collectors`, then `vms`, `pis`, `hypervisors`, `outside`, `firewalls` | Issues the collector's certificate, forwards logs to the collector, answers SNMP |
 | `pam-ciba` | `pam_ciba` | Gates SSH logins on push approval |
 | `system-proxy` | `system_proxy` | Writes the system-wide and package-manager proxy settings |
 | `proxies` | `proxies` | Installs HAProxy with the site's template named by `haproxy_cfg`, keepalived with the site's VRRP values, and squid where `squid_proxy` is set |
 | `update` | `vms`, `pis`, then `windows`, then `hypervisors`, then `controllers` | Upgrades packages one node at a time, updates compose containers where `container_compose_update` is set, reboots where allowed, waits for a rebooted host's boot-time guests to run again, reports what still waits, fails on any node it never reached |
 | `maintenance` | the `update` groups and `controllers` | The maintenance window: a mail that it opens, the `update` plays with reboots allowed, the certificate renewal on the controller, a mail that it is done with the log attached, and the controller's own reboot last; a failing node mails the log and stops the run |
 | `certificates` | `controllers`, then `certificates` | Issues or adopts the controller's certificates by DNS-01, then pushes them to every target |
-| `opnsense` | `firewalls` | Applies pending OPNsense package updates, installs the baseline packages and the repositories in `opnsense_repos`, issues and renews the web GUI certificate |
+| `opnsense` | `firewalls` | Applies the pending OPNsense updates through the firmware API, installs the baseline packages and the repositories in `opnsense_repos`, issues the web GUI certificate through the ACME client, reboots where allowed, places root's key and the web GUI sign-in through the OpenID Provider |
 | `openwrt` | `openwrt` | Points the clock at the gateway, points logs at the collector, upgrades firmware and packages |
 
 ## Updates
@@ -79,10 +79,10 @@ A node that carries `dependencies_install_packages: false` is upgraded and never
 
 A Proxmox host that rebooted is not done until every guest it starts on boot reports running again. The last play of an update run lists the nodes still waiting for a reboot or an update, and fails the run, with the window's mail, on any node it never reached.
 
-OPNsense base and kernel updates stay off unless asked for:
+An OPNsense firewall applies every pending update as one job and reboots only when the run allows it:
 
 ```sh
-ansible-playbook -i inventory/home.yml site.yml --tags opnsense --diff -e opnsense_update_base_kernel=true -e reboots_allowed=true
+ansible-playbook -i inventory/home.yml site.yml --tags opnsense --diff -e reboots_allowed=true
 ```
 
 An access point upgrades only when `owut check` reports it safe, and the run waits for it to come back on the new release.

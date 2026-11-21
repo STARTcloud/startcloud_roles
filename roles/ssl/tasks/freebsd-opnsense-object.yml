@@ -1,0 +1,99 @@
+---
+- name: "Reading the list that holds {{ ssl_opnsense_object.name }}"
+  ansible.builtin.uri:
+    url: "{{ opnsense_api_url }}/acmeclient/{{ ssl_opnsense_object.controller }}/search"
+    method: POST
+    url_username: "{{ opnsense_api_key }}"
+    url_password: "{{ opnsense_api_secret }}"
+    force_basic_auth: true
+    validate_certs: "{{ opnsense_api_validate_certs }}"
+    body_format: json
+    body: {}
+    return_content: true
+  register: ssl_opnsense_object_search
+  check_mode: false
+
+- name: "Setting the existing entry for {{ ssl_opnsense_object.name }}"
+  ansible.builtin.set_fact:
+    ssl_opnsense_object_existing: >-
+      {{ ssl_opnsense_object_search.json.rows | selectattr('name', 'equalto', ssl_opnsense_object.name) | list }}
+
+- name: "Reading the stored values of {{ ssl_opnsense_object.name }}"
+  ansible.builtin.uri:
+    url: "{{ opnsense_api_url }}/acmeclient/{{ ssl_opnsense_object.controller }}/get/{{ ssl_opnsense_object_existing[0].uuid }}"
+    url_username: "{{ opnsense_api_key }}"
+    url_password: "{{ opnsense_api_secret }}"
+    force_basic_auth: true
+    validate_certs: "{{ opnsense_api_validate_certs }}"
+    return_content: true
+  register: ssl_opnsense_object_get
+  check_mode: false
+  when: ssl_opnsense_object_existing | length > 0
+
+- name: "Recording whether a change is needed for {{ ssl_opnsense_object.name }}"
+  ansible.builtin.set_fact:
+    ssl_opnsense_object_change: >-
+      {{ ssl_opnsense_object_existing | length == 0
+         or (ssl_opnsense_object.wanted.keys() | map('extract', ssl_opnsense_object_current) | list)
+            != (ssl_opnsense_object.wanted.values() | list) }}
+  vars:
+    ssl_opnsense_object_current: >-
+      {%- set ns = namespace(current={}) -%}
+      {%- for field, value in (ssl_opnsense_object_get.json[ssl_opnsense_object.key] | default({})).items() -%}
+      {%-   if value is mapping -%}
+      {%-     set ns.current = ns.current | combine({field: value | dict2items | selectattr('value.selected', 'equalto', 1) | map(attribute='key') | join(',')}) -%}
+      {%-   else -%}
+      {%-     set ns.current = ns.current | combine({field: value}) -%}
+      {%-   endif -%}
+      {%- endfor -%}
+      {{ ns.current }}
+  changed_when: ssl_opnsense_object_change | bool
+  notify: "Reconfiguring the OPNsense ACME client"
+
+- name: "Adding {{ ssl_opnsense_object.name }}"
+  ansible.builtin.uri:
+    url: "{{ opnsense_api_url }}/acmeclient/{{ ssl_opnsense_object.controller }}/add"
+    method: POST
+    url_username: "{{ opnsense_api_key }}"
+    url_password: "{{ opnsense_api_secret }}"
+    force_basic_auth: true
+    validate_certs: "{{ opnsense_api_validate_certs }}"
+    body_format: json
+    body: "{{ {ssl_opnsense_object.key: ssl_opnsense_object.wanted} }}"
+    return_content: true
+  register: ssl_opnsense_object_add
+  failed_when: ssl_opnsense_object_add.json.result | default('failed') != 'saved'
+  changed_when: true
+  no_log: "{{ ssl_opnsense_object.secret | default(false) | bool }}"
+  when:
+    - ssl_opnsense_object_change | bool
+    - ssl_opnsense_object_existing | length == 0
+    - not ansible_check_mode
+
+- name: "Updating {{ ssl_opnsense_object.name }}"
+  ansible.builtin.uri:
+    url: "{{ opnsense_api_url }}/acmeclient/{{ ssl_opnsense_object.controller }}/update/{{ ssl_opnsense_object_existing[0].uuid }}"
+    method: POST
+    url_username: "{{ opnsense_api_key }}"
+    url_password: "{{ opnsense_api_secret }}"
+    force_basic_auth: true
+    validate_certs: "{{ opnsense_api_validate_certs }}"
+    body_format: json
+    body: "{{ {ssl_opnsense_object.key: ssl_opnsense_object.wanted} }}"
+    return_content: true
+  register: ssl_opnsense_object_set
+  failed_when: ssl_opnsense_object_set.json.result | default('failed') != 'saved'
+  changed_when: true
+  no_log: "{{ ssl_opnsense_object.secret | default(false) | bool }}"
+  when:
+    - ssl_opnsense_object_change | bool
+    - ssl_opnsense_object_existing | length > 0
+    - not ansible_check_mode
+
+- name: "Recording the uuid of {{ ssl_opnsense_object.name }}"
+  ansible.builtin.set_fact:
+    ssl_opnsense_uuids: >-
+      {{ ssl_opnsense_uuids | default({})
+         | combine({ssl_opnsense_object.name: (ssl_opnsense_object_existing[0].uuid
+                                               if ssl_opnsense_object_existing | length > 0
+                                               else ssl_opnsense_object_add.json.uuid | default(''))}) }}

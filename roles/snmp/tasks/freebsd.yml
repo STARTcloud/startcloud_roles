@@ -1,0 +1,9 @@
+---
+- name: "Detecting OPNsense Appliance"
+  ansible.builtin.stat:
+    path: /usr/local/opnsense/mvc
+  register: snmp_opnsense_check
+
+- name: "Configuring the SNMP agent through the OPNsense API"
+  ansible.builtin.include_tasks: freebsd-opnsense.yml
+  when: snmp_opnsense_check.stat.exists

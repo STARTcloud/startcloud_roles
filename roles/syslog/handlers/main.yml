@@ -12,3 +12,19 @@
     name: "{{ syslog_legacy_daemon }}"
     state: restarted
   when: syslog_enabled | bool
+
+- name: "Reconfiguring the OPNsense syslog"
+  ansible.builtin.uri:
+    url: "{{ opnsense_api_url }}/syslog/service/reconfigure"
+    method: POST
+    url_username: "{{ opnsense_api_key }}"
+    url_password: "{{ opnsense_api_secret }}"
+    force_basic_auth: true
+    validate_certs: "{{ opnsense_api_validate_certs }}"
+    body_format: json
+    body: {}
+    return_content: true
+  register: syslog_opnsense_reconfigure
+  failed_when: syslog_opnsense_reconfigure.json.status | default('failed') != 'ok'
+  changed_when: true
+  when: not ansible_check_mode

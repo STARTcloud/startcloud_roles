@@ -43,7 +43,29 @@ argument_specs:
       root_ssh_key:
         type: str
         default: ""
-        description: Optional SSH public key installed for root on platforms without a preseed/kickstart (empty = skip).
+        description: >-
+          Optional SSH public key installed for root on platforms without a preseed/kickstart (empty = skip). On a running
+          OPNsense firewall with opnsense_api_key set, the key goes into root's user record through the firewall's API,
+          which keeps it across the firewall's own rewrites of authorized_keys.
+      opnsense_api_port:
+        type: int
+        default: 443
+        description: Port the OPNsense web GUI and API listen on.
+      opnsense_api_url:
+        type: str
+        description: Base address of the OPNsense API; defaults to https://<inventory_hostname>:<opnsense_api_port>/api.
+      opnsense_api_key:
+        type: str
+        default: ""
+        description: OPNsense API key the lane signs in with; empty writes root's key file directly, the image-build way.
+      opnsense_api_secret:
+        type: str
+        default: ""
+        description: Secret of opnsense_api_key.
+      opnsense_api_validate_certs:
+        type: bool
+        default: true
+        description: Whether the firewall's web GUI certificate is checked on API calls.
       installer_base_url:
         type: str
         description: Base URL for downloading installers; resolved from secrets when set.

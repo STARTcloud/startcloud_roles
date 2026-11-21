@@ -5,6 +5,9 @@ argument_specs:
     description:
       - Imports a supplied certificate, generates a self-signed CA and server certificate, or obtains Let's Encrypt
         certificates, then exports PFX/PEM/JKS bundles and trusts the CA. Supports Debian/Ubuntu and Windows.
+      - On an OPNsense firewall it writes the ACME client's settings, account, DNS-01 challenge, web GUI restart
+        automation and one certificate per ssl_dns01_certs entry through the firewall's API, issues each certificate
+        once, and points the web GUI at the first certificate.
     author: Mark Gilbert
     options:
       run_tasks:
@@ -179,6 +182,55 @@ argument_specs:
         type: str
         default: letsencrypt-production-2
         description: ACME server profile name used by the appliance acme package.
+      ssl_opnsense_environment:
+        type: str
+        description: ACME client environment on OPNsense, prod or stg; follows letsencrypt_staging_enabled.
+      ssl_opnsense_ca:
+        type: str
+        description: Certificate authority of the ACME account on OPNsense; follows letsencrypt_staging_enabled.
+      ssl_opnsense_account_name:
+        type: str
+        default: letsencrypt
+        description: Name of the ACME account on OPNsense.
+      ssl_opnsense_validation_name:
+        type: str
+        default: cloudflare
+        description: Name of the DNS-01 challenge on OPNsense.
+      ssl_opnsense_dns_service:
+        type: str
+        default: dns_cf
+        description: DNS service of the DNS-01 challenge on OPNsense; dns_cf reads secrets.cloudflare_api_token.
+      ssl_opnsense_action_name:
+        type: str
+        default: webgui
+        description: Name of the automation the ACME client runs after a renewal on OPNsense.
+      ssl_opnsense_action_type:
+        type: str
+        default: configd_restart_gui
+        description: Type of that automation; configd_restart_gui restarts the web GUI.
+      ssl_opnsense_sign_timeout:
+        type: int
+        default: 600
+        description: Seconds one certificate issue through the OPNsense API may take.
+      opnsense_api_port:
+        type: int
+        default: 443
+        description: Port the OPNsense web GUI and API listen on.
+      opnsense_api_url:
+        type: str
+        description: Base address of the OPNsense API; defaults to https://<inventory_hostname>:<opnsense_api_port>/api.
+      opnsense_api_key:
+        type: str
+        default: ""
+        description: OPNsense API key the lane signs in with.
+      opnsense_api_secret:
+        type: str
+        default: ""
+        description: Secret of opnsense_api_key.
+      opnsense_api_validate_certs:
+        type: bool
+        default: true
+        description: Whether the firewall's web GUI certificate is checked on API calls.
       ssl_push_lineage:
         type: str
         default: ""
