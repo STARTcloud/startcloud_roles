@@ -2,10 +2,11 @@
 __ntp_default_engine: "{{ 'timesyncd' if ansible_distribution_major_version | int >= 13 else 'ntp' }}"
 __ntp_engine: "{{ ntp_engine if ntp_engine | length > 0 else __ntp_default_engine }}"
 __use_systemd_timesyncd: "{{ __ntp_engine == 'timesyncd' }}"
-__ntp_daemon: "{{ {'timesyncd': 'systemd-timesyncd', 'ntp': 'ntp', 'chrony': 'chrony'}[__ntp_engine] }}"
+__ntp_ntpd: "{{ 'ntpsec' if ansible_distribution_major_version | int >= 12 else 'ntp' }}"
+__ntp_daemon: "{{ {'timesyncd': 'systemd-timesyncd', 'ntp': __ntp_ntpd, 'chrony': 'chrony'}[__ntp_engine] }}"
 ntp_tzdata_package: tzdata
-__ntp_package: "{{ {'timesyncd': 'systemd-timesyncd', 'ntp': 'ntp', 'chrony': 'chrony'}[__ntp_engine] }}"
-__ntp_config_file: "{{ {'timesyncd': '/etc/systemd/timesyncd.conf', 'ntp': '/etc/ntp.conf', 'chrony': '/etc/chrony/chrony.conf'}[__ntp_engine] }}"
-__ntp_driftfile: "{{ '/var/lib/chrony/chrony.drift' if __ntp_engine == 'chrony' else '/var/lib/ntp/drift' }}"
+__ntp_package: "{{ {'timesyncd': 'systemd-timesyncd', 'ntp': __ntp_ntpd, 'chrony': 'chrony'}[__ntp_engine] }}"
+__ntp_config_file: "{{ {'timesyncd': '/etc/systemd/timesyncd.conf', 'ntp': '/etc/' ~ __ntp_ntpd ~ '/ntp.conf' if __ntp_ntpd == 'ntpsec' else '/etc/ntp.conf', 'chrony': '/etc/chrony/chrony.conf'}[__ntp_engine] }}"
+__ntp_driftfile: "{{ {'timesyncd': '/var/lib/ntp/drift', 'ntp': '/var/lib/' ~ __ntp_ntpd ~ '/ntp.drift' if __ntp_ntpd == 'ntpsec' else '/var/lib/ntp/drift', 'chrony': '/var/lib/chrony/chrony.drift'}[__ntp_engine] }}"
 __ntp_config_template: "{{ 'chrony-debian.conf.j2' if __ntp_engine == 'chrony' else (__ntp_config_file | basename) ~ '.j2' }}"
 ntp_cron_daemon: cron
