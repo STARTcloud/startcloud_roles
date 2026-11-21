@@ -793,10 +793,10 @@
     - name: "Checking for existing DNS-01 certificates"
       become: true
       ansible.builtin.stat:
-        path: "/etc/letsencrypt/live/{{ item.domains | first }}/cert.pem"
+        path: "/etc/letsencrypt/live/{{ item.name | default(item.domains | first) }}/cert.pem"
       loop: "{{ ssl_dns01_certs }}"
       loop_control:
-        label: "{{ item.domains | first }}"
+        label: "{{ item.name | default(item.domains | first) }}"
       register: ssl_dns01_cert_checks
 
     - name: "Requesting DNS-01 certificates"
@@ -815,29 +815,29 @@
         --key-type rsa
         {{ '--staging' if letsencrypt_staging_enabled else '' }}
         --email {{ settings.email }}
-        --cert-name {{ item.item.domains | first }}
+        --cert-name {{ item.item.name | default(item.item.domains | first) }}
         {% for domain in item.item.domains %}-d {{ domain }} {% endfor %}
       changed_when: true
       when: not item.stat.exists
       loop: "{{ ssl_dns01_cert_checks.results }}"
       loop_control:
-        label: "{{ item.item.domains | first }}"
+        label: "{{ item.item.name | default(item.item.domains | first) }}"
 
     - name: "Publishing DNS-01 certificates into the certificate store"
       become: true
       ansible.builtin.shell: >-
         set -o pipefail &&
-        cp /etc/letsencrypt/live/{{ item.domains | first }}/fullchain.pem {{ cert_dir }}/crt/{{ item.domains | first }}.crt &&
-        cp /etc/letsencrypt/live/{{ item.domains | first }}/privkey.pem {{ cert_dir }}/key/{{ item.domains | first }}.key &&
-        cat /etc/letsencrypt/live/{{ item.domains | first }}/fullchain.pem /etc/letsencrypt/live/{{ item.domains | first }}/privkey.pem > {{ cert_dir }}/combined/{{ item.domains | first }}.pem &&
-        chown {{ service_user }}:{{ service_group }} {{ cert_dir }}/crt/{{ item.domains | first }}.crt {{ cert_dir }}/key/{{ item.domains | first }}.key
-        {{ cert_dir }}/combined/{{ item.domains | first }}.pem
+        cp /etc/letsencrypt/live/{{ item.name | default(item.domains | first) }}/fullchain.pem {{ cert_dir }}/crt/{{ item.name | default(item.domains | first) }}.crt &&
+        cp /etc/letsencrypt/live/{{ item.name | default(item.domains | first) }}/privkey.pem {{ cert_dir }}/key/{{ item.name | default(item.domains | first) }}.key &&
+        cat /etc/letsencrypt/live/{{ item.name | default(item.domains | first) }}/fullchain.pem /etc/letsencrypt/live/{{ item.name | default(item.domains | first) }}/privkey.pem > {{ cert_dir }}/combined/{{ item.name | default(item.domains | first) }}.pem &&
+        chown {{ service_user }}:{{ service_group }} {{ cert_dir }}/crt/{{ item.name | default(item.domains | first) }}.crt {{ cert_dir }}/key/{{ item.name | default(item.domains | first) }}.key
+        {{ cert_dir }}/combined/{{ item.name | default(item.domains | first) }}.pem
       args:
         executable: /bin/bash
       changed_when: true
       loop: "{{ ssl_dns01_certs }}"
       loop_control:
-        label: "{{ item.domains | first }}"
+        label: "{{ item.name | default(item.domains | first) }}"
 
     - name: "Creating the certbot deploy-hook directory"
       become: true

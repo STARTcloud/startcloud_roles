@@ -1,0 +1,6 @@
+---
+snmp_packages:
+  - snmpd-nossl
+__snmp_uci_com2sec: snmpd.public
+__snmp_uci_system: snmpd.@system[0]
+__snmp_openwrt_daemon: snmpd

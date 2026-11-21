@@ -7,6 +7,9 @@ argument_specs:
       - Deploys the LibreNMS extension scripts and renders the snmpd daemon and configuration files from templates.
       - On OPNsense it writes the community, location and contact of the os-net-snmp plugin through the firewall's API with an API key.
       - On a Cisco IOS switch (inventory ansible_os_family ios, connection network_cli, no facts gathered) it writes the snmp-server community, location and contact lines with cisco.ios.ios_config.
+      - >-
+        On an OpenWrt access point (inventory ansible_os_family openwrt, no facts gathered) it installs the snmpd package
+        with apk when it is missing, writes the community, sysLocation and sysContact with uci and restarts snmpd.
     author: Mark Gilbert
     options:
       run_tasks:

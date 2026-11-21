@@ -99,7 +99,8 @@ argument_specs:
         elements: dict
         default: []
         description: >-
-          Certificates to issue via the DNS-01 challenge. Each item carries a domains list and an optional provider,
+          Certificates to issue via the DNS-01 challenge. Each item carries a domains list, an optional name, the lineage
+          name where the first domain cannot be one, such as a wildcard, and an optional provider,
           acmedns (default), cloudflare or rfc2136. acmedns needs a matching entry per domain in secrets.acmedns_credentials and a
           published _acme-challenge CNAME pointing at that registration's fulldomain. cloudflare needs
           secrets.cloudflare_api_token with Zone Read and DNS Edit on each domain's zone and issues through the certbot

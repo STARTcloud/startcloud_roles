@@ -107,7 +107,7 @@ ssl_dns01_certs:
   - { domains: [portal.example.org, tunnel.example.org], provider: rfc2136 }
 ```
 
-The first domain names the lineage. A Cloudflare provider reads `secrets.cloudflare_api_token`; an rfc2136 provider reads `secrets.rfc2136_server`, `secrets.rfc2136_name` and `secrets.rfc2136_secret`, with `secrets.rfc2136_port` and `secrets.rfc2136_algorithm` where the defaults do not fit. Renewal is automatic: certbot's timer on Debian, the ACME client on OPNsense; a renewal runs the scripts in `ssl_renewal_hooks`, and a controller lists the push as one of them:
+The first domain names the lineage, or `name` does where the first domain is a wildcard. An acme-dns provider reads `secrets.acmedns_api_url` and `secrets.acmedns_credentials`, the registrations keyed by domain; a Cloudflare provider reads `secrets.cloudflare_api_token`; an rfc2136 provider reads `secrets.rfc2136_server`, `secrets.rfc2136_name` and `secrets.rfc2136_secret`, with `secrets.rfc2136_port` and `secrets.rfc2136_algorithm` where the defaults do not fit. Renewal is automatic: certbot's timer on Debian, the ACME client on OPNsense; a renewal runs the scripts in `ssl_renewal_hooks`, and a controller lists the push as one of them:
 
 ```yaml
 ssl_renewal_hooks:

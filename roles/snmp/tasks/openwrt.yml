@@ -1,0 +1,66 @@
+---
+- name: "Ensuring the community is present"
+  ansible.builtin.assert:
+    that:
+      - snmp_community | length > 0
+    fail_msg: "The OpenWrt lane needs snmp_community"
+
+- name: "Reading the installed SNMP packages"
+  ansible.builtin.raw: "apk info 2>/dev/null"
+  register: snmp_openwrt_installed
+  changed_when: false
+  check_mode: false
+
+- name: "Recording whether SNMP packages are missing"
+  ansible.builtin.set_fact:
+    snmp_openwrt_missing: "{{ snmp_packages | difference(snmp_openwrt_installed.stdout_lines | map('trim') | list) }}"
+  changed_when: snmp_openwrt_missing | length > 0
+
+- name: "Installing the SNMP packages"
+  ansible.builtin.raw: "apk update && apk add {{ snmp_openwrt_missing | join(' ') }}"
+  changed_when: true
+  when:
+    - snmp_openwrt_missing | length > 0
+    - not ansible_check_mode
+
+- name: "Reading the configured community"
+  ansible.builtin.raw: "uci get {{ __snmp_uci_com2sec }}.community"
+  register: snmp_openwrt_community
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "Reading the configured location"
+  ansible.builtin.raw: "uci get {{ __snmp_uci_system }}.sysLocation"
+  register: snmp_openwrt_location
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "Reading the configured contact"
+  ansible.builtin.raw: "uci get {{ __snmp_uci_system }}.sysContact"
+  register: snmp_openwrt_contact
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: "Recording whether the SNMP agent settings change"
+  ansible.builtin.set_fact:
+    snmp_openwrt_change: >-
+      {{ snmp_openwrt_missing | length > 0
+         or snmp_openwrt_community.stdout | default('') | trim != snmp_community
+         or snmp_openwrt_location.stdout | default('') | trim != snmp_location
+         or snmp_openwrt_contact.stdout | default('') | trim != snmp_contact }}
+  changed_when: snmp_openwrt_change | bool
+
+- name: "Writing the SNMP agent settings"
+  ansible.builtin.raw: >-
+    uci set {{ __snmp_uci_com2sec }}.community='{{ snmp_community }}'
+    && uci set {{ __snmp_uci_system }}.sysLocation='{{ snmp_location }}'
+    && uci set {{ __snmp_uci_system }}.sysContact='{{ snmp_contact }}'
+    && uci commit snmpd
+    && /etc/init.d/{{ __snmp_openwrt_daemon }} restart
+  changed_when: true
+  when:
+    - snmp_openwrt_change | bool
+    - not ansible_check_mode
