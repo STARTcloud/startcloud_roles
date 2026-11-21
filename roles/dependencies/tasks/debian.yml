@@ -52,16 +52,13 @@
 # The download/cleanup pair is gated on the keyring the flow produces —
 # without this, every rerun re-downloaded and re-deleted the temp key,
 # reporting two changes forever.
-- name: "Checking for existing dearmored keyrings"
+- name: "Checking for existing keyrings"
   ansible.builtin.stat:
     path: "{{ item.gpg_keyring_path }}"
   loop: "{{ extra_repos | default([]) }}"
   loop_control:
     label: "{{ item.name }}"
   register: dependencies_keyring_stats
-  when:
-    - extra_repos | default([]) | length > 0
-    - item.needs_dearmor | default(false)
 
 - name: "Downloading armored GPG keys for extra repositories"
   ansible.builtin.get_url:
@@ -72,7 +69,7 @@
   loop_control:
     label: "{{ item.item.name | default('skipped') }}"
   when:
-    - not (item.skipped | default(false))
+    - item.item.needs_dearmor | default(false)
     - not item.stat.exists
 
 - name: "Dearmoring GPG keys for extra repositories"
@@ -101,18 +98,20 @@
   loop_control:
     label: "{{ item.item.name | default('skipped') }}"
   when:
-    - not (item.skipped | default(false))
+    - item.item.needs_dearmor | default(false)
     - not item.stat.exists
 
 - name: "Downloading GPG keys for extra repositories (non-armored)"
   ansible.builtin.get_url:
-    url: "{{ item.gpg_key_url }}"
-    dest: "{{ item.gpg_keyring_path }}"
+    url: "{{ item.item.gpg_key_url }}"
+    dest: "{{ item.item.gpg_keyring_path }}"
     mode: "0644"
-  loop: "{{ extra_repos | default([]) }}"
+  loop: "{{ dependencies_keyring_stats.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.name | default('skipped') }}"
   when:
-    - extra_repos | default([]) | length > 0
-    - not (item.needs_dearmor | default(false))
+    - not (item.item.needs_dearmor | default(false))
+    - not item.stat.exists
 
 - name: "Removing stale duplicate source files for extra repositories"
   ansible.builtin.file:
