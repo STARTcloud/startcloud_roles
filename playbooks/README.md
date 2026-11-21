@@ -87,7 +87,7 @@ An OPNsense firewall applies every pending update as one job and reboots only wh
 ansible-playbook -i inventory/home.yml site.yml --tags opnsense --diff -e reboots_allowed=true
 ```
 
-An access point upgrades only when `owut check` reports it safe, and the run waits for it to come back on the new release.
+An access point upgrades only when `owut check` reports it safe; the run waits for it to come back and checks that `owut check` then reports nothing more.
 
 ## The maintenance window
 

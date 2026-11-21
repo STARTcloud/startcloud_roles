@@ -11,4 +11,4 @@
       - "snmp-server community {{ snmp_community }} {{ snmp_ios_access }}"
       - "snmp-server location {{ snmp_location }}"
       - "snmp-server contact {{ snmp_contact }}"
-    save_when: modified
+    save_when: changed
