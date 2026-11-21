@@ -54,6 +54,18 @@
     label: "{{ item.dest }}"
   register: ssl_push_files
 
+- name: "Installing the CA files the node verifies against"
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ cert_dir }}/ca/{{ item | basename }}"
+    owner: "{{ ssl_push_owner }}"
+    group: "{{ ssl_push_group }}"
+    mode: "0644"
+  loop: "{{ ssl_push_ca_files }}"
+  loop_control:
+    label: "{{ item | basename }}"
+  register: ssl_push_ca
+
 - name: "Assembling the combined certificate"
   ansible.builtin.copy:
     content: "{{ lookup('ansible.builtin.file', ssl_push_lineage ~ '/fullchain.pem') }}\n{{ lookup('ansible.builtin.file', ssl_push_lineage ~ '/privkey.pem') }}\n"
@@ -89,7 +101,7 @@
   changed_when: true
   when:
     - ssl_push_listening | bool
-    - ssl_push_files.changed or ssl_push_combined.changed or not (ssl_push_serving | bool)
+    - ssl_push_files.changed or ssl_push_ca.changed or ssl_push_combined.changed or not (ssl_push_serving | bool)
 
 - name: "Reading the certificate the node serves"
   community.crypto.get_certificate:

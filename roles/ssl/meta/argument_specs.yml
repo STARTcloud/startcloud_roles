@@ -268,6 +268,11 @@ argument_specs:
         type: str
         default: ""
         description: STARTTLS protocol of the comparison for a port that negotiates TLS inside its protocol, such as mysql; empty for a plain TLS port.
+      ssl_push_ca_files:
+        type: list
+        elements: str
+        default: []
+        description: CA certificate files on the controller pushed beside the lineage into cert_dir/ca under their own names, for a service on the node that verifies a peer against a CA of its own.
       ssl_push_fortigate:
         type: bool
         default: false

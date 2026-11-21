@@ -17,8 +17,8 @@
     body_format: json
     body: {}
     return_content: true
-  register: dependencies_opnsense_check
-  failed_when: dependencies_opnsense_check.json.status | default('failed') != 'ok'
+  register: dependencies_opnsense_firmware_check
+  failed_when: dependencies_opnsense_firmware_check.json.status | default('failed') != 'ok'
   changed_when: false
   check_mode: false
 

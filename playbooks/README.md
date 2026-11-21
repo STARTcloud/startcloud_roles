@@ -121,7 +121,7 @@ ssl_renewal_hooks:
   - { name: haproxy, command: systemctl reload haproxy }
 ```
 
-A port that negotiates TLS inside its protocol names it in `ssl_push_verify_starttls`, such as `mysql`. A host that takes the push over an API carries `ansible_connection: local` and `ssl_push_netscaler` or `ssl_push_fortigate` instead.
+A port that negotiates TLS inside its protocol names it in `ssl_push_verify_starttls`, such as `mysql`. CA files a service on the host verifies peers against go in `ssl_push_ca_files`, paths on the controller, and land under `cert_dir/ca` by their own names. A host that takes the push over an API carries `ansible_connection: local` and `ssl_push_netscaler` or `ssl_push_fortigate` instead.
 
 ## Logs and SNMP
 

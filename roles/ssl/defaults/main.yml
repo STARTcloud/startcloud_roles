@@ -112,6 +112,7 @@ ssl_push_verify_host: "{{ inventory_hostname }}"
 ssl_push_verify_port: 0
 ssl_push_verify_servername: "{{ ssl_push_verify_host }}"
 ssl_push_verify_starttls: ""
+ssl_push_ca_files: []
 ssl_push_fortigate: false
 ssl_push_fortigate_admin_port: 18443
 ssl_push_fortigate_validate_certs: true
