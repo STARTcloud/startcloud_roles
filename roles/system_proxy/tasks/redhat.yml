@@ -35,3 +35,14 @@
     - "ftp_proxy={{ proxy_env_url }}"
     - "no_proxy={{ proxy_no_proxy | join(',') }}"
   when: proxy_systemwide | bool
+
+- name: "Handing the system-wide proxy to every sudo session"
+  ansible.builtin.lineinfile:
+    path: /etc/sudoers.d/proxy
+    regexp: "^Defaults env_file="
+    line: "Defaults env_file=/etc/environment"
+    create: true
+    owner: root
+    group: root
+    mode: "0440"
+  when: proxy_systemwide | bool
