@@ -825,19 +825,20 @@
 
     - name: "Publishing DNS-01 certificates into the certificate store"
       become: true
+      vars:
+        ssl_dns01_lineage: "{{ item.name | default(item.domains | first) }}"
       ansible.builtin.shell: >-
         set -o pipefail &&
-        cp /etc/letsencrypt/live/{{ item.name | default(item.domains | first) }}/fullchain.pem {{ cert_dir }}/crt/{{ item.name | default(item.domains | first) }}.crt &&
-        cp /etc/letsencrypt/live/{{ item.name | default(item.domains | first) }}/privkey.pem {{ cert_dir }}/key/{{ item.name | default(item.domains | first) }}.key &&
-        cat /etc/letsencrypt/live/{{ item.name | default(item.domains | first) }}/fullchain.pem /etc/letsencrypt/live/{{ item.name | default(item.domains | first) }}/privkey.pem > {{ cert_dir }}/combined/{{ item.name | default(item.domains | first) }}.pem &&
-        chown {{ service_user }}:{{ service_group }} {{ cert_dir }}/crt/{{ item.name | default(item.domains | first) }}.crt {{ cert_dir }}/key/{{ item.name | default(item.domains | first) }}.key
-        {{ cert_dir }}/combined/{{ item.name | default(item.domains | first) }}.pem
+        cp /etc/letsencrypt/live/{{ ssl_dns01_lineage }}/fullchain.pem {{ cert_dir }}/crt/{{ ssl_dns01_lineage }}.crt &&
+        cp /etc/letsencrypt/live/{{ ssl_dns01_lineage }}/privkey.pem {{ cert_dir }}/key/{{ ssl_dns01_lineage }}.key &&
+        cat /etc/letsencrypt/live/{{ ssl_dns01_lineage }}/fullchain.pem /etc/letsencrypt/live/{{ ssl_dns01_lineage }}/privkey.pem > {{ cert_dir }}/combined/{{ ssl_dns01_lineage }}.pem &&
+        chown {{ service_user }}:{{ service_group }} {{ cert_dir }}/crt/{{ ssl_dns01_lineage }}.crt {{ cert_dir }}/key/{{ ssl_dns01_lineage }}.key {{ cert_dir }}/combined/{{ ssl_dns01_lineage }}.pem
       args:
         executable: /bin/bash
       changed_when: true
       loop: "{{ ssl_dns01_certs }}"
       loop_control:
-        label: "{{ item.name | default(item.domains | first) }}"
+        label: "{{ ssl_dns01_lineage }}"
 
     - name: "Creating the certbot deploy-hook directory"
       become: true
