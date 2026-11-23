@@ -3,6 +3,72 @@
 All notable changes to the `startcloud.startcloud_roles` collection are
 documented here.
 
+## [0.6.0](https://github.com/STARTcloud/startcloud_roles/compare/v0.5.0...v0.6.0) (2026-11-23)
+
+
+### Features
+
+* an audit role records every program start and login and hands the records to syslog ([155f01e](https://github.com/STARTcloud/startcloud_roles/commit/155f01e87d7c67fd5624cf9af921da4c71bce0c8))
+* dependencies removes no longer needed packages by default ([2800ed1](https://github.com/STARTcloud/startcloud_roles/commit/2800ed11cbd376fe1cba709ef8dae2abeffe64c7))
+* gate SSH logins on pam-ciba push approval in lockdown ([bf64f4b](https://github.com/STARTcloud/startcloud_roles/commit/bf64f4bacc5969b4d46f7d0fdce77b507dfea6cf))
+* lockdown key-only accounts for pam-ciba and silent interpreter discovery ([6b90f9b](https://github.com/STARTcloud/startcloud_roles/commit/6b90f9b97df2d3f463a866ba4434aefd1b9d9340))
+* mirror sources, Proxmox repositories, reboot and Galera gates in dependencies ([19d8dff](https://github.com/STARTcloud/startcloud_roles/commit/19d8dff6078dd56f26cf1ae63c95da0971c71721))
+* ntp engine choice with OmniOS and chrony lanes, ntp and openwrt playbooks ([8e40b04](https://github.com/STARTcloud/startcloud_roles/commit/8e40b04ca3db54fa0f9318c225d9b5a96615e18d))
+* OpenWrt and Cisco IOS lanes for time servers, logs, SNMP and the access point upgrade, chosen by the inventory's ansible_os_family with no facts gathered ([352c2f7](https://github.com/STARTcloud/startcloud_roles/commit/352c2f7d8f08d6b8cfb27dfd73b087ba2858261f))
+* OPNsense plugin that signs web GUI users in through an OpenID Provider ([b82ddc7](https://github.com/STARTcloud/startcloud_roles/commit/b82ddc7c978394d5bbfd1f2f2e60b2fa2d2e8046))
+* pam-ciba trusts the key addresses and gates sudo for the accounts named in lockdown_pam_ciba_sudo_users ([543b502](https://github.com/STARTcloud/startcloud_roles/commit/543b502d8d9cb7acf0a11159e9ec124a1332482d))
+* playbooks README that says how to run every playbook ([335ba54](https://github.com/STARTcloud/startcloud_roles/commit/335ba54b00761a6e13f2ceba1be50d8a4c229ba9))
+* push a certbot lineage to FortiGate, NetScaler, Galera, UDS and VDI Health from ssl ([451a1f7](https://github.com/STARTcloud/startcloud_roles/commit/451a1f7f7529b8c0f6cc1646704b0ab262f7d14f))
+* ssl role issues and renews an OPNsense firewall's web GUI certificate through its ACME client ([11e2e29](https://github.com/STARTcloud/startcloud_roles/commit/11e2e291e11b9da5518eb6e32be55b1f0495b0f4))
+* ssl role issues and renews an OPNsense firewall's web GUI certificate through its ACME client ([20a9677](https://github.com/STARTcloud/startcloud_roles/commit/20a9677fe7a9556622d2f2e116543b8f9a855c71))
+* syslog role sends and receives over TLS; ssl role enables certbot renewal and renders renewal hooks; snmp handlers skip in check mode on hosts without snmpd; monitoring play issues the collector certificate and covers outside hosts; openwrt play points logd at the collector ([a72143e](https://github.com/STARTcloud/startcloud_roles/commit/a72143e65f59830d3d8d8170aca4d62c72258fa0))
+* syslog senders use TCP with a disk-backed queue and the collector listens on TCP; OmniOS rsyslog gets a work directory; openwrt play sets logd's transport from syslog_protocol ([01f38b0](https://github.com/STARTcloud/startcloud_roles/commit/01f38b0ec3efa49a81d787ebb101e3b0aaa92672))
+* the dependencies and lockdown roles gain their OmniOS lanes ([d4ef62d](https://github.com/STARTcloud/startcloud_roles/commit/d4ef62def69b58ed7d5dec3539e782d6a6b28645))
+* the motd role brands the home environment and OmniOS, and the hosts file reaches the Pis ([5099e28](https://github.com/STARTcloud/startcloud_roles/commit/5099e28bf865c331d5e83892bb4a1bb4de169e1f))
+* the motd role brands the home environment and OmniOS, and the hosts file reaches the Pis ([0dc57e0](https://github.com/STARTcloud/startcloud_roles/commit/0dc57e047ed34fd500cc20a1f37b80c5ce578e30))
+* the snmp role renders an extend line the host already holds and a read-write community ([debf6be](https://github.com/STARTcloud/startcloud_roles/commit/debf6be000b6dbd8e17c96dcac85ddb459d19b74))
+* update for uds/ha environment work ([b168094](https://github.com/STARTcloud/startcloud_roles/commit/b168094b9a4353c91e020f79c66309d291c1cd57))
+* update plays for the OPNsense firewall and the OpenWrt access points ([d14a708](https://github.com/STARTcloud/startcloud_roles/commit/d14a708b38ea76eca76193411377d989a43a3055))
+* update, pam-ciba, hosts file and controller key playbooks ([e7c4693](https://github.com/STARTcloud/startcloud_roles/commit/e7c4693268ada599184dfa779f5c26dde58bec30))
+
+
+### Bug Fixes
+
+* adding proxy to root user accounts using sudo ([f289c61](https://github.com/STARTcloud/startcloud_roles/commit/f289c611297882d122abf07adf2101781fd39b05))
+* adding proxy to root user accounts using sudo ([e998f12](https://github.com/STARTcloud/startcloud_roles/commit/e998f121cd8213cd3dcb8a7a50e5335ad19d58bd))
+* ciba module work ([406a5ab](https://github.com/STARTcloud/startcloud_roles/commit/406a5ab4733011408c89ad93d7f964cd7103b46d))
+* FreeBSD repository key download waits for its folder in a check run ([a1a5e95](https://github.com/STARTcloud/startcloud_roles/commit/a1a5e9549b182151afd81a52d17114c5b4da153b))
+* let lockdown leave the startcloud account untouched ([a4a8d02](https://github.com/STARTcloud/startcloud_roles/commit/a4a8d02825bf565ffcf4d482f95079905f2e6448))
+* lockdown no longer resets the ssh connection after the account rotation ([a3f1768](https://github.com/STARTcloud/startcloud_roles/commit/a3f17684a1cc3318baeb008df6510c56390063cf))
+* lockdown replaces hand-placed pam-ciba lines and sshd drop-ins instead of adding beside them ([93f3352](https://github.com/STARTcloud/startcloud_roles/commit/93f3352e48b06683cce6a27b63c371d0e9667873))
+* OmniOS lane skips a host whose update waits on a reboot, updates linked zones and polls the long upgrade ([1733d1f](https://github.com/STARTcloud/startcloud_roles/commit/1733d1ffbf77eb3ba5166827f4ec2765a5652bd2))
+* opnsense play applies packages by default and reboots only when allowed after base and kernel; networking hostname read runs in check mode ([cb4236d](https://github.com/STARTcloud/startcloud_roles/commit/cb4236dcc48a16034d2c4a89555633ab22d86b01))
+* pam-ciba health user keeps password login beside its key ([5314815](https://github.com/STARTcloud/startcloud_roles/commit/5314815824bec9a5aa585ed790c728ddb78f5695))
+* pick the newest installed kernel by file time ([cc1bfdc](https://github.com/STARTcloud/startcloud_roles/commit/cc1bfdc95cc701e02401f8bcc643cfd05755b3dc))
+* pin the mirror sources to the native architecture ([247ca4e](https://github.com/STARTcloud/startcloud_roles/commit/247ca4e465345639e0ae1a7fb68621d7afd1e8f6))
+* proxy the repository key downloads and quote the Proxmox subscription check ([e8d3b01](https://github.com/STARTcloud/startcloud_roles/commit/e8d3b0165ac93af7d3896223ca047727336ba6cf))
+* read-only command tasks run in check mode and nodejs installs its dependencies after the stale list is removed ([6c05656](https://github.com/STARTcloud/startcloud_roles/commit/6c056560790b4974681f07afdebe86052b48a0ba))
+* some stuff ([5b2ccaa](https://github.com/STARTcloud/startcloud_roles/commit/5b2ccaa9c9f26fc5ea134633cc8da332461120c5))
+* STARTcloud public pkg repository for OPNsense is the path-based address ([bf688f2](https://github.com/STARTcloud/startcloud_roles/commit/bf688f22bac7308315b75f0e78fa7f51f5cec2ab))
+* the dependencies role downloads a repository key only when its keyring is missing ([30ca070](https://github.com/STARTcloud/startcloud_roles/commit/30ca070ed4173020e76207e51bea29673037877b))
+* the hosts file check and the syslog lane fit OmniOS ([cdce4f1](https://github.com/STARTcloud/startcloud_roles/commit/cdce4f1ffdc74a03ec6763e3148f6adb073bb544))
+* the keepalived role installs the tools its check and tasks call ([1607bbc](https://github.com/STARTcloud/startcloud_roles/commit/1607bbce229981b1f1c1d5f29e60d99ab5433a4d))
+* the NetScaler carries its name in the inventory ([32a6445](https://github.com/STARTcloud/startcloud_roles/commit/32a6445db14f7da4dcc5bd01b392cb8d53f74224))
+* the NetScaler push reads the chain names the way the appliance run always did ([9343439](https://github.com/STARTcloud/startcloud_roles/commit/934343953e2c8a115229fea95c14ef490677590d))
+* the ntp role drives ntpsec on Debian 12 and later ([7474c1f](https://github.com/STARTcloud/startcloud_roles/commit/7474c1f0ec3bac4deaaf1663e8c53a1fbb3e55f7))
+* the ntp role skips its service steps in a check run that did not install the package ([b83d5bc](https://github.com/STARTcloud/startcloud_roles/commit/b83d5bc9bcefdc13754dc603852b857e433324ad))
+* the playbooks find the collection from their own checkout and name no path ([bfa7312](https://github.com/STARTcloud/startcloud_roles/commit/bfa7312c40d2fabb2693388fdaa02b92492e9c53))
+* the s2 controller holds the prominic.world lineage and pushes it to the staff VPN FortiGates ([1ebf5a0](https://github.com/STARTcloud/startcloud_roles/commit/1ebf5a04b7def1326c8863e172118ec59b239698))
+* the ssl role pushes a lineage one way, through the node's own renewal hooks ([637404f](https://github.com/STARTcloud/startcloud_roles/commit/637404fcbb59874c86c491dcdaf1e7b022ad1634))
+* the unreached check counts only the nodes inside the run's limit ([94e0477](https://github.com/STARTcloud/startcloud_roles/commit/94e0477f0c65480ac5a24828c2fe4f8be3e17b0d))
+* the VCC root CA is committed and pushed to the proxies ([d2f9939](https://github.com/STARTcloud/startcloud_roles/commit/d2f99395b53a049dcec26e8da7ca38ba1c0219b2))
+* the VCC root CA is committed and pushed to the proxies ([17c20c8](https://github.com/STARTcloud/startcloud_roles/commit/17c20c82dc6519fd644ae1b67892c6fa0428e483))
+* the VCC root CA is committed and pushed to the proxies ([5cc324e](https://github.com/STARTcloud/startcloud_roles/commit/5cc324e80d3c11409cd989a04b223ffdc2781087))
+* the VCC site runs from its VDI health VM as controller ([8192c71](https://github.com/STARTcloud/startcloud_roles/commit/8192c71ed32a74d0960a073dd23bf7630ed0a9d7))
+* the VCC site runs from its VDI health VM as controller ([0a3bd36](https://github.com/STARTcloud/startcloud_roles/commit/0a3bd3688d36ccf9feaa57dce15c932c12fb320a))
+* the window updates Windows guests before their host, waits for a rebooted host's guests and fails on any node it never reached ([a3b6b22](https://github.com/STARTcloud/startcloud_roles/commit/a3b6b22491e81536f22092d8aab0ffa7b133c5ad))
+* update the Raspberry Pis with the virtual machines ([86bfd86](https://github.com/STARTcloud/startcloud_roles/commit/86bfd86fbf8bfb251a08d9b5bfb351013509bcc3))
+
 ## [0.5.0](https://github.com/STARTcloud/startcloud_roles/compare/v0.4.4...v0.5.0) (2026-11-16)
 
 
