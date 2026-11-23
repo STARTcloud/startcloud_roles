@@ -9,23 +9,41 @@
 
 - name: "Reading the addresses the node resolves its own name to"
   ansible.builtin.getent:
-    database: hosts
+    database: ahosts
     key: "{{ networking_hosts_short }}"
+  when: ansible_system == 'Linux'
 
 - name: "Verifying the node resolves its own name to one address"
   ansible.builtin.assert:
     that:
-      - ansible_facts.getent_hosts.keys() | list | length == 1
-    fail_msg: "{{ networking_hosts_short }} resolves to {{ ansible_facts.getent_hosts.keys() | list | join(', ') }}"
+      - ansible_facts.getent_ahosts.keys() | list | length == 1
+    fail_msg: "{{ networking_hosts_short }} resolves to {{ ansible_facts.getent_ahosts.keys() | list | join(', ') }}"
+  when: ansible_system == 'Linux'
 
 - name: "Reading the name the node reports"
   ansible.builtin.command: hostname -f
   register: networking_hosts_hostname
   changed_when: false
   check_mode: false
+  when: ansible_system == 'Linux'
 
 - name: "Verifying hostname -f returns the FQDN"
   ansible.builtin.assert:
     that:
       - networking_hosts_hostname.stdout == networking_hosts_fqdn
     fail_msg: "hostname -f returns {{ networking_hosts_hostname.stdout }} instead of {{ networking_hosts_fqdn }}"
+  when: ansible_system == 'Linux'
+
+- name: "Reading the address the node resolves its own name to"
+  ansible.builtin.getent:
+    database: hosts
+    key: "{{ networking_hosts_short }}"
+  when: ansible_system == 'SunOS'
+
+- name: "Verifying the node resolves its own name to one address and its canonical name is the FQDN"
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.getent_hosts.keys() | list | length == 1
+      - (ansible_facts.getent_hosts.values() | first | first) == networking_hosts_fqdn
+    fail_msg: "{{ networking_hosts_short }} resolves to {{ ansible_facts.getent_hosts | to_json }} instead of one address named {{ networking_hosts_fqdn }}"
+  when: ansible_system == 'SunOS'
