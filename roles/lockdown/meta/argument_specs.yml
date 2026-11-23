@@ -91,7 +91,10 @@ argument_specs:
         type: list
         elements: str
         default: []
-        description: Addresses or networks from which the mapped accounts sign in by key alone, with no push approval.
+        description: >-
+          Addresses or networks from which the mapped accounts sign in by key alone, with no push approval; the
+          same list is pam-ciba's approval.trusted_addresses, so a sudo request from one of them is approved
+          with no push.
       lockdown_pam_ciba_key_users:
         type: list
         elements: str
@@ -100,6 +103,14 @@ argument_specs:
           Local accounts that sign in by key alone from anywhere, with no push approval, for a service
           account such as the configuration controller's; the health user listed here keeps its password
           login beside the key.
+      lockdown_pam_ciba_sudo_users:
+        type: list
+        elements: str
+        default: []
+        description: >-
+          Local accounts whose sudo asks PAM (sudoers entry ALL=(ALL:ALL) ALL in /etc/sudoers.d/<user>), with
+          pam-ciba placed in the sudo PAM stack above common-auth: from a key address sudo asks nothing, from
+          anywhere else an unmapped account is refused and a mapped one gets the push. Debian only.
       lockdown_pam_ciba_login_grace_time:
         type: str
         default: 6m

@@ -5,6 +5,12 @@ provider:
   scope: {{ lockdown_pam_ciba_scope }}
 approval:
   authorization_details_type: {{ lockdown_pam_ciba_details_type }}
+{% if lockdown_pam_ciba_key_addresses | length > 0 %}
+  trusted_addresses:
+{% for address in lockdown_pam_ciba_key_addresses %}
+    - {{ address }}
+{% endfor %}
+{% endif %}
 users:
 {% for local_user, provider_user in lockdown_pam_ciba_users.items() %}
   {{ local_user }}: {{ provider_user }}

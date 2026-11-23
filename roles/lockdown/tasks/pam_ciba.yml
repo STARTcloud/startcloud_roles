@@ -51,3 +51,23 @@
     group: root
     mode: "0644"
   notify: "Restarting ssh"
+
+- name: "Placing pam-ciba in the sudo PAM stack"
+  ansible.builtin.blockinfile:
+    path: /etc/pam.d/sudo
+    marker: "# {mark} ANSIBLE MANAGED PAM CIBA"
+    insertbefore: '^@include common-auth'
+    block: |
+      auth [success=ok ignore=ignore default=die] pam_exec.so quiet /usr/bin/pam-ciba authenticate
+      auth [success=done default=die] pam_permit.so
+  when: lockdown_pam_ciba_sudo_users | length > 0
+
+- name: "Making sudo ask PAM for the gated accounts"
+  ansible.builtin.copy:
+    content: "{{ item }} ALL=(ALL:ALL) ALL\n"
+    dest: "/etc/sudoers.d/{{ item }}"
+    owner: root
+    group: root
+    mode: "0440"
+    validate: /usr/sbin/visudo -cf %s
+  loop: "{{ lockdown_pam_ciba_sudo_users }}"
