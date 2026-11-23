@@ -29,6 +29,9 @@ dependencies_pve_repository: ""
 dependencies_pve_enterprise_uri: https://enterprise.proxmox.com/debian/pve
 dependencies_pve_no_subscription_uri: http://download.proxmox.com/debian/pve
 dependencies_pve_keyring: /usr/share/keyrings/proxmox-archive-keyring.gpg
+dependencies_omnios_mirror: ""
+dependencies_omnios_release: "{{ ansible_distribution_version | default('') | regex_replace('^(r[0-9]+).*$', '\\1') }}"
+dependencies_omnios_startcloud_release: r151054
 dependencies_upgrade: true
 dependencies_autoremove: true
 dependencies_opnsense_poll_delay: 10

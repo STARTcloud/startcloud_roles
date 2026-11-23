@@ -3,3 +3,11 @@ extra_packages:
   - ooce/system/htop
 packages:
   - ooce/system/htop
+
+extra_repos:
+  - name: omnios
+    origin: "{{ dependencies_omnios_mirror }}/{{ dependencies_omnios_release }}/core/"
+  - name: extra.omnios
+    origin: "{{ dependencies_omnios_mirror }}/{{ dependencies_omnios_release }}/extra/"
+  - name: STARTcloud
+    origin: "{{ dependencies_omnios_mirror }}/{{ dependencies_omnios_startcloud_release }}/public/"

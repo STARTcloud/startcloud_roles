@@ -9,6 +9,10 @@ argument_specs:
         On an OpenWrt access point, whose inventory entry sets ansible_os_family to openwrt and whose play gathers no
         facts, it upgrades the firmware and packages with owut when owut reports it safe and waits for the access point
         to come back.
+      - >-
+        On OmniOS it points the pkg publishers at the mirror for the release the host declares, updates pkg itself,
+        upgrades every package into a boot environment and records whether that boot environment waits on a reboot;
+        a release change is one word in the inventory, and the upgrade that follows moves the host to it.
     author: Mark Gilbert
     options:
       run_tasks:
@@ -38,7 +42,9 @@ argument_specs:
           Extra APT repositories to add (name, gpg_key_url, gpg_keyring_path, repo, needs_dearmor,
           optional filename defaulting to name, optional stale_source_files listing old duplicate
           source files to remove). On FreeBSD and OPNsense, extra pkg repositories (name, url,
-          pubkey_url, pubkey_path, optional priority defaulting to 100).
+          pubkey_url, pubkey_path, optional priority defaulting to 100). On OmniOS, the pkg publishers
+          (name, origin) the host is pointed at when dependencies_omnios_mirror is set; a publisher the
+          list does not name is left as it is.
       proxy_server:
         type: str
         description: Hostname or address of the HTTP proxy apt and the key downloads go through when use_proxy is true.
@@ -110,6 +116,22 @@ argument_specs:
         type: str
         default: /usr/share/keyrings/proxmox-archive-keyring.gpg
         description: Keyring the deb822 stanza is signed by, shipped by the proxmox-archive-keyring package.
+      dependencies_omnios_mirror:
+        type: str
+        default: ""
+        description: >-
+          Root of the OmniOS package mirror, such as https://omnios.startcloud.com; when set, the host's omnios,
+          extra.omnios and STARTcloud publishers are pointed at its <release>/core/, <release>/extra/ and
+          <release>/public/ paths. Empty leaves the publishers untouched.
+      dependencies_omnios_release:
+        type: str
+        description: >-
+          The OmniOS release the host follows, the path on the mirror: r151054, bloody, r151062; defaults to the
+          release the host runs, so a host moves only when the inventory names another.
+      dependencies_omnios_startcloud_release:
+        type: str
+        default: r151054
+        description: The release the STARTcloud publisher is served under on the mirror.
       dependencies_upgrade:
         type: bool
         default: true

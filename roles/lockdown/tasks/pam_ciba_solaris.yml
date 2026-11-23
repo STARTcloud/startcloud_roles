@@ -44,8 +44,6 @@
   ansible.builtin.blockinfile:
     path: /etc/ssh/sshd_config
     marker: "# {mark} ANSIBLE MANAGED PAM CIBA"
-    block: |
-      UsePAM yes
-      {{ lookup('ansible.builtin.template', '10-pam-ciba.conf.j2') }}
+    block: "{{ lookup('ansible.builtin.template', '10-pam-ciba.conf.j2') }}"
     validate: /usr/sbin/sshd -t -f %s
   notify: "Restarting ssh"

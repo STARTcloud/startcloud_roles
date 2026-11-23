@@ -2,6 +2,17 @@
 - name: "Including OS-specific vars"
   ansible.builtin.include_vars: "{{ ansible_os_family | lower }}.yml"
 
+- name: "Pointing the pkg publishers at the mirror for the declared release"
+  community.general.pkg5_publisher:
+    name: "{{ item.name }}"
+    origin: "{{ item.origin }}"
+    enabled: true
+    state: present
+  loop: "{{ extra_repos | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: dependencies_omnios_mirror | length > 0
+
 - name: "Reading the boot environments before the upgrade"
   ansible.builtin.command: beadm list -H
   register: dependencies_boot_environments_before
@@ -14,23 +25,30 @@
       {{ (dependencies_boot_environments_before.stdout_lines | map('split', ';') | selectattr('2', 'search', 'R') | map(attribute='0') | first)
          != (dependencies_boot_environments_before.stdout_lines | map('split', ';') | selectattr('2', 'search', 'N') | map(attribute='0') | first) }}
 
+- name: "Self-upgrading pkg before reading the upgradable packages"
+  community.general.pkg5:
+    name: package/pkg
+    state: latest
+  register: dependencies_pkg_self_upgrade
+  when: not (dependencies_boot_environment_waiting | bool)
+
 - name: "Reading the upgradable packages"
   ansible.builtin.command: pkg update -r -nv
   register: dependencies_upgradable
   changed_when: false
   failed_when: dependencies_upgradable.rc not in [0, 4]
   check_mode: false
-  when: not (dependencies_boot_environment_waiting | bool)
+  when:
+    - not (dependencies_boot_environment_waiting | bool)
+    - not (ansible_check_mode and dependencies_pkg_self_upgrade is changed)
 
 - name: "Upgrading all pkg packages"
   ansible.builtin.command: pkg update -r
-  async: "{{ ansible_check_mode | ternary(0, 3600) }}"
-  poll: 15
   changed_when: true
   when:
     - dependencies_upgrade | bool
     - not (dependencies_boot_environment_waiting | bool)
-    - dependencies_upgradable.rc == 0
+    - dependencies_upgradable.rc | default(4) == 0
 
 - name: "Adding Additional packages"
   community.general.pkg5:
