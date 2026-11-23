@@ -47,6 +47,10 @@ argument_specs:
         type: str
         default: all
         description: View the community reads (all, or systemonly).
+      snmp_rwcommunity:
+        type: str
+        default: ""
+        description: Read-write SNMPv2c community on the same view; empty writes no rwcommunity line.
       snmp_contact:
         type: str
         description: sysContact; defaults to the email variable.
@@ -65,7 +69,9 @@ argument_specs:
       snmp_extension_list:
         type: list
         elements: dict
-        description: LibreNMS extension scripts to download, each with an extend directive and a source url.
+        description: >-
+          Extension scripts, each an extend directive; an entry with a url is downloaded into
+          snmp_extension_scripts first, an entry without one names a script the host already holds.
       snmp_extension_scripts:
         type: str
         default: /usr/local/lib/snmpd

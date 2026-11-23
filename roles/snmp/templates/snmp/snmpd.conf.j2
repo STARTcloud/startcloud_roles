@@ -31,6 +31,9 @@ view   systemonly  included   .1.3.6.1.2.1.25.1
 {% if snmp_community | length > 0 %}
 rocommunity  {{ snmp_community }} default -V {{ snmp_community_view }}
 {% endif %}
+{% if snmp_rwcommunity | length > 0 %}
+rwcommunity  {{ snmp_rwcommunity }} default -V {{ snmp_community_view }}
+{% endif %}
 {% if snmp_v3 | bool %}
 createUser {{ snmp_user }} SHA {{ snmp_password }} AES {{ snmp_encryption }}
 rouser {{ snmp_user }} priv

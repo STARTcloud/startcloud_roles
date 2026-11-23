@@ -37,7 +37,7 @@
     setype: lib_t
     selevel: s0
   with_items:
-    - "{{ snmp_extension_list }}"
+    - "{{ snmp_extension_list | selectattr('url', 'defined') | list }}"
   tags:
     - configuration
 

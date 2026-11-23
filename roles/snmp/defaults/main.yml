@@ -18,6 +18,7 @@ snmp_agentaddress_protocol:
   ipv6: udp6
 snmp_community: ""
 snmp_community_view: all
+snmp_rwcommunity: ""
 snmp_contact: "{{ email | default('') }}"
 snmp_encryption: snmp_encryption
 snmp_extension_list:
