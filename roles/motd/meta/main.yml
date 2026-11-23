@@ -14,6 +14,8 @@ galaxy_info:
       versions: ["jammy", "noble"]
     - name: FreeBSD
       versions: ["14.0"]
+    - name: Solaris
+      versions: ["11.4"]
   galaxy_tags:
     - motd
     - banner

@@ -3,7 +3,7 @@ argument_specs:
   main:
     short_description: Configure a branded message-of-the-day
     description:
-      - Renders /etc/motd, optional update-motd.d scripts, an on-demand sysinfo command and branded /etc/issue banners for Linux and FreeBSD logins.
+      - Renders /etc/motd, optional update-motd.d scripts, an on-demand sysinfo command and branded /etc/issue banners for Linux logins, and a static branded /etc/motd on FreeBSD and OmniOS.
     author: Mark Gilbert
     options:
       run_tasks:
@@ -12,7 +12,7 @@ argument_specs:
         description: Master gate — when false the role loads its vars but runs no tasks.
       vendor:
         type: str
-        description: Vendor branding profile — when defined, vars/<vendor>.yml is loaded over the role defaults.
+        description: Brand profile (STARTcloud, prominic, m4kr) — when defined, vars/<vendor>.yml is loaded over the role defaults.
       distro:
         type: str
         default: "{{ ansible_distribution | default('linux') | lower }}"

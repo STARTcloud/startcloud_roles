@@ -1,0 +1,12 @@
+
+===============================================================================
+  This system is managed by {{ motd_org }}
+{% if motd_show_support %}
+-------------------------------------------------------------------------------
+  Support:  {{ motd_sysadmins_signature }}
+  Email:    {{ motd_sysadmins_email }}
+
+  Info:     https://vagrant-zones.startcloud.com/changes
+  Template: https://boxvault.startcloud.com/{{ vendor | default('STARTcloud') }}/{{ distro }}{{ distro_version }}-{{ vm_type }}
+{% endif %}
+===============================================================================

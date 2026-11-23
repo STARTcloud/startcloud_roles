@@ -13,7 +13,7 @@
         key: "{{ lookup('file', controller_public_key) }}"
 
 - name: Write the site hosts file on every node
-  hosts: vms:hypervisors
+  hosts: vms:hypervisors:pis
   become: true
   gather_facts: true
   tags: [hosts-file]
@@ -50,6 +50,16 @@
   roles:
     - role: startcloud.startcloud_roles.syslog
     - role: startcloud.startcloud_roles.snmp
+
+- name: Brand every node's login message
+  hosts: vms:pis:hypervisors
+  serial: 1
+  any_errors_fatal: true
+  become: true
+  gather_facts: true
+  tags: [motd]
+  roles:
+    - role: startcloud.startcloud_roles.motd
 
 - name: Gate SSH logins on pam-ciba push approval
   hosts: pam_ciba

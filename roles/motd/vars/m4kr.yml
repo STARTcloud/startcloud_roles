@@ -1,0 +1,15 @@
+---
+motd_org: M4KR
+motd_color_primary: "0;36"
+motd_color_secondary: "1"
+motd_banner_managed_line: >-
+  echo -e "${G}┃${R}                      This system is managed by ${G}M4KR${R}                       ${G}┃${R}"
+motd_banner_art: |
+  echo -e "${G}┃${R}                       ${G} __  __  _  _    _  __ ____  ${R}                       ${G}┃${R}"
+  echo -e "${G}┃${R}                       ${G}|  \\/  || || |  | |/ /|  _ \\ ${R}                       ${G}┃${R}"
+  echo -e "${G}┃${R}                       ${G}| |\\/| || || |_ | ' / | |_) |${R}                       ${G}┃${R}"
+  echo -e "${G}┃${R}                       ${G}| |  | ||__   _|| . \\ |  _ < ${R}                       ${G}┃${R}"
+  echo -e "${G}┃${R}                       ${G}|_|  |_|   |_|  |_|\\_\\|_| \\_\\\\${R}                       ${G}┃${R}"
+motd_banner_tagline: >-
+  echo -e "${G}┃${R}                           ${W}YOUR HOME, YOUR CLOUD${R}                           ${G}┃${R}"
+motd_content: ""

@@ -31,7 +31,7 @@ The inventory lives under `inventory/` and stays out of the repository. It holds
 
 | Group | Members |
 | --- | --- |
-| `controllers` | the node the playbook runs from, with `ansible_connection: local` |
+| `controllers` | the node that mails the maintenance window and renews the certificates, reached like every other host |
 | `vms` | virtual machines |
 | `pis` | Raspberry Pis |
 | `hypervisors` | hypervisor hosts |
@@ -53,9 +53,10 @@ A group the site does not have is declared with no hosts, so every play finds it
 | Tag | Groups | Does |
 | --- | --- | --- |
 | `authorized-key` | `vms`, `hypervisors`, `pis` | Places the controller's public key on the login account |
-| `hosts-file` | `vms`, `hypervisors` | Writes the site hosts file |
+| `hosts-file` | `vms`, `hypervisors`, `pis` | Writes the site hosts file |
 | `ntp` | `vms`, `pis`, `hypervisors`, `outside`, `firewalls`, then `openwrt`, `switches` | Points every clock at its time servers |
 | `monitoring` | `collectors`, then `vms`, `pis`, `hypervisors`, `outside`, `firewalls`, then `openwrt`, `switches` | Issues the collector's certificate, forwards logs to the collector, answers SNMP |
+| `motd` | `vms`, `pis`, `hypervisors` | Brands the login message with the profile named by `vendor` and installs the `sysinfo` command |
 | `pam-ciba` | `pam_ciba` | Gates SSH logins on push approval |
 | `system-proxy` | `system_proxy` | Writes the system-wide and package-manager proxy settings |
 | `proxies` | `proxies` | Installs HAProxy with the site's template named by `haproxy_cfg`, keepalived with the site's VRRP values, and squid where `squid_proxy` is set |
