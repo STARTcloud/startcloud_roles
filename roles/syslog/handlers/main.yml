@@ -7,12 +7,6 @@
     - syslog_enabled | bool
     - not (ansible_check_mode and syslog_install | default({}) is changed)
 
-- name: "Restarting legacy syslog"
-  ansible.builtin.service:
-    name: "{{ syslog_legacy_daemon }}"
-    state: restarted
-  when: syslog_enabled | bool
-
 - name: "Reconfiguring the OPNsense syslog"
   ansible.builtin.uri:
     url: "{{ opnsense_api_url }}/syslog/service/reconfigure"

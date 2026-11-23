@@ -9,14 +9,14 @@
 
 - name: "Reading the addresses the node resolves its own name to"
   ansible.builtin.getent:
-    database: ahosts
+    database: hosts
     key: "{{ networking_hosts_short }}"
 
 - name: "Verifying the node resolves its own name to one address"
   ansible.builtin.assert:
     that:
-      - ansible_facts.getent_ahosts.keys() | list | length == 1
-    fail_msg: "{{ networking_hosts_short }} resolves to {{ ansible_facts.getent_ahosts.keys() | list | join(', ') }}"
+      - ansible_facts.getent_hosts.keys() | list | length == 1
+    fail_msg: "{{ networking_hosts_short }} resolves to {{ ansible_facts.getent_hosts.keys() | list | join(', ') }}"
 
 - name: "Reading the name the node reports"
   ansible.builtin.command: hostname -f
