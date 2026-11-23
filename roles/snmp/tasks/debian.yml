@@ -30,7 +30,7 @@
   become: true
   ansible.builtin.get_url:
     url: "{{ item.url }}"
-    dest: '{{ snmp_extension_scripts + "/" }}'
+    dest: "{{ snmp_extension_scripts }}/{{ item.url | basename }}"
     owner: root
     group: root
     mode: "0755"
@@ -49,7 +49,7 @@
   become: true
   ansible.builtin.get_url:
     url: "https://raw.githubusercontent.com/librenms/librenms-agent/master/agent-local/proxmox"
-    dest: '{{ snmp_extension_scripts + "/" }}'
+    dest: "{{ snmp_extension_scripts }}/proxmox"
     owner: root
     group: root
     mode: "0755"

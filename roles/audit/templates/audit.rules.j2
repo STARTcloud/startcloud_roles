@@ -1,0 +1,11 @@
+-D
+-b {{ audit_backlog_limit }}
+-f {{ audit_failure_mode }}
+-a always,exit -F arch=b64 -S execve -F auid>={{ audit_min_uid }} -F auid!=unset -F key={{ audit_rules_key }}
+-a always,exit -F arch=b32 -S execve -F auid>={{ audit_min_uid }} -F auid!=unset -F key={{ audit_rules_key }}
+{% for rule in audit_rules_extra %}
+{{ rule }}
+{% endfor %}
+{% if audit_lock_rules | bool %}
+-e 2
+{% endif %}

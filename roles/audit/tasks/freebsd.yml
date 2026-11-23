@@ -1,0 +1,36 @@
+---
+- name: "Checking the base ships an audit daemon"
+  ansible.builtin.stat:
+    path: "{{ audit_rc_script }}"
+  register: audit_rc
+
+- name: "Writing the audit control file"
+  ansible.builtin.template:
+    src: audit_control.j2
+    dest: "{{ audit_config_file }}"
+    owner: root
+    group: wheel
+    mode: "0644"
+  notify: "Refreshing the audit daemon"
+  when: audit_rc.stat.exists
+
+- name: "Enabling the audit daemon at boot"
+  community.general.sysrc:
+    name: auditd_enable
+    value: "YES"
+  when:
+    - audit_enabled | bool
+    - audit_rc.stat.exists
+
+- name: "Ensuring the audit daemon is running"
+  ansible.builtin.service:
+    name: "{{ audit_daemon }}"
+    state: started
+  when:
+    - audit_enabled | bool
+    - audit_rc.stat.exists
+
+- name: "Reporting a base with no audit daemon"
+  ansible.builtin.debug:
+    msg: "{{ inventory_hostname }} ships no {{ audit_rc_script }}, so nothing is recorded there"
+  when: not audit_rc.stat.exists

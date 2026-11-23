@@ -1,0 +1,88 @@
+---
+- name: "Ensuring the audit daemon is installed"
+  ansible.builtin.package:
+    name: "{{ audit_package }}"
+    state: present
+  register: audit_install
+
+- name: "Reading the kernel's audit state"
+  ansible.builtin.command: auditctl -s
+  register: audit_status
+  changed_when: false
+  failed_when: false
+  when: not (ansible_check_mode and audit_install is changed)
+
+- name: "Recording whether the rules are locked until reboot"
+  ansible.builtin.set_fact:
+    audit_rules_locked: "{{ (audit_status.stdout | default('')) is search('^enabled 2$', multiline=True) }}"
+
+- name: "Writing the audit rules"
+  ansible.builtin.template:
+    src: audit.rules.j2
+    dest: "{{ audit_rules_file }}"
+    owner: root
+    group: root
+    mode: "0640"
+  register: audit_rules
+  notify: "Loading the audit rules"
+
+- name: "Recording that the new rules take effect at the next reboot"
+  ansible.builtin.set_fact:
+    audit_reboot_required: "{{ audit_rules is changed and audit_rules_locked | bool }}"
+
+- name: "Naming the node and resolving the names in every record"
+  ansible.builtin.lineinfile:
+    path: "{{ audit_config_file }}"
+    regexp: "^{{ item.key }}\\s*="
+    line: "{{ item.key }} = {{ item.value }}"
+  loop:
+    - { key: name_format, value: hostname }
+    - { key: log_format, value: ENRICHED }
+    - { key: max_log_file, value: "{{ audit_max_log_file }}" }
+    - { key: num_logs, value: "{{ audit_num_logs }}" }
+    - { key: max_log_file_action, value: ROTATE }
+  notify: "Restarting the audit daemon"
+  when: not (ansible_check_mode and audit_install is changed)
+
+- name: "Checking the syslog plugin is installed"
+  ansible.builtin.stat:
+    path: "{{ audit_syslog_plugin_path }}"
+  register: audit_syslog_plugin
+  when:
+    - audit_syslog | bool
+    - not (ansible_check_mode and audit_install is changed)
+
+- name: "Asserting the syslog plugin is installed"
+  ansible.builtin.assert:
+    that: audit_syslog_plugin.stat.exists
+    fail_msg: "{{ audit_syslog_plugin_path }} is missing, so the audit records cannot reach syslog"
+  when:
+    - audit_syslog | bool
+    - not (ansible_check_mode and audit_install is changed)
+
+- name: "Handing every audit record to syslog"
+  ansible.builtin.template:
+    src: syslog.conf.j2
+    dest: "{{ audit_syslog_plugin_file }}"
+    owner: root
+    group: root
+    mode: "0640"
+  notify: "Restarting the audit daemon"
+  when:
+    - audit_syslog | bool
+    - not (ansible_check_mode and audit_install is changed)
+
+- name: "Ensuring the audit daemon is running and enabled"
+  ansible.builtin.service:
+    name: "{{ audit_daemon }}"
+    state: started
+    enabled: true
+  when:
+    - audit_enabled | bool
+    - not (ansible_check_mode and audit_install is changed)
+
+- name: "Reporting the audit state"
+  ansible.builtin.debug:
+    msg:
+      rules_locked_until_reboot: "{{ audit_rules_locked }}"
+      reboot_required_for_new_rules: "{{ audit_reboot_required }}"

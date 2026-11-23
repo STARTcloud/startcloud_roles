@@ -55,7 +55,7 @@ A group the site does not have is declared with no hosts, so every play finds it
 | `authorized-key` | `vms`, `hypervisors`, `pis` | Places the controller's public key on the login account |
 | `hosts-file` | `vms`, `hypervisors`, `pis` | Writes the site hosts file |
 | `ntp` | `vms`, `pis`, `hypervisors`, `outside`, `firewalls`, then `openwrt`, `switches` | Points every clock at its time servers |
-| `monitoring` | `collectors`, then `vms`, `pis`, `hypervisors`, `outside`, `firewalls`, then `openwrt`, `switches` | Issues the collector's certificate, forwards logs to the collector, answers SNMP |
+| `monitoring` | `collectors`, then `vms`, `pis`, `hypervisors`, `outside`, `firewalls`, then `openwrt`, `switches` | Issues the collector's certificate, forwards logs to the collector, answers SNMP, records every program start and login and hands the records to syslog |
 | `motd` | `vms`, `pis`, `hypervisors` | Brands the login message with the profile named by `vendor` and installs the `sysinfo` command |
 | `pam-ciba` | `pam_ciba` | Gates SSH logins on push approval |
 | `system-proxy` | `system_proxy` | Writes the system-wide and package-manager proxy settings |
@@ -129,6 +129,8 @@ A port that negotiates TLS inside its protocol names it in `ssl_push_verify_star
 ## Logs and SNMP
 
 `syslog_server`, `syslog_protocol` and `syslog_port` set where a node sends its logs; the protocol is `udp`, `tcp` or `tls`. The collector's receivers are set with `syslog_receive_udp`, `syslog_receive_tcp` and `syslog_receive_tls`.
+
+The `audit` role records every program a logged-in account starts, with its arguments, and every login, logout and authentication, and hands each record to syslog, so it rides the same forwarding. On Linux the rules lock the audit setup until reboot, so a rules change made later is refused until the node reboots; the role reports when one waits. `audit_syslog_facility` names the facility the records carry, `audit_rules_extra` adds rule lines of the site's own.
 
 ## Push-approved SSH
 

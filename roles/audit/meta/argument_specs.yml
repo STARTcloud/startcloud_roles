@@ -1,0 +1,71 @@
+---
+argument_specs:
+  main:
+    short_description: Record every program start and every login and hand the records to syslog
+    description:
+      - On Linux it installs auditd, writes one rules file that records every execve by a logged-in account
+        (both syscall tables, login uid at or above audit_min_uid) beside the kernel's own login, logout and
+        authentication events, names the node and resolves the names in every record, and turns the syslog
+        plugin on so each record reaches the system logger and the forwarding the syslog role wrote.
+      - With audit_lock_rules the rules file ends in -e 2, which locks the kernel's audit setup until the next
+        reboot; a later change to the rules is refused, recorded, and taken only after a reboot, which the role reports.
+      - On OmniOS it selects the audit classes ex and lo (every exec with its arguments, every login and logout),
+        turns the audit_syslog plugin on for the same classes and keeps the audit daemon running.
+      - On FreeBSD it writes audit_control with the classes lo, aa and ex and the argv policy and keeps the audit
+        daemon running; the records stay in the binary trail under /var/audit. A base with no audit daemon, OPNsense
+        among them, gets nothing and says so.
+    author: Mark Gilbert
+    options:
+      run_tasks:
+        type: bool
+        default: true
+        description: Master gate — when false the role loads its vars but runs no tasks.
+      audit_enabled:
+        type: bool
+        default: true
+        description: Whether the audit daemon is started and enabled.
+      audit_min_uid:
+        type: int
+        default: 1000
+        description: Lowest login uid whose program starts are recorded on Linux; services and cron have no login uid and are never recorded.
+      audit_rules_key:
+        type: str
+        default: commands
+        description: Key written into every exec record on Linux, the word ausearch and aureport select them by.
+      audit_rules_extra:
+        type: list
+        elements: str
+        default: []
+        description: Further audit rule lines written after the exec rules on Linux, each in auditctl form.
+      audit_lock_rules:
+        type: bool
+        default: true
+        description: Whether the Linux rules end in -e 2, which locks the audit setup until reboot.
+      audit_backlog_limit:
+        type: int
+        default: 8192
+        description: Kernel audit backlog on Linux (-b).
+      audit_failure_mode:
+        type: int
+        default: 1
+        description: What the Linux kernel does when it cannot deliver a record (-f), 0 silent, 1 printk, 2 panic.
+      audit_max_log_file:
+        type: int
+        default: 8
+        description: Size in MiB at which the local audit log rotates on Linux.
+      audit_num_logs:
+        type: int
+        default: 5
+        description: Rotated local audit logs kept on Linux.
+      audit_syslog:
+        type: bool
+        default: true
+        description: Whether every record is handed to syslog (Linux plugin, OmniOS audit_syslog).
+      audit_syslog_facility:
+        type: str
+        default: LOG_LOCAL6
+        description: Syslog facility the Linux plugin writes the records with (LOG_LOCAL0 to LOG_LOCAL7, LOG_AUTH, LOG_AUTHPRIV, LOG_DAEMON, LOG_SYSLOG, LOG_USER).
+      audit_syslog_priority:
+        type: str
+        default: LOG_INFO
+        description: Syslog priority the Linux plugin writes the records with.

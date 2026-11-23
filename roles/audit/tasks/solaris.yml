@@ -1,0 +1,43 @@
+---
+- name: "Reading the configured audit classes"
+  ansible.builtin.command: auditconfig -getflags
+  register: audit_flags_current
+  changed_when: false
+
+- name: "Selecting the audit classes"
+  ansible.builtin.command: "auditconfig -setflags {{ audit_flags }}"
+  changed_when: true
+  when: audit_flags_current.stdout is not search('configured user default audit flags = ' ~ audit_flags ~ '\\(')
+  notify: "Refreshing the audit daemon"
+
+- name: "Reading the audit policy"
+  ansible.builtin.command: auditconfig -getpolicy
+  register: audit_policy_current
+  changed_when: false
+
+- name: "Recording the command arguments in every exec record"
+  ansible.builtin.command: auditconfig -setpolicy +argv
+  changed_when: true
+  when: audit_policy_current.stdout is not search('configured audit policies = .*argv')
+  notify: "Refreshing the audit daemon"
+
+- name: "Reading the syslog plugin"
+  ansible.builtin.command: auditconfig -getplugin audit_syslog
+  register: audit_plugin_current
+  changed_when: false
+  when: audit_syslog | bool
+
+- name: "Handing every audit record to syslog"
+  ansible.builtin.command: "auditconfig -setplugin audit_syslog active p_flags={{ audit_flags }}"
+  changed_when: true
+  when:
+    - audit_syslog | bool
+    - audit_plugin_current.stdout is not search('\\(active\\)') or audit_plugin_current.stdout is not search('p_flags=' ~ audit_flags ~ ';')
+  notify: "Refreshing the audit daemon"
+
+- name: "Ensuring the audit daemon is running and enabled"
+  ansible.builtin.service:
+    name: "{{ audit_daemon }}"
+    state: started
+    enabled: true
+  when: audit_enabled | bool

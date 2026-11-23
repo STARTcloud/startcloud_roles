@@ -50,6 +50,7 @@
   roles:
     - role: startcloud.startcloud_roles.syslog
     - role: startcloud.startcloud_roles.snmp
+    - role: startcloud.startcloud_roles.audit
 
 - name: Brand every node's login message
   hosts: vms:pis:hypervisors

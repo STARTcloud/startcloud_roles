@@ -1,0 +1,37 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: "Gathering package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Asserting auditd is installed"
+      ansible.builtin.assert:
+        that:
+          - "'auditd' in ansible_facts.packages"
+        fail_msg: "auditd is not installed"
+
+    - name: "Reading the rules file"
+      ansible.builtin.slurp:
+        src: /etc/audit/rules.d/50-startcloud.rules
+      register: audit_rules_content
+
+    - name: "Asserting the exec rules are written"
+      ansible.builtin.assert:
+        that:
+          - "'-S execve -F auid>=1000 -F auid!=unset -F key=commands' in audit_rules_content.content | b64decode"
+        fail_msg: "/etc/audit/rules.d/50-startcloud.rules does not record program starts"
+
+    - name: "Reading the syslog plugin"
+      ansible.builtin.slurp:
+        src: /etc/audit/plugins.d/syslog.conf
+      register: audit_plugin_content
+
+    - name: "Asserting the syslog plugin is active"
+      ansible.builtin.assert:
+        that:
+          - "'active = yes' in audit_plugin_content.content | b64decode"
+        fail_msg: "/etc/audit/plugins.d/syslog.conf does not hand the records to syslog"

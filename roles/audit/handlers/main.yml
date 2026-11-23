@@ -1,0 +1,22 @@
+---
+- name: "Loading the audit rules"
+  ansible.builtin.command: augenrules --load
+  changed_when: true
+  when:
+    - not (audit_rules_locked | default(false) | bool)
+    - not (ansible_check_mode and audit_install | default({}) is changed)
+
+- name: "Restarting the audit daemon"
+  ansible.builtin.service:
+    name: "{{ audit_daemon }}"
+    state: restarted
+  when:
+    - audit_enabled | bool
+    - not (ansible_check_mode and audit_install | default({}) is changed)
+
+- name: "Refreshing the audit daemon"
+  ansible.builtin.command: audit -s
+  changed_when: true
+  when:
+    - audit_enabled | bool
+    - not ansible_check_mode

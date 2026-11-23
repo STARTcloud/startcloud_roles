@@ -1,0 +1,7 @@
+---
+audit_package: auditd
+audit_daemon: auditd
+audit_config_file: /etc/audit/auditd.conf
+audit_rules_file: /etc/audit/rules.d/50-startcloud.rules
+audit_syslog_plugin_file: /etc/audit/plugins.d/syslog.conf
+audit_syslog_plugin_path: /sbin/audisp-syslog

@@ -1,0 +1,15 @@
+---
+run_tasks: true
+
+audit_enabled: true
+audit_min_uid: 1000
+audit_rules_key: commands
+audit_rules_extra: []
+audit_lock_rules: true
+audit_backlog_limit: 8192
+audit_failure_mode: 1
+audit_max_log_file: 8
+audit_num_logs: 5
+audit_syslog: true
+audit_syslog_facility: LOG_LOCAL6
+audit_syslog_priority: LOG_INFO

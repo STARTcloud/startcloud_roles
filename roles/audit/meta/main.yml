@@ -1,0 +1,28 @@
+---
+galaxy_info:
+  role_name: audit
+  author: Mark Gilbert
+  description: Records every program start and every login on the node and hands the records to syslog, so they ride the forwarding to the log collector.
+  company: STARTcloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: GPL-2.0-or-later
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions: ["bookworm", "trixie"]
+    - name: Ubuntu
+      versions: ["jammy", "noble"]
+    - name: EL
+      versions: ["8", "9"]
+    - name: Solaris
+      versions: ["11.4"]
+    - name: FreeBSD
+      versions: ["all"]
+  galaxy_tags:
+    - audit
+    - auditd
+    - logging
+    - security
+dependencies: []
+collections:
+  - startcloud.startcloud_roles

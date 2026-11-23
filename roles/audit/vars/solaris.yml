@@ -1,0 +1,3 @@
+---
+audit_daemon: system/auditd
+audit_flags: ex,lo

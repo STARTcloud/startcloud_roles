@@ -1,0 +1,12 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    run_tasks: true
+    audit_lock_rules: false
+    settings:
+      hostname: startcloud-audit-debian12
+      domain: molecule.local
+  roles:
+    - role: audit

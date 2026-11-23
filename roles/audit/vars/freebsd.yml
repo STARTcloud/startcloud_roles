@@ -1,0 +1,11 @@
+---
+audit_daemon: auditd
+audit_rc_script: /etc/rc.d/auditd
+audit_config_file: /etc/security/audit_control
+audit_flags: lo,aa,ex
+audit_naflags: lo,aa
+audit_policy: cnt,argv
+audit_trail_dir: /var/audit
+audit_trail_minfree: 5
+audit_trail_filesz: 2M
+audit_trail_expire_after: 10M
