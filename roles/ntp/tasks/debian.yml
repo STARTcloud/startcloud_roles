@@ -23,13 +23,19 @@
   ansible.builtin.package:
     name: "{{ ntp_package }}"
     state: present
+  register: ntp_install_traditional
   when: not (__use_systemd_timesyncd | bool)
 
 - name: "Ensuring systemd-timesyncd is installed."
   ansible.builtin.package:
     name: "{{ ntp_package }}"
     state: present
+  register: ntp_install_timesyncd
   when: __use_systemd_timesyncd | bool
+
+- name: "Recording whether the check run left the NTP package uninstalled."
+  ansible.builtin.set_fact:
+    ntp_install_pending: "{{ ansible_check_mode and (ntp_install_traditional is changed or ntp_install_timesyncd is changed) }}"
 
 - name: "Ensuring tzdata package is installed (Linux)."
   ansible.builtin.package:
@@ -60,14 +66,18 @@
     name: "{{ ntp_daemon }}"
     state: started
     enabled: true
-  when: ntp_enabled | bool
+  when:
+    - ntp_enabled | bool
+    - not (ntp_install_pending | bool)
 
 - name: "Ensuring NTP is stopped and disabled as configured."
   ansible.builtin.service:
     name: "{{ ntp_daemon }}"
     state: stopped
     enabled: false
-  when: not (ntp_enabled | bool)
+  when:
+    - not (ntp_enabled | bool)
+    - not (ntp_install_pending | bool)
 
 - name: "Generating systemd-timesyncd configuration file."
   ansible.builtin.template:

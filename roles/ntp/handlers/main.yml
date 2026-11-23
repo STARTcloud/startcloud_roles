@@ -3,7 +3,9 @@
   ansible.builtin.service:
     name: "{{ ntp_daemon }}"
     state: restarted
-  when: ntp_enabled | bool
+  when:
+    - ntp_enabled | bool
+    - not (ntp_install_pending | default(false) | bool)
 
 - name: "Restarting cron"
   ansible.builtin.service:
