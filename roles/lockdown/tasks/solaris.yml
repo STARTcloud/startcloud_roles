@@ -1,0 +1,4 @@
+---
+- name: "Including the pam-ciba tasks"
+  ansible.builtin.include_tasks: pam_ciba_solaris.yml
+  when: lockdown_pam_ciba | bool

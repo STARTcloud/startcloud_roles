@@ -5,6 +5,9 @@ argument_specs:
     description:
       - Disables unneeded/risky services, rotates the default user password, generates and installs an SSH key, and optionally scrubs sensitive files. Dispatches to Debian and Windows tasks.
       - On OPNsense it writes the os-oidc-login plugin's settings and user map through the firewall's API, so the web GUI signs in through the OpenID Provider.
+      - >-
+        On OmniOS it gates SSH logins on pam-ciba push approval, with the service module pam_ciba.so.1 as a binding
+        entry of the sshd service in /etc/pam.conf and the sshd settings written into /etc/ssh/sshd_config.
     author: Mark Gilbert
     options:
       run_tasks:
@@ -57,7 +60,9 @@ argument_specs:
           Sign SSH logins in through the OpenID Provider's push approval: installs pam-ciba from the STARTcloud
           repository, writes its configuration, places it in the sshd PAM stack above common-auth and writes
           /etc/ssh/sshd_config.d/10-pam-ciba.conf (key plus keyboard-interactive for every login, password only
-          for the health user, key alone from the key addresses).
+          for the health user, key alone from the key addresses). On OmniOS the stack is a binding entry for
+          the sshd service in /etc/pam.conf above the stock password lines, so an account with no entry in
+          lockdown_pam_ciba_users signs in by its password, and the sshd settings go into /etc/ssh/sshd_config.
       lockdown_pam_ciba_issuer:
         type: str
         default: ""

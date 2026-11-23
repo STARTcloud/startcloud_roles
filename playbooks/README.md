@@ -131,4 +131,4 @@ A port that negotiates TLS inside its protocol names it in `ssl_push_verify_star
 
 ## Push-approved SSH
 
-The `pam-ciba` tag reads `lockdown_pam_ciba_issuer`, each host's `lockdown_pam_ciba_client_id`, and `lockdown_pam_ciba_users`, which maps a local account to its provider account. Accounts in `lockdown_pam_ciba_key_users` sign in by key alone.
+The `pam-ciba` tag reads `lockdown_pam_ciba_issuer`, each host's `lockdown_pam_ciba_client_id`, and `lockdown_pam_ciba_users`, which maps a local account to its provider account. Accounts in `lockdown_pam_ciba_key_users` sign in by key alone; the account named by `lockdown_pam_ciba_health_user` keeps its password login. On OmniOS the module is a `binding` entry of the `sshd` service in `/etc/pam.conf`, so an account with no entry in `lockdown_pam_ciba_users` falls through to its password.

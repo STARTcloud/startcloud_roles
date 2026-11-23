@@ -1,0 +1,51 @@
+---
+- name: "Checking the pam-ciba settings"
+  ansible.builtin.assert:
+    that:
+      - lockdown_pam_ciba_issuer | length > 0
+      - lockdown_pam_ciba_client_id | length > 0
+      - lockdown_pam_ciba_users | length > 0
+    fail_msg: "lockdown_pam_ciba needs lockdown_pam_ciba_issuer, lockdown_pam_ciba_client_id and at least one entry in lockdown_pam_ciba_users"
+
+- name: "Installing pam-ciba"
+  community.general.pkg5:
+    name: system/security/pam-ciba
+    state: present
+
+- name: "Creating /etc/pam-ciba"
+  ansible.builtin.file:
+    path: /etc/pam-ciba
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: "Writing /etc/pam-ciba/app.config.yaml"
+  ansible.builtin.template:
+    src: pam-ciba.app.config.yaml.j2
+    dest: /etc/pam-ciba/app.config.yaml
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: "Placing pam-ciba in the sshd PAM stack"
+  ansible.builtin.blockinfile:
+    path: /etc/pam.conf
+    marker: "# {mark} ANSIBLE MANAGED PAM CIBA"
+    block: |
+      sshd auth binding   pam_ciba.so.1
+      sshd auth requisite pam_authtok_get.so.1
+      sshd auth required  pam_dhkeys.so.1
+      sshd auth required  pam_unix_cred.so.1
+      sshd auth required  pam_unix_auth.so.1
+  notify: "Restarting ssh"
+
+- name: "Writing the pam-ciba settings into /etc/ssh/sshd_config"
+  ansible.builtin.blockinfile:
+    path: /etc/ssh/sshd_config
+    marker: "# {mark} ANSIBLE MANAGED PAM CIBA"
+    block: |
+      UsePAM yes
+      {{ lookup('ansible.builtin.template', '10-pam-ciba.conf.j2') }}
+    validate: /usr/sbin/sshd -t -f %s
+  notify: "Restarting ssh"

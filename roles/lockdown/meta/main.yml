@@ -2,7 +2,9 @@
 galaxy_info:
   role_name: lockdown
   author: Mark Gilbert
-  description: Hardens a guest by disabling unneeded services, rotating the default password, deploying an SSH key, gating SSH logins on pam-ciba push approval, and scrubbing sensitive files.
+  description: >-
+    Hardens a guest by disabling unneeded services, rotating the default password, deploying an SSH key, gating SSH
+    logins on pam-ciba push approval on Debian and OmniOS, and scrubbing sensitive files.
   company: STARTcloud
   issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
   license: GPL-2.0-or-later
@@ -12,6 +14,8 @@ galaxy_info:
       versions: ["bookworm", "trixie"]
     - name: Ubuntu
       versions: ["jammy", "noble"]
+    - name: Solaris
+      versions: ["11.4"]
     - name: Windows
       versions: ["2022"]
   galaxy_tags:
